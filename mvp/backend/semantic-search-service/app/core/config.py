@@ -289,6 +289,11 @@ class Settings(BaseSettings):
     # Standard aus, unabhaengig von punkte_aktiv: eine eigene Verarbeitung, die erst
     # mit Satz in DSFA und Datenschutzerklaerung eingeschaltet wird.
     gepostet_aktiv: bool = False
+    # Herkunft pruefen (#759): nachts die Links aller Herkuenfte abrufen und tote oder
+    # umgezogene fuer Admins auflisten (services/herkunft_pruefen.py). Obergrenze an,
+    # weil dabei nichts zur Person entsteht: kein Name, keine Kennung, nur Adresse und
+    # Ergebnis. Wirksam erst, wenn ein Admin den Schalter einschaltet (Standard aus).
+    herkunft_pruefen_aktiv: bool = True
     # Merkliste (#758): Angemeldete merken Beitraege und finden sie unter "Meine
     # Beitraege" wieder (Tabelle merkliste, api/v1/merkliste.py). Obergrenze an, damit
     # ein Admin ohne Rollout einschalten kann; Standard aus ist der Admin-Wert. Vor dem
