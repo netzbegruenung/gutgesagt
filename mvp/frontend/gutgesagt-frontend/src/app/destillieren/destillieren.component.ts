@@ -36,6 +36,8 @@ import {
 import { NavigationService } from '../services/navigation.service';
 import { FORMULAR_PFAD } from '../shared/formular-adresse';
 import { BeitragskarteComponent } from '../beitragskarte/beitragskarte.component';
+import { EinwurfThemenComponent } from '../shared/themen/einwurf-themen.component';
+import { Thema } from '../services/dtos/themenDtos';
 import { BeitragAnsehenService } from '../beitragsformular/beitrag-ansehen.service';
 import { KartenDaten, ausEinwurf, istSichtbar, istVerwerfbar } from '../beitragskarte/karten-daten';
 import { verwerfenFehlertext } from '../shared/fangkorb-texte';
@@ -78,7 +80,15 @@ export const TYPEN: ReadonlyArray<{ wert: Beitragstyp; name: string; erlaeuterun
 @Component({
   selector: 'app-destillieren',
   standalone: true,
-  imports: [...SHARED_IMPORTS, MatRadioModule, RouterLink, BeitragskarteComponent, Cc0HinweisComponent, EinwilligungHinweisComponent],
+  imports: [
+    ...SHARED_IMPORTS,
+    MatRadioModule,
+    RouterLink,
+    BeitragskarteComponent,
+    Cc0HinweisComponent,
+    EinwilligungHinweisComponent,
+    EinwurfThemenComponent,
+  ],
   templateUrl: './destillieren.component.html',
   styleUrls: ['./destillieren.component.css'],
 })
@@ -204,6 +214,17 @@ export class DestillierenComponent implements OnInit, OnDestroy {
   }
 
   private kopfCache?: { einwurf: Einwurf; satz: string; karte: KartenDaten };
+
+  /**
+   * Neue Themen des Einwurfs (app-einwurf-themen): als neues Objekt, damit der Kopf sie
+   * gleich zeigt (kopfCache). Das Formular laedt den Einwurf beim Oeffnen neu und nimmt
+   * sie als Vorauswahl der neuen Aussage.
+   */
+  themenGeaendert(themen: Thema[]): void {
+    if (this.einwurf) {
+      this.einwurf = { ...this.einwurf, themen };
+    }
+  }
 
   /**
    * Ein schon verknuepfter Beitrag dieses Einwurfs (der erste sichtbare), fuer den

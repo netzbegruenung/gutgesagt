@@ -8,12 +8,17 @@ import { BeitragAendernDialogComponent, aendernFehlertext } from './beitrag-aend
 import { KartenDaten } from './karten-daten';
 import { MeineBeitraegeService } from '../services/meine-beitraege.service';
 import { ReferenceService } from '../services/reference.service';
+import { ThemenService } from '../services/themen.service';
+import { AuthService } from '../auth/auth.service';
+
+const KLIMA = { schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' };
 
 describe('BeitragAendernDialogComponent', () => {
   let fixture: ComponentFixture<BeitragAendernDialogComponent>;
   let komponente: BeitragAendernDialogComponent;
   let dialogRef: jasmine.SpyObj<MatDialogRef<BeitragAendernDialogComponent>>;
   let beitraege: jasmine.SpyObj<MeineBeitraegeService>;
+  let themenService: jasmine.SpyObj<ThemenService>;
 
   const daten: KartenDaten = {
     id: 'b-1',
@@ -45,6 +50,8 @@ describe('BeitragAendernDialogComponent', () => {
   beforeEach(() => {
     dialogRef = jasmine.createSpyObj('MatDialogRef', ['close']);
     beitraege = jasmine.createSpyObj('MeineBeitraegeService', ['beitragAendern']);
+    themenService = jasmine.createSpyObj('ThemenService', ['liste', 'aendern']);
+    themenService.liste.and.returnValue(of([KLIMA]));
 
     TestBed.configureTestingModule({
       imports: [BeitragAendernDialogComponent, NoopAnimationsModule],
@@ -54,6 +61,11 @@ describe('BeitragAendernDialogComponent', () => {
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: MeineBeitraegeService, useValue: beitraege },
         { provide: ReferenceService, useValue: jasmine.createSpyObj('ReferenceService', ['addReference', 'isValidUrl']) },
+        { provide: ThemenService, useValue: themenService },
+        {
+          provide: AuthService,
+          useValue: { userInfo$: of({ isAuthenticated: true, userId: 'u-1', userName: null, claims: null }) },
+        },
       ],
     });
   });
@@ -70,6 +82,33 @@ describe('BeitragAendernDialogComponent', () => {
         { reference_string: 'https://example.org/studie', description: 'Feldtest' },
         { reference_string: 'https://example.org/zweite', description: undefined },
       ],
+    });
+  });
+
+  describe('Themen der Aussage', () => {
+    it('zeigt ohne bekannte Aussage keine Themen', () => {
+      erstellen();
+
+      expect(fixture.nativeElement.querySelector('.themen-der-aussage')).toBeNull();
+    });
+
+    it('zeigt die Themen der Aussage zum Aendern und merkt sich eine Aenderung', () => {
+      erstellen({
+        ...daten,
+        statement: { text: 'Wärmepumpen sind zu teuer', aehnlichkeit: 0, antwortqualitaet: 0, id: 'a-1', themen: [KLIMA] },
+      });
+      const block: HTMLElement = fixture.nativeElement.querySelector('.themen-der-aussage');
+
+      expect(block.querySelector('.thema-marke')!.textContent!.trim()).toBe('Klima');
+      expect(block.textContent).toContain('Gelten für alle Beiträge zu „Wärmepumpen sind zu teuer“');
+      expect(komponente.themenGeaendert).toBeFalse();
+
+      (block.querySelector('.themen-umschalter') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      (block.querySelector('.thema-chip') as HTMLButtonElement).click();
+
+      expect(themenService.aendern).toHaveBeenCalled();
+      expect(komponente.themenGeaendert).toBeTrue();
     });
   });
 

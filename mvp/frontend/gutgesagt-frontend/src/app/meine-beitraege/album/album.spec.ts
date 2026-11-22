@@ -51,6 +51,13 @@ describe('Album (album.ts)', () => {
       expect(eintrag.themen.map((t) => t.schluessel)).toEqual(['klima', 'wohnen']);
     });
 
+    it('gibt der Karte ID und Themen der Aussage mit, fuer „Beitrag ändern“', () => {
+      const eintrag = albumEintrag(beitrag({ themen: [KLIMA] }));
+
+      expect(eintrag.karte.statement?.id).toMatch(/^a\d+$/);
+      expect(eintrag.karte.statement?.themen).toEqual([KLIMA]);
+    });
+
     it('fuehrt Beitraege ohne Aussage ohne Thema und ohne „Antwort auf“', () => {
       const eintrag = albumEintrag(beitrag());
 

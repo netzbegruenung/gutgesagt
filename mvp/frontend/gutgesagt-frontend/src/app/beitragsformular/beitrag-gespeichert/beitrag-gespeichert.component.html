@@ -18,6 +18,8 @@
     <div *ngIf="aussageKopf as aussage" class="gespeichert-aussage">
         <p class="gespeichert-label">Antwort auf <span *ngIf="zustand.aussageNeu" class="neu-marke">neu</span></p>
         <app-beitragskarte class="aussage-karte" variante="kopf" [daten]="aussage"></app-beitragskarte>
+        <!-- Die Themen der Aussage, aenderbar; ein Beitrag hat keine eigenen -->
+        <app-aussage-themen *ngIf="aussageThemen as themen" class="aussage-themen" [aussage]="themen"></app-aussage-themen>
     </div>
     <!-- Die gewaehlten Themen der neuen Aussage galten nicht (#455), Satz wie in "Hier fehlt eine Antwort" -->
     <p *ngIf="zustand.themenHinweis" class="gespeichert-hinweis themen-hinweis" role="status">{{ zustand.themenHinweis }}</p>

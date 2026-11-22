@@ -375,7 +375,7 @@ describe('MeineEinwuerfeComponent', () => {
       const komponente = fixture.componentInstance;
       const karte = fixture.debugElement.query(By.directive(BeitragskarteComponent)).componentInstance as BeitragskarteComponent;
 
-      expect(karte.menueEintraege.map((eintrag) => eintrag.wort)).toEqual(['Link kopieren', 'Weiter destillieren']);
+      expect(karte.menueEintraege.map((eintrag) => eintrag.wort)).toEqual(['Link kopieren', 'Weiter destillieren', 'Themen ändern']);
 
       komponente.aktionAusfuehren(komponente.karten[0], 'weiterDestillieren');
 
