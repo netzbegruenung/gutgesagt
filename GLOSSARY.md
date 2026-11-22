@@ -295,6 +295,10 @@ _Avoid_: Überschrift, Etikett, Thema
 Die Angabe, worauf sich ein Beitrag stützt: ein Link oder eine andere Fundstelle mit kurzer Beschreibung, etwa eine Rede.
 _Avoid_: Quelle, Referenz, Reference, Beleg (und nicht für den Einstieg in ein Formular)
 
+**Herkunft prüfen**:
+Der nächtliche Lauf, der die Links aller sichtbaren Herkünfte abruft und für Admins auflistet, welche nicht mehr gehen (nicht gefunden, Fehler, nicht erreichbar) oder umgezogen sind. Am Beitrag ändert er nichts. Hinter dem Schalter `herkunft_pruefen` (#759).
+_Avoid_: Quellen-Prüfer, Linkchecker
+
 **Stil**:
 Die Tonlage eines Kommentars, etwa sachlich, persönlich, humorvoll oder brückenbauend. „Bissig“ gibt es nur beim Zweck „Für die eigenen Leute“. Die Oberfläche zeigt „brückenbauend“ als „freundlich“ und „bissig“ als „deutlich“ (Persona-Runde 18.11.); die Werte bleiben.
 _Avoid_: Ton, Tonalität

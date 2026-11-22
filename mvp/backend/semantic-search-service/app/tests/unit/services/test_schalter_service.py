@@ -151,7 +151,8 @@ def test_stand_nennt_obergrenze_admin_wert_wirksam_und_dsfa_hinweis():
     dienst, _, _ = _dienst({"punkte": True})
     stand = {s.name: s for s in dienst.stand(Settings(punkte_aktiv=True))}
 
-    assert set(stand) == {"punkte", "abzeichen_sichtbar", "gepostet"}
+    # Mindestens diese; weitere Schalter pruefen ihre eigenen Tests
+    assert set(stand) >= {"punkte", "abzeichen_sichtbar", "gepostet"}
     assert (
         stand["punkte"].obergrenze,
         stand["punkte"].admin_wert,
@@ -162,6 +163,16 @@ def test_stand_nennt_obergrenze_admin_wert_wirksam_und_dsfa_hinweis():
     assert "DSFA" in stand["abzeichen_sichtbar"].dsfa_hinweis
     assert stand["gepostet"].dsfa_hinweis is None
     assert all(s.erklaerung for s in stand.values())
+
+
+def test_herkunft_pruefen_obergrenze_an_admin_wert_aus():
+    """#759: Der Server erlaubt ihn von sich aus; wirksam erst mit dem Admin-Wert."""
+    dienst, _, _ = _dienst()
+    stand = {s.name: s for s in dienst.stand(Settings())}["herkunft_pruefen"]
+
+    assert (stand.obergrenze, stand.admin_wert, stand.wirksam) == (True, False, False)
+    assert stand.dsfa_hinweis is None
+    assert dienst.wirksam("herkunft_pruefen", Settings()) is False
 
 
 def test_schalter_wirksam_nimmt_den_globalen_dienst():
