@@ -203,6 +203,14 @@ export class EinwurfService {
     return this.http.get<Einwurf>(this.einwurfUrl(id));
   }
 
+  /**
+   * Die Themen eines Einwurfs ersetzen (hoechstens zwei, leer entfernt alle). Darf jede
+   * angemeldete Person, wie das Destillieren; liefert den Einwurf mit den neuen Themen.
+   */
+  themenSetzen(id: string, themen: string[]): Observable<Einwurf> {
+    return this.http.put<Einwurf>(`${this.einwurfUrl(id)}/themen`, { themen });
+  }
+
   /** Den eigenen Satz speichern; ein leerer Satz loescht ihn. */
   satzSpeichern(id: string, sentence: string): Observable<SatzResponse> {
     return this.http.put<SatzResponse>(

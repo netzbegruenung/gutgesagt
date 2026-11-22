@@ -312,7 +312,7 @@ Ein Beitrag, der aus einem anderen entstanden ist, weil jemand ihn als Vorlage g
 _Avoid_: Remix, Kopie, Fassung, Fork
 
 **Thema**:
-Ein Eintrag aus einer festen, kurzen Liste, mit dem Aussagen geordnet werden; eine Aussage hat höchstens drei. Schon beim Einwerfen lassen sich bis zu zwei wählen; sie sind ein Fingerzeig für andere und beim Ausformulieren die Vorauswahl für eine neue Aussage. Freie Schlagworte gibt es nicht. Jedes Thema hat ein Motiv, ein kleines Bild neben seinem Namen (Fluent Emoji wie bei den Meilensteinen, bei Europa eine eigene Zeichnung der Europaflagge); es ist rein dekorativ, der Name steht immer daneben.
+Ein Eintrag aus einer festen, kurzen Liste, mit dem Aussagen geordnet werden; eine Aussage hat höchstens drei. Schon beim Einwerfen lassen sich bis zu zwei wählen; sie sind ein Fingerzeig für andere und beim Ausformulieren die Vorauswahl für eine neue Aussage. Ändern darf sie danach, wer destillieren darf (jede angemeldete Person, in jeder Stufe), im Fangkorb, in „Meine Einwürfe“ und beim Destillieren. Die Themen einer Aussage ordnet jede angemeldete Person zu oder ändert sie, überall, wo sie zu sehen sind, auch im Beitragsformular bei einer vorhandenen Aussage. Ein Beitrag hat keine eigenen Themen; er steht unter denen seiner Aussage. Freie Schlagworte gibt es nicht. Jedes Thema hat ein Motiv, ein kleines Bild neben seinem Namen (Fluent Emoji wie bei den Meilensteinen, bei Europa eine eigene Zeichnung der Europaflagge); es ist rein dekorativ, der Name steht immer daneben.
 _Avoid_: Tag, Topic, Kategorie, Schlagwort
 
 **Album**:

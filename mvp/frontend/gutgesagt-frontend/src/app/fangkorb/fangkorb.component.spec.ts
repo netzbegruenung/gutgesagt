@@ -13,6 +13,7 @@ import { LADE_GROESSE, FangkorbComponent, SEITENLEISTE_MEDIEN } from './fangkorb
 import { LADE_TIMEOUT_MS, WIEDERHOLUNG_MS } from '../shared/lade-wiederholung';
 import { FILTER_SCHLUESSEL } from './fangkorb-filter';
 import { EinwurfBeitragSheetComponent } from './einwurf-beitrag-sheet.component';
+import { EinwurfThemenSheetComponent } from './einwurf-themen-sheet.component';
 import { BeitragskarteComponent } from '../beitragskarte/beitragskarte.component';
 import { PLATTFORMEN } from '../shared/plattform';
 import {
@@ -1024,8 +1025,8 @@ describe('FangkorbComponent', () => {
       erstellen([einwurf({ id: 'eigen' }), einwurf({ id: 'fremd', ist_eigener_einwurf: false })]);
       const [eigen, fremd] = kartenKomponenten();
 
-      expect(eigen.menueEintraege.map((eintrag) => eintrag.wort)).toEqual(['Link kopieren', 'Verwerfen']);
-      expect(fremd.menueEintraege.map((eintrag) => eintrag.wort)).toEqual(['Link kopieren']);
+      expect(eigen.menueEintraege.map((eintrag) => eintrag.wort)).toEqual(['Link kopieren', 'Themen ändern', 'Verwerfen']);
+      expect(fremd.menueEintraege.map((eintrag) => eintrag.wort)).toEqual(['Link kopieren', 'Themen ändern']);
     });
 
     it('bietet Admins Verwerfen auch an fremden Einwuerfen', () => {
@@ -1036,7 +1037,7 @@ describe('FangkorbComponent', () => {
       ]);
 
       for (const karte of kartenKomponenten()) {
-        expect(karte.menueEintraege.map((eintrag) => eintrag.wort)).toEqual(['Link kopieren', 'Verwerfen']);
+        expect(karte.menueEintraege.map((eintrag) => eintrag.wort)).toEqual(['Link kopieren', 'Themen ändern', 'Verwerfen']);
       }
     });
 
@@ -1059,7 +1060,32 @@ describe('FangkorbComponent', () => {
       expect(verworfen.menueEintraege.map((eintrag) => eintrag.wort)).toEqual([
         'Link kopieren',
         'Trotzdem destillieren',
+        'Themen ändern',
       ]);
+    });
+
+    it('oeffnet "Themen ändern" im Sheet und laedt danach neu, wenn sich etwas geaendert hat', () => {
+      const klima = { schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' };
+      erstellen([einwurf({ id: 'fremd', ist_eigener_einwurf: false, themen: [klima] })]);
+      (bottomSheet.open as jasmine.Spy).and.returnValue({ afterDismissed: () => of(true), instance: {} });
+      const vorher = einwurfService.fangkorbLaden.calls.count();
+
+      component.aktionAusfuehren(component.karten[0], 'themenAendern');
+
+      const [komponente, optionen] = (bottomSheet.open as jasmine.Spy).calls.mostRecent().args;
+      expect(komponente).toBe(EinwurfThemenSheetComponent);
+      expect(optionen.data).toEqual(jasmine.objectContaining({ einwurfId: 'fremd', themen: [klima] }));
+      expect(einwurfService.fangkorbLaden.calls.count()).toBe(vorher + 1);
+    });
+
+    it('laedt nach "Themen ändern" ohne Aenderung nicht neu', () => {
+      erstellen([einwurf({ id: 'e-1' })]);
+      (bottomSheet.open as jasmine.Spy).and.returnValue({ afterDismissed: () => of(undefined), instance: { geaendert: false } });
+      const vorher = einwurfService.fangkorbLaden.calls.count();
+
+      component.aktionAusfuehren(component.karten[0], 'themenAendern');
+
+      expect(einwurfService.fangkorbLaden.calls.count()).toBe(vorher);
     });
 
     it('kopiert den Link und sagt es', () => {

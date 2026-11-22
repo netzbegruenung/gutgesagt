@@ -145,7 +145,8 @@ beides auf einer Seite, mit zwei getrennten, nicht vorbelegten Häkchen.
   und antwortet ohne sie mit 403 `nutzungsbedingungen_fehlen`, an genau den Endpunkten in
   `GESPERRT` (und beim Ausformulieren). Dazu sperrt `require_nutzungsbedingungen` allein, was
   ohne Art.-9-Daten für andere Sichtbares anlegt oder fremde Inhalte beeinflusst: Themen
-  zuordnen und einen Antwortvorschlag an eine Aussage hängen (`NB_NUR` in
+  zuordnen (an Aussagen und an Einwürfen) und einen Antwortvorschlag an eine Aussage hängen
+  (`NB_NUR` in
   `tests/unit/api/test_nutzungsbedingungen_api.py`). Offen bleiben Melden, Widerspruch,
   Feedback, eigene Einstellungen (Punkte, Abzeichen), Besuch zählen, Suchen, Löschen, Widerruf
   und Konto beenden (Maßstab der juristischen Prüfung, 20.11.2026). Bewusst offen bleibt auch das
