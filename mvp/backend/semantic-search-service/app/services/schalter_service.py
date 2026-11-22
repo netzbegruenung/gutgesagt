@@ -73,6 +73,15 @@ SCHALTER: Dict[str, Schalterart] = {
                 "in der Übersicht."
             ),
         ),
+        Schalterart(
+            name="herkunft_pruefen",
+            feld="herkunft_pruefen_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_HERKUNFT_PRUEFEN_AKTIV",
+            erklaerung=(
+                "Prüft nachts die Links unter „Herkunft“ und listet tote oder "
+                "umgezogene in der Übersicht. Ruft dafür fremde Server ab."
+            ),
+        ),
     )
 }
 

@@ -297,6 +297,11 @@ class Settings(BaseSettings):
     # Standard aus, unabhaengig von punkte_aktiv: eine eigene Verarbeitung, die erst
     # mit Satz in DSFA und Datenschutzerklaerung eingeschaltet wird.
     gepostet_aktiv: bool = False
+    # Herkunft pruefen (#759): nachts die Links aller Herkuenfte abrufen und tote oder
+    # umgezogene fuer Admins auflisten (services/herkunft_pruefen.py). Obergrenze an,
+    # weil dabei nichts zur Person entsteht: kein Name, keine Kennung, nur Adresse und
+    # Ergebnis. Wirksam erst, wenn ein Admin den Schalter einschaltet (Standard aus).
+    herkunft_pruefen_aktiv: bool = True
     # Gewichte und Deckel der drei Stufen (domain/punkte.py): Tun klein und je Tag
     # gedeckelt, Quests mehr, Wirkung bei anderen am meisten.
     punkte_nutzung: int = Field(default=10, ge=0)

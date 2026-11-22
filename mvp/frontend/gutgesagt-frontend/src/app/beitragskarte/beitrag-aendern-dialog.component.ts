@@ -20,6 +20,7 @@ import { ReferenceInputComponent } from '../reference-input/reference-input.comp
 import { Cc0HinweisComponent } from '../shared/cc0-hinweis/cc0-hinweis.component';
 import { BeitragAenderung, HerkunftEingabe, MeineBeitraegeService } from '../services/meine-beitraege.service';
 import { einwilligungFehlt } from '../services/art9-einwilligung.service';
+import { AUFZAEHLUNG_HINWEIS } from '../shared/aufzaehlung';
 
 import { AENDERBARE_TYPEN } from './aenderbar';
 import { AussageMitThemenFeld } from '../services/themen.service';
@@ -100,6 +101,7 @@ function alsEingabe(quelle: KartenQuelle): HerkunftEingabe {
           <mat-label>Text</mat-label>
           <textarea matInput formControlName="text" required [attr.maxlength]="textMax"
                     cdkTextareaAutosize cdkAutosizeMinRows="4" cdkAutosizeMaxRows="12"></textarea>
+          <mat-hint class="aufzaehlung-hinweis">{{ aufzaehlungHinweis }}</mat-hint>
           <mat-hint align="end">{{ formular.value.text?.length ?? 0 }} / {{ textMax }}</mat-hint>
           <mat-error *ngIf="formular.controls.text.hasError('required')">Der Text fehlt.</mat-error>
           <mat-error *ngIf="formular.controls.text.hasError('minlength')">Mindestens {{ textMin }} Zeichen.</mat-error>
@@ -121,6 +123,7 @@ function alsEingabe(quelle: KartenQuelle): HerkunftEingabe {
             <mat-label>Langfassung (optional)</mat-label>
             <textarea matInput id="aendern-lang" formControlName="lang" [attr.maxlength]="langMax"
                       cdkTextareaAutosize cdkAutosizeMinRows="3" cdkAutosizeMaxRows="12"></textarea>
+            <mat-hint class="aufzaehlung-hinweis">{{ aufzaehlungHinweis }}</mat-hint>
             <mat-hint align="end">{{ formular.value.lang?.length ?? 0 }} / {{ langMax }}</mat-hint>
             <mat-error *ngIf="formular.controls.lang.hasError('maxlength')">Höchstens {{ langMax }} Zeichen.</mat-error>
           </mat-form-field>
@@ -187,6 +190,7 @@ export class BeitragAendernDialogComponent {
   readonly textMax: number;
   readonly kurzMax = KURZFASSUNG_MAX;
   readonly langMax = LANGFASSUNG_MAX;
+  readonly aufzaehlungHinweis = AUFZAEHLUNG_HINWEIS;
   /** Kurz- und Langfassung hat nur der Kommentar (GLOSSARY.md, Fassung). */
   readonly hatFassungen: boolean;
   readonly speichertGerade = signal(false);
