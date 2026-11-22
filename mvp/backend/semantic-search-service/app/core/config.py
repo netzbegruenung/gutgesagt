@@ -289,6 +289,11 @@ class Settings(BaseSettings):
     # Standard aus, unabhaengig von punkte_aktiv: eine eigene Verarbeitung, die erst
     # mit Satz in DSFA und Datenschutzerklaerung eingeschaltet wird.
     gepostet_aktiv: bool = False
+    # Herkunft pruefen (#759): nachts die Links aller Herkuenfte abrufen und tote oder
+    # umgezogene fuer Admins auflisten (services/herkunft_pruefen.py). Obergrenze an,
+    # weil dabei nichts zur Person entsteht: kein Name, keine Kennung, nur Adresse und
+    # Ergebnis. Wirksam erst, wenn ein Admin den Schalter einschaltet (Standard aus).
+    herkunft_pruefen_aktiv: bool = True
     # App-Abkuerzungen im Manifest (#757): Langes Druecken aufs App-Symbol bietet
     # Einwerfen, Suchen und Fangkorb an. Das Manifest ist statisch, der Schalter wirkt an
     # der Zielroute /abkuerzung/<name> (aus: Startseite). Obergrenze an, weil nichts
