@@ -6,7 +6,7 @@ import { BehaviorSubject, of, Subject, throwError } from 'rxjs';
 import { AUTOSAVE_VERZOEGERUNG_MS, DestillierenComponent, TYPEN } from './destillieren.component';
 import { BeitragAnsehenService } from '../beitragsformular/beitrag-ansehen.service';
 import { DestillierUebergabeService } from './destillier-uebergabe.service';
-import { SatzResponse, Einwurf, EinwurfService } from '../services/einwurf.service';
+import { SatzResponse, Einwurf, EinwurfService, ThemenErgebnis } from '../services/einwurf.service';
 import { AuthService, UserInfo } from '../auth/auth.service';
 import { LoggingService } from '../services/logging.service';
 import { FILTER_SCHLUESSEL, filterLaden } from '../fangkorb/fangkorb-filter';
@@ -15,6 +15,10 @@ import { CONSENT_HINWEIS_SATZ } from '../shared/consent-hinweis';
 import { erwarteCc0Hinweis } from '../shared/cc0-hinweis/cc0-hinweis.testing';
 import { Art9EinwilligungZustand } from '../services/art9-einwilligung-zustand';
 import { entwurfHolen } from '../einwilligung/entwurf-vor-einwilligung';
+import { ThemenService } from '../services/themen.service';
+
+const KLIMA = { schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' };
+const VERKEHR = { schluessel: 'verkehr', name: 'Verkehr', motiv: 'themen/verkehr.svg' };
 
 function einwurf(overrides: Partial<Einwurf> = {}): Einwurf {
   return {
@@ -73,6 +77,7 @@ describe('DestillierenComponent', () => {
         { provide: DestillierUebergabeService, useValue: uebergabe },
         { provide: NavigationService, useValue: navigation },
         { provide: BeitragAnsehenService, useValue: beitragAnsehen },
+        { provide: ThemenService, useValue: { liste: () => of([KLIMA, VERKEHR]) } },
         {
           provide: AuthService,
           useValue: {
@@ -120,7 +125,15 @@ describe('DestillierenComponent', () => {
       'rundeBeginnen',
       'fangkorbLaden',
       'naechsterZumAusformulieren',
+      'themenSetzen',
+      'themenAendern',
     ]);
+    einwurfService.themenAendern.and.callFake((id: string, schluessel: string[], fertig: (e: ThemenErgebnis) => void) =>
+      einwurfService.themenSetzen(id, schluessel).subscribe({
+        next: (e) => fertig({ offen: 0, themen: e.themen ?? [], fehler: null }),
+        error: (fehler) => fertig({ offen: 0, themen: null, fehler }),
+      }),
+    );
     einwurfService.fangkorbLaden.and.returnValue(of({ results: [], results_count: 0, total_records_count: 0 }));
     einwurfService.satzSpeichern.and.callFake((id: string, sentence: string) =>
       of({ raw_input_id: id, sentence, updated_at: null }),
@@ -842,6 +855,72 @@ describe('DestillierenComponent', () => {
       expect(text()).toContain('Fakten und Zahlen, die eine Antwort stützen.');
       const gewaehlt: HTMLElement = fixture.nativeElement.querySelector('.typ.gewaehlt');
       expect(gewaehlt.classList).toContain('typ-commentary');
+    });
+  });
+
+  describe('Themen des Einwurfs', () => {
+    function chip(name: string): HTMLButtonElement {
+      return (Array.from(fixture.nativeElement.querySelectorAll('.thema-chip')) as HTMLButtonElement[]).find(
+        (k) => k.textContent?.trim() === name,
+      )!;
+    }
+
+    function kopfMarken(): string[] {
+      return Array.from(fixture.nativeElement.querySelectorAll('.einwurf-kopf .thema-marke')).map(
+        (m) => (m as HTMLElement).textContent!.trim(),
+      );
+    }
+
+    it('lassen sich unter dem Kopf aendern, gespeichert am Einwurf und gleich im Kopf', async () => {
+      await erstellen('id-1', einwurf({ themen: [KLIMA] }));
+      einwurfService.themenSetzen.and.returnValue(of(einwurf({ themen: [KLIMA, VERKEHR] })));
+      const umschalter: HTMLButtonElement = fixture.nativeElement.querySelector('.einwurf-themen-aendern .themen-umschalter');
+      expect(umschalter.textContent!.trim()).toBe('Themen des Einwurfs ändern');
+      expect(kopfMarken()).toEqual(['Klima']);
+
+      umschalter.click();
+      fixture.detectChanges();
+      chip('Verkehr').click();
+      fixture.detectChanges();
+
+      expect(einwurfService.themenSetzen).toHaveBeenCalledOnceWith('id-1', ['klima', 'verkehr']);
+      expect(kopfMarken()).toEqual(['Klima', 'Verkehr']);
+      expect(component.einwurf!.themen).toEqual([KLIMA, VERKEHR]);
+    });
+
+    it('bietet ohne Themen "Themen wählen", auch in der Typwahl', async () => {
+      await erstellen('id-1', einwurf({ own_draft: 'Der Punkt' }));
+      expect(fixture.nativeElement.querySelector('.einwurf-themen-aendern .themen-umschalter').textContent.trim()).toBe(
+        'Themen wählen',
+      );
+
+      component.schritt = 'typwahl';
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.typwahl .einwurf-themen-aendern .themen-umschalter')).toBeTruthy();
+    });
+
+    it('stellt nach einem Fehler den Stand davor wieder her und sagt es', async () => {
+      await erstellen('id-1', einwurf({ themen: [KLIMA] }));
+      einwurfService.themenSetzen.and.returnValue(throwError(() => ({ status: 500 })));
+      fixture.nativeElement.querySelector('.einwurf-themen-aendern .themen-umschalter').click();
+      fixture.detectChanges();
+
+      chip('Verkehr').click();
+      fixture.detectChanges();
+
+      expect(kopfMarken()).toEqual(['Klima']);
+      expect(fixture.nativeElement.querySelector('.themen-fehler').textContent).toContain('Themen nicht gespeichert.');
+    });
+
+    it('laesst hoechstens zwei waehlen', async () => {
+      await erstellen('id-1', einwurf({ themen: [KLIMA, VERKEHR] }));
+      fixture.nativeElement.querySelector('.einwurf-themen-aendern .themen-umschalter').click();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.einwurf-themen-aendern .themen-hinweis').textContent).toContain(
+        'Bis zu zwei Themen',
+      );
     });
   });
 });

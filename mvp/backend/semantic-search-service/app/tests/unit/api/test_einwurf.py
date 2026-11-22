@@ -1356,3 +1356,121 @@ class TestGleicherLink:
         antwort = client.post(GLEICHER_LINK_URL, json={}, headers={"X-User": "alice"})
 
         assert antwort.status_code == 422
+
+
+THEMEN_URL = f"/api/v1/rawinput/{EINWURF_ID}/themen"
+
+
+@pytest.mark.unit
+@pytest.mark.api
+class TestThemenAendern:
+    """Die Themen eines Einwurfs nachtraeglich setzen: Regeln wie beim Destillieren."""
+
+    def test_jede_angemeldete_person_setzt_die_themen(self, client, repository):
+        repository.themen_setzen.return_value = _gespeicherter_einwurf(
+            id=str(EINWURF_ID), submitted_by="bob", themen=["klima", "verkehr"]
+        )
+
+        antwort = client.put(
+            THEMEN_URL,
+            json={"themen": ["verkehr", "klima"]},
+            headers={"X-User": "alice"},
+        )
+
+        assert antwort.status_code == 200
+        repository.themen_setzen.assert_called_once_with(
+            EINWURF_ID, ["verkehr", "klima"], "alice"
+        )
+        assert [t["schluessel"] for t in antwort.json()["themen"]] == [
+            "klima",
+            "verkehr",
+        ]
+
+    def test_leere_liste_entfernt_alle(self, client, repository):
+        repository.themen_setzen.return_value = _gespeicherter_einwurf(
+            id=str(EINWURF_ID)
+        )
+
+        antwort = client.put(
+            THEMEN_URL, json={"themen": []}, headers={"X-User": "alice"}
+        )
+
+        assert antwort.status_code == 200
+        repository.themen_setzen.assert_called_once_with(EINWURF_ID, [], "alice")
+        assert antwort.json()["themen"] == []
+
+    @pytest.mark.parametrize(
+        "themen",
+        [
+            ["klima", "verkehr", "europa"],
+            ["klima", "klima"],
+            ["heizungsgesetz"],
+            "klima",
+        ],
+        ids=["drei", "doppelt", "unbekannt", "kein-array"],
+    )
+    def test_ungueltige_themen_sind_422_und_nichts_gespeichert(
+        self, client, repository, themen
+    ):
+        antwort = client.put(
+            THEMEN_URL, json={"themen": themen}, headers={"X-User": "alice"}
+        )
+
+        assert antwort.status_code == 422
+        repository.themen_setzen.assert_not_called()
+
+    @pytest.mark.parametrize("person", [None, "anonymous"])
+    def test_nur_fuer_angemeldete(self, client, repository, person):
+        headers = {"X-User": person} if person else {}
+
+        antwort = client.put(THEMEN_URL, json={"themen": ["klima"]}, headers=headers)
+
+        assert antwort.status_code == 401
+        repository.themen_setzen.assert_not_called()
+
+    def test_geht_ohne_art9_einwilligung(
+        self, client, repository, art9_einwilligung_ohne_datenbank
+    ):
+        """Keine Person gespeichert: wie Themen an Aussagen zuordnen (NB_NUR)."""
+        art9_einwilligung_ohne_datenbank.lesen.return_value = None
+        repository.themen_setzen.return_value = _gespeicherter_einwurf(
+            id=str(EINWURF_ID)
+        )
+
+        antwort = client.put(
+            THEMEN_URL, json={"themen": ["klima"]}, headers={"X-User": "alice"}
+        )
+
+        assert antwort.status_code == 200
+        art9_einwilligung_ohne_datenbank.lesen.assert_not_called()
+
+    def test_unbekannter_einwurf_ist_404(self, client, repository):
+        repository.themen_setzen.side_effect = EinwurfNichtGefunden(EINWURF_ID)
+
+        antwort = client.put(
+            THEMEN_URL, json={"themen": ["klima"]}, headers={"X-User": "alice"}
+        )
+
+        assert antwort.status_code == 404
+
+    def test_fehler_der_datenbank_ist_500_ohne_details(self, client, repository):
+        repository.themen_setzen.side_effect = RuntimeError("geheim")
+
+        antwort = client.put(
+            THEMEN_URL, json={"themen": ["klima"]}, headers={"X-User": "alice"}
+        )
+
+        assert antwort.status_code == 500
+        assert "geheim" not in antwort.text
+
+    def test_kennungen_sehen_nur_admins(self, client, repository):
+        repository.themen_setzen.return_value = _gespeicherter_einwurf(
+            id=str(EINWURF_ID), submitted_by="bob"
+        )
+
+        antwort = client.put(
+            THEMEN_URL, json={"themen": ["klima"]}, headers={"X-User": "alice"}
+        )
+
+        assert antwort.status_code == 200
+        assert antwort.json()["submitted_by"] is None

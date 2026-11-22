@@ -29,6 +29,8 @@ import { ROUTES } from '../../shared/constants/app.constants';
 import { LUECKE_ZU, NAECHSTE_LUECKE } from '../../shared/luecke-texte';
 import { EINWURF_PARAM } from '../../destillieren/einwurf-adresse';
 import { TeilenService } from '../../shared/teilen.service';
+import { AussageMitThemenFeld, ThemenService } from '../../services/themen.service';
+import { AussageThemenComponent } from '../../shared/themen/aussage-themen.component';
 
 /** Beitragstypen, fuer die es die Ergebnisseite gibt. */
 export type GespeichertTyp = FormularTyp;
@@ -78,7 +80,7 @@ export const EINWURF_NICHT_MIT_NEUEM_VERKNUEPFT =
 @Component({
   standalone: true,
   selector: 'app-beitrag-gespeichert',
-  imports: [...SHARED_IMPORTS, CommonModule, RouterLink, BeitragskarteComponent],
+  imports: [...SHARED_IMPORTS, CommonModule, RouterLink, BeitragskarteComponent, AussageThemenComponent],
   templateUrl: './beitrag-gespeichert.component.html',
   styleUrls: ['./beitrag-gespeichert.component.css'],
 })
@@ -101,6 +103,13 @@ export class BeitragGespeichertComponent implements OnInit {
   einwurfEigen: boolean | null = null;
   readonly zustand: GespeichertZustand;
   readonly aussageKopf: KartenDaten | null;
+  /**
+   * Die Themen der Aussage unter ihrem Kopf, aenderbar wie auf der Ergebnisseite: So laesst
+   * sich gleich nachtragen, was beim Speichern nicht galt (themenHinweis). Null, solange sie
+   * laden oder wenn das Nachsehen scheiterte.
+   */
+  aussageThemen: AussageMitThemenFeld | null = null;
+  private themenService = inject(ThemenService);
   /** Die ID aus der Adresse, fuer "Teilen". */
   private beitragId = '';
   /** Die gespeicherte Karte selbst: "Teilen" nimmt ihre gewaehlte Fassung (P03, Persona-Runde 2). */
@@ -122,6 +131,16 @@ export class BeitragGespeichertComponent implements OnInit {
     // Nicht verknuepft: keine "Antwort auf"-Karte - der Hinweis nennt die Aussage.
     this.aussageKopf =
       aussage?.text && this.zustand.verknuepft !== false ? ausAussage(aussage.id, aussage.text) : null;
+    const aussageId = this.aussageKopf ? aussage?.id : undefined;
+    if (aussageId) {
+      this.themenService
+        .vonAussage(aussageId)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (themen) => (this.aussageThemen = { statement_id: aussageId, themen }),
+          error: () => (this.aussageThemen = null),
+        });
+    }
   }
 
   /** Hinweis, wenn nicht verknuepft werden konnte - mit der Aussage im Text, sofern bekannt. */
