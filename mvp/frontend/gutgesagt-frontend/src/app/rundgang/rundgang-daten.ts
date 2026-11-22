@@ -224,11 +224,9 @@ export const RUNDGAENGE: Record<RundgangId, Rundgang> = {
       },
       {
         titel: 'Jederzeit wieder',
-        text: {
-          desktop: 'In der Hilfe steht alles Wichtige. Dort startest du diesen Rundgang jederzeit neu.',
-          mobil: 'Im Menü findest du die Hilfe. Dort startest du diesen Rundgang jederzeit neu.',
-        },
-        ziel: '.hilfe-knopf, .mobile-header .menu-button',
+        // „Mehr“ steht am Desktop oben, am Handy in der unteren Leiste (Navigation 22.11.)
+        text: 'Unter „Mehr“ startest du diesen Rundgang jederzeit neu.',
+        ziel: 'app-hauptnavigation .mehr-knopf',
         seite: { pfad: '/search' },
       },
     ],
@@ -270,7 +268,7 @@ export const RUNDGAENGE: Record<RundgangId, Rundgang> = {
         titel: 'Meine Beiträge',
         text:
           'Hier siehst du, was du eingestellt hast und wie oft es genutzt wurde. Den Rundgang startest du ' +
-          'jederzeit wieder über die Hilfe.',
+          'jederzeit wieder unter „Mehr“.',
         ziel: '.beitraege-block',
         seite: { pfad: '/contribute' },
       },

@@ -288,6 +288,11 @@ class Settings(BaseSettings):
     # Standard aus, unabhaengig von punkte_aktiv: eine eigene Verarbeitung, die erst
     # mit Satz in DSFA und Datenschutzerklaerung eingeschaltet wird.
     gepostet_aktiv: bool = False
+    # Herkunft pruefen (#759): nachts die Links aller Herkuenfte abrufen und tote oder
+    # umgezogene fuer Admins auflisten (services/herkunft_pruefen.py). Obergrenze an,
+    # weil dabei nichts zur Person entsteht: kein Name, keine Kennung, nur Adresse und
+    # Ergebnis. Wirksam erst, wenn ein Admin den Schalter einschaltet (Standard aus).
+    herkunft_pruefen_aktiv: bool = True
     # Antworten auf eigene Aussagen (#760): Kachel auf der Startseite und Reiter "Meine
     # Aussagen" (services/antworten_hinweis.py). Nichts wird gespeichert, aber die
     # Datenschutzerklaerung nennt bisher nur zwei 7-Tage-Zahlen: Standard aus wie bei

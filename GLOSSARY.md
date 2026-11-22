@@ -295,6 +295,10 @@ _Avoid_: Überschrift, Etikett, Thema
 Die Angabe, worauf sich ein Beitrag stützt: ein Link oder eine andere Fundstelle mit kurzer Beschreibung, etwa eine Rede.
 _Avoid_: Quelle, Referenz, Reference, Beleg (und nicht für den Einstieg in ein Formular)
 
+**Herkunft prüfen**:
+Der nächtliche Lauf, der die Links aller sichtbaren Herkünfte abruft und für Admins auflistet, welche nicht mehr gehen (nicht gefunden, Fehler, nicht erreichbar) oder umgezogen sind. Am Beitrag ändert er nichts. Hinter dem Schalter `herkunft_pruefen` (#759).
+_Avoid_: Quellen-Prüfer, Linkchecker
+
 **Stil**:
 Die Tonlage eines Kommentars, etwa sachlich, persönlich, humorvoll oder brückenbauend. „Bissig“ gibt es nur beim Zweck „Für die eigenen Leute“. Die Oberfläche zeigt „brückenbauend“ als „freundlich“ und „bissig“ als „deutlich“ (Persona-Runde 18.11.); die Werte bleiben.
 _Avoid_: Ton, Tonalität
@@ -312,7 +316,7 @@ Ein Beitrag, der aus einem anderen entstanden ist, weil jemand ihn als Vorlage g
 _Avoid_: Remix, Kopie, Fassung, Fork
 
 **Thema**:
-Ein Eintrag aus einer festen, kurzen Liste, mit dem Aussagen geordnet werden; eine Aussage hat höchstens drei. Schon beim Einwerfen lassen sich bis zu zwei wählen; sie sind ein Fingerzeig für andere und beim Ausformulieren die Vorauswahl für eine neue Aussage. Freie Schlagworte gibt es nicht. Jedes Thema hat ein Motiv, ein kleines Bild neben seinem Namen (Fluent Emoji wie bei den Meilensteinen, bei Europa eine eigene Zeichnung der Europaflagge); es ist rein dekorativ, der Name steht immer daneben.
+Ein Eintrag aus einer festen, kurzen Liste, mit dem Aussagen geordnet werden; eine Aussage hat höchstens drei. Schon beim Einwerfen lassen sich bis zu zwei wählen; sie sind ein Fingerzeig für andere und beim Ausformulieren die Vorauswahl für eine neue Aussage. Ändern darf sie danach jede angemeldete Person, die den Nutzungsbedingungen zugestimmt hat, in jeder Stufe wie beim Destillieren, im Fangkorb, in „Meine Einwürfe“ und beim Destillieren. Die Themen einer Aussage ordnet jede angemeldete Person zu oder ändert sie, überall, wo sie zu sehen sind, auch im Beitragsformular bei einer vorhandenen Aussage. Ein Beitrag hat keine eigenen Themen; er steht unter denen seiner Aussage. Freie Schlagworte gibt es nicht. Jedes Thema hat ein Motiv, ein kleines Bild neben seinem Namen (Fluent Emoji wie bei den Meilensteinen, bei Europa eine eigene Zeichnung der Europaflagge); es ist rein dekorativ, der Name steht immer daneben.
 _Avoid_: Tag, Topic, Kategorie, Schlagwort
 
 **Album**:
@@ -658,5 +662,5 @@ Eine Person, die Meldungen bearbeitet, Beiträge sperrt, Widersprüche prüft, E
 _Avoid_: Moderator, Redaktion
 
 **Schalter**:
-Eine Funktion, die sich ein- und ausschalten lässt, ohne den Code zu ändern. Bei Punkten, Abzeichen am Anzeigenamen, „Ja, gepostet“ und dem Hinweis auf neue Antworten zu eigenen Aussagen (`antworten_hinweis`, #760) hat ein Schalter zwei Teile: die **Obergrenze**, die der Server aus seiner Umgebung setzt, und den **Admin-Wert**, den ein Admin auf der Admin-Seite „Schalter“ setzt. Wirksam ist der Schalter nur, wenn beide an sind; ohne Admin-Wert ist er aus. Über die Obergrenze hinaus einschalten kann kein Admin, ausschalten jederzeit; jede Änderung steht mit Zeitpunkt und Kennung des Admins im Verlauf (#708). Abzeichen wirken nur zusammen mit den Punkten.
+Eine Funktion, die sich ein- und ausschalten lässt, ohne den Code zu ändern. Bei Punkten, Abzeichen am Anzeigenamen, „Ja, gepostet“, „Herkunft prüfen“ (`herkunft_pruefen`, #759) und dem Hinweis auf neue Antworten zu eigenen Aussagen (`antworten_hinweis`, #760) hat ein Schalter zwei Teile: die **Obergrenze**, die der Server aus seiner Umgebung setzt, und den **Admin-Wert**, den ein Admin auf der Admin-Seite „Schalter“ setzt. Wirksam ist der Schalter nur, wenn beide an sind; ohne Admin-Wert ist er aus. Über die Obergrenze hinaus einschalten kann kein Admin, ausschalten jederzeit; jede Änderung steht mit Zeitpunkt und Kennung des Admins im Verlauf (#708). Abzeichen wirken nur zusammen mit den Punkten.
 _Avoid_: Feature-Flag, Toggle, Flag

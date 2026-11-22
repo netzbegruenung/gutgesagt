@@ -57,6 +57,7 @@
                     <textarea matInput id="text" formControlName="text" required
                               [attr.maxlength]="textMax" placeholder="In eigenen Worten – den Post nicht abschreiben"
                               cdkTextareaAutosize cdkAutosizeMinRows="4" cdkAutosizeMaxRows="16"></textarea>
+                    <mat-hint class="aufzaehlung-hinweis">{{ aufzaehlungHinweis }}</mat-hint>
                     <mat-hint align="end">{{ textLaenge }} / {{ textMax }}</mat-hint>
                     <mat-error *ngIf="postForm.get('text')?.hasError('required')">Der Text fehlt.</mat-error>
                     <mat-error *ngIf="postForm.get('text')?.hasError('minlength')">Mindestens 10 Zeichen.</mat-error>
@@ -72,6 +73,15 @@
                         <app-themen-auswahl [themen]="themenWahl.liste" [gewaehlt]="postForm.value.themen"
                                             beschriftung="Themen der neuen Aussage"
                                             (gewaehltChange)="themenWahl.setzen($event)"></app-themen-auswahl>
+                    </div>
+                </div>
+
+                <!-- Eine vorhandene Aussage: ihre Themen, aenderbar wie auf der Ergebnisseite (gelten fuer alle Beitraege zu ihr) -->
+                <div *ngIf="themenWahl.vorhandene as vorhanden" class="optionale-angaben">
+                    <div class="themen-feld themen-der-aussage">
+                        <span class="feld-beschriftung">Themen der Aussage</span>
+                        <app-aussage-themen [aussage]="vorhanden"></app-aussage-themen>
+                        <p class="themen-hinweis">Gelten für alle Beiträge zu dieser Aussage.</p>
                     </div>
                 </div>
 

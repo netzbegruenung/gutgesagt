@@ -774,6 +774,13 @@
     color: var(--text-leise);
     font-size: 0.875rem;
   }
+
+  // Die Themen einer vorhandenen Aussage: gelten fuer alle Beitraege zu ihr
+  .themen-der-aussage .themen-hinweis {
+    margin: 0;
+    color: var(--text-leise);
+    font-size: 13px;
+  }
 }
 
 // Fester Abstand zwischen den Feldern (#616): Hinweis- und Fehlerzeilen unter einem

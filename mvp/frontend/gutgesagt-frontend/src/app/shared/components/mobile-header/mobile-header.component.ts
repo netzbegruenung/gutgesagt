@@ -9,6 +9,7 @@ import { NavigationService } from '../../../services/navigation.service';
 import { RouteConfigService } from '../../services/route-config.service';
 import { UserInfo } from '../../../auth/auth.service';
 import { NEU_HINWEIS } from '../../../rundgang/rundgang-daten';
+import { KontoMenueComponent } from '../konto-menue/konto-menue.component';
 import { Subject } from 'rxjs';
 import { takeUntil, filter } from 'rxjs/operators';
 
@@ -20,7 +21,8 @@ import { takeUntil, filter } from 'rxjs/operators';
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
-    MatTooltipModule
+    MatTooltipModule,
+    KontoMenueComponent
   ],
   templateUrl: './mobile-header.component.html',
   styleUrls: ['./mobile-header.component.css']
@@ -31,9 +33,7 @@ export class MobileHeaderComponent implements OnInit, OnDestroy {
   /** Neu-Punkt an „Beitragen“, bis Mitmachen beantwortet ist (#587). */
   @Input() beitragenNeu = false;
   readonly neuHinweis = NEU_HINWEIS;
-  @Output() openMenu = new EventEmitter<void>();
   @Output() login = new EventEmitter<void>();
-  @Output() logout = new EventEmitter<void>();
   @Output() contribute = new EventEmitter<void>();
 
   pageTitle: string = 'Gut gesagt';
@@ -96,15 +96,6 @@ export class MobileHeaderComponent implements OnInit, OnDestroy {
   startseite(event: Event): void {
     event.preventDefault();
     void this.navigationService.navigateHome();
-  }
-
-  openMobileMenu(): void {
-    this.openMenu.emit();
-  }
-
-  /** Der Avatar gibt es nur angemeldet; er oeffnet das Menue (#644). */
-  openUserMenu(): void {
-    this.openMobileMenu();
   }
 
   /** "+" gibt es nur angemeldet (#644). */

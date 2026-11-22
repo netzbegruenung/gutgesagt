@@ -259,6 +259,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Neue Antworten auf eigene Aussagen und „Meine Aussagen“ (#760, Schalter `antworten_hinweis`) | keine Speicherung | — beim Besuch bzw. Aufruf aus den Antwortvorschlägen der Aussagen berechnet |
 | Meilenstein-Abzeichen am Anzeigenamen (#351) | keine Speicherung | — nur im Arbeitsspeicher, alle 15 Minuten neu berechnet, nach einem Neustart leer; nach dem Löschkommando (Schritt 2) höchstens noch bis zum nächsten Lauf |
 | Schalter (`schalter`) und ihr Verlauf (`schalter_verlauf`, #708): Admin-Wert, Zeitpunkt, Kennung des Admins | Verlauf: 12 Monate ab der Änderung, Bereinigungslauf (Task der Löschfristen, `SCHALTER_VERLAUF_TAGE` in `services/loeschfristen_service.py`, unabhängig vom abschaltbaren Bereinigungsjob; Entscheidung Maintainer 18.11.2026). Der aktuelle Stand in `schalter` bleibt. | Kennung des Admins: mit seinem Konto geleert (`person_loeschen.sql`), beim Umstellen der Kennungen mit umgeschrieben (#487) — betrifft nur Admins, nicht Nutzende; die Kennung steht nur dort, kein Klarname |
+| Herkunft prüfen (`herkunft_pruefung`, #759): Adresse einer Herkunft, Ergebnis, HTTP-Status, Weiterleitungsziel, Zeitpunkte | solange die Herkunft sichtbar ist | — kein Personenbezug (keine Kennung, kein Beitrag); jeder Lauf löscht die Zeilen zu gelöschten oder gesperrten Herkünften. Nur mit dem Schalter `herkunft_pruefen`; ohne ihn entsteht nichts, und nach dem Ausschalten leert der stündliche Takt die Tabelle (`services/herkunft_pruefen.py`) |
 | Konten aus Einladungen im Realm, nie benutzt (#538) | 30 Tage nach Ablauf des Links, also etwa 33 Tage | Anlegen des Kontos beim Einlösen (`createdTimestamp` in Keycloak; der Link gilt drei Tage) |
 
 - **Meldungen:** Sechs Monate, weil eine Entscheidung über eine Meldung so lange
@@ -528,8 +529,10 @@ und der Ablauf oben erfasst die Tabelle nicht.
   `fuers_testset`). Wer es herunterlädt, verwaltet die Kopie selbst; der Text einer
   vorab angelegten Aussage stammt von einer Person und kann, wie jeder Beitrag, Namen
   enthalten.
-- **`einwurf_themen`** trägt je beim Einwerfen gewähltem Thema nur Einwurf-ID und Thema,
-  weder Kennung noch Zeitpunkt; wer gewählt hat, steht schon am Einwurf. Keine eigene Frist:
+- **`einwurf_themen`** trägt je Thema eines Einwurfs nur Einwurf-ID und Thema, weder Kennung
+  noch Zeitpunkt. Gewählt beim Einwerfen, danach von jeder angemeldeten Person änderbar
+  (`PUT /api/v1/rawinput/{id}/themen`); wer gewählt oder geändert hat, wird nicht gespeichert,
+  nur der Einwerfer steht am Einwurf. Keine eigene Frist:
   Die Zeilen gehen per CASCADE mit dem Einwurf, durch die Löschfrist der Einwürfe wie durch das
   Löschkommando (Schritt 2).
 - **`varianten`** (#356) trägt je Variante nur ihre ID und die ID des Originals, weder

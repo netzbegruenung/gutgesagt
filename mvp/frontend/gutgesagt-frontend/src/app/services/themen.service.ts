@@ -52,6 +52,19 @@ export class ThemenService {
     return this.liste$;
   }
 
+  /**
+   * Die Themen einer vorhandenen Aussage nachsehen, etwa wenn das Beitragsformular sie
+   * gewaehlt hat. Still: Scheitert es, fehlt nur die Anzeige.
+   */
+  vonAussage(statementId: string): Observable<Thema[]> {
+    return this.http
+      .get<ThemenZuordnenResponse>(`${this.basis}/von`, {
+        params: { statement_id: statementId },
+        context: stillerKontext(),
+      })
+      .pipe(map((antwort) => antwort.themen));
+  }
+
   /** Die Themen einer Aussage setzen; ersetzt die bisherigen. Liefert, was jetzt gilt. */
   zuordnen(statementId: string, themen: string[]): Observable<Thema[]> {
     const request: ThemenZuordnenRequest = { statement_id: statementId, themen };

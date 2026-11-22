@@ -165,6 +165,16 @@ def test_stand_nennt_obergrenze_admin_wert_wirksam_und_dsfa_hinweis():
     assert all(s.erklaerung for s in stand.values())
 
 
+def test_herkunft_pruefen_obergrenze_an_admin_wert_aus():
+    """#759: Der Server erlaubt ihn von sich aus; wirksam erst mit dem Admin-Wert."""
+    dienst, _, _ = _dienst()
+    stand = {s.name: s for s in dienst.stand(Settings())}["herkunft_pruefen"]
+
+    assert (stand.obergrenze, stand.admin_wert, stand.wirksam) == (True, False, False)
+    assert stand.dsfa_hinweis is None
+    assert dienst.wirksam("herkunft_pruefen", Settings()) is False
+
+
 def test_antworten_hinweis_obergrenze_aus_admin_wert_aus():
     """#760: Standard aus, bis die Datenschutzerklaerung den Satz hat."""
     dienst, _, _ = _dienst()

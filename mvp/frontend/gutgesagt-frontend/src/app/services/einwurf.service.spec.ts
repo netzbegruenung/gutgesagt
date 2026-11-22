@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { Einwurf, EinwurfService, EinwurfSeite } from './einwurf.service';
+import { Einwurf, EinwurfService, EinwurfSeite, ThemenErgebnis } from './einwurf.service';
 import { LoggingService } from './logging.service';
 import { environment } from '../../environments/environment';
 import { CONSENT_HINWEIS, CONSENT_HINWEIS_SATZ } from '../shared/consent-hinweis';
@@ -268,6 +268,67 @@ describe('EinwurfService', () => {
       anfrage.flush({ results: [einwurf({ status: 'processed' })] });
 
       expect(gefunden?.map((e) => e.status)).toEqual(['processed']);
+    });
+  });
+
+  describe('Themen aendern (Warteschlange je Einwurf)', () => {
+    const KLIMA = { schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' };
+    const VERKEHR = { schluessel: 'verkehr', name: 'Verkehr', motiv: 'themen/verkehr.svg' };
+
+    it('schickt schnelle Klicks der Reihe nach, der letzte gilt', () => {
+      const ergebnisse: ThemenErgebnis[] = [];
+      service.themenAendern('e-1', ['klima'], (e) => ergebnisse.push(e));
+      service.themenAendern('e-1', ['klima', 'verkehr'], (e) => ergebnisse.push(e));
+
+      // Erst nach der ersten Antwort geht der zweite Auftrag raus
+      const erste = httpMock.expectOne(`${basis}/e-1/themen`);
+      expect(erste.request.method).toBe('PUT');
+      expect(erste.request.body).toEqual({ themen: ['klima'] });
+      httpMock.expectNone(`${basis}/e-1/themen`);
+      erste.flush({ id: 'e-1', themen: [KLIMA] });
+      const zweite = httpMock.expectOne(`${basis}/e-1/themen`);
+      expect(zweite.request.body).toEqual({ themen: ['klima', 'verkehr'] });
+      zweite.flush({ id: 'e-1', themen: [KLIMA, VERKEHR] });
+
+      expect(ergebnisse).toEqual([
+        { offen: 1, themen: [KLIMA], fehler: null },
+        { offen: 0, themen: [KLIMA, VERKEHR], fehler: null },
+      ]);
+    });
+
+    it('meldet einen Fehler und arbeitet danach weiter', () => {
+      const ergebnisse: ThemenErgebnis[] = [];
+      service.themenAendern('e-1', ['klima'], (e) => ergebnisse.push(e));
+      service.themenAendern('e-1', ['verkehr'], (e) => ergebnisse.push(e));
+
+      httpMock.expectOne(`${basis}/e-1/themen`).flush('kaputt', { status: 500, statusText: 'Server Error' });
+      httpMock.expectOne(`${basis}/e-1/themen`).flush({ id: 'e-1', themen: [VERKEHR] });
+
+      expect(ergebnisse[0].themen).toBeNull();
+      expect(ergebnisse[0].offen).toBe(1);
+      expect(ergebnisse[1]).toEqual({ offen: 0, themen: [VERKEHR], fehler: null });
+    });
+
+    it('meldet themenGespeichert erst, wenn alles beantwortet ist, ohne Auftrag sofort', () => {
+      let sofort = false;
+      service.themenGespeichert('e-2').subscribe(() => (sofort = true));
+      expect(sofort).toBeTrue();
+
+      let fertig = false;
+      service.themenAendern('e-1', ['klima'], () => undefined);
+      service.themenGespeichert('e-1').subscribe(() => (fertig = true));
+      expect(fertig).toBeFalse();
+      httpMock.expectOne(`${basis}/e-1/themen`).flush({ id: 'e-1', themen: [KLIMA] });
+      expect(fertig).toBeTrue();
+    });
+
+    it('haelt die Einwuerfe auseinander', () => {
+      service.themenAendern('e-1', ['klima'], () => undefined);
+      service.themenAendern('e-2', ['verkehr'], () => undefined);
+
+      // Beide gleichzeitig unterwegs: je Einwurf eine eigene Reihe
+      httpMock.expectOne(`${basis}/e-1/themen`).flush({ id: 'e-1', themen: [KLIMA] });
+      httpMock.expectOne(`${basis}/e-2/themen`).flush({ id: 'e-2', themen: [VERKEHR] });
     });
   });
 });

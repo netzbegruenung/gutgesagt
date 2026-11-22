@@ -7,6 +7,7 @@ from domain.themen import ThemenDerAussage
 from dtos.beitrag import VorhandenDto
 from dtos.statement import ThemaDto
 from domain.models.generic_text import GenericText
+from utils.aufzaehlung import beitrag_mit_punkten
 
 
 ### AddGenericText ###
@@ -83,6 +84,12 @@ class AddGenericTextRequest(BaseModel):
                 f"Der Text darf hoechstens {HINTERGRUNDINFO_TEXT_MAX} Zeichen lang sein"
             )
         return generictext
+
+    # Aufzaehlung: "* " und "- " am Zeilenanfang werden zu "• " (utils/aufzaehlung.py).
+    @field_validator("generictext")
+    @classmethod
+    def aufzaehlung_mit_punkten(cls, beitrag):
+        return beitrag_mit_punkten(beitrag)
 
 
 class AddGenericTextResponse(BaseModel):
