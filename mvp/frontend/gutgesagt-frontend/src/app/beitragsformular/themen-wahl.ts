@@ -1,9 +1,10 @@
-import { inject } from '@angular/core';
+import { DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { Thema } from '../services/dtos/themenDtos';
-import { ThemenService } from '../services/themen.service';
 import { ThemenVorschlaege } from '../shared/themen/themen-vorschlaege';
+import { AussageMitThemenFeld, ThemenService } from '../services/themen.service';
 import { AntwortAuf } from './antwort-auf/antwort-auf.component';
 import { themenWaehlbar } from './aussage-fuer-anfrage';
 
@@ -11,6 +12,10 @@ import { themenWaehlbar } from './aussage-fuer-anfrage';
  * Die Themenwahl fuer die Aussage eines Beitragsformulars (#455), fuer das
  * Kommentar- und das Hintergrundinfo-Formular gleich. Haelt das Control der Themen
  * passend zur Aussage im Antwort-auf-Block.
+ *
+ * Ist eine vorhandene Aussage gewaehlt, haelt sie deren Themen (`vorhandene`): Das
+ * Formular zeigt sie mit „Themen ändern“ wie die Ergebnisseite (app-aussage-themen), denn
+ * ein Beitrag hat keine eigenen Themen, er steht unter denen seiner Aussage.
  *
  * Im Konstruktor der Komponente anlegen: Die Liste laedt sie selbst und hoert mit
  * der Komponente auf.
@@ -24,10 +29,20 @@ export class ThemenWahl {
   private warWaehlbar = false;
   /** Themenvorschlaege (#401) zum Text der neuen Aussage, fuer [vorschlaege]. */
   readonly themenVorschlaege = new ThemenVorschlaege();
+  /**
+   * Die gewaehlte, vorhandene Aussage mit ihren Themen; null ohne, solange sie laden oder
+   * wenn das Nachsehen scheiterte (dann kein Zuordnen, das vorhandene ersetzte).
+   */
+  vorhandene: AussageMitThemenFeld | null = null;
+  /** Die ID, deren Themen gerade geladen werden oder geladen sind. */
+  private vorhandeneId: string | null = null;
+  private vorhandeneAbo?: Subscription;
+  private readonly themenService = inject(ThemenService);
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor(private readonly themen: AbstractControl<string[] | null>) {
     // Ist die Liste nicht ladbar, fehlt die Themenwahl; speichern geht trotzdem.
-    inject(ThemenService)
+    this.themenService
       .liste()
       .pipe(takeUntilDestroyed())
       .subscribe({
@@ -62,6 +77,27 @@ export class ThemenWahl {
     }
     this.warWaehlbar = waehlbar;
     this.themenVorschlaege.text(waehlbar ? aussage.text : '');
+    this.vorhandeneLaden(aussage.id || null);
+  }
+
+  /** Die Themen der gewaehlten, vorhandenen Aussage nachsehen, einmal je Aussage. */
+  private vorhandeneLaden(id: string | null): void {
+    if (id === this.vorhandeneId) {
+      return;
+    }
+    this.vorhandeneAbo?.unsubscribe();
+    this.vorhandeneId = id;
+    this.vorhandene = null;
+    if (!id) {
+      return;
+    }
+    this.vorhandeneAbo = this.themenService
+      .vonAussage(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (themen) => (this.vorhandene = { statement_id: id, themen }),
+        error: () => (this.vorhandene = null),
+      });
   }
 
   /**
@@ -85,6 +121,7 @@ export class ThemenWahl {
     this.warWaehlbar = false;
     this.themen.setValue([]);
     this.themenVorschlaege.text('');
+    this.vorhandeneLaden(null);
   }
 
   /**

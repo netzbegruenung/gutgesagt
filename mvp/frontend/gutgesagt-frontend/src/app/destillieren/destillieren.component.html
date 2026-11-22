@@ -33,6 +33,9 @@
             -->
             <app-beitragskarte *ngIf="einwurfBand as band" class="einwurf-kopf" variante="kopf" [daten]="band">
             </app-beitragskarte>
+            <!-- Die Themen des Einwurfs stehen im Kopf; hier lassen sie sich aendern (Vorauswahl der Aussage) -->
+            <app-einwurf-themen class="einwurf-themen-aendern" [einwurfId]="einwurf.id" [themen]="einwurf.themen ?? []"
+                                (themenChange)="themenGeaendert($event)"></app-einwurf-themen>
             <p *ngIf="einwurf.status === 'discarded'" class="einwurf-stand">
                 Verworfen – du kannst ihn trotzdem destillieren.
             </p>
@@ -84,6 +87,8 @@
             <!-- Derselbe Kopf wie spaeter ueber dem Formular: Einwurf, Link, der Satz -->
             <app-beitragskarte *ngIf="einwurfKopf as kopf" class="einwurf-kopf" variante="kopf" [daten]="kopf">
             </app-beitragskarte>
+            <app-einwurf-themen class="einwurf-themen-aendern" [einwurfId]="einwurf.id" [themen]="einwurf.themen ?? []"
+                                (themenChange)="themenGeaendert($event)"></app-einwurf-themen>
 
             <mat-radio-group class="typen" aria-label="Was wird daraus?" [(ngModel)]="typ">
                 <mat-radio-button *ngFor="let eintrag of typen" [value]="eintrag.wert"

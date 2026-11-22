@@ -302,6 +302,24 @@ async def themen_vorschlaege(
     return ThemenVorschlagResponse(themen=themen)
 
 
+# Die Themen einer Aussage nachsehen, etwa wenn das Beitragsformular eine vorhandene
+# Aussage gewaehlt hat oder die Seite "Gespeichert" sie zeigt: Dort laesst sie sich
+# zuordnen wie auf der Ergebnisseite. Nur die Themen, kein Text; eine unbekannte
+# Aussage hat keine. Schluessel, die nicht mehr in der Liste stehen, fallen weg.
+@router.get("/themen/von", response_model=ThemenZuordnenResponse)
+async def themen_von(
+    statement_id: uuid.UUID = Query(..., description="ID der Aussage"),
+    user_id: str = Depends(require_user),
+    themen_service: AussageThemenService = Depends(get_aussage_themen_service),
+) -> ThemenZuordnenResponse:
+    try:
+        themen = themen_service.themen_von([statement_id]).get(statement_id, [])
+    except Exception as e:
+        logger.error(f"Error in /themen/von: {type(e).__name__}", exc_info=True)
+        raise HTTPException(status_code=500, detail=INTERNER_FEHLER)
+    return ThemenZuordnenResponse(statement_id=statement_id, themen=themen_dtos(themen))
+
+
 # Die Themen einer Aussage von Hand setzen: ersetzt die bisherigen, eine leere
 # Liste entfernt alle. Jede angemeldete Person darf zuordnen; gespeichert wird
 # nicht, wer es war (services/aussage_themen_service.py).

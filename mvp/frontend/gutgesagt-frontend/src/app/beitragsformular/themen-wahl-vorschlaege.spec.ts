@@ -18,7 +18,12 @@ describe('ThemenWahl: Themenvorschlaege (#401)', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [{ provide: ThemenService, useValue: { liste: () => of([{ schluessel: 'verkehr', name: 'Verkehr' }]) } }],
+      providers: [
+        {
+          provide: ThemenService,
+          useValue: { liste: () => of([{ schluessel: 'verkehr', name: 'Verkehr' }]), vonAussage: () => of([]) },
+        },
+      ],
     });
     wahl = TestBed.createComponent(WirtComponent).componentInstance.wahl;
     texte = [];

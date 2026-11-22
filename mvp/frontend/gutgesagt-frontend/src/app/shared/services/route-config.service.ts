@@ -139,8 +139,8 @@ export class RouteConfigService {
   }
 
   // Mobil nur der Typname: "Kommentar verfassen" passt bei 360 px nicht neben
-  // Pfeil, Avatar und Menue. "Meine Beitraege" steht im Menue, auf der Beitragen-Seite
-  // und auf der Ergebnisseite; einen eigenen Knopf im Kopf gibt es nicht.
+  // Pfeil und Profilbild. "Meine Beitraege" steht in der unteren Leiste, auf der
+  // Beitragen-Seite und auf der Ergebnisseite; einen eigenen Knopf im Kopf gibt es nicht.
   private getFormularConfig(pageTitle: string, mobilePageTitle: string): RouteConfig {
     return {
       pageTitle,
