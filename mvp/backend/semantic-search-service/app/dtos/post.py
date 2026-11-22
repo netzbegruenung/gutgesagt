@@ -1,11 +1,12 @@
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import List
 
 from domain.cc0_hinweis import Cc0Wortlaut
 from domain.models.post import Post
 from dtos.antwort_auf import AntwortAufAnfrage, AntwortAufErgebnis
 from dtos.beitrag import PostResponse, PostTreffer
+from utils.aufzaehlung import beitrag_mit_punkten
 
 
 ### AddPost ###
@@ -18,6 +19,12 @@ class AddPostRequest(AntwortAufAnfrage):
     # Kennung des CC0-Hinweises, den die Person beim Speichern gesehen hat (#431,
     # domain/cc0_hinweis.py).
     cc0_wortlaut: Cc0Wortlaut = None
+
+    # Aufzaehlung: "* " und "- " am Zeilenanfang werden zu "• " (utils/aufzaehlung.py).
+    @field_validator("post")
+    @classmethod
+    def aufzaehlung_mit_punkten(cls, beitrag):
+        return beitrag_mit_punkten(beitrag)
 
 
 class AddPostResponse(AntwortAufErgebnis):

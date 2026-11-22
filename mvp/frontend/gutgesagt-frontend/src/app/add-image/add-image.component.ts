@@ -37,6 +37,7 @@ import {
 } from '../shared/components/bestaetigungs-dialog/bestaetigungs-dialog.component';
 import type { BeitragGespeichert } from '../beitragsformular/beitrag-gespeichert/gespeichert-adresse';
 import { einspaltig } from '../beitragsformular/gegenlesen/einspaltig';
+import { AUFZAEHLUNG_HINWEIS, mitPunkten } from '../shared/aufzaehlung';
 
 /** Der Bild-Titel beschreibt, er ist keine Behauptung (CODING_STANDARDS.md); bis 200 Zeichen. */
 export const TITEL_MAX = 200;
@@ -249,7 +250,7 @@ export class AddImageComponent implements AfterViewInit, OnDestroy {
         id: 'vorschau',
         content_type: 'image',
         title: werte.title || 'Titel',
-        text: werte.caption || 'Worum es auf dem Bild geht',
+        text: mitPunkten(werte.caption) || 'Worum es auf dem Bild geht',
         image_url: this.bildLadefehler ? '' : werte.image_url || '',
         original_author: 'Du',
       },

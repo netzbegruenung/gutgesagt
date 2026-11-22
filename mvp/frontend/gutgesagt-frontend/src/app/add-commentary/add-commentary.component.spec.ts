@@ -1305,6 +1305,15 @@ describe('AddCommentaryComponent', () => {
       expect(component.vorschauKarte.extra?.lang).toBeUndefined();
     });
 
+    it('zeigt Aufzaehlungen in allen Fassungen der Vorschau mit Punkten', () => {
+      ausfuellen();
+      component.commentaryForm.patchValue({ text: 'Darum:\n- billig\n- sauber', kurz: '* kurz', lang: '- lang' });
+
+      expect(component.vorschauKarte.text).toBe('Darum:\n• billig\n• sauber');
+      expect(component.vorschauKarte.extra?.kurz).toBe('• kurz');
+      expect(component.vorschauKarte.extra?.lang).toBe('• lang');
+    });
+
     it('bieten unter der Kurzfassung einen Kuerzungsvorschlag aus dem Kommentar an (#403)', () => {
       ausfuellen();
       aufklappen();

@@ -6,6 +6,7 @@ from domain.cc0_hinweis import Cc0Wortlaut
 from domain.models.image import Image
 from dtos.antwort_auf import AntwortAufAnfrage, AntwortAufErgebnis
 from dtos.beitrag import BeitragResponse
+from utils.aufzaehlung import beitrag_mit_punkten
 
 
 class AddImageRequest(AntwortAufAnfrage):
@@ -23,6 +24,12 @@ class AddImageRequest(AntwortAufAnfrage):
         if not image.text or not image.text.strip():
             raise ValueError("Ein Bild braucht eine Unterschrift")
         return image
+
+    # Aufzaehlung: "* " und "- " am Zeilenanfang werden zu "• " (utils/aufzaehlung.py).
+    @field_validator("image")
+    @classmethod
+    def aufzaehlung_mit_punkten(cls, beitrag):
+        return beitrag_mit_punkten(beitrag)
 
 
 class AddImageResponse(AntwortAufErgebnis):
