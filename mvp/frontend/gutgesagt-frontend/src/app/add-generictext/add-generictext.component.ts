@@ -30,6 +30,7 @@ import { AussageInAnfrage, aussageFuerAnfrage, themenHinweisNachSpeichern } from
 import { Thema } from '../services/dtos/themenDtos';
 import { ThemenWahl } from '../beitragsformular/themen-wahl';
 import { ThemenAuswahlComponent } from '../shared/themen/themen-auswahl.component';
+import { AussageThemenComponent } from '../shared/themen/aussage-themen.component';
 import { FormularHilfeComponent } from '../beitragsformular/formular-hilfe/formular-hilfe.component';
 import { GegenlesenComponent } from '../beitragsformular/gegenlesen/gegenlesen.component';
 import { SprachhinweisComponent } from '../shared/components/sprachhinweis/sprachhinweis.component';
@@ -144,6 +145,7 @@ function zuruecksetzenFrage(mitThemen: boolean): BestaetigungsDialogDaten {
     SprachhinweisComponent,
     FormularLeisteComponent,
     ThemenAuswahlComponent,
+    AussageThemenComponent,
     Cc0HinweisComponent,
     DublettenHinweisComponent,
   ],

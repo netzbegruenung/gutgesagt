@@ -39,6 +39,7 @@ import {
   BestaetigungsDialogDaten,
 } from '../shared/components/bestaetigungs-dialog/bestaetigungs-dialog.component';
 import { ThemenAuswahlComponent } from '../shared/themen/themen-auswahl.component';
+import { AussageThemenComponent } from '../shared/themen/aussage-themen.component';
 import { einspaltig } from '../beitragsformular/gegenlesen/einspaltig';
 import { AUFZAEHLUNG_HINWEIS, mitPunkten } from '../shared/aufzaehlung';
 
@@ -92,6 +93,7 @@ function zuruecksetzenFrage(mitThemen: boolean): BestaetigungsDialogDaten {
     FormularHilfeComponent,
     AntwortAufComponent,
     ThemenAuswahlComponent,
+    AussageThemenComponent,
     GegenlesenComponent,
     SprachhinweisComponent,
     FormularLeisteComponent,

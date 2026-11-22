@@ -84,6 +84,10 @@
     overflow: hidden;
 }
 
+.aussage-themen {
+    margin-top: 8px;
+}
+
 @media (max-width: 599px) {
     .gespeichert-knoepfe > * {
         flex: 1 1 100%;

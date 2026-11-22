@@ -15,6 +15,7 @@ import { typFarbe } from '../shared/content-type-registry';
 import { Cc0HinweisComponent } from '../shared/cc0-hinweis/cc0-hinweis.component';
 import { SprachhinweisComponent } from '../shared/components/sprachhinweis/sprachhinweis.component';
 import { ThemenAuswahlComponent } from '../shared/themen/themen-auswahl.component';
+import { AussageThemenComponent } from '../shared/themen/aussage-themen.component';
 import { einzeilig } from '../beitragsformular/einzeilig';
 import { validierungsMeldung } from '../beitragsformular/speicherfehler';
 import { EinwilligungHinweisComponent } from '../einwilligung/einwilligung-hinweis.component';
@@ -92,6 +93,7 @@ function zuruecksetzenFrage(mitThemen: boolean): BestaetigungsDialogDaten {
     FormularHilfeComponent,
     AntwortAufComponent,
     ThemenAuswahlComponent,
+    AussageThemenComponent,
     GegenlesenComponent,
     SprachhinweisComponent,
     FormularLeisteComponent,
