@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Gut gesagt: Optionen</title>
+  <style>
+    body { font: 14px/1.5 system-ui, sans-serif; margin: 16px; min-width: 260px; }
+    fieldset { border: 0; padding: 0; margin: 0; }
+    legend { font-weight: 600; margin-bottom: 4px; }
+    label { display: block; padding: 2px 0; }
+    #gespeichert { color: #008939; min-height: 1.5em; margin: 8px 0 0; }
+  </style>
+</head>
+<body>
+  <fieldset>
+    <legend>Ziel</legend>
+    <label><input type="radio" name="ziel" value="prod"> Gut gesagt (gutgesagt.netzbegruenung.de)</label>
+    <label><input type="radio" name="ziel" value="test"> Testinstanz (gutgesagt-test.netzbegruenung.de)</label>
+  </fieldset>
+  <p id="gespeichert" role="status"></p>
+  <script src="adressen.js"></script>
+  <script src="optionen.js"></script>
+</body>
+</html>

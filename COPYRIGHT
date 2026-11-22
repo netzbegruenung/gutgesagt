@@ -8,12 +8,14 @@ the Free Software Foundation, either version 3 of the License, or
 
 Third-party content
 -------------------
-The hand in the logo, favicon, Siegel and vote buttons and the profile pictures in
+The hand in the logo, favicon, Siegel, vote buttons and browser extension icons
+(browser-erweiterung/icons/) and the profile pictures in
 mvp/frontend/gutgesagt-frontend/public/avatars/ are emojis from Fluent Emoji
 (https://github.com/microsoft/fluentui-emoji), Copyright (c) Microsoft Corporation,
 used under the MIT License, modified. The license text is in
-mvp/frontend/gutgesagt-frontend/public/marke/FLUENT-EMOJI-LIZENZ.txt and
-mvp/frontend/gutgesagt-frontend/public/avatars/FLUENT-EMOJI-LIZENZ.txt.
+mvp/frontend/gutgesagt-frontend/public/marke/FLUENT-EMOJI-LIZENZ.txt,
+mvp/frontend/gutgesagt-frontend/public/avatars/FLUENT-EMOJI-LIZENZ.txt and
+browser-erweiterung/icons/FLUENT-EMOJI-LIZENZ.txt.
 
 The milestone motifs in mvp/frontend/gutgesagt-frontend/public/meilensteine/ are emojis
 from Fluent Emoji (https://github.com/microsoft/fluentui-emoji), Copyright (c) Microsoft

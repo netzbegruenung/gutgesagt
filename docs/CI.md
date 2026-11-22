@@ -25,7 +25,7 @@ GitHub mirror runs no CI.
 | `bff` | `mcr.microsoft.com/dotnet/sdk:9.0` (BFF Dockerfile) | `check.sh --schritt bff` with `CHECK_OHNE_DOCKER=1` |
 | `unit` | `gutgesagt-ci-python` | `check.sh --schritt unit`: Python unit tests and `scripts/tests/`, each with two pytest-xdist workers (`CHECK_WORKER=2`; locally four) |
 | `frontend-build` | `gutgesagt-ci-node` | after `unit`: `check.sh --schritt frontend-build` (`ng build --configuration production`, for the budgets of the image build) with `NG_BUILD_MAX_WORKERS=2` |
-| `frontend` | same | after `frontend-build`: Chromium from Debian (`scripts/ci-chromium.sh`, already in the CI image), `check.sh --schritt frontend` (Karma tests) with `CHECK_OHNE_SOURCEMAPS=1` (`ng test --source-map=false`) |
+| `frontend` | same | after `frontend-build`: Chromium from Debian (`scripts/ci-chromium.sh`, already in the CI image), `check.sh --schritt frontend` (Karma tests, then the browser extension tests with `node --test`) with `CHECK_OHNE_SOURCEMAPS=1` (`ng test --source-map=false`) |
 | `integration` | `gutgesagt-ci-python` | push to `main`, tags and manual runs only, never in pull requests: after `frontend`, `check.sh --schritt integration` with `INTEGRATION_STACK_PFLICHT=1` against the services below, serially |
 | `ci-bericht` | `python:3.13-slim` | red pull-request runs only, see below |
 
