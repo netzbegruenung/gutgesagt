@@ -1,11 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
-import { Observable, combineLatest, of } from 'rxjs';
+import { BehaviorSubject, Observable, combineLatest, of } from 'rxjs';
 import { distinctUntilChanged, filter, map, shareReplay, switchMap } from 'rxjs/operators';
 
 import { AuthService } from '../../../auth/auth.service';
 import { UsageTrackingService } from '../../../services/usage-tracking.service';
-import { SeitLetztemBesuchService } from '../../../seit-letztem-besuch/seit-letztem-besuch.service';
 import { ROUTES } from '../../constants/app.constants';
 
 /**
@@ -14,14 +13,17 @@ import { ROUTES } from '../../constants/app.constants';
  * die Kachel „neue Einwürfe im Fangkorb“ auf der Startseite. Keine Gesamtzahl: Die
  * wüchse nur und sagte nichts. Kein eigener Abruf.
  *
- * Wer den Fangkorb öffnet, hat das Neue gesehen: Dann verschwinden Zahl und Kachel für
- * diesen App-Start (SeitLetztemBesuchService, Art „einwuerfe“).
+ * Wer den Fangkorb öffnet, hat das Neue gesehen: Dann verschwindet die Zahl an der
+ * Navigation für diesen App-Start. Die Kachel auf der Startseite bleibt davon unberührt
+ * (sie verschwindet weiter erst nach ihrem eigenen Klick, SeitLetztemBesuchService).
+ * Kommt ein neuer Besuchsstand (etwa nach einem Kontowechsel), zählt er wieder.
  */
 @Injectable({ providedIn: 'root' })
 export class FangkorbNeuService {
   private readonly usage = inject(UsageTrackingService);
-  private readonly neues = inject(SeitLetztemBesuchService);
   private readonly router = inject(Router);
+  /** Der Fangkorb war in diesem App-Start offen, seit der aktuelle Besuchsstand kam. */
+  private readonly gesehen$ = new BehaviorSubject(false);
 
   /** Die Zahl, oder 0, wenn nichts Neues da ist, niemand angemeldet ist oder sie gesehen wurde. */
   readonly anzahl$: Observable<number> = inject(AuthService).userInfo$.pipe(
@@ -31,11 +33,11 @@ export class FangkorbNeuService {
       if (!kennung) {
         return of(0);
       }
-      this.neues.fuer(kennung);
-      return combineLatest([this.usage.besuchStand$, this.neues.erledigt$]).pipe(
-        map(([stand, erledigt]) => {
+      this.gesehen$.next(false);
+      return combineLatest([this.usage.besuchStand$, this.gesehen$]).pipe(
+        map(([stand, gesehen]) => {
           const zahl = stand?.neue_einwuerfe ?? 0;
-          return zahl > 0 && !erledigt.has('einwuerfe') ? zahl : 0;
+          return zahl > 0 && !gesehen ? zahl : 0;
         }),
       );
     }),
@@ -49,7 +51,7 @@ export class FangkorbNeuService {
       .subscribe((e) => {
         const pfad = e.urlAfterRedirects.split(/[?#]/)[0];
         if (pfad === ROUTES.RAW_INPUT_LIST || pfad.startsWith(ROUTES.RAW_INPUT_LIST + '/')) {
-          this.neues.erledigen('einwuerfe');
+          this.gesehen$.next(true);
         }
       });
   }

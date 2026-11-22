@@ -958,6 +958,13 @@ html:has(app-hauptnavigation.hauptnavigation--leiste) {
 }
 
 /* Meldungen unten erscheinen ueber der Leiste statt auf ihr */
-html:has(app-hauptnavigation.hauptnavigation--leiste:not(.versteckt)) .mat-mdc-snack-bar-container {
-    margin-bottom: calc(var(--unterleiste-hoehe, 64px) + 8px);
+html:has(app-hauptnavigation.hauptnavigation--leiste) .mat-mdc-snack-bar-container {
+    margin-bottom: calc(var(--unterleiste-sichtbar, 0px) + 8px);
+}
+
+/* Formular mit fester Speichern-Leiste ueber der unteren Leiste: beide Hoehen freihalten */
+@media (max-width: 599px) {
+    html:has(app-hauptnavigation.hauptnavigation--leiste):has(> body.hat-feste-leiste) {
+        scroll-padding-bottom: calc(var(--unterleiste-sichtbar, 64px) + var(--feste-leiste-hoehe, 73px) + 16px);
+    }
 }

@@ -153,6 +153,11 @@
     max-width: 100%;
 }
 
+/* Die Leiste schneidet ueberstehendes ab (overflow: hidden): Fokusrahmen nach innen */
+:host(.hauptnavigation--leiste) .ziel:focus-visible {
+    outline-offset: -3px;
+}
+
 :host(.hauptnavigation--leiste) .ziel-icon-rahmen {
     padding: 4px 18px;
     border-radius: 16px;

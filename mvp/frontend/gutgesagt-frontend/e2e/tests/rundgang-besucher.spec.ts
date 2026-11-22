@@ -28,8 +28,6 @@ test('Besucher: Zurück im Browser beendet den Rundgang, er lässt sich neu star
   await feld.fill('Windräder töten Vögel');
   await expect(feld).toHaveValue('Windräder töten Vögel');
   await expect(page.getByRole('button', { name: 'Rundgang (1 Min.)' })).toHaveCount(0);
-  // Solange die Tastatur offen ist, weicht die untere Leiste
-  await feld.blur();
 
   // Über „Mehr“ in der unteren Leiste neu starten: wieder ab Schritt 1
   await page.locator('app-hauptnavigation .mehr-knopf').click();

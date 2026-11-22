@@ -71,7 +71,8 @@
 .einwerfen-fab {
   position: fixed;
   right: 16px;
-  bottom: 16px;
+  /* Ueber der unteren Leiste der Hauptnavigation, nicht auf „Meine“ und „Mehr“ */
+  bottom: calc(var(--unterleiste-sichtbar, 0px) + 16px);
   z-index: var(--z-index-fixed, 1030);
   --mat-fab-container-color: var(--primaer);
   --mat-fab-foreground-color: #fff;

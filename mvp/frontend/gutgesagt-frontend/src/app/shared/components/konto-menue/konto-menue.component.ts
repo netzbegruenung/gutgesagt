@@ -1,4 +1,4 @@
-import { Component, Input, ViewChild, inject } from '@angular/core';
+import { Component, ViewChild, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenu, MatMenuModule } from '@angular/material/menu';
@@ -23,12 +23,6 @@ import { DATENSCHUTZ_EINSTELLUNGEN } from '../../fangkorb-texte';
   imports: [MatIconModule, MatMenuModule],
   template: `
     <mat-menu #menue="matMenu" xPosition="before" class="konto-menue">
-      @if (name) {
-        <!-- Mobil steht der Name sonst nirgends: wer angemeldet ist -->
-        <div mat-menu-item disabled class="konto-menue-name">
-          <span>Angemeldet als <strong>{{ name }}</strong></span>
-        </div>
-      }
       <button mat-menu-item type="button" class="profilmenue-eintrag" (click)="profilbild()">
         <mat-icon aria-hidden="true">face</mat-icon>
         <span>Profilbild wählen</span>
@@ -53,8 +47,6 @@ import { DATENSCHUTZ_EINSTELLUNGEN } from '../../fangkorb-texte';
 })
 export class KontoMenueComponent {
   @ViewChild('menue', { static: true }) menue!: MatMenu;
-  /** Mobil: der Name als erste, nicht wählbare Zeile. Am Desktop steht er schon am Knopf. */
-  @Input() name: string | null = null;
 
   readonly datenschutzEinstellungen = DATENSCHUTZ_EINSTELLUNGEN;
   private readonly dialog = inject(MatDialog);

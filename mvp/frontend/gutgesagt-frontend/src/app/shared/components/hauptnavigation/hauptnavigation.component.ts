@@ -81,9 +81,14 @@ export function oeffnetTastatur(ziel: EventTarget | null): boolean {
   return ziel instanceof HTMLInputElement && !KEINE_TASTATUR.has(ziel.type);
 }
 
-/** Grobe Zeiger (Finger): Dort öffnet ein Textfeld die Bildschirmtastatur. */
-export function beruehrung(): boolean {
-  return typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+/**
+ * Die Bildschirmtastatur ist offen: Der sichtbare Ausschnitt (visualViewport) ist deutlich
+ * niedriger als das Fenster, wie bei der Formular-Leiste (#616). Gezoomt zählt die
+ * Höhe mal Zoom, damit Zoomen allein nicht als Tastatur gilt.
+ */
+export function tastaturSichtbar(): boolean {
+  const ausschnitt = window.visualViewport;
+  return !!ausschnitt && window.innerHeight - ausschnitt.height * ausschnitt.scale > 120;
 }
 
 /** Pfad ohne Query und Fragment. */
@@ -141,6 +146,7 @@ export class HauptnavigationComponent implements OnInit, AfterViewInit {
   protected readonly pfad = signal(ohneQuery(this.router.url ?? ''));
   /** Am Handy: Ein Textfeld hat den Fokus, die Tastatur ist offen; die Leiste weicht. */
   protected readonly tastaturOffen = signal(false);
+  private fokusImFeld = false;
 
   ngOnInit(): void {
     this.router.events
@@ -168,6 +174,10 @@ export class HauptnavigationComponent implements OnInit, AfterViewInit {
   aktiv(ziel: NavZiel): boolean {
     const pfad = this.pfad();
     return [ziel.pfad, ...(ziel.auch ?? [])].some((p) => liegtUnter(pfad, p));
+  }
+
+  aufSeite(ziel: string): boolean {
+    return liegtUnter(this.pfad(), ziel);
   }
 
   get mehrAktiv(): boolean {
@@ -201,19 +211,34 @@ export class HauptnavigationComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Nur mit Touch-Bedienung öffnet ein Textfeld eine Bildschirmtastatur; am Tablet mit
-   * Tastatur oder im schmalen Desktop-Fenster bleibt die Leiste stehen.
+   * Die Leiste weicht nur, wenn ein Textfeld den Fokus hat und die Tastatur wirklich offen
+   * ist: Am Tablet mit Tastatur, bei Fokus per Code ohne Tastatur oder nach dem Schließen
+   * der Tastatur mit „Zurück“ (Feld bleibt fokussiert) bleibt sie stehen.
    */
   @HostListener('document:focusin', ['$event'])
   fokusRein(event: FocusEvent): void {
-    if (this.modus === 'leiste' && beruehrung()) {
-      this.tastaturOffen.set(oeffnetTastatur(event.target));
-    }
+    this.fokusImFeld = oeffnetTastatur(event.target);
+    this.tastaturPruefen();
   }
 
   @HostListener('document:focusout')
   fokusRaus(): void {
-    this.tastaturOffen.set(false);
+    this.fokusImFeld = false;
+    this.tastaturPruefen();
+  }
+
+  tastaturPruefen(): void {
+    if (this.modus !== 'leiste') {
+      return;
+    }
+    this.tastaturOffen.set(this.fokusImFeld && tastaturSichtbar());
+    this.sichtbarMelden();
+  }
+
+  /** Was die Leiste unten gerade belegt (0, solange sie der Tastatur weicht), für Formular-Leiste und FAB. */
+  private sichtbarMelden(): void {
+    const hoehe = this.tastaturOffen() ? 0 : this.host.nativeElement.offsetHeight;
+    document.documentElement.style.setProperty('--unterleiste-sichtbar', `${hoehe}px`);
   }
 
   /**
@@ -223,17 +248,21 @@ export class HauptnavigationComponent implements OnInit, AfterViewInit {
    */
   private hoeheMelden(): void {
     const wurzel = document.documentElement;
-    const setzen = () => wurzel.style.setProperty('--unterleiste-hoehe', `${this.host.nativeElement.offsetHeight}px`);
+    const setzen = () => {
+      wurzel.style.setProperty('--unterleiste-hoehe', `${this.host.nativeElement.offsetHeight}px`);
+      this.sichtbarMelden();
+    };
     setzen();
-    if (typeof ResizeObserver === 'undefined') {
-      this.destroyRef.onDestroy(() => wurzel.style.removeProperty('--unterleiste-hoehe'));
-      return;
-    }
-    const beobachter = new ResizeObserver(setzen);
-    beobachter.observe(this.host.nativeElement);
+    const ausschnitt = window.visualViewport;
+    const beiGroesse = () => this.tastaturPruefen();
+    ausschnitt?.addEventListener('resize', beiGroesse);
+    const beobachter = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(setzen);
+    beobachter?.observe(this.host.nativeElement);
     this.destroyRef.onDestroy(() => {
-      beobachter.disconnect();
+      beobachter?.disconnect();
+      ausschnitt?.removeEventListener('resize', beiGroesse);
       wurzel.style.removeProperty('--unterleiste-hoehe');
+      wurzel.style.removeProperty('--unterleiste-sichtbar');
     });
   }
 }

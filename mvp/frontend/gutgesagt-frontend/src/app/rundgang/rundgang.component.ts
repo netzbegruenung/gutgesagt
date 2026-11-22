@@ -39,6 +39,14 @@ const RUHIG = '(prefers-reduced-motion: reduce)';
 /** „Mehr“ in der Hauptnavigation (Kopf oder untere Leiste): Dort stehen Hilfe und Rundgänge. */
 const HILFE_WEG = 'app-hauptnavigation .mehr-knopf';
 
+/** Liegt das Element in einem festen Rahmen (etwa der unteren Leiste)? Scrollen hilft dann nicht. */
+export function liegtFest(el: HTMLElement): boolean {
+  for (let e: HTMLElement | null = el; e; e = e.parentElement) {
+    if (getComputedStyle(e).position === 'fixed') return true;
+  }
+  return false;
+}
+
 function passt(query: string): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia(query).matches;
 }
@@ -68,6 +76,8 @@ export class RundgangComponent implements OnDestroy {
   readonly kegel = signal<Kasten | null>(null);
   readonly blasenOrt = signal<{ left?: number; top?: number }>({});
   readonly pfeil = signal<{ seite: 'oben' | 'links' | 'unten'; versatz: number } | null>(null);
+  /** Mobil: Karte oben statt unten, weil das Ziel fest unten steht (untere Leiste, „Mehr“). */
+  readonly karteOben = signal(false);
   /** Text für Screenreader, wenn ein Schritt wechselt oder der Rundgang endet. */
   readonly ansage = signal('');
 
@@ -223,6 +233,8 @@ export class RundgangComponent implements OnDestroy {
     const blasenHoehe = this.blase?.nativeElement.offsetHeight ?? 0;
     const unten = document.documentElement.clientHeight - (this.schmal ? blasenHoehe + 2 * RAND : RAND);
     if (r.top >= RAND && r.bottom <= unten) return;
+    // Feste Ziele (untere Leiste) lassen sich nicht schieben; dort steht die Karte oben
+    if (liegtFest(ziel)) return;
     const oben = this.schmal ? 72 : 112;
     const alt = ziel.style.scrollMarginTop;
     ziel.style.scrollMarginTop = `${oben}px`;
@@ -277,6 +289,7 @@ export class RundgangComponent implements OnDestroy {
       if (this.ziel) this.insBild(this.ziel);
       else this.spaeterAusrichten();
     }
+    this.karteOben.set(false);
     if (!this.ziel) {
       this.kegel.set(null);
       this.pfeil.set(null);
@@ -289,9 +302,12 @@ export class RundgangComponent implements OnDestroy {
     const k: Kasten = { x: r.left - POLSTER, y: r.top - POLSTER, w: r.width + 2 * POLSTER, h: r.height + 2 * POLSTER };
 
     if (this.schmal) {
-      // Die Karte steht unten; der Kegel endet über ihr
+      // Die Karte steht unten; der Kegel endet über ihr. Steht das Ziel fest in der
+      // unteren Hälfte (untere Leiste), rückt die Karte nach oben.
+      const oben = r.top > vh / 2 && liegtFest(this.ziel);
+      this.karteOben.set(oben);
       const blasenOben = vh - RAND - b.h - RAND;
-      if (k.y + k.h > blasenOben) k.h = Math.max(40, blasenOben - k.y);
+      if (!oben && k.y + k.h > blasenOben) k.h = Math.max(40, blasenOben - k.y);
       this.blasenOrt.set({});
       this.pfeil.set(null);
     } else {

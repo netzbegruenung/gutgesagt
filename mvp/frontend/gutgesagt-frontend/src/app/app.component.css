@@ -83,12 +83,6 @@ main * {
     margin-right: 0 !important;
 }
 
-.left-header-box .user-info {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-}
-
 .right-header-box {
     flex: 1;
     min-width: 0;
@@ -109,23 +103,6 @@ main * {
 }
 
 
-.help-text {
-    margin-top: 10px;
-    background-color: var(--mulde);
-    padding: 10px;
-    border-radius: var(--border-radius-medium);
-    font-size: 14px;
-    color: var(--text);
-}
-
-.help-icon {
-    cursor: help;
-}
-
-.home-icon {
-    cursor: pointer;
-}
-
 .profile-avatar {
     width: var(--avatar-size-desktop);
     height: var(--avatar-size-desktop);
@@ -137,121 +114,11 @@ main * {
     flex-shrink: 0;
 }
 
-/* Mobile styles */
-@media (max-width: 768px) {
-    .header {
-        flex-direction: row;
-        padding: var(--spacing-sm) 0;
-        position: relative;
-    }
-
-    .left-header-box {
-        width: auto;
-        flex: 1;
-        gap: var(--spacing-sm);
-        height: 60px;
-    }
-
-    .right-header-box {
-        width: auto;
-        gap: var(--spacing-xs);
-        height: 60px;
-    }
-
-    .profile-avatar {
-        width: var(--avatar-size-mobile);
-        height: var(--avatar-size-mobile);
-    }
-
-    /* Show login status text on mobile, but smaller */
-    .left-header-box span {
-        font-size: 14px;
-        line-height: 1.2;
-    }
-
-    /* Mobile hamburger menu button */
-    .mobile-menu-button {
-        display: block;
-    }
-
-    /* Hide help button on mobile since it's in burger menu */
-    .desktop-only-button {
-        display: none;
-    }
-}
-
-@media (max-width: 480px) {
-    .header {
-        padding: var(--spacing-sm) 0;
-    }
-
-    .profile-avatar {
-        width: var(--avatar-size-mobile);
-        height: var(--avatar-size-mobile);
-    }
-
-    .left-header-box,
-    .right-header-box {
-        height: var(--header-height-mobile);
-    }
-
-    /* Keep login status text visible but very compact */
-    .left-header-box span {
-        font-size: 12px;
-    }
-
-    .left-header-box .text-bold {
-        display: inline;
-        font-size: 12px;
-    }
-}
-
-/* Hide mobile menu button on desktop */
-@media (min-width: 769px) {
-    .mobile-menu-button {
-        display: none;
-    }
-}
-
-/* Show different text versions for mobile/desktop */
-.mobile-login-text {
-    display: none;
-}
-
-.mobile-only {
-    display: none;
-}
-
-/* Spacing for user info - replace br tags */
-.user-info-spacing {
-    margin-top: var(--spacing-xs);
-    display: block;
-}
-
-@media (max-width: 768px) {
-    .mobile-login-text {
-        display: inline;
-    }
-
-    .mobile-only {
-        display: block;
-    }
-
-    .desktop-only {
-        display: none;
-    }
-}
-
-@media (min-width: 769px) {
-    .mobile-only {
-        display: none;
-    }
-}
-
 /* ===== Navigation Variante 3 (22.11.2026) ===== */
 
-/* Reicht die Breite nicht (960-1199 px), rutscht die Navigation in eine zweite Zeile,
-   statt Text gegen Icons zu tauschen: Icons stehen immer mit Text. */
+/* Unter 1440 px steht die Navigation immer in einer eigenen zweiten Zeile, statt Text
+   gegen Icons zu tauschen (Icons stehen immer mit Text) und ohne je nach Seitentitel
+   zwischen ein- und zweizeilig zu springen. */
 .header {
     flex-wrap: wrap;
 }
@@ -260,6 +127,25 @@ main * {
     flex: 1 0 auto;
     height: auto;
     min-height: var(--header-height-desktop);
+}
+
+@media (max-width: 1439px) {
+    .right-header-box {
+        flex-basis: 100%;
+    }
+}
+
+/* Ab 1440 px (main ist hoechstens 1400 px breit) in einer Zeile mit dem Titel: Neben
+   einem langen Titel steht der Name am Profilbild nur fuer Screenreader */
+@media (min-width: 1440px) {
+    .header--titel-lang .konto-name {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
 }
 
 .right-header-box > app-hauptnavigation {
@@ -314,4 +200,7 @@ main * {
    meldet die Leiste selbst, mit Safe Area und bei grosser Schrift. */
 main.mit-unterleiste {
     padding-bottom: var(--unterleiste-hoehe, calc(64px + env(safe-area-inset-bottom)));
+    /* viewport-fit=cover: im Querformat nichts unter der Kamera-Aussparung */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
 }

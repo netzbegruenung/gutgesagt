@@ -38,12 +38,12 @@
       "Anmelden" (#644, wie am Desktop seit #599).
     -->
     <ng-container *ngIf="userInfo?.isAuthenticated; else anmeldenKnopf">
-      <app-konto-menue #konto [name]="userInfo?.userName ?? null"></app-konto-menue>
+      <app-konto-menue #konto></app-konto-menue>
       <button type="button"
               class="mobile-header-avatar-container konto-knopf-mobil"
               [matMenuTriggerFor]="konto.menue"
               aria-haspopup="menu"
-              aria-label="Profilmenü">
+              [attr.aria-label]="'Profilmenü: ' + (userInfo?.userName ?? '')">
         <img [src]="selectedProfilePictureUrl"
              alt=""
              class="mobile-header-avatar">

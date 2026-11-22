@@ -225,7 +225,7 @@ export const RUNDGAENGE: Record<RundgangId, Rundgang> = {
       {
         titel: 'Jederzeit wieder',
         // „Mehr“ steht am Desktop oben, am Handy in der unteren Leiste (Navigation 22.11.)
-        text: 'Unter „Mehr“ startest du diesen Rundgang jederzeit neu. Dort findest du auch Hilfe und Feedback.',
+        text: 'Unter „Mehr“ startest du diesen Rundgang jederzeit neu.',
         ziel: 'app-hauptnavigation .mehr-knopf',
         seite: { pfad: '/search' },
       },

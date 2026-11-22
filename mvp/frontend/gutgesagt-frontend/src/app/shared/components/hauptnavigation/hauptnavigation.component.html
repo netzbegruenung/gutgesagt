@@ -12,7 +12,7 @@
                         }
                     }
                 </span>
-                <span class="ziel-text">{{ modus === 'leiste' ? ziel.kurz : ziel.text }}@if (ziel.id === 'fangkorb') {<span class="visually-hidden">{{ fangkorbZusatz((fangkorbNeu$ | async) ?? 0) }}</span>}</span>
+                <span class="ziel-text">{{ modus === 'leiste' ? ziel.kurz : ziel.text }}@if (modus === 'leiste' && ziel.kurz !== ziel.text) {<span class="visually-hidden">{{ ziel.text.slice(ziel.kurz.length) }}</span>}@if (ziel.id === 'fangkorb') {<span class="visually-hidden">{{ fangkorbZusatz((fangkorbNeu$ | async) ?? 0) }}</span>}</span>
             </a>
         }
     } @else {
@@ -46,7 +46,8 @@
 <!-- „Mehr“: Desktop und Handy derselbe Inhalt in derselben Reihenfolge (WCAG 3.2.3) -->
 <mat-menu #mehrMenue="matMenu" [yPosition]="modus === 'leiste' ? 'above' : 'below'" xPosition="before" class="mehr-menue">
     @if (angemeldet) {
-        <a mat-menu-item class="mehr-eintrag" [href]="hierFehltPfad" (click)="gehe($event, hierFehltPfad)">
+        <a mat-menu-item class="mehr-eintrag" [href]="hierFehltPfad" (click)="gehe($event, hierFehltPfad)"
+           [attr.aria-current]="aufSeite(hierFehltPfad) ? 'page' : null">
             <mat-icon aria-hidden="true">contact_support</mat-icon><span>Hier fehlt eine Antwort</span>
         </a>
         <!-- Ohne Anmeldung steht Hilfe direkt in der Navigation -->
@@ -64,7 +65,8 @@
         <mat-icon aria-hidden="true">feedback</mat-icon><span>Feedback</span>
     </button>
     @if (admin) {
-        <a mat-menu-item class="mehr-eintrag mehr-admin" href="/admin/dashboard" (click)="gehe($event, '/admin/dashboard')">
+        <a mat-menu-item class="mehr-eintrag mehr-admin" href="/admin/dashboard" (click)="gehe($event, '/admin/dashboard')"
+           [attr.aria-current]="aufSeite('/admin') ? 'page' : null">
             <mat-icon aria-hidden="true">admin_panel_settings</mat-icon><span>Admin<app-offene-meldungen-zahl></app-offene-meldungen-zahl></span>
         </a>
     }

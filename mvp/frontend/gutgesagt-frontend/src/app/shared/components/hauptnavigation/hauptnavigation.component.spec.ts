@@ -78,15 +78,23 @@ describe('HauptnavigationComponent', () => {
     return Array.from(fixture.nativeElement.querySelectorAll('.ziel')) as HTMLElement[];
   }
 
+  /** Sichtbarer Text der Ziele, ohne die Zusaetze fuer Screenreader. */
   function texte(): string[] {
-    return ziele().map((z) => z.querySelector('.ziel-text')!.textContent!.trim());
+    return ziele().map((z) => {
+      const kopie = z.querySelector('.ziel-text')!.cloneNode(true) as HTMLElement;
+      kopie.querySelectorAll('.visually-hidden').forEach((e) => e.remove());
+      return kopie.textContent!.trim();
+    });
   }
 
-  function beruehrungEmulieren(an: boolean): void {
-    const echt = window.matchMedia.bind(window);
-    spyOn(window, 'matchMedia').and.callFake((q: string) =>
-      q === '(pointer: coarse)' ? ({ matches: an } as MediaQueryList) : echt(q),
-    );
+  /** Bildschirmtastatur offen: Der sichtbare Ausschnitt ist 300 px niedriger als das Fenster. */
+  function tastaturEmulieren(offen: boolean): void {
+    spyOnProperty(window, 'visualViewport', 'get').and.returnValue({
+      height: window.innerHeight - (offen ? 300 : 0),
+      scale: 1,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    } as unknown as VisualViewport);
   }
 
   function ziel(id: string): HTMLElement {
@@ -98,6 +106,8 @@ describe('HauptnavigationComponent', () => {
       bauen('leiste');
 
       expect(texte()).toEqual(['Suchen', 'Einwerfen', 'Fangkorb', 'Meine', 'Mehr']);
+      // „Meine“ allein waere mehrdeutig: Screenreader hoeren „Meine Beiträge“ (2.5.3 bleibt erfuellt)
+      expect(ziel('meine').textContent!.replace(/\s+/g, ' ')).toContain('Meine Beiträge');
       for (const z of ziele()) {
         expect(z.querySelector('mat-icon')!.getAttribute('aria-hidden')).toBe('true');
       }
@@ -133,7 +143,7 @@ describe('HauptnavigationComponent', () => {
     });
 
     it('weicht der Bildschirmtastatur: versteckt bei Fokus in einem Textfeld, danach wieder da', () => {
-      beruehrungEmulieren(true);
+      tastaturEmulieren(true);
       bauen('leiste');
       const feld = document.createElement('input');
       document.body.appendChild(feld);
@@ -142,6 +152,8 @@ describe('HauptnavigationComponent', () => {
         fixture.detectChanges();
         expect(fixture.nativeElement.classList).toContain('versteckt');
         expect(getComputedStyle(fixture.nativeElement).visibility).toBe('hidden');
+        // Formular-Leiste und FAB ruecken dann bis ganz nach unten
+        expect(document.documentElement.style.getPropertyValue('--unterleiste-sichtbar')).toBe('0px');
 
         feld.blur();
         fixture.detectChanges();
@@ -151,8 +163,8 @@ describe('HauptnavigationComponent', () => {
       }
     });
 
-    it('bleibt mit Maus und Tastatur stehen, auch bei Fokus in einem Textfeld', () => {
-      beruehrungEmulieren(false);
+    it('bleibt stehen, wenn ein Textfeld ohne Bildschirmtastatur den Fokus hat', () => {
+      tastaturEmulieren(false);
       bauen('leiste');
       const feld = document.createElement('input');
       document.body.appendChild(feld);
@@ -289,7 +301,8 @@ describe('HauptnavigationComponent', () => {
       oeffnen('/fangkorb');
 
       expect(zaehler()).toBeNull();
-      expect(TestBed.inject(SeitLetztemBesuchService).erledigt$.value.has('einwuerfe')).toBeTrue();
+      // Die Kachel auf der Startseite verschwindet weiter nur nach ihrem eigenen Klick
+      expect(TestBed.inject(SeitLetztemBesuchService).erledigt$.value.has('einwuerfe')).toBeFalse();
     }));
   });
 });

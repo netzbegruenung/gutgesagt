@@ -337,6 +337,22 @@ describe('RundgangComponent', () => {
       flush();
     }));
 
+    // Navigation 22.11.2026: „Mehr“ steht fest in der unteren Leiste, Scrollen hilft nicht
+    it('stellt die Karte nach oben, wenn das Ziel fest am unteren Rand steht', fakeAsync(() => {
+      const eins = seite.querySelector('#probe-eins') as HTMLElement;
+      eins.style.position = 'fixed';
+      eins.style.top = 'auto';
+      eins.style.bottom = '0px';
+      starten(0);
+      const b = blase()!;
+      expect(b.classList).toContain('blase--oben');
+      expect(getComputedStyle(b).top).toBe('12px');
+      // Der Kegel wird nicht gekappt: Er umfasst das ganze Ziel
+      const r = eins.getBoundingClientRect();
+      expect(kegel()!.getBoundingClientRect().height).toBeCloseTo(r.height + 16, 0);
+      flush();
+    }));
+
     it('schafft unten Platz, wenn das Ziel am Seitenende unter der Karte laege, und nimmt ihn danach zurueck', fakeAsync(() => {
       const haupt = document.createElement('main');
       haupt.id = 'hauptinhalt';

@@ -157,7 +157,7 @@ describe('MobileHeaderComponent', () => {
   });
 
   // Navigation Variante 3 (22.11.2026): Das Profilbild oeffnet nur noch das Konto
-  it('oeffnet am Profilbild nur das Konto: Name, Profilbild, Datenschutz, Abmelden', async () => {
+  it('oeffnet am Profilbild nur das Konto: Profilbild, Datenschutz, Abmelden', async () => {
     const komponente = fixture.componentInstance;
     komponente.userInfo = { isAuthenticated: true, userId: 'u1', userName: 'Kim', claims: null };
     fixture.detectChanges();
@@ -165,7 +165,8 @@ describe('MobileHeaderComponent', () => {
     const abmelden = spyOn(auth, 'logout');
 
     const knopf = fixture.nativeElement.querySelector('.mobile-header-avatar-container') as HTMLButtonElement;
-    expect(knopf.getAttribute('aria-label')).toBe('Profilmenü');
+    // Der Name steht im zugaenglichen Namen, nicht als ausgegrauter Menuepunkt
+    expect(knopf.getAttribute('aria-label')).toBe('Profilmenü: Kim');
     expect(knopf.getAttribute('aria-haspopup')).toBe('menu');
     knopf.click();
     fixture.detectChanges();
@@ -175,7 +176,6 @@ describe('MobileHeaderComponent', () => {
       e.textContent!.replace(/\s+/g, ' ').trim(),
     );
     expect(eintraege).toEqual([
-      'Angemeldet als Kim',
       jasmine.stringContaining('Profilbild wählen'),
       jasmine.stringContaining('Datenschutz-Einstellungen'),
       jasmine.stringContaining('Abmelden'),
