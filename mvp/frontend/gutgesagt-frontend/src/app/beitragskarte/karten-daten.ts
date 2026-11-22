@@ -2,7 +2,7 @@ import { BaseContentResult, BaseSearchResult, ContentReference } from '../servic
 import { ContentResult } from '../services/dtos/contributionDtos';
 import { BeitragZustand, Einwurf, AusformuliertIn } from '../services/einwurf.service';
 import { CONTENT_TYPE_REGISTRY, resolveContentType } from '../shared/content-type-registry';
-import { plattformAusUrl, plattformName } from '../shared/plattform';
+import { Plattform, plattformAusUrl, plattformName } from '../shared/plattform';
 import { KETTEN_ICONS } from '../shared/fangkorb-texte';
 import type { NutzungJeFassung } from '../shared/fassung';
 import { STIL_LABEL, Stil } from '../shared/zweck-stil';
@@ -125,6 +125,8 @@ export interface EinwurfAngaben {
   stufe: EinwurfStufe;
   /** Marke links in der Link-Zeile: Plattformname, sonst die Domain. */
   herkunft: string | null;
+  /** Plattform des Links fuer das Symbol vor der Quelle; null ohne Link (etwa nur ein Bild). */
+  plattform?: Plattform | null;
   /** Ziel der Link-Zeile: der Link, sonst die Bildadresse. */
   link: string | null;
   /** Der Link, wie er dasteht: ohne Schema und www, Domain und Pfad. */
@@ -533,6 +535,7 @@ export function ausEinwurf(einwurf: Einwurf): KartenDaten {
       einwurfId: einwurf.id,
       stufe,
       herkunft: plattformNameAusUrl(einwurf.url) ?? domainAus(adresse),
+      plattform: plattformAusUrl(einwurf.url),
       link: adresse,
       linkText: adresseKurz(adresse),
       saetze,

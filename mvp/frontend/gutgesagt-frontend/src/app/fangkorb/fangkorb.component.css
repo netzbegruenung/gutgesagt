@@ -312,9 +312,18 @@
   height: 1px;
 }
 
+/* Neben der Seitenleiste ein Raster (Spaltenbreite wie in "Meine Einwuerfe"), auf dem
+   Kartengrund des Fangkorbs: zwei Spalten, die Karten einer Reihe gleich hoch, der Fuss
+   unten buendig */
 .fangkorb--seitenleiste .karten {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 12px;
   border-radius: var(--border-radius-medium);
+}
+
+.fangkorb--seitenleiste .karten > li {
+  min-width: 0;
 }
 
 .fangkorb--seitenleiste .fangkorb-laedt,

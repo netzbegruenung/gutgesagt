@@ -1235,13 +1235,16 @@ describe('BeitragskarteComponent', () => {
       zeigen(daten, { variante: 'kopf' });
 
       expect(element('.karte').classList).toContain('stufe-destilliert');
-      expect(element('.einwurf-band .einwurf-titel').textContent).toContain('Gute Antwort in den Kommentaren');
+      // Inhalt im Koerper, im Kopf nur die Einordnung
+      expect(element('.einwurf-koerper .einwurf-titel').textContent).toContain('Gute Antwort in den Kommentaren');
+      expect(element('.einwurf-band .einwurf-titel')).toBeNull();
+      expect(element('.einwurf-band .einwurf-stufe').textContent!.trim()).toBe('Destilliert');
       expect(element('.einwurf-herkunft').textContent).toContain('Instagram');
       expect(element('.einwurf-kopfsatz').textContent).toContain('Wärmepumpen lohnen sich im Altbau');
       expect(element('.einwurf-saetze')).toBeNull();
       expect(element('.einwurf-aktion')).toBeNull();
       expect(element('.einwurf-menue')).toBeNull();
-      expect(element('.einwurf-meta')).toBeNull();
+      expect(element('.einwurf-fuss')).toBeNull();
     });
 
     it('zeigt nur das Band mit Symbol und Titel der Aussage', () => {
@@ -1353,10 +1356,12 @@ describe('BeitragskarteComponent', () => {
         { variante: 'einwurf' },
       );
       expect(component.stufenName).toBe('Ausformuliert: Kommentar');
-      expect(element('.karte-icon').getAttribute('aria-label')).toBe('Ausformuliert: Kommentar');
+      // Das Wort steht neben dem Zeichen; das Zeichen selbst ist nur zur Ansicht
+      expect(element('.einwurf-band .einwurf-stufe').textContent!.trim()).toBe('Ausformuliert: Kommentar');
+      expect(element('.karte-icon').getAttribute('aria-hidden')).toBe('true');
     });
 
-    it('schreibt die Stufe in die Meta-Zeile, wenn die Seite das will (Meine Einwuerfe)', () => {
+    it('laesst den Einwerfer weg, wenn die Seite die Stufe will (Meine Einwuerfe)', () => {
       zeigen(
         einwurfKarte({
           submitted_by: 'test-user',
@@ -1378,11 +1383,11 @@ describe('BeitragskarteComponent', () => {
       expect(element('.einwurf-verworfen')).toBeNull();
     });
 
-    it('nennt ohne stufeZeigen den Einwerfer und keine Stufe in der Meta-Zeile', () => {
+    it('nennt ohne stufeZeigen Stufe und Einwerfer im Kopf', () => {
       zeigen(einwurfKarte(), { variante: 'einwurf' });
 
-      expect(element('.einwurf-einwerfer').textContent).toContain('Von:');
-      expect(element('.einwurf-stufe')).toBeNull();
+      expect(element('.einwurf-band .einwurf-einwerfer').textContent).toContain('Von:');
+      expect(element('.einwurf-band .einwurf-stufe').textContent!.trim()).toBe('Offen');
     });
 
     it('erlaubt auch Admins kein Verwerfen von Ausformuliertem', () => {
@@ -1393,53 +1398,96 @@ describe('BeitragskarteComponent', () => {
       expect(component.darfVerwerfen).toBeFalse();
     });
   });
-  describe('Einwurf quer (Fangkorb am Desktop)', () => {
-    function einwurfKarte(): KartenDaten {
+  describe('Einwurf-Karte: Kopf, Koerper, Fuss', () => {
+    function einwurfKarte(url: string | null = 'https://www.instagram.com/reel/ABC/', bild: string | null = null): KartenDaten {
       return ausEinwurf({
-        id: 'e-quer',
+        id: 'e-aufbau',
         content: 'Hinweis',
-        url: 'https://www.instagram.com/reel/ABC/',
-        image_url: null,
+        url,
+        image_url: bild,
         submitted_by: 'bob',
         source_channel: 'web',
         status: 'open',
         created_at: '2026-09-13T12:00:00Z',
         drafts: [],
         links: [],
+        themen: [{ schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' }],
       });
     }
 
-    it('steht ohne quer wie bisher: Griff ueber der Meta-Zeile', () => {
+    it('ordnet im Kopf ein: Zeichen, Stufe, Alter und Themen mit Motiv', () => {
+      zeigen(einwurfKarte(), { variante: 'einwurf' });
+
+      const kopf = element('.einwurf-band');
+      expect(kopf.querySelector('.karte-icon')!.textContent!.trim()).toBeTruthy();
+      expect(kopf.querySelector('.einwurf-stufe')!.textContent!.trim()).toBe('Offen');
+      expect(kopf.querySelector('.einwurf-alter')!.textContent!.trim()).toBeTruthy();
+      expect(kopf.querySelector('.thema-marke')!.textContent!.trim()).toBe('Klima');
+      expect(kopf.querySelector('.thema-motiv')).toBeTruthy();
+      expect(kopf.querySelector('.einwurf-titel, .einwurf-linkzeile')).toBeNull();
+    });
+
+    it('traegt den Inhalt im Koerper: Hinweis und Quelle mit Plattformsymbol', () => {
+      zeigen(einwurfKarte(), { variante: 'einwurf' });
+
+      const koerper = element('.einwurf-koerper');
+      expect(koerper.querySelector('.einwurf-titel')!.textContent!.trim()).toBe('Hinweis');
+      expect(koerper.querySelector('.einwurf-herkunft')!.textContent!.trim()).toBe('Instagram');
+      expect(koerper.querySelector('.quelle-symbol')!.textContent!.trim()).toBe('photo_camera');
+    });
+
+    it('zeigt das Bildsymbol fuer einen Einwurf nur mit Bild', () => {
+      zeigen(einwurfKarte(null, 'https://beispiel.de/bild.jpg'), { variante: 'einwurf' });
+
+      expect(element('.quelle-symbol').textContent!.trim()).toBe('image');
+    });
+
+    it('nennt im Kopf ueber dem Formular nur die Stufe, ohne Einwerfer und Alter', () => {
+      zeigen(einwurfKarte(), { variante: 'kopf' });
+
+      expect(element('.einwurf-band .einwurf-stufe').textContent!.trim()).toBe('Offen');
+      expect(element('.einwurf-einwerfer')).toBeNull();
+      expect(element('.einwurf-alter')).toBeNull();
+    });
+
+    it('stellt ⋮ am verworfenen Einwurf ohne Griff rechts in den Fuss, voll deckend', () => {
+      const daten = einwurfKarte();
+      daten.einwurfAngaben = { ...daten.einwurfAngaben!, stufe: 'verworfen' };
+      zeigen(daten, { variante: 'einwurf' });
+      fixture.nativeElement.style.display = 'block';
+      fixture.nativeElement.style.width = '400px';
+
+      expect(element('.einwurf-primaer')).toBeNull();
+      const fuss = element('.einwurf-fuss').getBoundingClientRect();
+      const menue = element('.einwurf-menue').getBoundingClientRect();
+      expect(fuss.right - menue.right).toBeLessThan(20);
+      expect(getComputedStyle(element('.karte')).opacity).toBe('1');
+      expect(getComputedStyle(element('.einwurf-band')).opacity).toBe('1');
+    });
+
+    it('bleibt ohne Hinweis und ohne Link sauber: nur die Saetze im Koerper', () => {
+      const daten = ausEinwurf({
+        id: 'e-saetze', content: null, url: null, image_url: null, submitted_by: 'bob', source_channel: 'web',
+        status: 'in_progress', created_at: '2026-09-13T12:00:00Z',
+        drafts: [{ id: 's-1', user_id: 'bob', sentence: 'Ein Satz', updated_at: '2026-09-13T12:00:00Z' }], links: [],
+      });
+      zeigen(daten, { variante: 'einwurf' });
+
+      expect(element('.einwurf-titel')).toBeNull();
+      expect(element('.einwurf-linkzeile')).toBeNull();
+      expect(element('.einwurf-koerper .satz-text').textContent!.trim()).toBe('Ein Satz');
+      expect(element('.einwurf-fuss .einwurf-primaer')).toBeTruthy();
+    });
+
+    it('stellt die Aktionen in den Fuss, unter den Koerper', () => {
       zeigen(einwurfKarte(), { variante: 'einwurf' });
       fixture.nativeElement.style.display = 'block';
-      fixture.nativeElement.style.width = '700px';
+      fixture.nativeElement.style.width = '400px';
 
-      expect(element('.karte').classList).not.toContain('karte--quer');
-      const griff = element('.einwurf-primaer').getBoundingClientRect();
-      const meta = element('.einwurf-meta').getBoundingClientRect();
-      expect(meta.top).toBeGreaterThanOrEqual(griff.bottom);
-    });
-
-    it('stellt quer Meta links und Griff mit Menue rechts in eine Zeile', () => {
-      zeigen(einwurfKarte(), { variante: 'einwurf', quer: true });
-      fixture.nativeElement.style.display = 'block';
-      fixture.nativeElement.style.width = '700px';
-
-      expect(element('.karte').classList).toContain('karte--quer');
-      const griff = element('.einwurf-primaer').getBoundingClientRect();
-      const meta = element('.einwurf-meta').getBoundingClientRect();
-      expect(meta.right).toBeLessThanOrEqual(griff.left);
-      expect(meta.top).toBeLessThan(griff.bottom);
-      expect(meta.bottom).toBeGreaterThan(griff.top);
-      // Tab-Reihenfolge wie hochkant: erst der Griff, die Meta-Zeile hat keinen Tab-Stopp
-      expect(element('.einwurf-fuss').firstElementChild!.classList).toContain('einwurf-aktion');
-    });
-
-    it('wirkt im Kopf nicht', () => {
-      zeigen(einwurfKarte(), { variante: 'kopf', quer: true });
-
-      expect(element('.karte').classList).not.toContain('karte--quer');
-      expect(element('.einwurf-fuss')).toBeNull();
+      const koerper = element('.einwurf-koerper').getBoundingClientRect();
+      const griff = element('.einwurf-fuss .einwurf-primaer').getBoundingClientRect();
+      expect(griff.top).toBeGreaterThanOrEqual(koerper.bottom);
+      expect(element('.einwurf-fuss .einwurf-menue')).toBeTruthy();
     });
   });
 });

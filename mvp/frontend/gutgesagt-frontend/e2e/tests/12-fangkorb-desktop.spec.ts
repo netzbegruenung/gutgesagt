@@ -54,7 +54,7 @@ const FAELLE = [
 ];
 
 for (const { breite, schema } of FAELLE) {
-  test(`Fangkorb mit Seitenleiste und queren Karten, ${breite} px ${schema === 'dark' ? 'dunkel' : 'hell'}`, async ({ page, bild }) => {
+  test(`Fangkorb mit Seitenleiste und Karten im Raster, ${breite} px ${schema === 'dark' ? 'dunkel' : 'hell'}`, async ({ page, bild }) => {
     await page.setViewportSize({ width: breite, height: 900 });
     await page.emulateMedia({ colorScheme: schema });
     await beispielFangkorb(page);
@@ -62,7 +62,7 @@ for (const { breite, schema } of FAELLE) {
     const tabliste = page.getByRole('tablist', { name: 'Arbeitslisten im Fangkorb' });
     await expect(tabliste).toHaveAttribute('aria-orientation', 'vertical');
     await page.getByRole('tab', { name: /Destillieren/ }).click();
-    await expect(page.locator('article.karte--quer')).toHaveCount(3);
+    await expect(page.locator('article.karte--einwurf')).toHaveCount(3);
 
     // Seitenleiste links neben der Liste, Einwerfen als Knopf darin, kein schwebender
     const leiste = (await page.locator('.steuerung').boundingBox())!;
@@ -71,18 +71,17 @@ for (const { breite, schema } of FAELLE) {
     await expect(page.locator('.steuerung').getByRole('button', { name: 'Einwerfen', exact: true })).toBeVisible();
     await expect(page.locator('.einwerfen-fab')).toHaveCount(0);
 
-    // Quer: Meta-Zeile links neben dem Griff
-    const karte = page.locator('article.karte--quer').first();
-    const meta = (await karte.locator('.einwurf-meta').boundingBox())!;
-    const griff = (await karte.locator('.einwurf-primaer').boundingBox())!;
-    expect(meta.x + meta.width).toBeLessThanOrEqual(griff.x);
+    // Raster: die ersten beiden Karten nebeneinander
+    const [erste, zweite] = await Promise.all([0, 1].map(async (i) => (await page.locator('article.karte--einwurf').nth(i).boundingBox())!));
+    expect(erste.x + erste.width).toBeLessThanOrEqual(zweite.x);
+    expect(Math.abs(erste.y - zweite.y)).toBeLessThan(2);
 
     // Pfeil runter waehlt die naechste Arbeitsliste
     await page.getByRole('tab', { name: /Destillieren/ }).focus();
     await page.keyboard.press('ArrowDown');
     await expect(page.getByRole('tab', { name: /Ausformulieren/ })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('tab', { name: /Ausformulieren/ })).toBeFocused();
-    await expect(page.locator('article.karte--quer')).toHaveCount(2);
+    await expect(page.locator('article.karte--einwurf')).toHaveCount(2);
 
     expect.soft(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
     await bild(`16-fangkorb-seitenleiste-${breite}-${schema === 'dark' ? 'dunkel' : 'hell'}`, true);
