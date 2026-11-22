@@ -68,40 +68,6 @@
   }
 }
 
-/* Themen am Einwurf: Marken wie an der Aussage (AussageThemenComponent), auf dem Sand
-   des Bandes. Hellgruen auf Sand: Schrift --akzent-schrift auf --primaer-tint wie dort. */
-.einwurf-themen {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  padding: var(--spacing-xs, 4px) var(--spacing-md) var(--spacing-sm);
-  background: var(--einwurf-grund);
-  list-style: none;
-}
-
-.einwurf-themen .thema-marke {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  line-height: 1.3;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--primaer-tint);
-  color: var(--akzent-schrift);
-}
-
-// Kopf aus einem Einwurf: der Satz unter der Link-Zeile, noch im Sandband
-.einwurf-kopfsatz {
-  margin: 0;
-  padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
-  background: var(--einwurf-grund);
-  font-weight: 600;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-}
-
 // Kopf: Symbol | Titel | Badges
 
 .karte-kopf {
@@ -825,13 +791,13 @@ h4.karte-titel {
   }
 }
 
-// Einwurf-Karte: dieselbe Anatomie wie die volle Karte - Kopfband, weisser Koerper,
-// Aktionszeile, Meta. Nur die Fuellung ist unfertig: statt Beitragstext stehen
-// die Saetze da, und statt Abstimmen/Kopieren genau ein Griff.
+// Einwurf-Karte: dieselbe Anatomie wie die volle Karte - Kopf, weisser Koerper,
+// Fuss mit den Aktionen. Der Kopf ordnet nur ein (Stufe, Einwerfer, Alter, Themen),
+// der Inhalt (Hinweis, Quelle, Saetze) steht im Koerper.
 //
-// Das Band traegt Sand (--einwurf-grund), solange der Einwurf offen oder
-// destilliert ist; bei Ausformuliert setzt die Typklasse --karten-farbe, und das
-// Band nimmt die Farbe des ersten verknuepften Beitrags an (das uebernimmt
+// Der Kopf traegt Sand (--einwurf-grund), solange der Einwurf offen oder
+// destilliert ist; bei Ausformuliert setzt die Typklasse --karten-farbe, und der
+// Kopf nimmt die Farbe des ersten verknuepften Beitrags an (das uebernimmt
 // .karte-kopf schon von selbst).
 
 .karte--einwurf {
@@ -842,32 +808,98 @@ h4.karte-titel {
     outline-offset: 2px;
   }
 
-  &.stufe-verworfen {
-    opacity: 0.6;
-  }
 }
 
-// Band und Link-Zeile tragen dieselbe Farbe - zusammen sind sie der Kopf.
+// Verworfen: nur der Inhalt tritt zurueck. Kopf (Stufe, Alter) und ⋮ bleiben voll
+// deckend, damit sie den Kontrast nach WCAG AA halten.
+.stufe-verworfen .einwurf-koerper {
+  opacity: 0.6;
+}
+
 .stufe-offen .einwurf-band,
-.stufe-offen .einwurf-linkzeile,
-.stufe-destilliert .einwurf-band,
-.stufe-destilliert .einwurf-linkzeile {
+.stufe-destilliert .einwurf-band {
   background: var(--einwurf-grund);
 }
 
-.stufe-verworfen .einwurf-band,
-.stufe-verworfen .einwurf-linkzeile {
+.stufe-verworfen .einwurf-band {
   background: var(--mulde);
 }
 
+// Kopf: Zeichen | Stufe und Alter; die Themen darunter ueber die ganze Breite.
 .einwurf-band {
-  align-items: start;
-  padding-bottom: var(--spacing-sm);
+  grid-template-columns: auto minmax(0, 1fr);
+  row-gap: var(--spacing-xs, 4px);
+  padding: var(--spacing-sm) var(--spacing-md);
+
+  .karte-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 24px;
+  }
 }
 
-// Ohne Hinweis ist die Link-Zeile die Aufschrift; das Band darueber wird schmal.
-.einwurf-band--ohne-hinweis {
-  padding-bottom: 0;
+.einwurf-stand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--spacing-sm);
+  margin: 0;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.einwurf-stufe {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.einwurf-herkunftszeile {
+  font-size: 12px;
+  color: var(--text-leise);
+}
+
+.einwurf-alter,
+.einwurf-einwerfer {
+  white-space: nowrap;
+}
+
+// Themen am Einwurf: Marken wie an der Aussage (AussageThemenComponent).
+// Hellgruen: Schrift --akzent-schrift auf --primaer-tint wie dort.
+.einwurf-themen {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.einwurf-themen .thema-marke {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.3;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--primaer-tint);
+  color: var(--akzent-schrift);
+}
+
+// Koerper: weiss wie bei der vollen Karte; Hinweis, Quelle, Saetze untereinander.
+.einwurf-koerper {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-md) var(--spacing-sm);
+  background: var(--flaeche);
+
+  &:empty {
+    display: none;
+  }
 }
 
 // Ein Hinweis, keine Behauptung: kleiner und halbfett statt 19 px fett.
@@ -875,34 +907,44 @@ h4.karte-titel {
   min-height: 0;
   font-size: 17px;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
-.einwurf-titel-platz {
-  min-width: 0;
-}
-
-// Eigener Block ueber die volle Bandbreite, mindestens 44 px, als Ganzes
-// antippbar: zwei Zeilen Text, das Symbol daneben ueber beide zentriert.
+// Die Quelle als ein Tipp-Ziel, mindestens 44 px: Symbol, Name ueber Adresse, Pfeil.
+// Zieht sich bis an den Kartenrand zurueck, damit die Flaeche beim Tippen bis dorthin reicht.
 .einwurf-linkzeile {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
   min-height: 44px;
-  padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--karten-farbe);
+  margin: 0 calc(-1 * var(--spacing-sm));
+  padding: var(--spacing-xs, 4px) var(--spacing-sm);
+  border-radius: var(--border-radius-medium, 8px);
   color: var(--text-leise);
   font-size: 13px;
   text-decoration: none;
 
-  // Die Bandfarbe bleibt stehen, der Tipp legt nur einen Schleier darueber.
   &:hover,
   &:focus-visible {
-    background-image: linear-gradient(var(--mulde), var(--mulde));
+    background: var(--mulde);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--akzent-tanne);
+    outline-offset: 0;
   }
 
   &:active {
-    background-image: linear-gradient(var(--linie), var(--linie));
+    background: var(--linie);
   }
+}
+
+.quelle-symbol {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+  color: var(--akzent-schrift);
 }
 
 .einwurf-linktexte {
@@ -913,7 +955,7 @@ h4.karte-titel {
 }
 
 .einwurf-herkunft {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.3;
   color: var(--text);
@@ -926,10 +968,17 @@ h4.karte-titel {
   line-height: 1.4;
 }
 
-// Ohne Hinweis traegt dieser Block die Aufschrift: Plattform in Titelgroesse.
-.einwurf-linkzeile--titel .einwurf-herkunft {
-  font-size: 17px;
-  line-height: 1.3;
+// Ohne Hinweis traegt die Quelle die Aufschrift: Plattform in Titelgroesse.
+.einwurf-linkzeile--titel {
+  .einwurf-herkunft {
+    font-size: 17px;
+  }
+
+  .quelle-symbol {
+    width: 24px;
+    height: 24px;
+    font-size: 24px;
+  }
 }
 
 .link-icon {
@@ -939,20 +988,12 @@ h4.karte-titel {
   font-size: 18px;
 }
 
-.einwurf-verworfen {
-  flex-shrink: 0;
-  padding: 2px var(--spacing-sm);
-  border: 1px solid var(--feldrand);
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-leise);
-}
-
-// Koerper: weiss wie bei der vollen Karte, die Saetze nur am gruenen Balken.
-.einwurf-koerper {
-  padding: var(--spacing-md) var(--spacing-md) 0;
-  background: var(--flaeche);
+// Kopf aus einem Einwurf: der Satz, aus dem der Beitrag entsteht
+.einwurf-kopfsatz {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .einwurf-saetze {
@@ -1002,13 +1043,20 @@ h4.karte-titel {
   font-size: 12px;
 }
 
-// Aktionszeile wie .aktionen der vollen Karte: Griff in der Mitte, ⋮ am Rand.
-// Feste Spalten, damit das Menue auch ohne Griff (verworfen) rechts steht.
+// Fuss wie .aktionen der vollen Karte: Griff in der Mitte, ⋮ am Rand. Feste Spalten,
+// damit das Menue auch ohne Griff (verworfen) rechts steht. Im Raster unten buendig.
+.einwurf-fuss {
+  flex-shrink: 0;
+  margin-top: auto;
+  background: var(--flaeche);
+}
+
 .einwurf-aktion {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 48px 1fr 48px;
   align-items: center;
-  padding: var(--spacing-md);
+  gap: var(--spacing-xs, 4px);
+  padding: var(--spacing-xs, 4px) var(--spacing-sm) var(--spacing-sm);
 }
 
 .einwurf-menue {
@@ -1018,15 +1066,14 @@ h4.karte-titel {
 }
 
 // Derselbe Knopf wie "Kopieren" auf der vollen Karte: gefuellt, gruen (die Farbe
-// kommt aus .gutgesagt-primary-dark), 40 px hoch, Emoji vor dem Wort. Anders als
-// dort bleibt die Hoehe auch am Handy bei 40 - der Griff ist hier die Hauptsache.
+// kommt aus .gutgesagt-primary-dark), Emoji vor dem Wort; 44 px hoch als Tipp-Ziel.
 .einwurf-primaer {
   display: inline-flex;
   align-items: center;
   grid-column: 2;
   justify-self: center;
   min-width: 180px;
-  height: 40px;
+  height: 44px;
   padding: 0 24px;
   font-weight: 600;
 }
@@ -1043,48 +1090,6 @@ h4.karte-titel {
   height: 18px;
   margin-right: 6px;
   font-size: 18px;
-}
-
-.einwurf-meta {
-  padding-top: 0;
-}
-
-// Hochkant traegt der Fuss nichts zum Layout bei: Aktion und Meta stehen wie bisher
-// untereinander im Fluss der Karte.
-.einwurf-fuss {
-  display: contents;
-}
-
-// Quer (Fangkorb am Desktop): eine Zeile unten in der Karte. Die Aktion steht im DOM
-// vor der Meta (Tab-Reihenfolge wie hochkant), row-reverse stellt sie nach rechts.
-.karte--quer {
-  .einwurf-fuss {
-    display: flex;
-    flex-direction: row-reverse;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--spacing-md);
-    margin-top: auto;
-    padding: var(--spacing-sm) var(--spacing-md);
-  }
-
-  .einwurf-aktion {
-    display: flex;
-    flex-shrink: 0;
-    gap: var(--spacing-sm);
-    padding: 0;
-  }
-
-  .einwurf-meta {
-    padding: 0;
-    text-align: left;
-  }
-}
-
-.einwurf-alter,
-.einwurf-stufe,
-.einwurf-einwerfer {
-  white-space: nowrap;
 }
 
 // Variante A (Designrunde 17.11.): Zweck und Stil als kleine Zeile ueber dem Titel, ohne Chips
@@ -1122,6 +1127,23 @@ h4.karte-titel {
     text-transform: inherit;
     font-weight: inherit;
     line-height: inherit;
+  }
+}
+
+// Kopf ueber dem Formular: so flach wie moeglich - Themen neben der Stufe in einer
+// Zeile (sie brechen um, wenn der Platz fehlt), der Koerper mit weniger Polster.
+.karte--kopf {
+  .einwurf-band {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+
+  .einwurf-themen {
+    grid-column: auto;
+  }
+
+  .einwurf-koerper {
+    gap: var(--spacing-xs, 4px);
+    padding: var(--spacing-sm) var(--spacing-md);
   }
 }
 

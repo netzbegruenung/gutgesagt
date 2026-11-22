@@ -112,7 +112,7 @@
 
                     <ul *ngIf="karten.length" class="karten">
                         <li *ngFor="let karte of karten; trackBy: nachKarte">
-                            <app-beitragskarte variante="einwurf" [daten]="karte" [quer]="seitenleiste"
+                            <app-beitragskarte variante="einwurf" [daten]="karte"
                                                (aktion)="aktionAusfuehren(karte, $event)">
                             </app-beitragskarte>
                         </li>

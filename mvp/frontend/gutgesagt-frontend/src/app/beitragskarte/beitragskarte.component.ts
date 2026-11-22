@@ -46,6 +46,7 @@ import { RelativeTimePipe } from '../shared/pipes/relative-time.pipe';
 import { FASSUNGEN, FASSUNG_LABEL, Fassung } from '../shared/fassung';
 import { STIL_ERKLAERUNG, STIL_LABEL, ZWECK_LABEL } from '../shared/zweck-stil';
 import { PLATTFORM_GRENZE } from '../shared/beitrag-grenzen';
+import { Plattform } from '../shared/plattform';
 import { FremdesBildComponent } from '../shared/fremdes-bild/fremdes-bild.component';
 import { SiegelComponent } from '../shared/components/siegel/siegel.component';
 import { SiegelErklaerung, siegelErklaerung } from '../shared/components/siegel/siegel-erklaerung';
@@ -58,6 +59,17 @@ import { istAenderbar } from './aenderbar';
 
 const NEU_STUNDEN = 24;
 const BELIEBT_AB = 5;
+
+/** Symbol je Plattform vor der Quelle der Einwurf-Karte (quellenSymbol). */
+const QUELLEN_SYMBOLE: Record<Plattform, string> = {
+  instagram: 'photo_camera',
+  youtube: 'smart_display',
+  tiktok: 'music_note',
+  threads: 'forum',
+  x: 'forum',
+  bluesky: 'forum',
+  web: 'public',
+};
 
 /** So viele Saetze stehen in der Einwurf-Karte; der Rest wird nur gezaehlt. */
 const SAETZE_SICHTBAR = 3;
@@ -151,8 +163,8 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
    */
   @Input() teilbar: boolean | undefined = undefined;
   /**
-   * Einwurf-Karte: die Stufe als Wort in der Meta-Zeile statt des Einwerfers. Fuer
-   * "Meine Einwuerfe", wo alle Karten die eigenen sind und die Stufe die Rueckmeldung ist.
+   * Einwurf-Karte: im Kopf nur Stufe und Alter, ohne den Einwerfer. Fuer "Meine
+   * Einwuerfe", wo alle Karten die eigenen sind und die Stufe die Rueckmeldung ist.
    */
   @Input() stufeZeigen = false;
   /**
@@ -165,11 +177,6 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
    * nennt (Gruppen der Ergebnisseite); Admins behalten den Aufklapper mit den Werten.
    */
   @Input() antwortAufZeigen = true;
-  /**
-   * Einwurf-Karte quer (Fangkorb am Desktop): Meta-Zeile links, Griff und ⋮ rechts in
-   * einer Zeile, statt Griff mittig und Meta darunter. Spart Hoehe in breiten Listen.
-   */
-  @Input() quer = false;
   /**
    * Streifen "Frisch aus der Community" auf der Startseite (16.11.): volle Karte ohne die
    * Marke "passt auf Mastodon/Bluesky/X" und ohne das Alter in der Meta-Zeile. Ueberall sonst bleiben beide.
@@ -356,9 +363,6 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
     if (this.vorschau) {
       klassen.push('karte--vorschau');
     }
-    if (this.quer && this.einwurfAngaben && !this.istKopf) {
-      klassen.push('karte--quer');
-    }
     if (this.schlicht) {
       klassen.push('karte--schlicht');
     }
@@ -424,6 +428,21 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
       return CONTENT_TYPE_REGISTRY[this.daten.typ]?.emoji || STUFEN.ausformuliert.emoji;
     }
     return STUFEN[this.einwurfAngaben.stufe].emoji;
+  }
+
+  /**
+   * Das Symbol vor der Quelle, damit sie auch ohne Lesen erkennbar ist; der Name steht
+   * daneben. Material-Symbole statt Markenlogos: Die gibt es im Projekt nicht, und sie
+   * braeuchten eine eigene Lizenzpruefung. Ein Einwurf nur mit Bild zeigt das Bildsymbol:
+   * `ausEinwurf` leitet `plattform` nur aus dem Link ab und fuellt `link` ohne Link mit der
+   * Bildadresse - Link da, Plattform leer heisst also "nur Bild".
+   */
+  get quellenSymbol(): string {
+    const angaben = this.einwurfAngaben;
+    if (!angaben?.plattform) {
+      return angaben?.link ? 'image' : 'link';
+    }
+    return QUELLEN_SYMBOLE[angaben.plattform];
   }
 
   get stufenName(): string {
