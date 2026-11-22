@@ -14,6 +14,7 @@ from domain.themen import (
     einwurf_themen_pruefen,
     themen_pruefen,
 )
+from domain.themen_abgleich import begriffe, normalisiert
 
 pytestmark = pytest.mark.unit
 
@@ -63,6 +64,25 @@ def test_jedes_thema_hat_ein_motiv():
     # public/ liegt, prueft scripts/tests/test_themen_motive.py.
     for thema in THEMEN:
         assert thema.motiv == f"themen/{thema.schluessel}.svg", thema.schluessel
+
+
+def test_jedes_thema_hat_fuenf_bis_zwoelf_stichwoerter():
+    # "Alles zum Thema" (#754): kurze Sucheingaben finden ihr Thema ueber sie.
+    for thema in THEMEN:
+        assert 5 <= len(thema.stichwoerter) <= 12, thema.schluessel
+        assert all(s.strip() == s and s for s in thema.stichwoerter), thema.schluessel
+
+
+def test_kein_begriff_steht_bei_zwei_themen():
+    # Normalisiert verglichen: "Wärmepumpe" und "Waermepumpen" waeren derselbe Begriff.
+    # Stuende einer bei zwei Themen, zeigte jede Suche danach beide.
+    gesehen = {}
+    for thema in THEMEN:
+        for begriff in begriffe(thema):
+            schluessel = normalisiert(begriff)
+            assert (
+                gesehen.setdefault(schluessel, thema.schluessel) == thema.schluessel
+            ), f"{begriff!r} bei {gesehen[schluessel]} und {thema.schluessel}"
 
 
 def test_einwurf_laesst_keine_bis_zwei_themen_durch():

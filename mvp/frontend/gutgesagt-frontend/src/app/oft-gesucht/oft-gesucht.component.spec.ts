@@ -75,6 +75,19 @@ describe('OftGesuchtComponent', () => {
     expect(content.getRecentContent).not.toHaveBeenCalled();
   });
 
+  it('laesst Aussagen weg, die "Alles zum Thema" schon zeigt (#754)', () => {
+    const seite = erstellen(of({ results: [{ id: 'k-1' }, { id: 'k-3' }] }));
+
+    fixture.componentRef.setInput('ohneAussagen', ['a-1']);
+    fixture.detectChanges();
+    expect(aussagen(seite)).toEqual(['„Wärmepumpen sind zu teuer“']);
+
+    fixture.componentRef.setInput('ohneAussagen', ['a-1', 'a-2']);
+    fixture.detectChanges();
+    expect(seite.querySelector('.oft-gesucht-titel')).toBeNull();
+    expect(seite.querySelector('.hier-fehlt-link')).toBeTruthy();
+  });
+
   it('nimmt ohne oft Genutztes die neuesten Beitraege, mit passendem Titel', () => {
     const seite = erstellen(of({ results: [] }), [{ id: 'k-3' }, { id: 'k-7' }]);
 

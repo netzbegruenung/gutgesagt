@@ -110,6 +110,17 @@ class AussageThemenRepository:
         )
         return self._gruppiert(abfrage)
 
+    def aussagen_mit_thema(self, thema: str) -> List[uuid.UUID]:
+        """Die Aussagen, die dieses Thema tragen, gleich welche Zuordnungsart (#754)."""
+        with self.db.get_session() as session:
+            return list(
+                session.execute(
+                    select(AussageThemaZeile.statement_id)
+                    .where(AussageThemaZeile.thema == thema)
+                    .order_by(AussageThemaZeile.statement_id)
+                ).scalars()
+            )
+
     def zuordnungen(self, zuordnungsart: Zuordnungsart) -> Dict[uuid.UUID, List[str]]:
         """Alle Zuordnungen einer Zuordnungsart, je Aussage."""
         abfrage = select(AussageThemaZeile.statement_id, AussageThemaZeile.thema).where(
