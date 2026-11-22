@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { BehaviorSubject, Observable, Subject, of } from 'rxjs';
+import { catchError, concatMap, filter, map, take } from 'rxjs/operators';
 import { CONSENT_HINWEIS_SATZ, mitCc0Wortlaut } from '../shared/consent-hinweis';
 import { environment } from '../../environments/environment';
 import { LoggingService } from './logging.service';
@@ -30,6 +30,26 @@ export interface EinwerfenRequest {
   image_url?: string;
   source_channel?: EinwurfWeg;
   themen?: string[];
+}
+
+/** Die Antwort auf einen Themen-Auftrag (EinwurfService.themenAendern). */
+export interface ThemenErgebnis {
+  /** Wie viele Auftraege dieses Einwurfs noch offen sind. */
+  offen: number;
+  /** Die Themen, die der Einwurf jetzt hat; null, wenn das Speichern scheiterte. */
+  themen: Thema[] | null;
+  fehler: unknown;
+}
+
+interface ThemenAuftrag {
+  schluessel: string[];
+  fertig: (ergebnis: ThemenErgebnis) => void;
+}
+
+interface ThemenWarteschlange {
+  auftraege: Subject<ThemenAuftrag>;
+  offen: number;
+  leer: BehaviorSubject<boolean>;
 }
 
 export interface EinwerfenResponse {
@@ -209,6 +229,66 @@ export class EinwurfService {
    */
   themenSetzen(id: string, themen: string[]): Observable<Einwurf> {
     return this.http.put<Einwurf>(`${this.einwurfUrl(id)}/themen`, { themen });
+  }
+
+  /**
+   * Die Themen eines Einwurfs aendern, wie sie ein Themen-Waehler meldet: je Einwurf der
+   * Reihe nach, damit am Ende der letzte Klick gilt. Die Warteschlange lebt hier im
+   * Dienst, nicht in der Komponente: Schliesst jemand das Sheet oder wechselt den Schritt,
+   * bevor die Antwort da ist, wird trotzdem gespeichert. `fertig` kommt nach jeder Antwort
+   * mit der Zahl noch offener Auftraege dieses Einwurfs.
+   */
+  themenAendern(id: string, schluessel: string[], fertig: (ergebnis: ThemenErgebnis) => void): void {
+    const warteschlange = this.themenWarteschlangen.get(id) ?? this.themenWarteschlangeAnlegen(id);
+    // Beim Einreihen zaehlen, nicht beim Senden: sonst gaelte der Einwurf zwischen zwei
+    // Auftraegen als fertig.
+    warteschlange.offen++;
+    warteschlange.leer.next(false);
+    warteschlange.auftraege.next({ schluessel, fertig });
+  }
+
+  /** Meldet einmal, sobald alle Themen-Auftraege dieses Einwurfs beantwortet sind (sofort ohne). */
+  themenGespeichert(id: string): Observable<void> {
+    const warteschlange = this.themenWarteschlangen.get(id);
+    if (!warteschlange) {
+      return of(undefined);
+    }
+    return warteschlange.leer.pipe(
+      filter((leer) => leer),
+      take(1),
+      map(() => undefined),
+    );
+  }
+
+  private readonly themenWarteschlangen = new Map<string, ThemenWarteschlange>();
+
+  private themenWarteschlangeAnlegen(id: string): ThemenWarteschlange {
+    const warteschlange: ThemenWarteschlange = {
+      auftraege: new Subject<ThemenAuftrag>(),
+      offen: 0,
+      leer: new BehaviorSubject(true),
+    };
+    warteschlange.auftraege
+      .pipe(
+        concatMap((auftrag) =>
+          this.themenSetzen(id, auftrag.schluessel).pipe(
+            map((einwurf) => ({ auftrag, themen: einwurf.themen ?? [], fehler: null as unknown })),
+            catchError((fehler) => of({ auftrag, themen: null, fehler })),
+          ),
+        ),
+      )
+      .subscribe(({ auftrag, themen, fehler }) => {
+        warteschlange.offen--;
+        auftrag.fertig({ offen: warteschlange.offen, themen, fehler });
+        if (warteschlange.offen === 0) {
+          // Leer: wer wartet (themenGespeichert), erfaehrt es; dann weg, bis zum naechsten Klick.
+          this.themenWarteschlangen.delete(id);
+          warteschlange.leer.next(true);
+          warteschlange.auftraege.complete();
+        }
+      });
+    this.themenWarteschlangen.set(id, warteschlange);
+    return warteschlange;
   }
 
   /** Den eigenen Satz speichern; ein leerer Satz loescht ihn. */

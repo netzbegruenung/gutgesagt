@@ -135,7 +135,8 @@ describe('FangkorbComponent', () => {
   beforeEach(async () => {
     sessionStorage.removeItem(FILTER_SCHLUESSEL);
     nutzer = { isAuthenticated: true, userId: 'alice', userName: null, claims: null };
-    einwurfService = jasmine.createSpyObj('EinwurfService', ['fangkorbLaden', 'updateStatus']);
+    einwurfService = jasmine.createSpyObj('EinwurfService', ['fangkorbLaden', 'updateStatus', 'themenGespeichert']);
+    einwurfService.themenGespeichert.and.returnValue(of(undefined));
     clipboard = jasmine.createSpyObj('Clipboard', ['copy']);
     clipboard.copy.and.returnValue(true);
     snackBar = jasmine.createSpyObj('MatSnackBar', ['open']);
@@ -1075,6 +1076,21 @@ describe('FangkorbComponent', () => {
       const [komponente, optionen] = (bottomSheet.open as jasmine.Spy).calls.mostRecent().args;
       expect(komponente).toBe(EinwurfThemenSheetComponent);
       expect(optionen.data).toEqual(jasmine.objectContaining({ einwurfId: 'fremd', themen: [klima] }));
+      expect(einwurfService.fangkorbLaden.calls.count()).toBe(vorher + 1);
+    });
+
+    it('laedt nach "Themen ändern" erst neu, wenn alles gespeichert ist', () => {
+      erstellen([einwurf({ id: 'e-1' })]);
+      const gespeichert = new Subject<void>();
+      einwurfService.themenGespeichert.and.returnValue(gespeichert);
+      (bottomSheet.open as jasmine.Spy).and.returnValue({ afterDismissed: () => of(true), instance: {} });
+      const vorher = einwurfService.fangkorbLaden.calls.count();
+
+      component.aktionAusfuehren(component.karten[0], 'themenAendern');
+      expect(einwurfService.fangkorbLaden.calls.count()).toBe(vorher);
+      gespeichert.next();
+
+      expect(einwurfService.themenGespeichert).toHaveBeenCalledWith('e-1');
       expect(einwurfService.fangkorbLaden.calls.count()).toBe(vorher + 1);
     });
 

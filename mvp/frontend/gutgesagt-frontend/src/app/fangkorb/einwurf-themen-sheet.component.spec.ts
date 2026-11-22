@@ -3,7 +3,7 @@ import { MAT_BOTTOM_SHEET_DATA, MatBottomSheetRef } from '@angular/material/bott
 import { of, throwError } from 'rxjs';
 
 import { EinwurfThemenSheetComponent, EinwurfThemenSheetDaten } from './einwurf-themen-sheet.component';
-import { EinwurfService } from '../services/einwurf.service';
+import { EinwurfService, ThemenErgebnis } from '../services/einwurf.service';
 import { ThemenService } from '../services/themen.service';
 
 const KLIMA = { schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' };
@@ -16,7 +16,13 @@ describe('EinwurfThemenSheetComponent', () => {
   let sheet: jasmine.SpyObj<MatBottomSheetRef<EinwurfThemenSheetComponent, boolean>>;
 
   function zeigen(daten: EinwurfThemenSheetDaten = { einwurfId: 'e-1', themen: [KLIMA], titel: 'Guter Thread' }): HTMLElement {
-    einwurfService = jasmine.createSpyObj('EinwurfService', ['themenSetzen']);
+    einwurfService = jasmine.createSpyObj('EinwurfService', ['themenSetzen', 'themenAendern']);
+    einwurfService.themenAendern.and.callFake((id: string, schluessel: string[], fertig: (e: ThemenErgebnis) => void) =>
+      einwurfService.themenSetzen(id, schluessel).subscribe({
+        next: (e) => fertig({ offen: 0, themen: e.themen ?? [], fehler: null }),
+        error: (fehler) => fertig({ offen: 0, themen: null, fehler }),
+      }),
+    );
     sheet = jasmine.createSpyObj('MatBottomSheetRef', ['dismiss']);
     TestBed.configureTestingModule({
       imports: [EinwurfThemenSheetComponent],
@@ -59,6 +65,16 @@ describe('EinwurfThemenSheetComponent', () => {
     expect(e.textContent).toContain('Themen gespeichert.');
 
     (e.querySelector('.fertig') as HTMLButtonElement).click();
+    expect(sheet.dismiss).toHaveBeenCalledOnceWith(true);
+  });
+
+  it('meldet die Aenderung schon beim Klick, auch wenn die Antwort noch aussteht', () => {
+    const e = zeigen();
+    einwurfService.themenAendern.and.stub();
+
+    chip(e, 'Verkehr').click();
+    (e.querySelector('.fertig') as HTMLButtonElement).click();
+
     expect(sheet.dismiss).toHaveBeenCalledOnceWith(true);
   });
 

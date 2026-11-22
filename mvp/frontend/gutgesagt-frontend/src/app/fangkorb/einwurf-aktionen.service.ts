@@ -4,7 +4,7 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EMPTY, Observable, defer } from 'rxjs';
-import { catchError, filter, map, tap } from 'rxjs/operators';
+import { catchError, filter, map, switchMap, tap } from 'rxjs/operators';
 
 import { EinwurfBeitragSheetComponent, EinwurfBeitragSheetDaten } from './einwurf-beitrag-sheet.component';
 import { EinwurfThemenSheetComponent, EinwurfThemenSheetDaten } from './einwurf-themen-sheet.component';
@@ -93,7 +93,8 @@ export class EinwurfAktionenService {
 
   /**
    * Die Themen im Sheet aendern; jeder Klick speichert dort gleich. Meldet nach dem
-   * Schliessen, wenn sich etwas geaendert hat, auch beim Wegwischen.
+   * Schliessen, wenn sich etwas geaendert hat, auch beim Wegwischen, und erst, wenn alles
+   * gespeichert ist.
    */
   private themenAendern(karte: KartenDaten): Observable<void> {
     const angaben = karte.einwurfAngaben!;
@@ -110,7 +111,9 @@ export class EinwurfAktionenService {
       return ref.afterDismissed().pipe(
         map((geaendert) => geaendert === true || ref.instance?.geaendert === true),
         filter((geaendert) => geaendert),
-        map(() => undefined),
+        // Erst neu laden, wenn alles gespeichert ist: Wer gleich nach dem Klick schliesst,
+        // saehe sonst den alten Stand.
+        switchMap(() => this.einwurfService.themenGespeichert(angaben.einwurfId)),
       );
     });
   }

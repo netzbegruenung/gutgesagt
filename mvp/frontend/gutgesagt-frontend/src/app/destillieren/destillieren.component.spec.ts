@@ -6,7 +6,7 @@ import { BehaviorSubject, of, Subject, throwError } from 'rxjs';
 import { AUTOSAVE_VERZOEGERUNG_MS, DestillierenComponent, TYPEN } from './destillieren.component';
 import { BeitragAnsehenService } from '../beitragsformular/beitrag-ansehen.service';
 import { DestillierUebergabeService } from './destillier-uebergabe.service';
-import { SatzResponse, Einwurf, EinwurfService } from '../services/einwurf.service';
+import { SatzResponse, Einwurf, EinwurfService, ThemenErgebnis } from '../services/einwurf.service';
 import { AuthService, UserInfo } from '../auth/auth.service';
 import { LoggingService } from '../services/logging.service';
 import { FILTER_SCHLUESSEL, filterLaden } from '../fangkorb/fangkorb-filter';
@@ -126,7 +126,14 @@ describe('DestillierenComponent', () => {
       'fangkorbLaden',
       'naechsterZumAusformulieren',
       'themenSetzen',
+      'themenAendern',
     ]);
+    einwurfService.themenAendern.and.callFake((id: string, schluessel: string[], fertig: (e: ThemenErgebnis) => void) =>
+      einwurfService.themenSetzen(id, schluessel).subscribe({
+        next: (e) => fertig({ offen: 0, themen: e.themen ?? [], fehler: null }),
+        error: (fehler) => fertig({ offen: 0, themen: null, fehler }),
+      }),
+    );
     einwurfService.fangkorbLaden.and.returnValue(of({ results: [], results_count: 0, total_records_count: 0 }));
     einwurfService.satzSpeichern.and.callFake((id: string, sentence: string) =>
       of({ raw_input_id: id, sentence, updated_at: null }),

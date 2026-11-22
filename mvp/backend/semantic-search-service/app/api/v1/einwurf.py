@@ -371,8 +371,8 @@ async def themen_setzen(
     Die Themen eines Einwurfs nachtraeglich setzen (Fangkorb, Meine Einwuerfe,
     Destillier-Ansicht); ersetzt die bisherigen, eine leere Liste entfernt alle.
 
-    Wer das darf, folgt dem Destillieren, nicht dem Verwerfen: jede angemeldete Person,
-    in jeder Stufe. Die Themen sind ein Fingerzeig fuer andere und die Vorauswahl der
+    Wer das darf, folgt dem Destillieren, nicht dem Verwerfen: jede angemeldete Person
+    (mit Zustimmung zu den Nutzungsbedingungen, s. u.), in jeder Stufe. Die Themen sind ein Fingerzeig fuer andere und die Vorauswahl der
     Aussage beim Ausformulieren; wer destilliert, soll beides richtigstellen koennen,
     ohne den Einwerfer zu fragen. Gespeichert wird nicht, wer geaendert hat: Deshalb
     wie das Zuordnen von Themen an Aussagen nur mit Zustimmung zu den

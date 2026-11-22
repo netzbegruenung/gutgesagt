@@ -12,11 +12,11 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, of } from 'rxjs';
-import { catchError, concatMap, map, tap } from 'rxjs/operators';
+import { of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Thema } from '../../services/dtos/themenDtos';
-import { EinwurfService, HOECHSTENS_THEMEN_JE_EINWURF } from '../../services/einwurf.service';
+import { EinwurfService, HOECHSTENS_THEMEN_JE_EINWURF, ThemenErgebnis } from '../../services/einwurf.service';
 import { ThemenService, schluesselVon } from '../../services/themen.service';
 import { einwilligungFehlt } from '../../services/art9-einwilligung.service';
 import { ThemenAuswahlComponent } from './themen-auswahl.component';
@@ -24,18 +24,13 @@ import { THEMEN_NICHT_GESPEICHERT } from './themen-meldung';
 
 let naechsteId = 0;
 
-/** Ein Auftrag: welcher Einwurf welche Themen bekommen soll. */
-interface Auftrag {
-  einwurfId: string;
-  schluessel: string[];
-}
-
 /**
  * Die Themen eines Einwurfs nachtraeglich aendern: in der Destillier-Ansicht unter dem
  * Kopf (aufklappbar) und im Sheet „Themen ändern“ aus dem ⋮-Menue der Einwurf-Karte
  * (`immerOffen`). Bedienung wie bei der Aussage (app-aussage-themen): Jeder Klick
- * speichert gleich, der Reihe nach, damit am Ende der letzte gilt; ein Spinner zeigt
- * das Speichern. Hoechstens zwei wie beim Einwerfen. Darf jede angemeldete Person, wie
+ * speichert gleich, der Reihe nach in der Warteschlange des Dienstes
+ * (EinwurfService.themenAendern), damit am Ende der letzte gilt und nichts verloren geht,
+ * wenn die Komponente vorher verschwindet; ein Spinner zeigt das Speichern. Hoechstens zwei wie beim Einwerfen. Darf jede angemeldete Person, wie
  * das Destillieren (PUT /rawinput/{id}/themen).
  *
  * Die Marken zeigt der Kopf des Einwurfs selbst; hier stehen nur Umschalter und Auswahl.
@@ -127,11 +122,13 @@ export class EinwurfThemenComponent implements OnInit, OnChanges {
   speichert = false;
   fehler: string | null = null;
   ansage = '';
-  /** Ob seit dem Oeffnen etwas gespeichert ist; das Sheet laedt danach die Liste neu. */
+  /**
+   * Ob seit dem Oeffnen etwas geaendert wurde, schon beim Klick: Das Sheet laedt danach die
+   * Liste neu, wenn alles gespeichert ist (EinwurfService.themenGespeichert).
+   */
   geaendert = false;
 
-  private readonly auftraege = new Subject<Auftrag>();
-  private offeneAuftraege = 0;
+  /** Der zuletzt gespeicherte Stand; nach einem Fehler zeigt die Komponente ihn wieder. */
   private gespeichert: Thema[] = [];
   private zuletztThemen: Thema[] | null = null;
   private zuletztSchluessel: string[] = [];
@@ -143,14 +140,15 @@ export class EinwurfThemenComponent implements OnInit, OnChanges {
     private destroyRef: DestroyRef,
   ) {}
 
-  /** Ein anderer Einwurf (Naechster Einwurf) beginnt zugeklappt, ohne Fehler der vorigen. */
+  /** Ein anderer Einwurf beginnt zugeklappt, ohne Fehler, Spinner und Stand des vorigen. */
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['einwurfId'] && !changes['einwurfId'].firstChange) {
       this.offen = false;
       this.fehler = null;
       this.ansage = '';
-    }
-    if (changes['themen'] && this.offeneAuftraege === 0) {
+      this.speichert = false;
+      this.gespeichert = this.themen;
+    } else if (changes['themen'] && !this.speichert) {
       this.gespeichert = this.themen;
     }
   }
@@ -167,42 +165,32 @@ export class EinwurfThemenComponent implements OnInit, OnChanges {
         this.liste = liste;
         this.cdr.markForCheck();
       });
-    this.auftraege
-      .pipe(
-        // Beim Einreihen zaehlen, nicht beim Senden: sonst gaelte der Einwurf zwischen zwei
-        // Auftraegen als fertig und zeigte kurz den vorletzten Stand.
-        tap(() => this.offeneAuftraege++),
-        concatMap((auftrag) =>
-          this.einwurfService.themenSetzen(auftrag.einwurfId, auftrag.schluessel).pipe(
-            map((einwurf) => ({ auftrag, themen: einwurf.themen ?? [], fehler: null as unknown })),
-            catchError((fehler) => of({ auftrag, themen: null, fehler })),
-          ),
-        ),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe(({ auftrag, themen, fehler }) => {
-        this.offeneAuftraege--;
-        // Eine Antwort zu einem vorigen Einwurf setzt hier nichts mehr.
-        if (auftrag.einwurfId !== this.einwurfId) {
-          return;
-        }
-        if (themen === null) {
-          this.fehler = einwilligungFehlt(fehler)
-            ? 'Dafür brauchst du die Zustimmung zu den Nutzungsbedingungen.'
-            : THEMEN_NICHT_GESPEICHERT;
-        } else {
-          this.gespeichert = themen;
-          this.geaendert = true;
-        }
-        if (this.offeneAuftraege === 0) {
-          this.speichert = false;
-          if (!this.fehler) {
-            this.ansage = 'Themen gespeichert.';
-          }
-          this.themenChange.emit(this.gespeichert);
-        }
-        this.cdr.markForCheck();
-      });
+  }
+
+  /** Die Antwort auf einen Auftrag; eine zu einem vorigen Einwurf setzt hier nichts. */
+  private beantwortet(einwurfId: string, { offen, themen, fehler }: ThemenErgebnis): void {
+    if (einwurfId !== this.einwurfId) {
+      return;
+    }
+    if (themen === null) {
+      this.fehler = einwilligungFehlt(fehler)
+        ? 'Dafür brauchst du die Zustimmung zu den Nutzungsbedingungen.'
+        : THEMEN_NICHT_GESPEICHERT;
+    } else {
+      this.gespeichert = themen;
+      // Der letzte Klick gilt: Ist er gespeichert, ist ein Fehler davor erledigt.
+      if (offen === 0) {
+        this.fehler = null;
+      }
+    }
+    if (offen === 0) {
+      this.speichert = false;
+      if (!this.fehler) {
+        this.ansage = 'Themen gespeichert.';
+      }
+      this.themenChange.emit(this.gespeichert);
+    }
+    this.cdr.markForCheck();
   }
 
   /** Die gewaehlten Schluessel, als dasselbe Array, solange sich die Themen nicht aendern. */
@@ -227,7 +215,9 @@ export class EinwurfThemenComponent implements OnInit, OnChanges {
     const jetzt = schluessel
       .map((s) => this.liste.find((t) => t.schluessel === s))
       .filter((t): t is Thema => t !== undefined);
+    this.geaendert = true;
     this.themenChange.emit(jetzt);
-    this.auftraege.next({ einwurfId: this.einwurfId, schluessel });
+    const einwurfId = this.einwurfId;
+    this.einwurfService.themenAendern(einwurfId, schluessel, (ergebnis) => this.beantwortet(einwurfId, ergebnis));
   }
 }
