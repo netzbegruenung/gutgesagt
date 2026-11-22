@@ -50,8 +50,11 @@ export interface EinwurfThemenSheetDaten {
         background: var(--feldrand);
       }
 
+      /* Schrift der Seite statt der Titelschrift: In der Kursiven lief "Themen ändern" zusammen */
       .sheet-titel {
         margin: 0 0 4px;
+        font-family: inherit;
+        font-style: normal;
         font-size: 18px;
         font-weight: 600;
         color: var(--text);
