@@ -75,6 +75,15 @@
                     </div>
                 </div>
 
+                <!-- Eine vorhandene Aussage: ihre Themen, aenderbar wie auf der Ergebnisseite (gelten fuer alle Beitraege zu ihr) -->
+                <div *ngIf="themenWahl.vorhandene as vorhanden" class="optionale-angaben">
+                    <div class="themen-feld themen-der-aussage">
+                        <span class="feld-beschriftung">Themen der Aussage</span>
+                        <app-aussage-themen [aussage]="vorhanden"></app-aussage-themen>
+                        <p class="themen-hinweis">Gelten für alle Beiträge zu dieser Aussage.</p>
+                    </div>
+                </div>
+
                 <app-sprachhinweis [titel]="postForm.value.title" [text]="postForm.value.text"></app-sprachhinweis>
                 <p appCc0Hinweis></p>
 

@@ -21,6 +21,10 @@ import { DestillierUebergabeService } from '../../destillieren/destillier-ueberg
 import { BeitragskarteComponent } from '../../beitragskarte/beitragskarte.component';
 import { BeitragskarteStubComponent } from '../../beitragskarte/beitragskarte.stub';
 import { KartenDaten } from '../../beitragskarte/karten-daten';
+import { ThemenService } from '../../services/themen.service';
+import { AuthService } from '../../auth/auth.service';
+
+const KLIMA = { schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' };
 
 /** Karte mit gewaehlter Fassung Kurz: steht fuer die echte Karte, damit die Seite ihren Text liest. */
 @Component({
@@ -43,6 +47,7 @@ describe('BeitragGespeichertComponent', () => {
   let uebergabe: jasmine.SpyObj<DestillierUebergabeService>;
   let navigation: jasmine.SpyObj<NavigationService>;
   let einwurfService: jasmine.SpyObj<EinwurfService>;
+  let themenService: jasmine.SpyObj<ThemenService>;
   /** Was das Nachladen des Einwurfs liefert; Standard: der eigene. */
   let geladenerEinwurf: Observable<Einwurf>;
   /** Das Teilen-Menue des Geraets; ohne share wie am Desktop ohne Web Share API. */
@@ -79,6 +84,9 @@ describe('BeitragGespeichertComponent', () => {
     uebergabe = jasmine.createSpyObj('DestillierUebergabeService', ['zumNaechsten', 'zumNaechstenAusformulieren']);
     navigation = jasmine.createSpyObj('NavigationService', ['navigateToResult', 'navigateToMeineEinwuerfe']);
     einwurfService = jasmine.createSpyObj('EinwurfService', ['einwurfLaden']);
+    themenService = jasmine.createSpyObj('ThemenService', ['liste', 'vonAussage', 'aendern']);
+    themenService.liste.and.returnValue(of([KLIMA]));
+    themenService.vonAussage.and.returnValue(of([KLIMA]));
     einwurfService.einwurfLaden.and.callFake(() => geladenerEinwurf);
 
     await TestBed.configureTestingModule({
@@ -93,6 +101,11 @@ describe('BeitragGespeichertComponent', () => {
         { provide: DestillierUebergabeService, useValue: uebergabe },
         { provide: NavigationService, useValue: navigation },
         { provide: EinwurfService, useValue: einwurfService },
+        { provide: ThemenService, useValue: themenService },
+        {
+          provide: AuthService,
+          useValue: { userInfo$: of({ isAuthenticated: true, userId: 'u-1', userName: null, claims: null }) },
+        },
         { provide: TEILEN_NAVIGATOR, useFactory: () => nav },
         {
           provide: ActivatedRoute,
@@ -310,6 +323,22 @@ describe('BeitragGespeichertComponent', () => {
       await oeffnen({}, { aussage: { id: 'a-1', text: 'Wärmepumpen sind zu teuer' }, verknuepft: true, themenHinweis: hinweis });
 
       expect(seite().querySelector('.themen-hinweis')!.textContent!.trim()).toBe(hinweis);
+    });
+
+    it('zeigt unter der Aussage ihre Themen zum Aendern', async () => {
+      await oeffnen({}, { aussage: { id: 'a-1', text: 'Wärmepumpen sind zu teuer' }, verknuepft: true });
+
+      expect(themenService.vonAussage).toHaveBeenCalledOnceWith('a-1');
+      const themen = seite().querySelector('.gespeichert-aussage app-aussage-themen')!;
+      expect(themen.querySelector('.thema-marke')!.textContent!.trim()).toBe('Klima');
+      expect(themen.querySelector('.themen-umschalter')!.textContent!.trim()).toBe('Themen ändern');
+    });
+
+    it('fragt ohne verknuepfte Aussage keine Themen ab', async () => {
+      await oeffnen({}, { aussage: { id: '', text: 'Wärmepumpen sind zu teuer' }, verknuepft: false });
+
+      expect(themenService.vonAussage).not.toHaveBeenCalled();
+      expect(seite().querySelector('app-aussage-themen')).toBeNull();
     });
 
     it('zeigt ohne Themenhinweis keinen', async () => {

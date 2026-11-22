@@ -95,6 +95,12 @@
   overflow: hidden;
 }
 
+/* Direkt unter dem Kopf, dessen Themen sie aendert */
+.einwurf-themen-aendern {
+  display: block;
+  margin: -12px 0 12px;
+}
+
 .typen {
   display: flex;
   flex-direction: column;
