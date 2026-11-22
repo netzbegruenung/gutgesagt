@@ -39,6 +39,10 @@ class Schalterart:
     umgebungsvariable: str
     erklaerung: str
     dsfa_hinweis: bool = False
+    # Ob GET /api/v1/funktionen den wirksamen Wert ohne Anmeldung meldet (api/v1/
+    # funktionen.py): fuer Funktionen, die nur im Browser laufen und deshalb keinen
+    # eigenen Endpunkt haben, der mit 404 antworten koennte (etwa Teilen als Bild).
+    oeffentlich: bool = False
 
 
 SCHALTER: Dict[str, Schalterart] = {
@@ -181,6 +185,11 @@ def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool
         # Ohne Punkte keine sichtbaren Abzeichen (wie Settings.abzeichen_sichtbar)
         return an and _wirksam("punkte", einstellungen, werte)
     return an
+
+
+def oeffentliche_schalter() -> List[str]:
+    """Namen der Schalter, deren wirksamen Wert GET /api/v1/funktionen meldet."""
+    return [art.name for art in SCHALTER.values() if art.oeffentlich]
 
 
 def _art(name: str) -> Schalterart:
