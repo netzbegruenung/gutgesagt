@@ -207,13 +207,25 @@ Deshalb in dieser Reihenfolge, nicht anders:
    verteilt Links für Konten, mit denen sich niemand in der App anmelden kann; das Dashboard
    warnt dann nicht mehr.
 
+Anmelde-Cookies aus dem alten Realm beendet die BFF bei der nächsten Anfrage: Sie vergleicht
+den Aussteller der Kennung im Cookie mit `Keycloak__Authority` und weist abweichende ab
+(`BFF/Services/AnmeldeAussteller.cs`, Log-Zeile „Session of user … ended: the session was
+issued by another realm“ mit Pseudonym). Ohne diese Prüfung liefen sie bis zu 14 Tage weiter
+und schickten die alte Kennung; was die Person darunter anlegte, trug die alte. Ein künftiger
+Realm-Wechsel braucht dafür nur die neue Authority. Verglichen wird die ganze Adresse: Zieht
+Keycloak auf einen anderen Hostnamen um, endet ebenso jede Sitzung einmal. Ist eine BFF ohne diese Prüfung schon
+umgestellt worden (Produktion am 20.11.2026), stellt nach ihrem Rollout ein Nachhol-Lauf von
+`kennungen_umstellen.py` (derselbe Aufruf wie unten in Schritt 7) um, was unter alten
+Kennungen liegen geblieben ist.
+
 ## Kennungen umstellen
 
 `mvp/scripts/manual/kennungen_umstellen.py` (#487) schreibt jede Kennung eines Mitglieds
 der Netzbegrünung auf die seines Kontos im Realm um: in PostgreSQL dieselben Spalten wie
 das Löschkommando (`person_loeschen.sql`), in Qdrant die vier Felder an Beiträgen. Für die
-Admin-Listen gibt es die neuen Werte aus. Die Löschliste ergänzt es nur: Ein Cookie mit der
-alten Kennung gilt bis zu 14 Tage weiter (Löschkonzept), die alte Zeile muss also bleiben.
+Admin-Listen gibt es die neuen Werte aus. Die Löschliste ergänzt es nur, die alte Zeile
+bleibt: Ein Cookie mit der alten Kennung beendet die BFF zwar seit der Prüfung des Ausstellers
+(oben, „Reihenfolge beim Umstellen“), ohne sie galt es aber bis zu 14 Tage weiter (Löschkonzept).
 Die Zuordnung kommt aus dem Realm: Ein Konto, das mit dem Identity Provider
 `netzbegruenung` verknüpft ist, trägt dort die alte Kennung. Ohne `--ausfuehren` zählt es
 nur, je Tabelle und Spalte und je Collection. Ein zweiter Lauf zählt null; nur einen Satz,

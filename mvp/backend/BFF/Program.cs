@@ -88,6 +88,8 @@ if (useKeycloak)
     // Pruefung des Issuers unten bei jeder Anmeldung fehl.
     var keycloakAuthority = keycloakSettings["Authority"]!.TrimEnd('/');
     startupLogger.LogInformation("Keycloak authority: {Authority}", keycloakAuthority);
+    // KontoPruefung weist Cookies ab, deren Aussteller nicht dieser Realm ist (Realm-Wechsel).
+    builder.Services.AddSingleton(new AnmeldeAussteller(keycloakAuthority));
 
     // Configure Keycloak OpenID Connect with Cookie Authentication
     builder.Services.AddAuthentication(options =>
@@ -115,6 +117,8 @@ if (useKeycloak)
         // Closing that gap needs a silent refresh against Keycloak, which is deliberately not built.
         // A deleted account is the exception: its Kennung goes on the list of deleted accounts
         // (docs/LOESCHKONZEPT.md), and KontoPruefung rejects the cookie on the next request (#278).
+        // Likewise a cookie from another realm (issuer != Authority, e.g. after the move to the
+        // own realm, #429): it still carries the old Kennung, so KontoPruefung ends it.
         options.ExpireTimeSpan = TimeSpan.FromDays(14);
         options.SlidingExpiration = true;
         options.Events.OnValidatePrincipal = KontoPruefung.ValidatePrincipalAsync;
@@ -539,8 +543,14 @@ public class ClaimUtilities
 
     public static string GetUserId(ClaimsPrincipal principal)
     {
-        return principal.Claims.FirstOrDefault(c => c.Type == "sub")?.Value
-            ?? principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+        return GetUserIdClaim(principal)?.Value;
+    }
+
+    /// <summary>Der Claim, der die Kennung traegt; sein Issuer ist der Aussteller (AnmeldeAussteller).</summary>
+    public static Claim? GetUserIdClaim(ClaimsPrincipal principal)
+    {
+        return principal.Claims.FirstOrDefault(c => c.Type == "sub")
+            ?? principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
     }
 
     public static string GetUserName(ClaimsPrincipal principal)
