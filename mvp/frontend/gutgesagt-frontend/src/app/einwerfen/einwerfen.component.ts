@@ -305,12 +305,11 @@ export class EinwerfenComponent implements OnInit, OnDestroy {
     this.einwurfForm.patchValue({ themen });
   }
 
-  /** Die Namen der gewaehlten Themen fuer die eingeklappte Zeile, etwa „Klima, Verkehr“. */
-  get gewaehlteThemenNamen(): string {
+  /** Die gewaehlten Themen fuer die eingeklappte Zeile, mit Name und Motiv, in der Reihenfolge der Wahl. */
+  get gewaehlteThemen(): Thema[] {
     return this.themen
-      .map((s) => this.themenListe.find((t) => t.schluessel === s)?.name)
-      .filter((name): name is string => !!name)
-      .join(', ');
+      .map((s) => this.themenListe.find((t) => t.schluessel === s))
+      .filter((thema): thema is Thema => !!thema);
   }
 
   get link(): string {

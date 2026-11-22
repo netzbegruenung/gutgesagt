@@ -81,7 +81,7 @@ describe('ThemenAuswahlComponent', () => {
   it('zeigt das Motiv dekorativ links im Chip, der Name bleibt der Zugaengliche Name', () => {
     const bild = knopf('Klima').querySelector('img.thema-motiv') as HTMLImageElement;
 
-    expect(bild.getAttribute('src')).toBe('/themen/klima.svg');
+    expect(bild.getAttribute('src')).toBe('themen/klima.svg');
     expect(bild.getAttribute('alt')).toBe('');
     expect(bild.getAttribute('aria-hidden')).toBe('true');
     expect(bild.getAttribute('width')).toBe('18');

@@ -1294,7 +1294,7 @@ describe('BeitragskarteComponent', () => {
       // Motiv dekorativ vor dem Namen, feste Groesse; ohne Motiv nur der Name
       const bilder = Array.from(liste.querySelectorAll('img.thema-motiv')) as HTMLImageElement[];
       expect(bilder.length).toBe(1);
-      expect(bilder[0].getAttribute('src')).toBe('/themen/klima.svg');
+      expect(bilder[0].getAttribute('src')).toBe('themen/klima.svg');
       expect(bilder[0].getAttribute('alt')).toBe('');
       expect(bilder[0].getAttribute('aria-hidden')).toBe('true');
       expect(bilder[0].getAttribute('width')).toBe('16');

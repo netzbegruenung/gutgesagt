@@ -212,8 +212,14 @@
     color: var(--text-leise);
 }
 
+/* Gewaehlte Themen in der Zeile: Motiv vor dem Namen, ohne Umbruch dazwischen */
 .themen-gewaehlt {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    vertical-align: middle;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 /* Die Chips hier mind. 44 px: Daumen auf dem Handy, Formular statt Filterleiste */

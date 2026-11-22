@@ -24,7 +24,7 @@ import { ThemenService } from '../services/themen.service';
 import { Thema } from '../services/dtos/themenDtos';
 
 const THEMEN: Thema[] = [
-  { schluessel: 'klima', name: 'Klima' },
+  { schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' },
   { schluessel: 'verkehr', name: 'Verkehr' },
   { schluessel: 'europa', name: 'Europa' },
 ];
@@ -352,7 +352,12 @@ describe('EinwerfenComponent', () => {
       expect(fixture.nativeElement.querySelector('.themen-hinweis').textContent.trim()).toBe(
         'Bis zu zwei Themen, optional.',
       );
-      expect(knopf.textContent).toContain('Verkehr, Klima');
+      expect(knopf.textContent!.replace(/\s+/g, ' ')).toContain('Verkehr, Klima');
+      // Auch in der Zeile visuell lesbar: das Motiv vor dem Namen, dekorativ
+      const bild = knopf.querySelector('.themen-gewaehlt img.thema-motiv') as HTMLImageElement;
+      expect(bild.getAttribute('src')).toBe('themen/klima.svg');
+      expect(bild.getAttribute('alt')).toBe('');
+      expect(bild.getAttribute('aria-hidden')).toBe('true');
 
       eingeben('', 'ein Fund');
       component.einwerfen();

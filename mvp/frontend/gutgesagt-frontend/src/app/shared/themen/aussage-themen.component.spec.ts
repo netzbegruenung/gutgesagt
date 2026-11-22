@@ -62,7 +62,7 @@ describe('AussageThemenComponent', () => {
     const e = zeigen({ statement_id: 'a-1', themen: [{ ...KLIMA, motiv: 'themen/klima.svg' }, VERKEHR] }, false);
 
     const bild = e.querySelector('.thema-marke img.thema-motiv') as HTMLImageElement;
-    expect(bild.getAttribute('src')).toBe('/themen/klima.svg');
+    expect(bild.getAttribute('src')).toBe('themen/klima.svg');
     expect(bild.getAttribute('alt')).toBe('');
     expect(bild.getAttribute('aria-hidden')).toBe('true');
     expect(bild.getAttribute('width')).toBe('16');

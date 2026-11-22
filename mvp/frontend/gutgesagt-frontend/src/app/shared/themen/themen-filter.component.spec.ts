@@ -24,7 +24,7 @@ describe('ThemenFilterComponent', () => {
   it('zeigt das Motiv dekorativ im Chip, "Alle Themen" ohne', () => {
     const bild = knopf('Klima').querySelector('img.thema-motiv') as HTMLImageElement;
 
-    expect(bild.getAttribute('src')).toBe('/themen/klima.svg');
+    expect(bild.getAttribute('src')).toBe('themen/klima.svg');
     expect(bild.getAttribute('alt')).toBe('');
     expect(bild.getAttribute('aria-hidden')).toBe('true');
     expect(knopf('Alle Themen').querySelector('img')).toBeNull();
