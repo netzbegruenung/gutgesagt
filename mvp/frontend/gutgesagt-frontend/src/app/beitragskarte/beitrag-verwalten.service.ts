@@ -46,19 +46,21 @@ export class BeitragVerwaltenService {
     private beitraege: MeineBeitraegeService,
   ) {}
 
-  /** Der Dialog fuer Titel, Text und Herkunft; true, wenn gespeichert ist. */
+  /**
+   * Der Dialog fuer Titel, Text und Herkunft; true, wenn gespeichert ist oder die Themen
+   * der Aussage dort geaendert wurden (die speichern gleich, auch ohne „Speichern“): Dann
+   * ist die Karte veraltet und die Liste laedt nach.
+   */
   aendern(daten: KartenDaten): Observable<boolean> {
-    return this.dialog
-      .open(BeitragAendernDialogComponent, { data: daten, width: '560px', maxWidth: '95vw' })
-      .afterClosed()
-      .pipe(
-        map((gespeichert) => gespeichert === true),
-        tap((gespeichert) => {
-          if (gespeichert) {
-            this.snackBar.open('Beitrag geändert', 'OK', { duration: 3000 });
-          }
-        }),
-      );
+    const ref = this.dialog.open(BeitragAendernDialogComponent, { data: daten, width: '560px', maxWidth: '95vw' });
+    return ref.afterClosed().pipe(
+      tap((gespeichert) => {
+        if (gespeichert === true) {
+          this.snackBar.open('Beitrag geändert', 'OK', { duration: 3000 });
+        }
+      }),
+      map((gespeichert) => gespeichert === true || ref.componentInstance?.themenGeaendert === true),
+    );
   }
 
   /**

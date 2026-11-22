@@ -145,7 +145,8 @@ beides auf einer Seite, mit zwei getrennten, nicht vorbelegten Häkchen.
   und antwortet ohne sie mit 403 `nutzungsbedingungen_fehlen`, an genau den Endpunkten in
   `GESPERRT` (und beim Ausformulieren). Dazu sperrt `require_nutzungsbedingungen` allein, was
   ohne Art.-9-Daten für andere Sichtbares anlegt oder fremde Inhalte beeinflusst: Themen
-  zuordnen und einen Antwortvorschlag an eine Aussage hängen (`NB_NUR` in
+  zuordnen (an Aussagen und an Einwürfen) und einen Antwortvorschlag an eine Aussage hängen
+  (`NB_NUR` in
   `tests/unit/api/test_nutzungsbedingungen_api.py`). Offen bleiben Melden, Widerspruch,
   Feedback, eigene Einstellungen (Punkte, Abzeichen), Besuch zählen, Suchen, Löschen, Widerruf
   und Konto beenden (Maßstab der juristischen Prüfung, 20.11.2026). Bewusst offen bleibt auch das
@@ -263,8 +264,9 @@ Ticket (`CODING_STANDARDS.md`, „Legal texts change through their own ticket“
   „Datenschutz-Einstellungen““ (bis #644 „Einwilligung“); der Name steht als
   `DATENSCHUTZ_EINSTELLUNGEN` in `mvp/frontend/gutgesagt-frontend/src/app/shared/fangkorb-texte.ts`
   (auch Seitentitel von `/einwilligung`; die Karte darauf heißt weiter „Einwilligung“, so
-  finden auch Personen mit dem Wortlaut `2026-11-05-b` den Widerruf), der Eintrag in `mvp/frontend/gutgesagt-frontend/src/app/app.component.html` und
-  `mvp/frontend/gutgesagt-frontend/src/app/shared/components/mobile-menu/mobile-menu.html`.
+  finden auch Personen mit dem Wortlaut `2026-11-05-b` den Widerruf), der Eintrag im Profilmenü am
+  Profilbild, Desktop und mobil, in
+  `mvp/frontend/gutgesagt-frontend/src/app/shared/components/konto-menue/konto-menue.component.ts`.
 
 Ohne Änderung zieht die E2E-Anmeldung mit
 (`mvp/frontend/gutgesagt-frontend/e2e/tests/anmelden.setup.ts`): Sie nimmt den aktuellen

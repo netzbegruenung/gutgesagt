@@ -29,6 +29,7 @@ export type EinwurfAktion =
   | 'ansehen'
   | 'weiterDestillieren'
   | 'linkKopieren'
+  | 'themenAendern'
   | 'verwerfen';
 
 export interface KartenQuelle {
@@ -45,7 +46,12 @@ export interface KartenStatement {
   aehnlichkeit: number;
   /** Prozent, 0-100. */
   antwortqualitaet: number;
-  /** Die Themen der Aussage aus der Suche, fuer Teilen als Bild (#756); fehlt ohne. */
+  /**
+   * ID und Themen der Aussage, nur wo sie bekannt sind (Album, Suche): „Beitrag ändern“ zeigt
+   * die Themen dann zum Aendern, denn ein Beitrag hat keine eigenen; Teilen als Bild (#756)
+   * nimmt das erste Thema mit Motiv.
+   */
+  id?: string;
   themen?: Thema[];
 }
 

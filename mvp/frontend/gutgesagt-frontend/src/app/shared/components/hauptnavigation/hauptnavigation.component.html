@@ -1,0 +1,78 @@
+<nav class="ziele" aria-label="Hauptnavigation">
+    @if (angemeldet) {
+        @for (ziel of ziele; track ziel.id) {
+            <a class="ziel" [href]="ziel.pfad" (click)="gehe($event, ziel.pfad)"
+               [class.ziel--aktiv]="aktiv(ziel)" [attr.aria-current]="aktiv(ziel) ? 'page' : null"
+               [attr.data-ziel]="ziel.id">
+                <span class="ziel-icon-rahmen">
+                    <mat-icon class="ziel-icon" aria-hidden="true">{{ ziel.icon }}</mat-icon>
+                    @if (ziel.id === 'fangkorb') {
+                        @if (fangkorbNeu$ | async; as neu) {
+                            <span class="zaehler" aria-hidden="true">{{ neu > 99 ? '99+' : neu }}</span>
+                        }
+                    }
+                </span>
+                <span class="ziel-text">{{ modus === 'leiste' ? ziel.kurz : ziel.text }}@if (modus === 'leiste' && ziel.kurz !== ziel.text) {<span class="visually-hidden">{{ ziel.text.slice(ziel.kurz.length) }}</span>}@if (ziel.id === 'fangkorb') {<span class="visually-hidden">{{ fangkorbZusatz((fangkorbNeu$ | async) ?? 0) }}</span>}</span>
+            </a>
+        }
+    } @else {
+        <a class="ziel" [href]="ziele[0].pfad" (click)="gehe($event, ziele[0].pfad)"
+           [class.ziel--aktiv]="aktiv(ziele[0])" [attr.aria-current]="aktiv(ziele[0]) ? 'page' : null"
+           data-ziel="suchen">
+            <span class="ziel-icon-rahmen"><mat-icon class="ziel-icon" aria-hidden="true">{{ ziele[0].icon }}</mat-icon></span>
+            <span class="ziel-text">{{ ziele[0].text }}</span>
+        </a>
+        <button type="button" class="ziel hilfe-knopf" (click)="hilfe()" data-ziel="hilfe">
+            <span class="ziel-icon-rahmen"><mat-icon class="ziel-icon" aria-hidden="true">help_outline</mat-icon></span>
+            <span class="ziel-text">Hilfe</span>
+        </button>
+    }
+
+    <!-- Am Desktop: Beitragen (angemeldet) bzw. Anmelden, zwischen den Zielen und „Mehr“ -->
+    <ng-content></ng-content>
+
+    <button type="button" class="ziel mehr-knopf" [matMenuTriggerFor]="mehrMenue" aria-haspopup="menu"
+            [class.ziel--aktiv]="mehrAktiv" data-ziel="mehr">
+        @if (modus === 'leiste') {
+            <span class="ziel-icon-rahmen"><mat-icon class="ziel-icon" aria-hidden="true">more_horiz</mat-icon></span>
+        }
+        <span class="ziel-text">Mehr</span>
+        @if (modus === 'kopf') {
+            <mat-icon class="mehr-pfeil" aria-hidden="true">expand_more</mat-icon>
+        }
+    </button>
+</nav>
+
+<!-- „Mehr“: Desktop und Handy derselbe Inhalt in derselben Reihenfolge (WCAG 3.2.3) -->
+<mat-menu #mehrMenue="matMenu" [yPosition]="modus === 'leiste' ? 'above' : 'below'" xPosition="before" class="mehr-menue">
+    @if (angemeldet) {
+        <a mat-menu-item class="mehr-eintrag" [href]="hierFehltPfad" (click)="gehe($event, hierFehltPfad)"
+           [attr.aria-current]="aufSeite(hierFehltPfad) ? 'page' : null">
+            <mat-icon aria-hidden="true">contact_support</mat-icon><span>Hier fehlt eine Antwort</span>
+        </a>
+        <!-- Ohne Anmeldung steht Hilfe direkt in der Navigation -->
+        <button mat-menu-item type="button" class="mehr-eintrag" (click)="hilfe()">
+            <mat-icon aria-hidden="true">help_outline</mat-icon><span>Hilfe</span>
+        </button>
+    }
+    <button mat-menu-item type="button" class="mehr-eintrag" (click)="rundgangStarten('antwort-finden')">
+        <mat-icon aria-hidden="true">travel_explore</mat-icon><span>Rundgang {{ antwortFinden }}</span>
+    </button>
+    <button mat-menu-item type="button" class="mehr-eintrag" (click)="rundgangStarten('mitmachen')">
+        <mat-icon aria-hidden="true">edit_note</mat-icon><span>Rundgang {{ angemeldet ? selbstBeitragen : selbstBeitragenOhneKonto }}</span>
+    </button>
+    <button mat-menu-item type="button" class="mehr-eintrag" (click)="feedback()">
+        <mat-icon aria-hidden="true">feedback</mat-icon><span>Feedback</span>
+    </button>
+    @if (admin) {
+        <a mat-menu-item class="mehr-eintrag mehr-admin" href="/admin/dashboard" (click)="gehe($event, '/admin/dashboard')"
+           [attr.aria-current]="aufSeite('/admin') ? 'page' : null">
+            <mat-icon aria-hidden="true">admin_panel_settings</mat-icon><span>Admin<app-offene-meldungen-zahl></app-offene-meldungen-zahl></span>
+        </a>
+    }
+    <mat-divider></mat-divider>
+    <button mat-menu-item type="button" class="mehr-eintrag mehr-farbschema" (click)="farbschema.umschalten()">
+        <mat-icon aria-hidden="true">{{ farbschema.dunkel() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+        <span>{{ farbschema.dunkel() ? 'Hell anzeigen' : 'Dunkel anzeigen' }}</span>
+    </button>
+</mat-menu>

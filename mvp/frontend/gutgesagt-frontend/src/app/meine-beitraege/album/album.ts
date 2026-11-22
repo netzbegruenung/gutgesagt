@@ -91,7 +91,13 @@ export function albumEintrag(eintrag: ContentResult): AlbumEintrag {
   const aussage = eintrag.aussage ?? null;
   if (aussage?.text) {
     // Nur der Text: die Werte der Suche gibt es hier nicht, die Karte zeigt sie im Album nicht.
-    karte.statement = { text: aussage.text, aehnlichkeit: 0, antwortqualitaet: 0 };
+    // ID und Themen fuer „Beitrag ändern“: Dort lassen sich die Themen der Aussage aendern.
+    karte.statement = {
+      text: aussage.text,
+      aehnlichkeit: 0,
+      antwortqualitaet: 0,
+      ...(aussage.id ? { id: aussage.id, themen: aussage.themen ?? [] } : {}),
+    };
   }
   const themen = aussage?.themen ?? [];
   const stil = karte.extra?.stil ?? null;

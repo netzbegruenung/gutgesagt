@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 
 import { BeitragsTyp, EinwurfService } from '../services/einwurf.service';
 import { LoggingService } from '../services/logging.service';
@@ -59,8 +59,13 @@ export class DestillierUebergabeService {
     private logger: LoggingService,
   ) {}
 
+  /**
+   * Erst wenn geaenderte Themen des Einwurfs gespeichert sind (Destillier-Ansicht, gleich
+   * danach „Formular öffnen“), sonst kaeme die alte Vorauswahl.
+   */
   vorbefuellungLaden(einwurfId: string): Observable<Vorbefuellung> {
-    return this.einwurfService.einwurfLaden(einwurfId).pipe(
+    return this.einwurfService.themenGespeichert(einwurfId).pipe(
+      switchMap(() => this.einwurfService.einwurfLaden(einwurfId)),
       map((einwurf) => {
         const karte = ausEinwurf(einwurf);
         const titel = einwurf.own_draft ?? '';

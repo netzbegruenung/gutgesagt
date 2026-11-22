@@ -11,8 +11,8 @@ export interface AussageInAnfrage {
 
 /**
  * Themen lassen sich nur fuer eine Aussage per Text waehlen (#455): Sie entsteht erst
- * beim Speichern. Eine gewaehlte, vorhandene Aussage behaelt ihre Themen; die aendert
- * man in „Hier fehlt eine Antwort“ oder auf der Admin-Seite „Themen“. Und erst, wenn
+ * beim Speichern. Eine gewaehlte, vorhandene Aussage behaelt ihre Themen; die zeigt und
+ * aendert das Formular eigens (ThemenWahl.vorhandene, gleich gespeichert). Und erst, wenn
  * der Text ausdruecklich als neue Aussage gewaehlt ist: Solange darunter noch
  * vorhandene zur Wahl stehen, kaemen „Themen der neuen Aussage“ zu frueh (#617).
  */

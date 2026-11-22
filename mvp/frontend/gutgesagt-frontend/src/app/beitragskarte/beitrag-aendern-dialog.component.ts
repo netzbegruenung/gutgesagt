@@ -22,6 +22,8 @@ import { BeitragAenderung, HerkunftEingabe, MeineBeitraegeService } from '../ser
 import { einwilligungFehlt } from '../services/art9-einwilligung.service';
 
 import { AENDERBARE_TYPEN } from './aenderbar';
+import { AussageMitThemenFeld } from '../services/themen.service';
+import { AussageThemenComponent } from '../shared/themen/aussage-themen.component';
 
 export { AENDERBARE_TYPEN, istAenderbar } from './aenderbar';
 
@@ -60,6 +62,8 @@ function alsEingabe(quelle: KartenQuelle): HerkunftEingabe {
  * Der Autor aendert Titel, Text und Herkunft seines Kommentars oder seiner
  * Hintergrundinfo (#299), beim Kommentar auch Kurz- und Langfassung (#551), damit sie
  * dem neuen Text nicht widersprechen. Schliesst mit true, wenn gespeichert ist.
+ * Kennt die Karte ihre Aussage (Album), stehen darunter deren Themen zum Aendern; ein
+ * Beitrag hat keine eigenen, er steht unter denen seiner Aussage.
  */
 @Component({
   selector: 'app-beitrag-aendern-dialog',
@@ -74,6 +78,7 @@ function alsEingabe(quelle: KartenQuelle): HerkunftEingabe {
     MatInputModule,
     ReferenceInputComponent,
     Cc0HinweisComponent,
+    AussageThemenComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -123,6 +128,13 @@ function alsEingabe(quelle: KartenQuelle): HerkunftEingabe {
 
         <app-reference-input formControlName="references" [kompakt]="true"></app-reference-input>
 
+        <!-- Ein Beitrag hat keine eigenen Themen: die seiner Aussage, gleich gespeichert wie auf der Ergebnisseite -->
+        <div *ngIf="aussageThemen as aussage" class="themen-der-aussage">
+          <span class="feld-beschriftung">Themen der Aussage</span>
+          <app-aussage-themen [aussage]="aussage" (themenChange)="themenGeaendert = true"></app-aussage-themen>
+          <p class="themen-hinweis">Gelten für alle Beiträge zu „{{ aussage.text }}“ und werden gleich gespeichert.</p>
+        </div>
+
         <p class="fehler" role="alert" *ngIf="fehler()">{{ fehler() }}</p>
         <p appCc0Hinweis></p>
       </mat-dialog-content>
@@ -144,6 +156,24 @@ function alsEingabe(quelle: KartenQuelle): HerkunftEingabe {
         margin: 8px 0 0;
       }
 
+      .themen-der-aussage {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 12px;
+      }
+
+      .feld-beschriftung {
+        color: var(--text-leise);
+        font-size: 0.875rem;
+      }
+
+      .themen-hinweis {
+        margin: 0;
+        color: var(--text-leise);
+        font-size: 13px;
+      }
+
       .speichern-knopf:not([disabled]) {
         background-color: var(--primaer);
         color: white;
@@ -163,6 +193,10 @@ export class BeitragAendernDialogComponent {
   readonly fehler = signal<string | null>(null);
 
   readonly formular;
+  /** Die Aussage mit ihren Themen, wenn die Karte sie kennt (Album); sonst keine Themen hier. */
+  readonly aussageThemen: (AussageMitThemenFeld & { text: string }) | null;
+  /** Ob hier Themen geaendert wurden: Die Liste laedt dann nach, auch ohne Speichern. */
+  themenGeaendert = false;
 
   @ViewChild(ReferenceInputComponent) referenceInput?: ReferenceInputComponent;
 
@@ -174,6 +208,10 @@ export class BeitragAendernDialogComponent {
   ) {
     this.textMax = AENDERBARE_TYPEN[daten.typ ?? ''] ?? KOMMENTAR_TEXT_MAX;
     this.hatFassungen = daten.typ === 'commentary';
+    const aussage = daten.statement;
+    // Eine eigene Kopie: app-aussage-themen aendert darin die Themen, die Karte bleibt, bis die Liste nachlaedt.
+    this.aussageThemen =
+      aussage?.id && aussage.themen ? { statement_id: aussage.id, themen: [...aussage.themen], text: aussage.text } : null;
     this.formular = fb.group({
       // Wie beim Anlegen: eine Behauptung in einem Satz, 3 bis 120 Zeichen (Titelregel).
       title: [daten.titel ?? '', [Validators.required, Validators.minLength(3), Validators.maxLength(TITEL_MAX)]],

@@ -10,8 +10,9 @@ export const LEISTEN_HOEHE_VARIABLE = '--feste-leiste-hoehe';
 /**
  * Die Leiste mit dem Speichern-Knopf eines Beitragsformulars.
  *
- * Am Handy steht sie fest am unteren Rand. Ohne safe-area-Abstand: der braeuchte
- * viewport-fit=cover und damit Anpassungen an Kopfzeile, FAB und Menue. Fest statt sticky: main hat overflow: hidden, daran klebt
+ * Am Handy steht sie fest am unteren Rand, direkt ueber der unteren Leiste der
+ * Hauptnavigation (--unterleiste-sichtbar; die haelt selbst den safe-area-Abstand).
+ * Fest statt sticky: main hat overflow: hidden, daran klebt
  * position: sticky nicht. Damit sie nichts verdeckt, haelt der body unten Platz
  * frei, solange sie da ist. Der Consent-Hinweis steht darueber im Fluss.
  *
@@ -75,8 +76,9 @@ export const LEISTEN_HOEHE_VARIABLE = '--feste-leiste-hoehe';
         position: fixed;
         left: 0;
         right: 0;
-        /* Ueber der Bildschirmtastatur: gesetzt aus dem visualViewport */
-        bottom: var(--leiste-ueber-tastatur, 0px);
+        /* Ueber der Bildschirmtastatur (gesetzt aus dem visualViewport) und ueber der
+           unteren Leiste der Hauptnavigation, solange die sichtbar ist */
+        bottom: calc(var(--leiste-ueber-tastatur, 0px) + var(--unterleiste-sichtbar, 0px));
         z-index: 50;
         margin: 0;
         padding: 12px 16px;

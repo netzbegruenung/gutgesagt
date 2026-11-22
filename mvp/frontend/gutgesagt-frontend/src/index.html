@@ -29,7 +29,9 @@
   <meta property="og:image:height" content="512">
   <meta name="twitter:card" content="summary">
   <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- viewport-fit=cover: Die untere Leiste am Handy haelt mit env(safe-area-inset-bottom)
+       Abstand zur Home-Leiste; der mobile Kopf mit env(safe-area-inset-top) zur Statusleiste. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <!-- Build-Kennung fuer den Footer: replace-env.sh setzt Commit und Version beim Containerstart
        hier ein, nicht in den *.js-Dateien. Deren Name entsteht vor der Ersetzung, nginx laesst
        sie ein Jahr im Cache, und der Footer zeigte so den Commit eines alten Builds;
@@ -94,8 +96,8 @@
   <!-- Auf dem iPhone-Home-Bildschirm: iOS nimmt das Symbol nicht aus dem Manifest, sondern
        hieraus, und fuellt Transparenz schwarz. Deshalb 180 x 180 ohne Alphakanal. Titel unter
        dem Symbol und Start ohne Browserleiste; "default" laesst die Statusleiste der
-       Geraeteeinstellung folgen (hell/dunkel), "black-translucent" braeuchte
-       viewport-fit=cover und Abstaende an Kopf und Leisten. -->
+       Geraeteeinstellung folgen (hell/dunkel), "black-translucent" legte die
+       Seite unter die Statusleiste. -->
   <link rel="apple-touch-icon" sizes="180x180" href="marke/apple-touch-icon-180-v3.png">
   <meta name="apple-mobile-web-app-title" content="Gut gesagt">
   <meta name="apple-mobile-web-app-capable" content="yes">

@@ -930,8 +930,8 @@ html[data-theme='dark'] .karte {
 
 /*
  * Klebende Suche im Album von „Meine Beiträge“: position: sticky wirkt nur, wenn kein
- * Vorfahr ein Scroll-Container ist. main (overflow: hidden) und mat-sidenav-content
- * (overflow-y: auto) sind es, scrollen aber nie selbst; gescrollt wird das Dokument.
+ * Vorfahr ein Scroll-Container ist. main (overflow: hidden) ist einer, scrollt aber nie
+ * selbst; gescrollt wird das Dokument.
  * Nur auf dieser Seite: clip schneidet wie hidden ab, ohne Scroll-Container zu sein.
  * Ohne :has (alte Browser) klebt die Suche nicht, sonst aendert sich nichts.
  */
@@ -939,11 +939,32 @@ main:has(app-album .suche) {
     overflow: clip;
 }
 
-mat-sidenav-content:has(app-album .suche) {
-    overflow: visible;
-}
-
 /* Fokus nicht verdeckt (WCAG 2.4.11): Was per Tastatur in den Blick scrollt, bleibt unter der klebenden Suche sichtbar. */
 html:has(app-album .suche) {
     scroll-padding-top: 180px;
+}
+
+/*
+ * Untere Leiste am Handy (Navigation Variante 3): Was per Tastatur in den Blick scrollt,
+ * bleibt ueber der Leiste sichtbar (WCAG 2.4.11). Die Hoehe setzt die Leiste selbst.
+ */
+html:has(app-hauptnavigation.hauptnavigation--leiste) {
+    scroll-padding-bottom: calc(var(--unterleiste-hoehe, 64px) + var(--spacing-md, 16px));
+}
+
+/* „Mehr“: Platz fuer „Rundgang Antwort finden (5 Schritte)“ in einer Zeile */
+.mat-mdc-menu-panel.mehr-menue {
+    max-width: 360px;
+}
+
+/* Meldungen unten erscheinen ueber der Leiste statt auf ihr */
+html:has(app-hauptnavigation.hauptnavigation--leiste) .mat-mdc-snack-bar-container {
+    margin-bottom: calc(var(--unterleiste-sichtbar, 0px) + 8px);
+}
+
+/* Formular mit fester Speichern-Leiste ueber der unteren Leiste: beide Hoehen freihalten */
+@media (max-width: 599px) {
+    html:has(app-hauptnavigation.hauptnavigation--leiste):has(> body.hat-feste-leiste) {
+        scroll-padding-bottom: calc(var(--unterleiste-sichtbar, 64px) + var(--feste-leiste-hoehe, 73px) + 16px);
+    }
 }
