@@ -38,6 +38,7 @@
                     <textarea matInput id="text" formControlName="caption" required
                               [attr.maxlength]="textMax" placeholder="Worum geht es? In eigenen Worten"
                               cdkTextareaAutosize cdkAutosizeMinRows="4" cdkAutosizeMaxRows="16"></textarea>
+                    <mat-hint class="aufzaehlung-hinweis">{{ aufzaehlungHinweis }}</mat-hint>
                     <mat-hint align="end">{{ textLaenge }} / {{ textMax }}</mat-hint>
                     <mat-error *ngIf="imageForm.get('caption')?.hasError('required')">Die Unterschrift fehlt.</mat-error>
                     <mat-error *ngIf="imageForm.get('caption')?.hasError('minlength')">Mindestens 10 Zeichen.</mat-error>

@@ -70,6 +70,7 @@ import {
 import { KOMMENTAR_TEXT_MAX, KURZFASSUNG_MAX, LANGFASSUNG_MAX, TITEL_MAX } from '../shared/beitrag-grenzen';
 import { einspaltig } from '../beitragsformular/gegenlesen/einspaltig';
 import { herkunftOhneFundstelle } from '../beitragsformular/gegenlesen/herkunftsangaben';
+import { AUFZAEHLUNG_HINWEIS, mitPunkten } from '../shared/aufzaehlung';
 
 export { TITEL_MAX } from '../shared/beitrag-grenzen';
 export const TEXT_MAX = KOMMENTAR_TEXT_MAX;
@@ -634,6 +635,8 @@ export class AddCommentaryComponent implements OnChanges, OnInit {
     );
   }
 
+  readonly aufzaehlungHinweis = AUFZAEHLUNG_HINWEIS;
+
   /**
    * Die Vorschau als KartenDaten, zwischengespeichert, solange sich nichts
    * aendert - sonst setzte jede Change Detection die Karte zurueck.
@@ -662,10 +665,10 @@ export class AddCommentaryComponent implements OnChanges, OnInit {
         id: 'vorschau',
         content_type: 'commentary',
         title: title || 'Titel',
-        text: text || 'Dein Kommentar',
+        text: mitPunkten(text) || 'Dein Kommentar',
         // Die Karte zeigt Reiter nur fuer Fassungen mit Text.
-        short_text: kurz,
-        long_text: lang,
+        short_text: mitPunkten(kurz),
+        long_text: mitPunkten(lang),
         zweck: angaben.zweck,
         style: angaben.stil,
         references: (references ?? [])

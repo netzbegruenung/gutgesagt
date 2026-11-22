@@ -410,6 +410,8 @@ h4.karte-titel {
   font-size: 15px;
   line-height: 1.45;
   overflow-wrap: anywhere;
+  // Zeilenumbrueche wie im kopierten Text, etwa fuer Aufzaehlungen mit "•"
+  white-space: pre-line;
 
   &:not(.aufgeklappt) {
     display: -webkit-box;
