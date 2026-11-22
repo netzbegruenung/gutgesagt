@@ -41,6 +41,7 @@ import {
 import { ThemenAuswahlComponent } from '../shared/themen/themen-auswahl.component';
 import { AussageThemenComponent } from '../shared/themen/aussage-themen.component';
 import { einspaltig } from '../beitragsformular/gegenlesen/einspaltig';
+import { AUFZAEHLUNG_HINWEIS, mitPunkten } from '../shared/aufzaehlung';
 
 /**
  * Wie beim Bild: Der Post-Titel beschreibt, er folgt der Behauptungsregel fuer
@@ -227,6 +228,8 @@ export class AddPostComponent implements OnChanges {
     return this.postForm.get('text')?.value?.length ?? 0;
   }
 
+  readonly aufzaehlungHinweis = AUFZAEHLUNG_HINWEIS;
+
   /**
    * Die Vorschau als KartenDaten, zwischengespeichert, solange sich nichts aendert.
    * Ohne Nutzung und Datum: Ueber einen Entwurf sagen sie nichts.
@@ -242,7 +245,7 @@ export class AddPostComponent implements OnChanges {
         id: 'vorschau',
         content_type: 'post',
         title: werte.title || 'Titel',
-        text: werte.text || 'Worum es im Post geht',
+        text: mitPunkten(werte.text) || 'Worum es im Post geht',
         platform: werte.platform ? plattformName(werte.platform) : '',
         author: werte.author,
         url: werte.url,
