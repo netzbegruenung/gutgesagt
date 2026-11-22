@@ -33,6 +33,10 @@ describe('Sharepic (#756)', () => {
       expect(umbrechen('Klimaschutzgesetz', 60, messen)).toEqual(['Klimas', 'chutzg', 'esetz']);
     });
 
+    it('teilt nicht mitten im Emoji', () => {
+      expect(umbrechen('😀😀😀', 20, messen).every((z) => !/[\uD800-\uDBFF]$/.test(z))).toBeTrue();
+    });
+
     it('laesst keine Leerzeile am Ende', () => {
       expect(umbrechen('eins\n\n', 100, messen)).toEqual(['eins']);
     });
@@ -64,6 +68,9 @@ describe('Sharepic (#756)', () => {
     expect(motivAdresse('https://example.org/x.svg')).toBeNull();
     expect(motivAdresse('//example.org/x.svg')).toBeNull();
     expect(motivAdresse('data:image/svg+xml,<svg/>')).toBeNull();
+    expect(motivAdresse('/\\evil.example/x.svg')).toBeNull();
+    expect(motivAdresse('\\\\evil.example\\x.svg')).toBeNull();
+    expect(motivAdresse('themen/../x.svg')).toBeNull();
     expect(motivAdresse(undefined)).toBeNull();
   });
 

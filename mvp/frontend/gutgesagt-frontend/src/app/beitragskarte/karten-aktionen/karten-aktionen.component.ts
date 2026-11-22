@@ -399,10 +399,15 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
 
   /** Ob „Als Bild teilen“ angeboten wird: Schalter an und ein Text, der ins Bild kann. */
   get sharepicSichtbar(): boolean {
-    return this.sharepicAn() && !this.vorschau && !!this.inhaltId && !!(this.bildText || this.kopierText).trim();
+    const text = (this.bildText || this.kopierText).trim();
+    // Vorlagen mit Platzhalter „[Hier …]“ nicht: Im Bild bliebe die Klammer stehen.
+    return this.sharepicAn() && !this.vorschau && !!this.inhaltId && !!text && !hatLuecke(text);
   }
 
-  /** Teilen als Bild (#756): Vorschau und Teilen im Dialog; geteilt oder gespeichert zaehlt wie Teilen. */
+  /**
+   * Teilen als Bild (#756): Vorschau und Teilen im Dialog. Gezaehlt wird nichts: Das
+   * Bild verlaesst das Geraet nur ueber das Teilen-Menue, der Server erfaehrt davon nichts.
+   */
   alsBildTeilen(): void {
     if (!this.sharepicSichtbar) {
       return;
@@ -413,14 +418,7 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
       aussage: this.aussage?.trim() || null,
       thema: this.thema,
       link: beitragsLink(this.inhaltId),
-    })
-      .afterClosed()
-      .subscribe((ergebnis) => {
-        if (ergebnis) {
-          this.usageTrackingService.trackContentUsage(this.inhaltId, this.fassung ?? undefined);
-          this.kopiert.emit();
-        }
-      });
+    });
   }
 
   beitragOeffnen(): void {

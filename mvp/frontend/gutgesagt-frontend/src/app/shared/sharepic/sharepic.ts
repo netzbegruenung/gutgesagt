@@ -1,5 +1,5 @@
 /**
- * Teilen als Bild (#756, Glossar „Sharepic“): Die Beitragskarte als Bild im Stil der App,
+ * Teilen als Bild (#756, Glossar „Teilen als Bild“): Die Beitragskarte als Bild im Stil der App,
  * gemalt im Browser auf ein Canvas. Kein Server, keine fremden Bilder: Schrift, Logo und
  * Motiv kommen von der eigenen Adresse. Das Bild ist immer hell, unabhängig vom
  * Dunkelmodus der App (es landet in fremden Apps).
@@ -51,7 +51,9 @@ const KARTE_RADIUS = 36;
 const SCHRIFT = 'PTSans, Roboto, sans-serif';
 const SCHRIFT_FETT = 'PTSans-bold, Roboto, sans-serif';
 const SCHRIFT_MARKE = 'GrueneType, Roboto, sans-serif';
-const LOGO = '/marke/logo-v2.svg';
+// Das App-Symbol als PNG: Es traegt das Logo auf demselben Gelb wie der Grund. Ein SVG
+// ohne eigene Breite und Hoehe (logo-v2.svg) malt Firefox nicht auf ein Canvas.
+const LOGO = '/marke/icon-192-v3.png';
 
 /** Die Adresse, wie sie im Bild steht: ohne Schema und ohne www. */
 export function kurzeAdresse(link: string): string {
@@ -82,11 +84,14 @@ export function umbrechen(text: string, breite: number, messen: Messen): string[
       }
       if (zeile) zeilen.push(zeile);
       zeile = wort;
-      while (messen(zeile) > breite && zeile.length > 1) {
-        let n = zeile.length - 1;
-        while (n > 1 && messen(zeile.slice(0, n)) > breite) n--;
-        zeilen.push(zeile.slice(0, n));
-        zeile = zeile.slice(n);
+      // Nach Zeichen, nicht nach UTF-16-Einheiten: Emoji bleiben ganz
+      let zeichen = Array.from(zeile);
+      while (messen(zeile) > breite && zeichen.length > 1) {
+        let n = zeichen.length - 1;
+        while (n > 1 && messen(zeichen.slice(0, n).join('')) > breite) n--;
+        zeilen.push(zeichen.slice(0, n).join(''));
+        zeichen = zeichen.slice(n);
+        zeile = zeichen.join('');
       }
     }
     if (zeile) zeilen.push(zeile);
@@ -101,11 +106,11 @@ export function kuerzen(zeilen: string[], max: number, breite: number, messen: M
     return zeilen;
   }
   const rest = zeilen.slice(0, Math.max(1, max));
-  let letzte = rest[rest.length - 1];
-  while (letzte.length && messen(`${letzte}…`) > breite) {
-    letzte = letzte.slice(0, -1);
+  const zeichen = Array.from(rest[rest.length - 1]);
+  while (zeichen.length && messen(`${zeichen.join('')}…`) > breite) {
+    zeichen.pop();
   }
-  rest[rest.length - 1] = `${letzte.trimEnd()}…`;
+  rest[rest.length - 1] = `${zeichen.join('').trimEnd()}…`;
   return rest;
 }
 
@@ -175,9 +180,20 @@ function messerFuer(ctx: CanvasRenderingContext2D) {
     };
 }
 
+/** Malt ein quadratisches Bild; wirft der Browser (etwa bei einem SVG ohne Groesse), ohne es. */
+function sicherMalen(ctx: CanvasRenderingContext2D, bild: HTMLImageElement, x: number, y: number, groesse: number): boolean {
+  try {
+    ctx.drawImage(bild, x, y, groesse, groesse);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function bildLaden(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
-    const bild = new Image();
+    // Mit Groesse: Firefox malt SVGs ohne eigene Breite und Hoehe sonst nicht
+    const bild = new Image(192, 192);
     bild.onload = () => resolve(bild);
     bild.onerror = () => resolve(null);
     bild.src = src;
@@ -244,8 +260,9 @@ export async function sharepicMalen(daten: SharepicDaten, format: SharepicFormat
     ctx.fill();
     let x = RAND + 24;
     if (motiv) {
-      ctx.drawImage(motiv, x, y + (markeHoehe - motivGroesse) / 2, motivGroesse, motivGroesse);
-      x += motivGroesse + 14;
+      if (sicherMalen(ctx, motiv, x, y + (markeHoehe - motivGroesse) / 2, motivGroesse)) {
+        x += motivGroesse + 14;
+      }
     }
     ctx.fillStyle = SHAREPIC_FARBEN.tanne;
     ctx.fillText(name, x, y + (markeHoehe - g) / 2 + 2, textBreite);
@@ -272,10 +289,8 @@ export async function sharepicMalen(daten: SharepicDaten, format: SharepicFormat
   const fussHoehe = 120;
   const fussY = hoehe - (story ? RAND * 2 : RAND) - fussHoehe;
   const logoGroesse = 104;
-  if (logo) {
-    ctx.drawImage(logo, RAND, fussY + (fussHoehe - logoGroesse) / 2, logoGroesse, logoGroesse);
-  }
-  const markeX = RAND + (logo ? logoGroesse + 20 : 0);
+  const mitLogo = !!logo && sicherMalen(ctx, logo, RAND, fussY + (fussHoehe - logoGroesse) / 2, logoGroesse);
+  const markeX = RAND + (mitLogo ? logoGroesse + 20 : 0);
   ctx.fillStyle = SHAREPIC_FARBEN.tanne;
   ctx.font = `56px ${SCHRIFT_MARKE}`;
   ctx.fillText('Gut gesagt', markeX, fussY + 8);
@@ -334,7 +349,8 @@ export async function sharepicMalen(daten: SharepicDaten, format: SharepicFormat
  * Fremde Adressen malt das Bild nicht (keine fremden Bilder, und sie sperrten das Canvas).
  */
 export function motivAdresse(motiv: string | undefined): string | null {
-  if (!motiv || /^[a-z][a-z0-9+.-]*:|^\/\//i.test(motiv)) {
+  // Nur einfache Pfade unter public/: kein Schema, kein // oder \, keine Punkte-Ordner
+  if (!motiv || !/^\/?(?:[a-z0-9_-]+\/)*[a-z0-9_-]+\.(?:svg|png)$/i.test(motiv)) {
     return null;
   }
   return motiv.startsWith('/') ? motiv : `/${motiv}`;

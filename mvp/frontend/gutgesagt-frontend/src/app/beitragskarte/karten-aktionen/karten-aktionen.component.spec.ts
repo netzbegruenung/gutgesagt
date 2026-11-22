@@ -1272,9 +1272,8 @@ describe('KartenAktionenComponent - Als Bild teilen', () => {
     expect(component.sharepicSichtbar).toBeFalse();
   });
 
-  it('oeffnet den Dialog mit Fassung, Aussage, Thema und Link und zaehlt ein geteiltes Bild', () => {
+  it('oeffnet den Dialog mit Fassung, Aussage, Thema und Link und zaehlt nichts', () => {
     sharepic.set(true);
-    dialog.open.and.returnValue({ afterClosed: () => of('geteilt') } as any);
 
     component.alsBildTeilen();
 
@@ -1288,16 +1287,14 @@ describe('KartenAktionenComponent - Als Bild teilen', () => {
       }),
     );
     expect(daten.link).toContain(`/beitrag/${INHALT_ID}`);
-    expect(usage.trackContentUsage).toHaveBeenCalledWith(INHALT_ID, undefined);
+    expect(usage.trackContentUsage).not.toHaveBeenCalled();
   });
 
-  it('zaehlt nichts, wenn der Dialog ohne Bild schliesst', () => {
+  it('nicht bei einer Vorlage mit Platzhalter', () => {
     sharepic.set(true);
-    dialog.open.and.returnValue({ afterClosed: () => of(undefined) } as any);
+    component.bildText = 'Wir wollen [Hier dein Ort] besser machen.';
 
-    component.alsBildTeilen();
-
-    expect(usage.trackContentUsage).not.toHaveBeenCalled();
+    expect(component.sharepicSichtbar).toBeFalse();
   });
 
   it('oeffnet bei ausgeschaltetem Schalter nichts', () => {

@@ -20,6 +20,7 @@ export const SHAREPIC_TEXTE = {
   schliessen: 'Schließen',
   laedt: 'Bild wird gemalt …',
   fehler: 'Das Bild ließ sich nicht malen. Versuch es noch einmal oder teile den Link.',
+  nochmal: 'Noch einmal',
   hinweis: 'Das Bild entsteht auf deinem Gerät. Gut gesagt speichert es nicht.',
 } as const;
 
@@ -47,13 +48,16 @@ export const SHAREPIC_TEXTE = {
       </mat-button-toggle-group>
 
       <div class="sharepic-vorschau" [class.story]="format === 'story'">
-        <img *ngIf="vorschau && !laedt" [src]="vorschau" [alt]="bildBeschreibung" data-testid="sharepic-vorschau">
+        <img *ngIf="vorschau && !laedt && !fehler" [src]="vorschau" [alt]="bildBeschreibung" data-testid="sharepic-vorschau">
         <div *ngIf="laedt" class="sharepic-laedt" role="status">
           <mat-spinner diameter="32"></mat-spinner><span>{{ texte.laedt }}</span>
         </div>
-        <p *ngIf="fehler && !laedt" class="sharepic-fehler" role="alert">
-          <mat-icon aria-hidden="true">error_outline</mat-icon>{{ texte.fehler }}
-        </p>
+        <div *ngIf="fehler && !laedt" class="sharepic-fehler" role="alert">
+          <p><mat-icon aria-hidden="true">error_outline</mat-icon>{{ texte.fehler }}</p>
+          <button mat-stroked-button type="button" class="sharepic-nochmal" (click)="nochmal()">
+            <mat-icon aria-hidden="true">refresh</mat-icon>{{ texte.nochmal }}
+          </button>
+        </div>
       </div>
       <p class="sharepic-hinweis">{{ texte.hinweis }}</p>
     </mat-dialog-content>
@@ -70,8 +74,8 @@ export const SHAREPIC_TEXTE = {
   styles: [
     `
       .sharepic-inhalt { display: flex; flex-direction: column; gap: 12px; }
-      .sharepic-format { align-self: flex-start; }
-      .sharepic-format .mat-button-toggle { min-height: 44px; }
+      /* 44 px Tippziel: die Hoehe des eigentlichen Knopfs kommt aus dem Token */
+      .sharepic-format { align-self: flex-start; --mat-button-toggle-height: 44px; }
       .sharepic-format mat-icon { margin-right: 6px; vertical-align: middle; }
       /* Gewaehlt deutlich, auch im Dunkelmodus: Markenfarbe mit weisser Schrift wie der Hauptknopf */
       .sharepic-format .mat-button-toggle-checked { background-color: var(--primaer); color: white; font-weight: 700; }
@@ -83,7 +87,8 @@ export const SHAREPIC_TEXTE = {
       .sharepic-vorschau.story { aspect-ratio: 9 / 16; width: auto; height: 50vh; }
       .sharepic-vorschau img { display: block; max-width: 100%; max-height: 100%; border-radius: 8px; }
       .sharepic-laedt { display: flex; align-items: center; gap: 12px; }
-      .sharepic-fehler { display: flex; align-items: flex-start; gap: 6px; margin: 16px; color: var(--fehler); }
+      .sharepic-fehler { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 16px; text-align: center; }
+      .sharepic-fehler p { display: flex; align-items: flex-start; gap: 6px; margin: 0; color: var(--fehler); }
       .sharepic-hinweis { margin: 0; font-size: 0.875rem; color: var(--text-leise); }
       .sharepic-aktionen { flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
       .sharepic-aktionen button { min-height: 44px; }
@@ -116,6 +121,8 @@ export class SharepicDialogComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Ein Malen, das noch laeuft, legt danach keine Vorschau mehr an
+    this.auftrag++;
     // Etwas später: Ein Herunterladen direkt vor dem Schließen liest die Adresse noch.
     const adresse = this.vorschau;
     this.vorschau = null;
@@ -148,6 +155,10 @@ export class SharepicDialogComponent implements OnInit, OnDestroy {
       return;
     }
     this.format = format;
+    void this.malen();
+  }
+
+  nochmal(): void {
     void this.malen();
   }
 

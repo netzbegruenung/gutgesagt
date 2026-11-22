@@ -83,7 +83,7 @@ SCHALTER: Dict[str, Schalterart] = {
             umgebungsvariable="SEMANTIC_SEARCH_SHAREPIC_AKTIV",
             erklaerung=(
                 "„Als Bild teilen“ im Menü der Beitragskarte: Das Bild entsteht im "
-                "Browser, der Server sieht und speichert nichts."
+                "Browser und verlässt das Gerät nur über dessen Teilen-Menü."
             ),
             oeffentlich=True,
         ),
