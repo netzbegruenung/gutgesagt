@@ -188,6 +188,12 @@ Behaviour change on rollout: a system where a variable is already `true` (for ex
 admin switches it on. Before switching on Punkte or Abzeichen on production: DSFA decided
 (`docs/DSFA.md`, section 7).
 
+Schalter marked `oeffentlich` in `SCHALTER` (`services/schalter_service.py`) are readable without
+sign-in at `GET /api/v1/funktionen` (#756): the app shows those functions only when they are on.
+Their upper bound is **on** by default (see `.env.example`), so an admin can switch them on without a
+rollout; they are still off until an admin does. Set the variable to `false` to rule one out on a
+server.
+
 ### 🚧 Updating Production
 
 Pull requests are checked on Forgejo by Woodpecker (`.woodpecker/ci.yaml`, required status
