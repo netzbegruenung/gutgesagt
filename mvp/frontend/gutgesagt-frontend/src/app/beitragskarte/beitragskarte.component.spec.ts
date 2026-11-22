@@ -1411,7 +1411,7 @@ describe('BeitragskarteComponent', () => {
         created_at: '2026-09-13T12:00:00Z',
         drafts: [],
         links: [],
-        themen: [{ schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' } as any],
+        themen: [{ schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' }],
       });
     }
 
@@ -1440,6 +1440,43 @@ describe('BeitragskarteComponent', () => {
       zeigen(einwurfKarte(null, 'https://beispiel.de/bild.jpg'), { variante: 'einwurf' });
 
       expect(element('.quelle-symbol').textContent!.trim()).toBe('image');
+    });
+
+    it('nennt im Kopf ueber dem Formular nur die Stufe, ohne Einwerfer und Alter', () => {
+      zeigen(einwurfKarte(), { variante: 'kopf' });
+
+      expect(element('.einwurf-band .einwurf-stufe').textContent!.trim()).toBe('Offen');
+      expect(element('.einwurf-einwerfer')).toBeNull();
+      expect(element('.einwurf-alter')).toBeNull();
+    });
+
+    it('stellt ⋮ am verworfenen Einwurf ohne Griff rechts in den Fuss, voll deckend', () => {
+      const daten = einwurfKarte();
+      daten.einwurfAngaben = { ...daten.einwurfAngaben!, stufe: 'verworfen' };
+      zeigen(daten, { variante: 'einwurf' });
+      fixture.nativeElement.style.display = 'block';
+      fixture.nativeElement.style.width = '400px';
+
+      expect(element('.einwurf-primaer')).toBeNull();
+      const fuss = element('.einwurf-fuss').getBoundingClientRect();
+      const menue = element('.einwurf-menue').getBoundingClientRect();
+      expect(fuss.right - menue.right).toBeLessThan(20);
+      expect(getComputedStyle(element('.karte')).opacity).toBe('1');
+      expect(getComputedStyle(element('.einwurf-band')).opacity).toBe('1');
+    });
+
+    it('bleibt ohne Hinweis und ohne Link sauber: nur die Saetze im Koerper', () => {
+      const daten = ausEinwurf({
+        id: 'e-saetze', content: null, url: null, image_url: null, submitted_by: 'bob', source_channel: 'web',
+        status: 'in_progress', created_at: '2026-09-13T12:00:00Z',
+        drafts: [{ id: 's-1', user_id: 'bob', sentence: 'Ein Satz', updated_at: '2026-09-13T12:00:00Z' }], links: [],
+      });
+      zeigen(daten, { variante: 'einwurf' });
+
+      expect(element('.einwurf-titel')).toBeNull();
+      expect(element('.einwurf-linkzeile')).toBeNull();
+      expect(element('.einwurf-koerper .satz-text').textContent!.trim()).toBe('Ein Satz');
+      expect(element('.einwurf-fuss .einwurf-primaer')).toBeTruthy();
     });
 
     it('stellt die Aktionen in den Fuss, unter den Koerper', () => {

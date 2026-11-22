@@ -808,9 +808,12 @@ h4.karte-titel {
     outline-offset: 2px;
   }
 
-  &.stufe-verworfen {
-    opacity: 0.6;
-  }
+}
+
+// Verworfen: nur der Inhalt tritt zurueck. Kopf (Stufe, Alter) und ⋮ bleiben voll
+// deckend, damit sie den Kontrast nach WCAG AA halten.
+.stufe-verworfen .einwurf-koerper {
+  opacity: 0.6;
 }
 
 .stufe-offen .einwurf-band,
@@ -1124,6 +1127,23 @@ h4.karte-titel {
     text-transform: inherit;
     font-weight: inherit;
     line-height: inherit;
+  }
+}
+
+// Kopf ueber dem Formular: so flach wie moeglich - Themen neben der Stufe in einer
+// Zeile (sie brechen um, wenn der Platz fehlt), der Koerper mit weniger Polster.
+.karte--kopf {
+  .einwurf-band {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+
+  .einwurf-themen {
+    grid-column: auto;
+  }
+
+  .einwurf-koerper {
+    gap: var(--spacing-xs, 4px);
+    padding: var(--spacing-sm) var(--spacing-md);
   }
 }
 

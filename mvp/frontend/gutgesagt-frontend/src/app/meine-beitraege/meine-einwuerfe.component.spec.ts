@@ -104,6 +104,29 @@ describe('MeineEinwuerfeComponent', () => {
     expect(texte('.einwuerfe-statistik')).toEqual(['3 Einwürfe']);
   });
 
+  it('stellt die Karten ab 900 px ohne grauen Grund in ein Raster mit mehreren Spalten', () => {
+    anzeigen();
+    fixture.nativeElement.style.display = 'block';
+    fixture.nativeElement.style.width = '1000px';
+
+    const liste: HTMLElement = fixture.nativeElement.querySelector('.karten');
+    const stil = getComputedStyle(liste);
+    expect(stil.display).toBe('grid');
+    expect(stil.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    if (window.innerWidth >= 900) {
+      const [erste, zweite] = Array.from(liste.children).map((li) => li.getBoundingClientRect());
+      expect(erste.right).toBeLessThanOrEqual(zweite.left);
+    }
+  });
+
+  it('stellt die Zahl als Kopfzeile ueber die Liste', () => {
+    anzeigen();
+
+    const kopf = fixture.nativeElement.querySelector('.einwuerfe-statistik').getBoundingClientRect();
+    const liste = fixture.nativeElement.querySelector('.karten').getBoundingClientRect();
+    expect(kopf.bottom).toBeLessThanOrEqual(liste.top);
+  });
+
   it('macht verworfene Einwuerfe erkennbar', () => {
     anzeigen();
 

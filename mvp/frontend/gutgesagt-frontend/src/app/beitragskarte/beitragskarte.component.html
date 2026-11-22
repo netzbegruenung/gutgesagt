@@ -115,7 +115,8 @@
 
             <p class="einwurf-stand">
                 <span class="einwurf-stufe">{{ stufenName }}</span>
-                <span class="einwurf-herkunftszeile"><ng-container *ngIf="zeigtEinwerfer"><span class="einwurf-einwerfer">Von: {{ autorAnzeige }}</span> · </ng-container><span class="einwurf-alter">{{ daten.erstellt | relativeTime }}</span></span>
+                <!-- Im Kopf ueber dem Formular nur die Stufe: dort zaehlt jede Zeile Hoehe -->
+                <span class="einwurf-herkunftszeile" *ngIf="!istKopf"><span class="visually-hidden">, </span><ng-container *ngIf="zeigtEinwerfer"><span class="einwurf-einwerfer">Von: {{ autorAnzeige }}</span> · </ng-container><span class="einwurf-alter">{{ daten.erstellt | relativeTime }}</span></span>
             </p>
 
             <!-- Die beim Einwerfen gewaehlten Themen als ruhige Marken, wie an der Aussage -->

@@ -34,7 +34,7 @@
 }
 
 /* Die Karten ohne grauen Grund: Ihr Schatten trennt sie. Am Handy untereinander, ab
-   900 px im Raster ueber die volle Inhaltsbreite (2 Spalten, ab etwa 1200 px Inhalt 3);
+   900 px im Raster ueber die volle Inhaltsbreite (2 Spalten, ab etwa 1050 px Inhalt 3);
    die Karten einer Reihe sind gleich hoch, der Fuss steht unten buendig. */
 .karten {
   display: grid;

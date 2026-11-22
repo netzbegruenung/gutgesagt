@@ -433,7 +433,9 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
   /**
    * Das Symbol vor der Quelle, damit sie auch ohne Lesen erkennbar ist; der Name steht
    * daneben. Material-Symbole statt Markenlogos: Die gibt es im Projekt nicht, und sie
-   * braeuchten eine eigene Lizenzpruefung. Ein Einwurf nur mit Bild zeigt das Bildsymbol.
+   * braeuchten eine eigene Lizenzpruefung. Ein Einwurf nur mit Bild zeigt das Bildsymbol:
+   * `ausEinwurf` leitet `plattform` nur aus dem Link ab und fuellt `link` ohne Link mit der
+   * Bildadresse - Link da, Plattform leer heisst also "nur Bild".
    */
   get quellenSymbol(): string {
     const angaben = this.einwurfAngaben;
