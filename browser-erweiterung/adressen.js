@@ -35,9 +35,12 @@ function zielBasis(name) {
 /**
  * Leerraum zusammenfassen und auf ``max`` Zeichen kuerzen, am letzten Wortende davor
  * (wie suchtextKuerzen im Frontend). Zaehlt Codepunkte, damit kein Emoji halbiert wird.
+ * Einzelne Surrogate (kaputte Markierung) werden zu U+FFFD, sonst wirft encodeURIComponent.
  */
 function textKuerzen(text, max = TEXT_MAX) {
-  const zeichen = Array.from(String(text ?? '').trim().replace(/\s+/g, ' '));
+  const roh = String(text ?? '');
+  const heil = typeof roh.toWellFormed === 'function' ? roh.toWellFormed() : roh;
+  const zeichen = Array.from(heil.trim().replace(/\s+/g, ' '));
   if (zeichen.length <= max) {
     return zeichen.join('');
   }
@@ -55,11 +58,21 @@ function passendKuerzen(text, adresse) {
   return kurz;
 }
 
-/** Nur http(s)-Seiten gehen als Link mit; file://, about: und Browser-Seiten nicht. */
+/**
+ * Nur http(s)-Seiten gehen als Link mit; file://, about: und Browser-Seiten nicht.
+ * Ohne Zugangsdaten (user:pass@) und ohne Fragment: Dort stehen bei Anmeldungen oft Tokens
+ * (#access_token=...), und der Link landet im Server-Protokoll und im Einwurf.
+ */
 function seitenLink(seitenAdresse) {
   try {
     const url = new URL(String(seitenAdresse ?? ''));
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+      return null;
+    }
+    url.username = '';
+    url.password = '';
+    url.hash = '';
+    return url.href;
   } catch {
     return null;
   }

@@ -32,8 +32,8 @@ VERBOTEN = {
 }
 # Netzwerkzugriff oder Seitenzugriff im Code der Erweiterung
 NETZWERK = re.compile(
-    r"\b(fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|importScripts\(\s*['\"]https?:"
-    r"|executeScript|insertCSS|scripting\.|eval|Function\()"
+    r"\b(fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|executeScript|insertCSS|eval)\b"
+    r"|\bscripting\.|\bFunction\(|importScripts\(\s*['\"]https?:"
 )
 
 

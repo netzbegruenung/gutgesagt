@@ -21,18 +21,24 @@ einen der Einträge übergibt, und öffnet damit Gut gesagt in einem neuen Tab; 
 nichts ab, hat keinen Zugriff auf Seiteninhalte und sammelt nichts. Gespeichert wird nur die Wahl
 Gut gesagt oder Testinstanz, lokal im Browser.
 
+Was den Browser verlässt: Beim Klick geht die Markierung (Suchen) bzw. Markierung und
+Seitenadresse samt Query (Einwerfen) als Adresse an Gut gesagt und steht damit im Browserverlauf
+und im Zugriffsprotokoll des Servers. Zugangsdaten (`nutzer:passwort@`) und das Fragment (`#…`,
+dort stehen oft Anmelde-Tokens) schneidet die Erweiterung ab; den Link sieht die Person im
+Formular und kann ihn vor dem Einwerfen ändern oder löschen.
+
 Berechtigungen: `contextMenus` (die zwei Einträge) und `storage` (das gewählte Ziel). Keine
 `host_permissions`, kein Content-Script. `scripts/tests/test_browser_erweiterung.py` hält das fest.
 
 ## Lokal installieren
 
-Chrome, Chromium, Edge:
+Chrome, Chromium, Edge (ab 121):
 
 1. `chrome://extensions` öffnen, oben rechts **Entwicklermodus** einschalten.
 2. **Entpackte Erweiterung laden** und den Ordner `browser-erweiterung/` wählen.
 3. Auf einer Seite Text markieren, Rechtsklick, **In Gut gesagt suchen**.
 
-Firefox (ab 121):
+Firefox (ab 140; noch nicht ausprobiert, nur das Manifest ist darauf ausgelegt):
 
 1. `about:debugging#/runtime/this-firefox` öffnen.
 2. **Temporäres Add-on laden** und `browser-erweiterung/manifest.json` wählen. Bleibt bis zum

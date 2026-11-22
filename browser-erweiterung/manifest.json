@@ -3,6 +3,7 @@
   "name": "Gut gesagt",
   "version": "0.1.0",
   "description": "Markierten Text per Rechtsklick in Gut gesagt suchen oder einwerfen.",
+  "minimum_chrome_version": "121",
   "permissions": ["contextMenus", "storage"],
   "background": {
     "service_worker": "hintergrund.js",
@@ -21,7 +22,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "gutgesagt@netzbegruenung.de",
-      "strict_min_version": "121.0",
+      "strict_min_version": "140.0",
       "data_collection_permissions": {
         "required": ["none"]
       }

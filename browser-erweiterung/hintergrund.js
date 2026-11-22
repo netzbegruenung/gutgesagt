@@ -17,13 +17,19 @@ const MENUE = {
   einwerfen: 'gutgesagt-einwerfen',
 };
 
-// Beide Browser behalten die Eintraege ueber Neustarts; neu angelegt wird nur bei Installation
-// und Update. removeAll vorher, sonst scheitert create an der schon vergebenen id.
-api.runtime.onInstalled.addListener(async () => {
+/**
+ * Legt die zwei Eintraege an. Bei Installation und Update, und bei jedem Browserstart: Chrome
+ * behaelt die Eintraege ohnehin, fuer Firefox mit Event-Page ist das nicht belegt. removeAll
+ * vorher, sonst scheitert create an der schon vergebenen id.
+ */
+async function menueAnlegen() {
   await api.contextMenus.removeAll();
   api.contextMenus.create({ id: MENUE.suchen, title: 'In Gut gesagt suchen', contexts: ['selection'] });
   api.contextMenus.create({ id: MENUE.einwerfen, title: 'In Gut gesagt einwerfen', contexts: ['selection'] });
-});
+}
+
+api.runtime.onInstalled.addListener(menueAnlegen);
+api.runtime.onStartup.addListener(menueAnlegen);
 
 /** Gespeichertes Ziel (Optionen), sonst Prod. storage.local: nichts wird synchronisiert. */
 async function basis() {

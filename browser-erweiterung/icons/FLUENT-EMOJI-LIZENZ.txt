@@ -1,4 +1,4 @@
-Die Hand in Logo, Favicon und Siegel von Gut gesagt ist das Emoji
+Die Hand in den Icons der Browser-Erweiterung von Gut gesagt ist das Emoji
 "Thumbs up" aus Fluent Emoji (Fassung Flat), verändert.
 Quelle: https://github.com/microsoft/fluentui-emoji
 Es steht unter der folgenden Lizenz:

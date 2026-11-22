@@ -77,8 +77,8 @@ test('Einwurf: /teilen mit text und url, wie das Teilen-Ziel der PWA', () => {
   const url = new URL(adresse);
   assert.equal(url.origin + url.pathname, `${PROD}/teilen`);
   assert.equal(url.searchParams.get('text'), 'Das „Heizungsgesetz“ & die Wärmepumpe');
-  // Die Seitenadresse kommt ganz an, auch & und #; Tracking-Parameter entfernt erst der Guard
-  assert.equal(url.searchParams.get('url'), 'https://www.instagram.com/p/ABC123/?utm_source=ig_web&x=%221%22#kommentare');
+  // Die Seitenadresse kommt mit Query an (Tracking-Parameter entfernt erst der Guard), ohne Fragment
+  assert.equal(url.searchParams.get('url'), 'https://www.instagram.com/p/ABC123/?utm_source=ig_web&x=%221%22');
   assert.equal(url.searchParams.has('title'), false);
   assert.equal(url.hash, '');
 });
@@ -90,6 +90,20 @@ test('Einwurf: nur http(s)-Seiten gehen als Link mit', () => {
     assert.equal(parameter(adresse, 'text'), 'Text');
   }
   assert.equal(seitenLink('http://example.org/a b'), 'http://example.org/a%20b');
+});
+
+test('Einwurf: Seitenlink ohne Zugangsdaten und ohne Fragment', () => {
+  const seite = 'https://nutzer:geheim@intranet.example/a?seite=2#access_token=XYZ';
+  assert.equal(seitenLink(seite), 'https://intranet.example/a?seite=2');
+  const adresse = einwurfAdresse(PROD, 'Text', seite);
+  assert.equal(parameter(adresse, 'url'), 'https://intranet.example/a?seite=2');
+  assert.ok(!adresse.includes('geheim') && !adresse.includes('XYZ'));
+});
+
+test('Kaputte Markierung (einzelnes Surrogat) wirft nicht', () => {
+  const adresse = suchAdresse(PROD, 'a\uD83D b');
+  assert.equal(parameter(adresse, 'searchQuery'), 'a\uFFFD b');
+  assert.ok(einwurfAdresse(PROD, '\uDC00', 'https://example.org/'));
 });
 
 test('Einwurf: ohne Markierung nur der Link, ohne beides nichts', () => {

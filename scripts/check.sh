@@ -107,7 +107,7 @@ if laeuft frontend; then
   # has node; not with --include. Without node (only the npx stub of scripts/tests) skipped.
   if [ ${#INCLUDE[@]} -eq 0 ] && command -v node >/dev/null; then
     echo "== Browser-Erweiterung"
-    node --test "$ROOT"/browser-erweiterung/test/*.test.js 2>&1 | kurz '^# (pass|fail)|^not ok' 3; test "${PIPESTATUS[0]}" -eq 0
+    node --test --test-reporter=tap "$ROOT"/browser-erweiterung/test/*.test.js 2>&1 | kurz '^# (pass|fail)|^not ok' 3; test "${PIPESTATUS[0]}" -eq 0
   fi
 fi
 # The image build (Dockerfile) runs `ng build --configuration production`, whose budgets ng test
