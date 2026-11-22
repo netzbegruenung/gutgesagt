@@ -544,7 +544,7 @@ Der Tab in „Meine Beiträge“, in dem eine Person ihre eigenen Einwürfe mit 
 _Avoid_: Meine Funde, Mein Fangkorb, Eingereichtes
 
 **Meine Aussagen**:
-Der dritte Tab in „Meine Beiträge“, nur mit dem Schalter `antworten_hinweis`: die Aussagen, die eine Person selbst angelegt hat, je mit den Beiträgen, die darauf antworten. Antworten anderer aus den letzten sieben Tagen tragen „Neu“; ihre Zahl steht als Kachel unter „Seit deinem letzten Besuch“. Wer geantwortet hat, steht nicht da, nur ob es die Person selbst war (#760).
+Der dritte Tab in „Meine Beiträge“, nur mit dem Schalter `antworten_hinweis`: die Aussagen, die eine Person selbst angelegt hat, je mit den Beiträgen, die darauf antworten. Antworten anderer aus den letzten sieben Tagen tragen „Neu“; ihre Zahl steht als Kachel unter „Seit deinem letzten Besuch“, und ein Punkt am Ziel „Meine“ der Hauptnavigation zeigt sie an, bis „Meine Beiträge“ offen war. Wer geantwortet hat, steht nicht da, nur ob es die Person selbst war (#760).
 _Avoid_: Meine Behauptungen, Meine Fragen
 
 **Nutzungsstatistik**:

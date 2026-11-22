@@ -11,8 +11,11 @@
                             <span class="zaehler" aria-hidden="true">{{ neu > 99 ? '99+' : neu }}</span>
                         }
                     }
+                    @if (ziel.id === 'meine' && (antwortenNeu$ | async)) {
+                        <span class="punkt" aria-hidden="true" data-testid="antworten-punkt"></span>
+                    }
                 </span>
-                <span class="ziel-text">{{ modus === 'leiste' ? ziel.kurz : ziel.text }}@if (modus === 'leiste' && ziel.kurz !== ziel.text) {<span class="visually-hidden">{{ ziel.text.slice(ziel.kurz.length) }}</span>}@if (ziel.id === 'fangkorb') {<span class="visually-hidden">{{ fangkorbZusatz((fangkorbNeu$ | async) ?? 0) }}</span>}</span>
+                <span class="ziel-text">{{ modus === 'leiste' ? ziel.kurz : ziel.text }}@if (modus === 'leiste' && ziel.kurz !== ziel.text) {<span class="visually-hidden">{{ ziel.text.slice(ziel.kurz.length) }}</span>}@if (ziel.id === 'fangkorb') {<span class="visually-hidden">{{ fangkorbZusatz((fangkorbNeu$ | async) ?? 0) }}</span>}@if (ziel.id === 'meine' && (antwortenNeu$ | async)) {<span class="visually-hidden">{{ antwortenZusatz }}</span>}</span>
             </a>
         }
     } @else {

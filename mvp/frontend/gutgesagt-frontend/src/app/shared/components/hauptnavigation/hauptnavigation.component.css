@@ -38,6 +38,19 @@
 }
 
 /* Neue Einwürfe im Fangkorb; die Zahl selbst ist stumm, der Linkname nennt sie */
+/* Punkt an „Meine“ (#760): Rand in der Flächenfarbe, damit er auf jedem Grund absetzt */
+.punkt {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--flaeche);
+    border-radius: 50%;
+    background: var(--akzent-tanne);
+    box-sizing: border-box;
+}
+
 .zaehler {
     position: absolute;
     top: -6px;
