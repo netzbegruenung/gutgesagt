@@ -981,6 +981,33 @@ class SchalterVerlaufZeile(Base):
     __table_args__ = (Index("idx_schalter_verlauf_geaendert_am", "geaendert_am"),)
 
 
+class AufrufHeuteZeile(Base):
+    """
+    Seitenaufrufe des laufenden Tages je Tagespseudonym (#761,
+    services/aufrufe_service.py). Das Pseudonym lebt nur bis zum Ende seines Tages:
+    Danach verdichtet der Takt den Tag zu ``aufrufe_tage`` und loescht die Zeilen.
+
+    Neue Tabelle: create_all legt sie beim Start an. Das Skript
+    postgres-app/migrations/2026-11-22-761-aufrufe.sql dokumentiert das Schema.
+    """
+
+    __tablename__ = "aufrufe_heute"
+
+    tag = Column(Date, primary_key=True)
+    pseudonym = Column(String(64), primary_key=True)
+    aufrufe = Column(Integer, nullable=False)
+
+
+class AufrufTagZeile(Base):
+    """Seitenaufrufe und Besucher je vergangenem Tag (#761), ohne Personenbezug."""
+
+    __tablename__ = "aufrufe_tage"
+
+    tag = Column(Date, primary_key=True)
+    aufrufe = Column(Integer, nullable=False)
+    besucher = Column(Integer, nullable=False)
+
+
 class MigrationsprotokollZeile(Base):
     """
     Welche Migration aus postgres-app/migrations eingespielt ist, eine Zeile je Datei.

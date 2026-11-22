@@ -151,7 +151,8 @@ def test_stand_nennt_obergrenze_admin_wert_wirksam_und_dsfa_hinweis():
     dienst, _, _ = _dienst({"punkte": True})
     stand = {s.name: s for s in dienst.stand(Settings(punkte_aktiv=True))}
 
-    assert set(stand) == {"punkte", "abzeichen_sichtbar", "gepostet"}
+    # Mindestens diese; weitere Schalter pruefen ihre eigenen Tests
+    assert set(stand) >= {"punkte", "abzeichen_sichtbar", "gepostet"}
     assert (
         stand["punkte"].obergrenze,
         stand["punkte"].admin_wert,
@@ -162,6 +163,16 @@ def test_stand_nennt_obergrenze_admin_wert_wirksam_und_dsfa_hinweis():
     assert "DSFA" in stand["abzeichen_sichtbar"].dsfa_hinweis
     assert stand["gepostet"].dsfa_hinweis is None
     assert all(s.erklaerung for s in stand.values())
+
+
+def test_aufrufe_zaehlen_obergrenze_aus_und_dsfa_hinweis():
+    """#761: heikel, deshalb Obergrenze aus wie bei den Punkten, mit DSFA-Hinweis."""
+    dienst, _, _ = _dienst({"aufrufe_zaehlen": True})
+    stand = {s.name: s for s in dienst.stand(Settings())}["aufrufe_zaehlen"]
+
+    assert (stand.obergrenze, stand.admin_wert, stand.wirksam) == (False, True, False)
+    assert "DSFA" in stand.dsfa_hinweis
+    assert dienst.wirksam("aufrufe_zaehlen", Settings(aufrufe_zaehlen_aktiv=True))
 
 
 def test_schalter_wirksam_nimmt_den_globalen_dienst():

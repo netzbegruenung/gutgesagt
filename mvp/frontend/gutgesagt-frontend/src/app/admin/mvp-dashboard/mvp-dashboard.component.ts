@@ -8,6 +8,7 @@ import { MetricsService, MVPMetrics } from '../../services/metrics.service';
 import { BilanzComponent } from '../bilanz/bilanz.component';
 import { SuchenOhneTrefferComponent } from '../suchen-ohne-treffer/suchen-ohne-treffer.component';
 import { MusterHinweiseComponent } from '../muster-hinweise/muster-hinweise.component';
+import { AufrufeComponent } from '../aufrufe/aufrufe.component';
 import { FeedbackListeComponent } from '../feedback-liste/feedback-liste.component';
 import { EinladungenComponent } from '../einladungen/einladungen.component';
 import { Subscription } from 'rxjs';
@@ -40,6 +41,7 @@ export const KENNZAHLEN_NACHLADEN_MS = 5 * 60 * 1000;
     BilanzComponent,
     SuchenOhneTrefferComponent,
     MusterHinweiseComponent,
+    AufrufeComponent,
     FeedbackListeComponent,
     EinladungenComponent,
     NachladeHinweisComponent

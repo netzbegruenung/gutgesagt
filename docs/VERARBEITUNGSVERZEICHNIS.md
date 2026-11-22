@@ -269,6 +269,20 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
 - **TOM:** Platzhalter „Bild laden“, das Bild lädt erst nach Klick und nur für dieses eine Bild;
   der Klick wird nicht gemerkt (DSE „Bilder von fremden Servern“).
 
+### T13 Seitenaufrufe und Besucher je Tag (gebaut, ausgeschaltet)
+
+- **Zweck:** zählen, wie viele Menschen die App an einem Tag öffnen, auch ohne Suche (#761).
+- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f; für das Tagespseudonym der Besucher **offen** mit
+  § 25 TDDDG wie T5 (DSFA V7, `docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md` Frage 2).
+- **Betroffene:** alle, die die App öffnen, angemeldet oder nicht.
+- **Daten:** je Besucher und laufendem Tag ein Tagespseudonym aus Anschluss und Tag (eigener
+  Raum, nicht verknüpfbar mit dem an Suchereignissen) und die Zahl der Seitenwechsel; keine
+  IP-Adresse, keine Kennung, kein Pfad, nichts im Browser. Danach je Tag zwei Zahlen.
+- **Empfänger:** Admins (Kennzahlen).
+- **Fristen:** LK „Fristen“ (Pseudonyme bis zum Ende ihres Tages).
+- **TOM:** Schalter `aufrufe_zaehlen`, Obergrenze Standard aus, mit DSFA-Hinweis;
+  höchstens 500 Aufrufe je Besucher und Tag; Admin-Seiten zählen nicht.
+
 ## Offen
 
 Gesammelt in DSFA 8.6: AV-Vertrag (F1), SMTP-Server (F2), Verschlüsselung der Sicherungen (F3),

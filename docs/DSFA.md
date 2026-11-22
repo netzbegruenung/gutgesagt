@@ -502,6 +502,23 @@ Empfänger und Ort“.
   die Bilanz bleibt so möglich. Vorschlag: Schlüssel der Angemeldeten wie bei Besuchern nur im Speicher
   (Abschnitt 9, Punkt 3).
 
+#### V7a Seitenaufrufe und Besucher je Tag (gebaut, ausgeschaltet; #761)
+
+- **Zweck:** wie V7, aber für alle, die die App öffnen, nicht nur für die, die suchen.
+- **Rechtsgrundlage und § 25 TDDDG:** wie V7; dasselbe Besuchermerkmal (Anschluss), derselbe
+  Tagesschlüssel im Speicher, kein neues Merkmal, kein Cookie. Das Frontend schickt je
+  Seitenwechsel eine leere Anfrage (`POST /api/v1/aufrufe/zaehlen`), ohne Pfad.
+- **Daten:** je Besucher und Tag ein Pseudonym mit eigenem Präfix (`aufruf|`, also nicht mit
+  dem an Suchereignissen verknüpfbar) und eine Zahl (`aufrufe_heute`); Angemeldete ebenso über
+  den Anschluss, nicht über die Kennung.
+- **Frist:** Pseudonyme bis zum Ende ihres UTC-Tages, dann zu `aufrufe_tage` verdichtet
+  (`ss/services/aufrufe_service.py`, stündlich, auch bei ausgeschaltetem Schalter).
+- **Risiko:** gering, wie V7 für Besucher. Neu ist nur der Umfang: Das Pseudonym entsteht
+  bei jedem Besuch, nicht nur bei einer Suche.
+- **Maßnahmen:** Schalter `aufrufe_zaehlen` (Obergrenze aus, DSFA-Hinweis an der Admin-Seite);
+  vor dem Einschalten Satz in der Datenschutzerklärung und Antwort auf Frage 2 an die
+  Datenschutzbeauftragte.
+
 #### V8 Suchen ohne Treffer
 
 - **Zweck:** erkennen, wo Antworten fehlen (`DSE:513-514`).

@@ -40,6 +40,7 @@ export class PublicEndpoints {
     '/api/v1/voting/',      // Voting endpoints - handle auth errors in components, don't redirect
     '/api/v1/moderation/report',  // Allow anonymous content reporting with session ID
     '/api/v1/feedback/senden',    // Feedback auch von Besuchern (#343)
+    '/api/v1/aufrufe/zaehlen',    // Seitenaufrufe zaehlen, auch von Besuchern (#761)
     '/api/v1/einladungen/pruefen',   // Einladung oeffnen, noch ohne Konto (#429)
     '/api/v1/einladungen/einloesen',
     '/api/v1/varianten/',            // "N Varianten" auch fuer Besucher (#356)

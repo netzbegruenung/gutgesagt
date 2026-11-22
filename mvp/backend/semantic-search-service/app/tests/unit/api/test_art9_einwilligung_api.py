@@ -666,6 +666,8 @@ OFFEN = {
     ("POST", "/api/v1/moderation/loeschauftraege/{auftrag_id}/ausfuehren"),
     # Schalter setzen (Admin, #708): keine Daten von Nutzenden
     ("PUT", "/api/v1/moderation/schalter/{name}"),
+    # Seitenaufruf zaehlen (#761): nur ein Zaehler je Tagespseudonym, keine Inhalte
+    ("POST", "/api/v1/aufrufe/zaehlen"),
     ("POST", "/api/v1/sperren/{sperre_id}/widerspruch"),
     # Einladungen (vor dem Konto) und Admin-Endpunkte
     ("POST", "/api/v1/einladungen"),

@@ -288,6 +288,12 @@ class Settings(BaseSettings):
     # Standard aus, unabhaengig von punkte_aktiv: eine eigene Verarbeitung, die erst
     # mit Satz in DSFA und Datenschutzerklaerung eingeschaltet wird.
     gepostet_aktiv: bool = False
+    # Seitenaufrufe und Besucher je Tag (#761, services/aufrufe_service.py): das
+    # Tagespseudonym (#446) an einer Zeile je Besucher und Tag, am Tagesende zu zwei
+    # Zahlen verdichtet. Standard aus: eine weitere Verarbeitung mit dem Pseudonym, die
+    # erst mit Satz in Datenschutzerklaerung und DSFA und nach der Antwort auf die
+    # DSB-Frage 2 (#495) eingeschaltet wird.
+    aufrufe_zaehlen_aktiv: bool = False
     # Gewichte und Deckel der drei Stufen (domain/punkte.py): Tun klein und je Tag
     # gedeckelt, Quests mehr, Wirkung bei anderen am meisten.
     punkte_nutzung: int = Field(default=10, ge=0)

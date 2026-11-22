@@ -326,6 +326,12 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   (0.92), direct raw score above 0.82 to below `…_INHALTSTOR_DIREKT_BIS` (0.90). spaCy model
   of Gegenlesen; open without nouns or before the model is loaded. Measured in
   `tests/regression/SUCHTESTSET.md`, section Inhaltstor.
+- `SEMANTIC_SEARCH_AUFRUFE_ZAEHLEN_AKTIV` - upper bound of the Schalter `aufrufe_zaehlen`
+  (#761, default `false`, DSFA hint); takes effect only when an admin switches it on too. Then
+  the frontend posts an empty request per page change (`POST /api/v1/aufrufe/zaehlen`, public at
+  the BFF), the service counts it per day pseudonym of the visitor (`aufrufe_heute`, Anschluss
+  with its own prefix, no IP, no cookie) and an hourly task condenses past days into
+  `aufrufe_tage` (views, visitors). Admins read them via `GET /api/v1/aufrufe` (Kennzahlen).
 - `DOCKER_CONTAINER` - set to `true` inside containers to enforce strict path validation
 
 ## Startup Scripts

@@ -237,6 +237,8 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 |---|---|---|
 | Meldungen (`content_reports`), bearbeitet oder abgewiesen | 180 Tage | Bearbeitung (`reviewed_at`; ohne sie, im Altbestand, der Eingang) |
 | Suchereignisse (`search_events`) samt Tagespseudonym | bis zum Ende ihres UTC-Tages | dann zum Tageszähler der Suchen verdichtet, ohne Pseudonym (#495, `SearchTrackingRepository.verdichten_vor`; Einzelheiten unter „Was nicht gelöscht wird“) |
+| Seitenaufrufe (`aufrufe_heute`, #761, Schalter `aufrufe_zaehlen`): Tagespseudonym und Zahl der Aufrufe | bis zum Ende ihres UTC-Tages | spätestens eine Stunde danach zu Tageszahlen verdichtet (`aufrufe_tage`: Aufrufe, Besucher, ohne Pseudonym) und gelöscht, stündlicher Task `services/aufrufe_service.py`, auch bei ausgeschaltetem Schalter |
+| Tageszahlen der Seitenaufrufe (`aufrufe_tage`) | keine | — nur zwei Zahlen je Tag, ohne Personenbezug |
 | Tagespseudonym an anonymen Meldungen (`reported_by_session_id`, `besucher:…`) | bis zum Abschluss der Meldung | Bearbeiten oder Abweisen ersetzt es durch einen Zufallswert (`anon:…`), angemeldete Meldungen verlieren den Wert (#446, `repositories/content_report_repository.py`) |
 | Meldungen, offen | keine | — sie sind Arbeit und bleiben, bis ein Admin sie bearbeitet oder ihr Beitrag endgültig entfernt wird (dann bearbeitet, Frist wie oben) |
 | Einwürfe (`raw_inputs`), die in keinem Beitrag ausformuliert sind, samt Sätzen und Themen | 365 Tage | letzte Arbeit daran: Einwerfen oder zuletzt gespeicherter Satz |

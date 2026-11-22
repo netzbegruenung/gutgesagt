@@ -53,6 +53,7 @@ from api.v1.linkvorschau import router as linkvorschau_router
 from api.v1.kuerzungsvorschlag import router as kuerzungsvorschlag_router
 from api.v1.art9_einwilligung import router as art9_einwilligung_router
 from api.v1.nutzungsbedingungen import router as nutzungsbedingungen_router
+from api.v1.aufrufe import router as aufrufe_router
 from services.cleanup.bereinigungsjob import bereinigungsjob_starten
 from services.suchen_ohne_treffer_service import (
     get_personen_des_tages,
@@ -74,6 +75,8 @@ from repositories.usage_tracking_repository import get_usage_repository
 from services.entdoppelung import pruefwerte_verwerfen_im_takt
 from repositories.gepostet_repository import get_gepostet_repository
 from services.abzeichen_service import abzeichen_im_takt, abzeichen_service_setzen
+from services.aufrufe_service import verdichten_im_takt as aufrufe_verdichten_im_takt
+from repositories.aufrufe_repository import get_aufrufe_repository
 from services.muster_hinweise_service import (
     loeschen_im_takt as muster_hinweise_loeschen_im_takt,
 )
@@ -232,6 +235,12 @@ async def lifespan(app: FastAPI):
             )
             logger.info("✅ Milestone badge task started")
 
+        # Seitenaufrufe (#761): Tagespseudonyme vergangener Tage zu Tageszahlen
+        # verdichten und loeschen, auch bei ausgeschaltetem Schalter (loescht nur).
+        app.state.aufrufe_verdichten = asyncio.create_task(
+            aufrufe_verdichten_im_takt(get_aufrufe_repository())
+        )
+
         logger.info(
             "✅ Application startup complete - server ready to accept connections"
         )
@@ -253,6 +262,7 @@ async def lifespan(app: FastAPI):
                 "pruefwerte_verwerfen",
                 "muster_hinweise_loeschen",
                 "abzeichen_rechnen",
+                "aufrufe_verdichten",
             ):
                 task = getattr(app.state, name, None)
                 if task is not None:
@@ -385,6 +395,7 @@ app.include_router(
     prefix="/api/v1/nutzungsbedingungen",
     tags=["nutzungsbedingungen"],
 )
+app.include_router(aufrufe_router, prefix="/api/v1/aufrufe", tags=["aufrufe"])
 
 # Betriebskennzahlen unter /metrics (#420). Zuletzt hinzugefuegt, also aussen: Die
 # Middleware zaehlt auch, was das Rate-Limit abweist. Am BFF ist /metrics gesperrt.

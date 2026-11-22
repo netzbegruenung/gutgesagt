@@ -436,6 +436,10 @@ _Avoid_: Tagesstatistik, Aggregat
 Ein Wert, der dasselbe Konto oder denselben Besucher an einem Tag wiedererkennbar macht, aber nicht über Tagesgrenzen hinweg: aus der Kennung und dem Datum berechnet, bei Besuchern am Server aus dem Besuchermerkmal und dem Datum mit dem Tagesschlüssel. Im Browser liegt dafür keine Kennung. Ohne den geheimen Schlüssel lässt er sich nicht auf die Kennung zurückführen. Er steht an Suchereignissen des laufenden Tages statt einer Kennung (danach bleibt nur der Tageszähler der Suchen) und an offenen anonymen Meldungen, bis sie abgeschlossen sind; bei Suchen ohne Treffer unterscheidet dasselbe Tagespseudonym die Personen, gespeichert wird es dort nicht. Wer an zwei Tagen sucht oder sich im Laufe des Tages anmeldet, hat zwei Tagespseudonyme; Kennzahlen, die Personen zählen, zählen Tagespseudonyme, bei Besuchern also Anschlüsse.
 _Avoid_: Nutzer-ID, Actor-Hash, Hash, anonyme ID
 
+**Aufruf**:
+Ein Seitenwechsel in der App, gezählt je Tag zusammen mit den Besuchern dieses Tages (verschiedene Tagespseudonyme mit eigenem Präfix, also Anschlüsse). Gezählt wird ohne Pfad und ohne Kennung, Admin-Seiten nicht; am Tagesende bleiben nur die zwei Zahlen. Hinter dem Schalter `aufrufe_zaehlen` (#761).
+_Avoid_: Pageview, Hit, Impression
+
 **Besuchermerkmal**:
 Woraus der Server das Tagespseudonym eines Besuchers bildet: der Anschluss, also die IP-Adresse (bei IPv6 nur ihr vorderer Teil), sonst nichts. Den User-Agent nimmt es seit #495 nicht mehr auf, damit das Pseudonym möglichst wenig über das Gerät trägt. Es existiert nur während einer Anfrage und wird weder gespeichert noch protokolliert. Alle Besucher am selben Anschluss haben dasselbe Besuchermerkmal, auch mit verschiedenen Browsern oder Geräten.
 _Avoid_: Fingerprint
@@ -654,5 +658,5 @@ Eine Person, die Meldungen bearbeitet, Beiträge sperrt, Widersprüche prüft, E
 _Avoid_: Moderator, Redaktion
 
 **Schalter**:
-Eine Funktion, die sich ein- und ausschalten lässt, ohne den Code zu ändern. Bei Punkten, Abzeichen am Anzeigenamen und „Ja, gepostet“ hat ein Schalter zwei Teile: die **Obergrenze**, die der Server aus seiner Umgebung setzt, und den **Admin-Wert**, den ein Admin auf der Admin-Seite „Schalter“ setzt. Wirksam ist der Schalter nur, wenn beide an sind; ohne Admin-Wert ist er aus. Über die Obergrenze hinaus einschalten kann kein Admin, ausschalten jederzeit; jede Änderung steht mit Zeitpunkt und Kennung des Admins im Verlauf (#708). Abzeichen wirken nur zusammen mit den Punkten.
+Eine Funktion, die sich ein- und ausschalten lässt, ohne den Code zu ändern. Bei Punkten, Abzeichen am Anzeigenamen, „Ja, gepostet“ und den Aufrufen (`aufrufe_zaehlen`, #761) hat ein Schalter zwei Teile: die **Obergrenze**, die der Server aus seiner Umgebung setzt, und den **Admin-Wert**, den ein Admin auf der Admin-Seite „Schalter“ setzt. Wirksam ist der Schalter nur, wenn beide an sind; ohne Admin-Wert ist er aus. Über die Obergrenze hinaus einschalten kann kein Admin, ausschalten jederzeit; jede Änderung steht mit Zeitpunkt und Kennung des Admins im Verlauf (#708). Abzeichen wirken nur zusammen mit den Punkten.
 _Avoid_: Feature-Flag, Toggle, Flag

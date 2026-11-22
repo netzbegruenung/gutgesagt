@@ -22,7 +22,10 @@ Schlüssel ein Pseudonym. Schlüssel und Adresse liegen dafür nur im Arbeitsspe
 wird für das Pseudonym nichts gespeichert oder ausgelesen. Den User-Agent nimmt der Server seit
 der Vorprüfung zu #495 nicht mehr auf (Entscheidung Maintainer, 11.11.2026). Das Pseudonym selbst
 wird gespeichert: an Suchereignissen nur bis zum Ende ihres Tages (danach bleiben Tageszähler ohne
-Pseudonym; vorher 90 Tage) und an anonymen Meldungen, bis sie abgeschlossen sind. Unabhängig
+Pseudonym; vorher 90 Tage) und an anonymen Meldungen, bis sie abgeschlossen sind. Gebaut, aber
+ausgeschaltet (#761): dasselbe Merkmal mit eigenem Präfix für Seitenaufrufe, an einer Zeile je
+Besucher und Tag, ebenfalls am Tagesende zu Zahlen verdichtet; eingeschaltet wird es erst mit
+der Antwort auf diese Frage. Unabhängig
 davon halten die Zugriffsprotokolle des vorgelagerten Webservers Adresse, User-Agent und Uhrzeit
 jeder Anfrage außer der Suche fest (Datenschutzerklärung, „Protokolldateien“).
 

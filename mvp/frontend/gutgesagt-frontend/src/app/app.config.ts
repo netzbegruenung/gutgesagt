@@ -8,6 +8,7 @@ import { cacheInterceptor } from './auth/cache.interceptor';
 import { GlobalErrorHandler } from './services/error-handler.service';
 import { alteSitzungskennungEntfernen } from './services/alte-sitzungskennung';
 import { NeueVersionService } from './shared/neue-version';
+import { AufrufeZaehlenService } from './services/aufrufe-zaehlen.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -24,6 +25,8 @@ export const appConfig: ApplicationConfig = {
     // Keine Sitzungskennung im Browser (#446): was fruehere Versionen ablegten, kommt weg.
     provideAppInitializer(() => alteSitzungskennungEntfernen()),
     // Der Merker eines automatischen Neuladens (Schleifensperre) faellt nach zehn Minuten.
-    provideAppInitializer(() => inject(NeueVersionService).aufraeumen())
+    provideAppInitializer(() => inject(NeueVersionService).aufraeumen()),
+    // Seitenaufrufe zaehlen (#761): meldet Seitenwechsel, hoert ohne Schalter nach dem ersten 404 auf
+    provideAppInitializer(() => inject(AufrufeZaehlenService).starten())
   ]
 };

@@ -187,6 +187,9 @@ Behaviour change on rollout: a system where a variable is already `true` (for ex
 `SEMANTIC_SEARCH_PUNKTE_AKTIV=true` on test) has that function **off** after the update until an
 admin switches it on. Before switching on Punkte or Abzeichen on production: DSFA decided
 (`docs/DSFA.md`, section 7).
+`SEMANTIC_SEARCH_AUFRUFE_ZAEHLEN_AKTIV` (#761, page views and visitors per day) stays `false` on
+production until the privacy policy names it and question 2 to the data protection officer is
+answered (`docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md`).
 
 ### 🚧 Updating Production
 

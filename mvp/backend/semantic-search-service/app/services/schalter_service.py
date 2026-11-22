@@ -73,6 +73,16 @@ SCHALTER: Dict[str, Schalterart] = {
                 "in der Übersicht."
             ),
         ),
+        Schalterart(
+            name="aufrufe_zaehlen",
+            feld="aufrufe_zaehlen_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_AUFRUFE_ZAEHLEN_AKTIV",
+            erklaerung=(
+                "Zählt Seitenaufrufe und Besucher je Tag über das Tagespseudonym, "
+                "ohne IP und ohne Cookie, und zeigt sie unter Kennzahlen."
+            ),
+            dsfa_hinweis=True,
+        ),
     )
 }
 
