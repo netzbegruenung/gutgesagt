@@ -35,6 +35,8 @@ describe('abkuerzungGuard (#757)', () => {
 
     it('fuehrt unbekannte Namen auf die Startseite', async () => {
       expect(await ziel('admin')).toBe('/search');
+      expect(await ziel('constructor')).toBe('/search');
+      expect(await ziel('__proto__')).toBe('/search');
     });
   });
 

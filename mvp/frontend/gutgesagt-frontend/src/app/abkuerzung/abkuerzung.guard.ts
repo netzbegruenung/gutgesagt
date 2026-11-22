@@ -27,7 +27,9 @@ export const ABKUERZUNGEN: Record<string, string> = {
  */
 export const abkuerzungGuard: CanActivateFn = (route) => {
   const router = inject(Router);
-  const ziel = ABKUERZUNGEN[route.paramMap.get('name') ?? ''];
+  const name = route.paramMap.get('name') ?? '';
+  // Nur eigene Eintraege: "constructor" oder "__proto__" kaemen sonst aus dem Prototyp
+  const ziel = Object.hasOwn(ABKUERZUNGEN, name) ? ABKUERZUNGEN[name] : undefined;
   return inject(FunktionenService)
     .frisch(ABKUERZUNGEN_SCHALTER)
     .pipe(map((an) => router.parseUrl(an && ziel ? ziel : ROUTES.SEARCH)));
