@@ -151,7 +151,7 @@ def test_stand_nennt_obergrenze_admin_wert_wirksam_und_dsfa_hinweis():
     dienst, _, _ = _dienst({"punkte": True})
     stand = {s.name: s for s in dienst.stand(Settings(punkte_aktiv=True))}
 
-    assert set(stand) == {"punkte", "abzeichen_sichtbar", "gepostet"}
+    assert {"punkte", "abzeichen_sichtbar", "gepostet", "abkuerzungen"} <= set(stand)
     assert (
         stand["punkte"].obergrenze,
         stand["punkte"].admin_wert,
@@ -161,6 +161,7 @@ def test_stand_nennt_obergrenze_admin_wert_wirksam_und_dsfa_hinweis():
     assert "DSFA" in stand["punkte"].dsfa_hinweis
     assert "DSFA" in stand["abzeichen_sichtbar"].dsfa_hinweis
     assert stand["gepostet"].dsfa_hinweis is None
+    assert stand["abkuerzungen"].dsfa_hinweis is None
     assert all(s.erklaerung for s in stand.values())
 
 

@@ -467,6 +467,10 @@ _Avoid_: Hinweis (das ist der Freitext an einem Einwurf), Benachrichtigung, Noti
 **Willkommen**:
 Das gelbe Band beim ersten Besuch auf der Startseite, unter dem Suchfeld (vorher darüber; mobil stand das Suchfeld dann erst weit unten), kein Fenster (#587; seit #599 nicht mehr über den Treffern): ein Satz, wofür Gut gesagt da ist, und das Angebot des Rundgangs „Antwort finden“, daneben „Ausblenden“. Ob die Person reagiert hat (Rundgang gestartet oder ausgeblendet), merkt sich nur der Browser; danach kommt das Band nicht wieder. Nach der Anmeldung kommt nur die Art.-9-Einwilligung; „Selbst beitragen“ bietet erst ein Band auf Beitragen an (#587, gestaffelt; seit #644 nicht mehr im Fangkorb).
 
+
+**App-Abkürzung**:
+Ein Eintrag im Menü, das langes Drücken aufs Symbol der installierten App öffnet: Einwerfen, Suchen, Fangkorb. Das Gerät liest sie beim Installieren aus dem Manifest und zeigt sie immer; ist ihr Schalter aus, öffnet jede die Startseite wie das Symbol selbst (#757).
+_Avoid_: Shortcut, Schnellzugriff
 **App-Hinweis**:
 Das Band „Gut gesagt als App“ auf der Startseite, unter dem Suchfeld, frühestens im Besuch nach dem Willkommen und nie zugleich mit einem anderen Band. Auf iPhone und iPad in Safari ist es eine Anleitung (Teilen, dann „Zum Home-Bildschirm“); in Chrome und Edge auf Android und Computer steht es nur da, wenn der Browser das Installieren anbietet, und hat dann einen Knopf „Installieren“ (18.11.). Nach „Ausblenden“ kommt es nicht wieder; der Browser merkt sich das unter demselben Vermerk auf allen Geräten, und nur, solange der Schalter für diesen Merker an ist. Nach dem Installieren ist es weg. Die Hilfe erklärt das Installieren je Gerät im Abschnitt „Als App aufs Handy“, mit demselben Knopf, wenn der Browser ihn anbietet.
 _Avoid_: PWA-Banner, Install-Prompt
