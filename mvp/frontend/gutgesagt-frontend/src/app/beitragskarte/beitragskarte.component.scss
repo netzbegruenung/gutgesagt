@@ -662,6 +662,12 @@ h4.karte-titel {
   margin-top: auto;
 }
 
+// Merken (#758): mittig wie "N Varianten"; leer ohne Hoehe, wenn der Knopf nicht dasteht
+.karte-merken {
+  display: flex;
+  justify-content: center;
+}
+
 // "N Varianten" (#356): ein Link ueber der Meta-Zeile, mittig wie sie
 .karte-varianten {
   display: flex;

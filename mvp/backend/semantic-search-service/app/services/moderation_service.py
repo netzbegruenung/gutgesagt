@@ -9,6 +9,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+from repositories.merkliste_repository import (
+    MerklisteRepository,
+    get_merkliste_repository,
+)
 from repositories.content_report_repository import (
     BeitragGesperrt,
     BeitragNichtGesperrt,
@@ -157,6 +161,7 @@ class ModerationService:
         mitteilung: Optional[MeldungMitteilung] = None,
         varianten_repo: Optional[VariantenRepository] = None,
         anzeigenamen: Optional[AnzeigenameService] = None,
+        merkliste_repo: Optional[MerklisteRepository] = None,
     ):
         self.report_repo = report_repo or get_content_report_repository()
         self.moderation_repo = moderation_repo or get_moderation_repository()
@@ -165,6 +170,7 @@ class ModerationService:
         self._einwurf_repo = einwurf_repo
         self._sperre_repo = sperre_repo
         self._varianten_repo = varianten_repo
+        self._merkliste_repo = merkliste_repo
         # Mails an die meldende Person (#493); ohne eingerichteten Versand geht nichts hinaus.
         self._mitteilung = mitteilung
         # Anzeigenamen fuer "Gemeldet von" und "Bearbeitet von"; erst beim Lesen gebraucht.
@@ -778,6 +784,18 @@ class ModerationService:
             logger.warning(f"Content {content_id} could not be deleted")
             return False
 
+        # Gemerkt hat ihn niemand mehr (#758); ein Fehler macht die Loeschung nicht
+        # rueckgaengig, die Merkliste laesst ihn ohnehin aus (404 beim Laden).
+        try:
+            await asyncio.to_thread(
+                self._merkliste().loeschen_fuer_beitrag, UUID(content_id)
+            )
+        except Exception as e:
+            logger.warning(
+                f"Content {content_id} deleted, removing it from Merklisten failed "
+                f"({type(e).__name__})"
+            )
+
         # Eine Sperre des Beitrags gilt als aufgehoben, damit ihre Frist laeuft und
         # der Autor keine Sperrnachricht zu einem Beitrag sieht, den es nicht mehr
         # gibt. Wie bei den Meldungen macht ein Fehler die Loeschung nicht rueckgaengig.
@@ -847,6 +865,11 @@ class ModerationService:
         if self._einwurf_repo is None:
             self._einwurf_repo = get_einwurf_repository()
         return self._einwurf_repo
+
+    def _merkliste(self) -> MerklisteRepository:
+        if self._merkliste_repo is None:
+            self._merkliste_repo = get_merkliste_repository()
+        return self._merkliste_repo
 
     def _varianten(self) -> VariantenRepository:
         if self._varianten_repo is None:

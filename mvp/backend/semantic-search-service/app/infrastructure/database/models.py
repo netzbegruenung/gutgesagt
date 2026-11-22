@@ -1003,3 +1003,27 @@ class MigrationsprotokollZeile(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     fehler = Column(Text, nullable=True)
+
+
+class MerklisteZeile(Base):
+    """
+    Ein gemerkter Beitrag (#758, GLOSSARY.md "Merkliste"): wer ihn wann zuletzt gemerkt
+    hat. Nur die Person selbst sieht ihre Merkliste; Zaehler fuer andere gibt es nicht.
+    Erneutes Merken setzt ``gemerkt_am`` neu, die Liste steht nach zuletzt gemerkt.
+
+    Neue Tabelle: create_all legt sie beim Start an. Das Skript
+    postgres-app/migrations/2026-11-23-758-merkliste.sql dokumentiert das Schema.
+    Loeschen: docs/LOESCHKONZEPT.md, Schritt 2 (mit dem Konto), beim Widerruf der
+    Art.-9-Einwilligung und mit dem endgueltig entfernten Beitrag.
+    """
+
+    __tablename__ = "merkliste"
+
+    user_id = Column(String(255), primary_key=True)
+    content_id = Column(SQLUUID(as_uuid=True), primary_key=True)
+    gemerkt_am = Column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        Index("idx_merkliste_user_gemerkt", "user_id", "gemerkt_am"),
+        Index("idx_merkliste_content", "content_id"),
+    )

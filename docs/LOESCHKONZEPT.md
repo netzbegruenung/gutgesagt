@@ -114,7 +114,8 @@ dann jede folgende Anfrage ab, nach dem Entfernen nicht mehr.
    Antwort auf die Frage nach der Sichtbarkeit der Abzeichen, auch ein Nein; #351), in
    `punkte_einwilligung` (jede Antwort auf die Einwilligung „Punkte und Meilensteine“, auch
    ein Widerruf; #351), in `nutzungsbedingungen_zustimmungen` (jede Zustimmung zu den
-   Nutzungsbedingungen in der App mit Zeitpunkt und Stand) und die in
+   Nutzungsbedingungen in der App mit Zeitpunkt und Stand), in `merkliste` (gemerkte
+   Beiträge mit Zeitpunkt, #758) und die in
    `loeschauftraege` (offene und erledigte Löschaufträge nach einem Widerruf)
    löschen, ebenso jeden Muster-Hinweis
    (`muster_hinweise`, #352), der die Person nennt. Der Anzeigename steht **nur dort** — weder in Qdrant
@@ -161,7 +162,7 @@ dann jede folgende Anfrage ab, nach dem Entfernen nicht mehr.
 
 Widerruft eine Person ihre Art.-9-Einwilligung, fehlt für die Zuordnung ihrer Beiträge,
 Einwürfe und Sätze die Rechtsgrundlage (DSFA V2, R9; `docs/ART9_EINWILLIGUNG.md`). Der Widerruf
-löscht sofort ihre Stimmen und legt in derselben Transaktion einen **Löschauftrag** an: Kennung,
+löscht sofort ihre Stimmen und ihre Merkliste (#758) und legt in derselben Transaktion einen **Löschauftrag** an: Kennung,
 Zeitpunkt und Frist, sieben Tage später (Tabelle `loeschauftraege`,
 `Art9EinwilligungService.widerrufen`). Einen Auftrag gibt es nur, wenn dabei eine geltende
 Einwilligung widerrufen wurde; je Person höchstens einen offenen, ein zweiter Widerruf legt
@@ -252,6 +253,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Muster-Hinweise (`muster_hinweise`) | 56 Tage (8 Wochen) | letzter Tag mit gegenseitiger Nutzung (`letzter_tag`) |
 | Löschaufträge (`loeschauftraege`), offen | keine | — sie sind Arbeit und bleiben, bis ein Admin den Löschablauf ausführt (Frist dafür: sieben Tage ab dem Widerruf, unter „Löschauftrag nach dem Widerruf“) |
 | Löschaufträge, erledigt | 365 Tage (entschieden 13.11.2026) | Ausführung (`erledigt_am`); mit dem Konto sofort (Schritt 2) |
+| Merkliste (`merkliste`, #758): gemerkter Beitrag und Zeitpunkt | solange die Person ihn gemerkt hat | — geht beim Entfernen aus der Merkliste, mit dem Konto (Schritt 2), beim Widerruf der Art.-9-Einwilligung und mit dem endgültig entfernten Beitrag; höchstens 500 Einträge je Person |
 | Zustimmung zur Sichtbarkeit der Abzeichen (`abzeichen_sichtbarkeit`) | solange das Konto besteht | — Nachweis der Zustimmung (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Einwilligung „Punkte und Meilensteine“ (`punkte_einwilligung`, #351) | solange das Konto besteht | — Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Zustimmung zu den Nutzungsbedingungen in der App (`nutzungsbedingungen_zustimmungen`) | solange das Konto besteht | — Nachweis des Vertragsschlusses und des Stands, dem die Person zugestimmt hat (Art. 6 Abs. 1 lit. b DSGVO); geht mit dem Konto (Schritt 2) |
@@ -697,7 +699,7 @@ docker exec -i gutgesagt-app-postgres psql -U app_user -d gutgesagt_app \
 #   -v ON_ERROR_STOP=1 -v uid="$KENNUNG"
 
 docker exec -i gutgesagt-app-postgres psql -U app_user -d gutgesagt_app -c \
-  "VACUUM FULL votes, content_reports, raw_inputs, raw_input_content_links, raw_input_drafts, usage_events, users, gesehene_nutzung, muster_hinweise, art9_einwilligungen, art9_ohne_einwilligung, abzeichen_sichtbarkeit, punkte_einwilligung, nutzungsbedingungen_zustimmungen, loeschauftraege;"
+  "VACUUM FULL votes, content_reports, raw_inputs, raw_input_content_links, raw_input_drafts, usage_events, users, gesehene_nutzung, muster_hinweise, art9_einwilligungen, art9_ohne_einwilligung, abzeichen_sichtbarkeit, punkte_einwilligung, nutzungsbedingungen_zustimmungen, merkliste, loeschauftraege;"
 ```
 
 ```bash

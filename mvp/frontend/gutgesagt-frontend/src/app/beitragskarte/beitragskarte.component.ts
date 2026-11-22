@@ -37,6 +37,7 @@ import {
   STUFEN,
   gueteAus,
 } from './karten-daten';
+import { MerkenKnopfComponent } from '../shared/merkliste/merken-knopf.component';
 import { KartenAktionenComponent, KopierVariante } from './karten-aktionen/karten-aktionen.component';
 import { herkunftDomain, herkunftText, tragtHerkunftsangaben } from './herkunft-text';
 import { CONTENT_TYPE_REGISTRY, typLabel } from '../shared/content-type-registry';
@@ -130,6 +131,7 @@ function nutzungsZeile(label: string, nutzung: number, zuwachs: number): Nutzung
     MatTooltipModule,
     RelativeTimePipe,
     KartenAktionenComponent,
+    MerkenKnopfComponent,
     FremdesBildComponent,
     SiegelComponent,
     RouterLink,

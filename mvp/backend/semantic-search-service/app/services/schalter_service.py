@@ -43,6 +43,8 @@ class Schalterart:
     # funktionen.py): fuer Funktionen, die nur im Browser laufen und deshalb keinen
     # eigenen Endpunkt haben, der mit 404 antworten koennte (etwa Teilen als Bild).
     oeffentlich: bool = False
+    # Eigener Hinweis vor dem Einschalten auf Prod, wo es nicht um die DSFA geht.
+    hinweis: Optional[str] = None
 
 
 SCHALTER: Dict[str, Schalterart] = {
@@ -75,6 +77,20 @@ SCHALTER: Dict[str, Schalterart] = {
             erklaerung=(
                 "Rückfrage „Ja, gepostet“ nach dem Kopieren und die Zahl je Woche "
                 "in der Übersicht."
+            ),
+        ),
+        Schalterart(
+            name="merkliste",
+            feld="merkliste_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_MERKLISTE_AKTIV",
+            erklaerung=(
+                "Merken an der Beitragskarte und der Reiter „Gemerkt“ in Meine "
+                "Beiträge. Nur die Person selbst sieht ihre Merkliste."
+            ),
+            oeffentlich=True,
+            hinweis=(
+                "Vor dem Einschalten auf Prod: Datenschutzerklärung um die Merkliste "
+                "ergänzt (Entwurf im PR zu #758)"
             ),
         ),
     )
@@ -163,7 +179,7 @@ class SchalterService:
                 obergrenze=bool(getattr(einstellungen, art.feld)),
                 admin_wert=bool(werte.get(art.name, False)),
                 wirksam=_wirksam(art.name, einstellungen, werte),
-                dsfa_hinweis=DSFA_HINWEIS if art.dsfa_hinweis else None,
+                dsfa_hinweis=DSFA_HINWEIS if art.dsfa_hinweis else art.hinweis,
             )
             for art in SCHALTER.values()
         ]

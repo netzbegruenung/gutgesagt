@@ -70,4 +70,10 @@
          [hidden]="tab !== 'einwuerfe'">
         <app-meine-einwuerfe *ngIf="einwuerfeGeoeffnet"></app-meine-einwuerfe>
     </div>
+
+    <!-- Merkliste (#758): nur mit Schalter; erst beim ersten Oeffnen geladen -->
+    <div id="meine-bereich-gemerkt" role="tabpanel" aria-labelledby="meine-tab-gemerkt"
+         *ngIf="tabs.length > 2" [hidden]="tab !== 'gemerkt'">
+        <app-gemerkt *ngIf="gemerktGeoeffnet"></app-gemerkt>
+    </div>
 </div>

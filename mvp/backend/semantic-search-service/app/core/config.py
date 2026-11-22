@@ -258,7 +258,8 @@ class Settings(BaseSettings):
     def ist_startkonto(self, user_id: Optional[str]) -> bool:
         return bool(user_id) and user_id in self.startkonto_kennungen()
 
-    # Seit #708 sind punkte_aktiv, abzeichen_sichtbar_aktiv und gepostet_aktiv nur die
+    # Seit #708 sind punkte_aktiv, abzeichen_sichtbar_aktiv, gepostet_aktiv und die
+    # Felder der spaeteren Schalter (SCHALTER in services/schalter_service.py) nur die
     # Obergrenze: Wirksam sind sie erst, wenn zusaetzlich ein Admin sie auf der Seite
     # "Schalter" einschaltet (services/schalter_service.py, schalter_wirksam). Im Code
     # nicht direkt abfragen.
@@ -288,6 +289,11 @@ class Settings(BaseSettings):
     # Standard aus, unabhaengig von punkte_aktiv: eine eigene Verarbeitung, die erst
     # mit Satz in DSFA und Datenschutzerklaerung eingeschaltet wird.
     gepostet_aktiv: bool = False
+    # Merkliste (#758): Angemeldete merken Beitraege und finden sie unter "Meine
+    # Beitraege" wieder (Tabelle merkliste, api/v1/merkliste.py). Obergrenze an, damit
+    # ein Admin ohne Rollout einschalten kann; Standard aus ist der Admin-Wert. Vor dem
+    # Einschalten auf Prod: Datenschutzerklaerung ergaenzt (Hinweis auf der Admin-Seite).
+    merkliste_aktiv: bool = True
     # Gewichte und Deckel der drei Stufen (domain/punkte.py): Tun klein und je Tag
     # gedeckelt, Quests mehr, Wirkung bei anderen am meisten.
     punkte_nutzung: int = Field(default=10, ge=0)

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { Observable, Subject, of } from 'rxjs';
 import { catchError, map, switchMap, takeUntil } from 'rxjs/operators';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -24,18 +24,22 @@ import { beantwortenParamsJeAussage } from '../hier-fehlt-eine-antwort/hier-fehl
 import { FORMULAR_PFAD } from '../shared/formular-adresse';
 import { AussagekarteComponent } from '../shared/aussagekarte/aussagekarte.component';
 import { AlbumComponent } from './album/album.component';
+import { GemerktComponent } from './gemerkt.component';
+import { MerklisteService } from '../services/merkliste.service';
 import { AlbumEintrag, albumEintrag, naechsterMeilenstein } from './album/album';
 
 /** So viele unbeantwortete Aussagen zeigt der leere Zustand als ersten Schritt (#645). */
 export const ERSTE_SCHRITTE = 3;
 
-/** Die beiden Tabs: eigene Beitraege und "Meine Einwuerfe". */
-export type MeineTab = 'beitraege' | 'einwuerfe';
+/** Die Tabs: eigene Beitraege, "Meine Einwuerfe" und, mit Schalter, die Merkliste (#758). */
+export type MeineTab = 'beitraege' | 'einwuerfe' | 'gemerkt';
 
 const TABS: ReadonlyArray<{ wert: MeineTab; name: string }> = [
   { wert: 'beitraege', name: 'Meine Beiträge' },
   { wert: 'einwuerfe', name: 'Meine Einwürfe' },
 ];
+/** Der Reiter der Merkliste (#758); nur mit eingeschaltetem Schalter. */
+const GEMERKT_TAB = { wert: 'gemerkt' as const, name: 'Gemerkt' };
 
 /**
  * Meine Beitraege als Album nach Thema (Variante A, Sebastian und Aila 20.11.; app-album):
@@ -60,15 +64,18 @@ const TABS: ReadonlyArray<{ wert: MeineTab; name: string }> = [
     SperrnachrichtenComponent,
     MeilensteineComponent,
     PunkteComponent,
-    AussagekarteComponent
+    AussagekarteComponent,
+    GemerktComponent
   ],
   templateUrl: './meine-beitraege.component.html',
   styleUrls: ['../shared/tabs.css', '../shared/aussagekarte/aussagekarten.scss', './meine-beitraege.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MeineBeitraegeComponent implements OnInit, OnDestroy {
-  readonly tabs = TABS;
+  private readonly merkliste = inject(MerklisteService);
   tab: MeineTab = 'beitraege';
+  /** Ab dem ersten Oeffnen bleibt der Merkliste-Tab stehen. */
+  gemerktGeoeffnet = false;
   /** Ab dem ersten Oeffnen bleibt der Einwurf-Tab stehen, damit Wechseln nicht neu laedt. */
   einwuerfeGeoeffnet = false;
   eintraege: AlbumEintrag[] = [];
@@ -95,9 +102,14 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
     private snackBar: MatSnackBar,
   ) { }
 
+  /** Die Tabs; „Gemerkt“ nur, solange der Schalter der Merkliste an ist. */
+  get tabs(): ReadonlyArray<{ wert: MeineTab; name: string }> {
+    return this.merkliste.an() ? [...TABS, GEMERKT_TAB] : TABS;
+  }
+
   ngOnInit() {
     // Ein Tab in der Adresse, etwa nach dem Ausformulieren "Meine Einwuerfe" (#508).
-    const tab = TABS.find((eintrag) => eintrag.wert === this.route.snapshot.queryParamMap.get(MEINE_TAB_PARAM));
+    const tab = [...TABS, GEMERKT_TAB].find((eintrag) => eintrag.wert === this.route.snapshot.queryParamMap.get(MEINE_TAB_PARAM));
     if (tab) {
       this.tabWaehlen(tab.wert);
       // Der Tab gilt nur fuer diesen Sprung: Bliebe er in der Adresse, oeffnete ein
@@ -192,6 +204,7 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
   tabWaehlen(tab: MeineTab): void {
     this.tab = tab;
     this.einwuerfeGeoeffnet ||= tab === 'einwuerfe';
+    this.gemerktGeoeffnet ||= tab === 'gemerkt';
   }
 
   /** Pfeiltasten, Pos1 und Ende waehlen den Tab und setzen den Fokus mit. */

@@ -26,6 +26,7 @@ from infrastructure.database.models import (
     ContentReport,
     GeseheneNutzung,
     LoeschauftragZeile,
+    MerklisteZeile,
     MusterHinweisZeile,
     NutzungsbedingungenZustimmungZeile,
     PunkteEinwilligungZeile,
@@ -275,6 +276,14 @@ def spuren(datenbank, einwuerfe):
                 user_id=PERSON,
                 wortlaut="2026-11-13",
                 entschieden_am=datetime.now(timezone.utc),
+            )
+        )
+        # Ein gemerkter Beitrag (#758).
+        s.add(
+            MerklisteZeile(
+                user_id=PERSON,
+                content_id=beitrag,
+                gemerkt_am=datetime.now(timezone.utc),
             )
         )
         s.add(
