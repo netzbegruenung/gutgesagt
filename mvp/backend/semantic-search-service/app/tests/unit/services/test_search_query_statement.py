@@ -128,7 +128,9 @@ def _mittag(tag):
 
 @pytest.fixture
 def suchen_ohne_treffer():
-    return MagicMock()
+    dienst = MagicMock()
+    dienst.schon_gesucht = AsyncMock(return_value=None)
+    return dienst
 
 
 @pytest.fixture
@@ -360,6 +362,50 @@ class TestSuchenOhneTreffer:
         )
 
         assert eins != zwei
+
+    def test_ohne_treffer_nennt_die_zahl_der_personen(
+        self, suchapp, suchen_ohne_treffer
+    ):
+        """#362: "Danach haben schon N Personen gesucht", auch fuer Besucher."""
+        app, service = suchapp
+        aussage = uuid.uuid4()
+        service.add_statement = AsyncMock(return_value=(False, aussage, "klima"))
+        app.dependency_overrides[get_search_query_statement_recorder] = _recorder
+        suchen_ohne_treffer.schon_gesucht.return_value = 3
+
+        resp = TestClient(app).post(
+            SEARCH_URL, json={"query_text": "klima", "limit": 10}, headers=BESUCHER
+        )
+
+        assert resp.json()["personen_ohne_treffer"] == 3
+        assert suchen_ohne_treffer.schon_gesucht.await_args.args == (aussage,)
+        # Erst gezaehlt, dann gelesen: die eigene Suche ist eingerechnet.
+        namen = [aufruf[0] for aufruf in suchen_ohne_treffer.method_calls]
+        assert namen.index("erfassen") < namen.index("schon_gesucht")
+
+    def test_unter_der_schwelle_keine_zahl(self, suchapp, suchen_ohne_treffer):
+        app, _ = suchapp
+        app.dependency_overrides[get_search_query_statement_recorder] = _recorder
+
+        resp = TestClient(app).post(
+            SEARCH_URL, json={"query_text": "klima", "limit": 10}
+        )
+
+        assert resp.json()["personen_ohne_treffer"] is None
+
+    def test_fehler_beim_lesen_der_zahl_laesst_die_suche_nicht_scheitern(
+        self, suchapp, suchen_ohne_treffer
+    ):
+        app, _ = suchapp
+        app.dependency_overrides[get_search_query_statement_recorder] = _recorder
+        suchen_ohne_treffer.schon_gesucht.side_effect = RuntimeError("weg")
+
+        resp = TestClient(app).post(
+            SEARCH_URL, json={"query_text": "klima", "limit": 10}
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["personen_ohne_treffer"] is None
 
     def test_fehler_der_kennzahl_laesst_die_suche_nicht_scheitern(
         self, suchapp, suchen_ohne_treffer

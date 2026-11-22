@@ -332,7 +332,7 @@ describe('ResultViewComponent: Nicht dabei?', () => {
     },
   };
 
-  function oeffnen(mobil: boolean, mitTreffer: boolean, vorschlaege = [SCHON_DA, AEHNLICH]): HTMLElement {
+  function oeffnen(mobil: boolean, mitTreffer: boolean, vorschlaege = [SCHON_DA, AEHNLICH], personen: number | null = null): HTMLElement {
     statementService = jasmine.createSpyObj('StatementService', ['aehnlicheAussagen']);
     statementService.aehnlicheAussagen.and.returnValue(of(vorschlaege));
     TestBed.configureTestingModule({
@@ -358,6 +358,7 @@ describe('ResultViewComponent: Nicht dabei?', () => {
       commentary_search_results: mitTreffer ? [KOMMENTAR as any] : [],
       generictext_search_results_count: 0,
       generictext_search_results: [],
+      personen_ohne_treffer: personen,
     });
     fixture = TestBed.createComponent(ResultViewComponent);
     fixture.detectChanges();
@@ -392,6 +393,17 @@ describe('ResultViewComponent: Nicht dabei?', () => {
     expect(bereich.querySelector('.keine-antwort-noetig')?.textContent).toContain('Nicht jede Aussage braucht eine Antwort.');
     bereich.querySelector<HTMLButtonElement>('.nur-link button')!.click();
     expect(navigate).toHaveBeenCalledWith(['/einwerfen']);
+  });
+
+  it('sagt ohne Treffer, wie viele Personen schon danach gesucht haben, ab zwei (#362)', () => {
+    const seite = oeffnen(true, false, [SCHON_DA, AEHNLICH], 3);
+    expect(seite.querySelector('.unified-empty-state .schon-gesucht')?.textContent)
+      .toContain('Danach haben in den letzten vier Wochen schon 3 Personen gesucht, dich eingerechnet.');
+  });
+
+  it('zeigt ohne Zahl keinen Hinweis auf andere Personen (#362)', () => {
+    const seite = oeffnen(false, false);
+    expect(seite.querySelector('.schon-gesucht')).toBeNull();
   });
 
   it('gibt ohne Treffer einen Suchtipp, der zur Suche nach Aussagen passt (#617)', () => {

@@ -120,6 +120,10 @@ class SearchResponse(BaseModel):
     post_search_results: List[PostSearchResult] = []
     image_search_results_count: int = 0
     image_search_results: List[ImageSearchResult] = []
+    # Ohne Treffer: so viele Personen haben in den letzten vier Wochen ebenfalls ohne
+    # Treffer danach gesucht, die eigene Suche eingerechnet; erst ab zwei, sonst None
+    # (#362, services/suchen_ohne_treffer_service.py, schon_gesucht).
+    personen_ohne_treffer: Optional[int] = None
 
     # class Config:
     #     alias_generator = camelize

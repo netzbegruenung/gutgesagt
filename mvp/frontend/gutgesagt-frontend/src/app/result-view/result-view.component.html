@@ -54,6 +54,8 @@
     <section class="content-section" *ngIf="!hatTreffer">
         <div class="unified-empty-state">
             <p class="search-query-info">Zu „{{searchQuery}}“ ist noch nichts drin. Die Sammlung wächst mit jedem Beitrag.</p>
+            <!-- Nur die Zahl, erst ab zwei Personen, auch fuer Besucher (#362) -->
+            <p class="schon-gesucht" *ngIf="personenOhneTreffer as personen">Danach haben in den letzten vier Wochen schon {{ personen }} Personen gesucht, dich eingerechnet.</p>
 
             <app-nicht-dabei [suchtext]="searchQuery" [bekannteAussagen]="bekannteAussagen" [ohneTreffer]="true">
                 <p class="neu-anlegen-satz">Schreib den ersten Kommentar zu dieser Aussage.</p>

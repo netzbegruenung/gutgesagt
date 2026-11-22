@@ -26,6 +26,8 @@ export interface SearchResponse {
     post_search_results?: PostSearchResult[];
     image_search_results_count?: number;
     image_search_results?: ImageSearchResult[];
+    /** Ohne Treffer: so viele Personen suchten in vier Wochen ohne Treffer danach, die eigene Suche eingerechnet; erst ab 2 (#362). */
+    personen_ohne_treffer?: number | null;
 }
 
 export interface CommentarySearchResult extends BaseSearchResult {

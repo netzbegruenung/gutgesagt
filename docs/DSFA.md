@@ -510,6 +510,9 @@ Empfänger und Ort“.
   je Anschluss), kein Pseudonym (`LK:368-374`).
 - **Frist:** acht Wochen (`DSE:517-518`).
 - **Risiko:** gering; der Zähler „n Personen“ ist für alle Angemeldeten sichtbar (`DSE:497-500`).
+  Seit #362 nennt die Ergebnisseite ohne Treffer die Zahl ab zwei Personen auch Suchenden ohne
+  Anmeldung, die eigene Suche eingerechnet: Wer etwas Seltenes sucht, erfährt so, dass in vier
+  Wochen mindestens eine weitere Person fast dasselbe suchte, aber weder Wortlaut noch Person.
 - **Maßnahmen:** Merkliste nur im Speicher bis Mitternacht (`DSE:469-476`); erst ab zwei Personen
   auf der Liste (`DSE:490-491`).
 

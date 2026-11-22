@@ -210,6 +210,18 @@ class TestRepository:
             _aussage(2)
         }
 
+    def test_personen_summiert_ab_der_woche_nur_fuer_die_aussage(self, neue_datenbank):
+        """Die Zahl fuer "Danach haben schon N Personen gesucht" (#362)."""
+        repository = _repository(neue_datenbank)
+        repository.zaehlen(AUSSAGE, date(2026, 10, 12), neue_person=True)
+        repository.zaehlen(AUSSAGE, VORIGE_WOCHE, neue_person=True)
+        repository.zaehlen(AUSSAGE, WOCHE, neue_person=True)
+        repository.zaehlen(AUSSAGE, WOCHE, neue_person=False)
+        repository.zaehlen(_aussage(9), WOCHE, neue_person=True)
+
+        assert repository.personen(AUSSAGE, VORIGE_WOCHE) == 2
+        assert repository.personen(_aussage(8), VORIGE_WOCHE) == 0
+
     def test_loeschen_vor_entfernt_nur_aeltere_wochen(self, neue_datenbank):
         repository = _repository(neue_datenbank)
         repository.zaehlen(AUSSAGE, date(2026, 10, 12), neue_person=True)

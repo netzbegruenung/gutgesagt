@@ -286,6 +286,26 @@ class SuchenOhneTrefferService:
                 self._personen.vergessen(pseudonym, statement_id)
             raise
 
+    async def schon_gesucht(
+        self, statement_id: Optional[uuid.UUID], heute: Optional[date] = None
+    ) -> Optional[int]:
+        """
+        Fuer die Seite ohne Treffer (#362): wie viele Personen im Zeitraum der Liste
+        (WOCHEN_STANDARD) ohne Treffer nach dieser Aussage gesucht haben, die eben
+        gezaehlte Suche eingerechnet; None unter MINDESTANZAHL, wie auf den Listen.
+        Nur eine Zahl, gelesen aus den Zaehlern, die erfassen ohnehin schreibt: kein
+        Text, keine Freigabe noetig, nichts zusaetzlich gespeichert. Auch Besucher
+        sehen sie (Entscheidung des Maintainers vom 28.10.2026).
+        """
+        if statement_id is None:
+            return None
+        personen = await asyncio.to_thread(
+            self._repository.personen,
+            statement_id,
+            _seit_woche(WOCHEN_STANDARD, heute),
+        )
+        return personen if personen >= MINDESTANZAHL else None
+
     async def haeufigste(
         self,
         wochen: int = WOCHEN_STANDARD,

@@ -419,6 +419,12 @@ export class ResultViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Ohne Treffer: wie viele Personen schon danach gesucht haben, erst ab zwei (#362). */
+  get personenOhneTreffer(): number | null {
+    const personen = this.antwort?.personen_ohne_treffer ?? null;
+    return personen !== null && personen >= 2 ? personen : null;
+  }
+
   /** Irgendein Treffer, gleich welchen Typs. */
   get hatTreffer(): boolean {
     return TREFFER_TYPEN.some((typ) => this.anzahlAlle[typ] > 0);

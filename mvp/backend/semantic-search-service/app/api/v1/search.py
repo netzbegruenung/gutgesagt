@@ -472,6 +472,21 @@ async def search_by_text(
             # Zeitpunkt, den die Tabelle nicht speichert.
             logger.warning(f"Failed to count search without hits: {type(e).__name__}")
 
+        # "Danach haben schon N Personen gesucht" (#362): nur nach einer Suche ohne
+        # Treffer, nur die Zahl und erst ab zwei Personen. Scheitert das Lesen, fehlt
+        # nur der Hinweis.
+        if total_results == 0:
+            try:
+                response.personen_ohne_treffer = (
+                    await suchen_ohne_treffer.schon_gesucht(
+                        statement_id, heute=jetzt.date()
+                    )
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to read searches without hits: {type(e).__name__}"
+                )
+
         return response
 
     except HTTPException:
