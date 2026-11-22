@@ -35,6 +35,8 @@ import { kannVorlageSein, vorlageAdresse } from '../../beitragsformular/vorlage'
 import { einwilligungFehlt } from '../../services/art9-einwilligung.service';
 import { beitragsLink } from '../../shared/beitrags-link';
 import { TeilenService, hatGeteilt } from '../../shared/teilen.service';
+import { FunktionenService } from '../../services/funktionen.service';
+import { sharepicDialogOeffnen } from '../../shared/sharepic/sharepic-dialog.component';
 import { KOPIERT, KOPIERT_MIT_LUECKE, hatLuecke } from '../../shared/vorlagen-luecke';
 import { platzhalterDialogOeffnen } from './platzhalter-dialog.component';
 import { GEPOSTET_FRAGE_MS, JA_GEPOSTET, KOPIERT_GEPOSTET_FRAGE, gepostetDank } from './gepostet-texte';
@@ -128,6 +130,16 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
   @Input() album = false;
   /** Im Album: der Knopf "Ändern" (nur Kommentar und Hintergrundinfo, istAenderbar). */
   @Input() aenderbar = false;
+
+  /** Teilen als Bild (#756): der angezeigte Text der gewaehlten Fassung, ohne Herkunft. */
+  @Input() bildText = '';
+  /** Teilen als Bild: die Aussage, auf die der Beitrag antwortet; null ohne. */
+  @Input() aussage: string | null = null;
+  /** Teilen als Bild: das erste Thema der Aussage mit Motiv; null ohne. */
+  @Input() thema: { name: string; motiv?: string } | null = null;
+
+  /** „Als Bild teilen“ steht nur im Menue, wenn der Schalter an ist (#756, Standard aus). */
+  readonly sharepicAn = inject(FunktionenService).an('sharepic');
 
   @Output() likeToggled = new EventEmitter<string>();
   /** Im Album: "Ändern" angetippt; den Dialog oeffnet die Seite. */
@@ -383,6 +395,32 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
       this.kopiert.emit();
     }
     this.cdr.markForCheck();
+  }
+
+  /** Ob „Als Bild teilen“ angeboten wird: Schalter an und ein Text, der ins Bild kann. */
+  get sharepicSichtbar(): boolean {
+    return this.sharepicAn() && !this.vorschau && !!this.inhaltId && !!(this.bildText || this.kopierText).trim();
+  }
+
+  /** Teilen als Bild (#756): Vorschau und Teilen im Dialog; geteilt oder gespeichert zaehlt wie Teilen. */
+  alsBildTeilen(): void {
+    if (!this.sharepicSichtbar) {
+      return;
+    }
+    sharepicDialogOeffnen(this.dialog, {
+      titel: this.titel?.trim() || null,
+      text: (this.bildText || this.kopierText).trim(),
+      aussage: this.aussage?.trim() || null,
+      thema: this.thema,
+      link: beitragsLink(this.inhaltId),
+    })
+      .afterClosed()
+      .subscribe((ergebnis) => {
+        if (ergebnis) {
+          this.usageTrackingService.trackContentUsage(this.inhaltId, this.fassung ?? undefined);
+          this.kopiert.emit();
+        }
+      });
   }
 
   beitragOeffnen(): void {

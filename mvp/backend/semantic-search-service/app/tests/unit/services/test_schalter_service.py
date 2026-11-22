@@ -151,7 +151,7 @@ def test_stand_nennt_obergrenze_admin_wert_wirksam_und_dsfa_hinweis():
     dienst, _, _ = _dienst({"punkte": True})
     stand = {s.name: s for s in dienst.stand(Settings(punkte_aktiv=True))}
 
-    assert set(stand) == {"punkte", "abzeichen_sichtbar", "gepostet"}
+    assert {"punkte", "abzeichen_sichtbar", "gepostet", "sharepic"} <= set(stand)
     assert (
         stand["punkte"].obergrenze,
         stand["punkte"].admin_wert,
@@ -161,7 +161,17 @@ def test_stand_nennt_obergrenze_admin_wert_wirksam_und_dsfa_hinweis():
     assert "DSFA" in stand["punkte"].dsfa_hinweis
     assert "DSFA" in stand["abzeichen_sichtbar"].dsfa_hinweis
     assert stand["gepostet"].dsfa_hinweis is None
+    assert stand["sharepic"].dsfa_hinweis is None
     assert all(s.erklaerung for s in stand.values())
+
+
+def test_sharepic_standard_aus_ohne_admin_wert():
+    """Obergrenze standardmaessig an, ohne Admin-Wert trotzdem aus (#756)."""
+    dienst, _, _ = _dienst()
+
+    assert dienst.wirksam("sharepic", Settings()) is False
+    dienst, _, _ = _dienst({"sharepic": True})
+    assert dienst.wirksam("sharepic", Settings()) is True
 
 
 def test_schalter_wirksam_nimmt_den_globalen_dienst():

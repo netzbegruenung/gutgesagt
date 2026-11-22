@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA, SimpleChange } from '@angular/core';
+import { NO_ERRORS_SCHEMA, SimpleChange, WritableSignal, signal } from '@angular/core';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { By } from '@angular/platform-browser';
 import { MatTooltip } from '@angular/material/tooltip';
@@ -13,6 +14,7 @@ import { AuthService } from '../../auth/auth.service';
 import { LoggingService } from '../../services/logging.service';
 import { UsageTrackingService } from '../../services/usage-tracking.service';
 import { VotingService } from '../../services/voting.service';
+import { FunktionenService } from '../../services/funktionen.service';
 import { KOPIERT } from '../../shared/vorlagen-luecke';
 import { TEILEN_LINK_KOPIERT, TEILEN_NAVIGATOR, TeilenNavigator } from '../../shared/teilen.service';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
@@ -1196,5 +1198,110 @@ describe('KartenAktionenComponent - Abstimmen', () => {
 
   it('laesst „Kopiert“ 4 s stehen, lang genug fuer den Wechsel in die andere App (P10)', () => {
     expect(KOPIERT_DAUER_MS).toBe(4000);
+  });
+});
+
+/** Teilen als Bild (#756): nur mit eingeschaltetem Schalter, Standard aus. */
+describe('KartenAktionenComponent - Als Bild teilen', () => {
+  const INHALT_ID = '123e4567-e89b-12d3-a456-426614174000';
+  let fixture: ComponentFixture<KartenAktionenComponent>;
+  let component: KartenAktionenComponent;
+  let dialog: jasmine.SpyObj<MatDialog>;
+  let usage: jasmine.SpyObj<UsageTrackingService>;
+  let sharepic: WritableSignal<boolean>;
+
+  beforeEach(async () => {
+    sharepic = signal(false);
+    dialog = jasmine.createSpyObj('MatDialog', ['open']);
+    usage = jasmine.createSpyObj('UsageTrackingService', ['trackContentUsage', 'gepostetAngeboten', 'gepostetBekannt']);
+    const auth = jasmine.createSpyObj('AuthService', ['getUserInfo']);
+    auth.getUserInfo.and.returnValue({ isAuthenticated: false });
+    await TestBed.configureTestingModule({
+      imports: [KartenAktionenComponent, NoopAnimationsModule],
+      providers: [
+        { provide: VotingService, useValue: jasmine.createSpyObj('VotingService', ['setLike']) },
+        { provide: LoggingService, useValue: jasmine.createSpyObj('LoggingService', ['logInteraction', 'logError']) },
+        { provide: MatSnackBar, useValue: jasmine.createSpyObj('MatSnackBar', ['open']) },
+        { provide: Clipboard, useValue: jasmine.createSpyObj('Clipboard', ['copy']) },
+        { provide: UsageTrackingService, useValue: usage },
+        { provide: AuthService, useValue: auth },
+        { provide: MatDialog, useValue: dialog },
+        { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate']) },
+        { provide: TEILEN_NAVIGATOR, useValue: {} },
+        { provide: MeilensteinHinweisService, useValue: jasmine.createSpyObj('MeilensteinHinweisService', ['bestaetigen']) },
+        { provide: FunktionenService, useValue: { an: () => sharepic.asReadonly() } },
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(KartenAktionenComponent);
+    component = fixture.componentInstance;
+    component.inhaltId = INHALT_ID;
+    component.titel = 'Windkraft schafft Arbeitsplätze';
+    component.kopierText = 'Text mit Herkunft';
+    component.bildText = 'Text der Fassung';
+    component.aussage = 'Windräder kosten Jobs.';
+    component.thema = { name: 'Klima', motiv: 'themen/klima.svg' };
+    fixture.detectChanges();
+  });
+
+  async function menueEintraege(): Promise<string[]> {
+    (fixture.nativeElement.querySelector('.menue-knopf') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    return Array.from(document.querySelectorAll('.mat-mdc-menu-panel .sharepic-eintrag')).map((e) =>
+      e.textContent!.replace(/\s+/g, ' ').trim(),
+    );
+  }
+
+  afterEach(() => document.querySelectorAll('.cdk-overlay-container').forEach((c) => (c.innerHTML = '')));
+
+  it('zeigt bei ausgeschaltetem Schalter keinen Eintrag', async () => {
+    expect(component.sharepicSichtbar).toBeFalse();
+    expect(await menueEintraege()).toEqual([]);
+  });
+
+  it('zeigt bei eingeschaltetem Schalter „Als Bild teilen“ mit Symbol und Text', async () => {
+    sharepic.set(true);
+    fixture.detectChanges();
+
+    expect(await menueEintraege()).toEqual(['imageAls Bild teilen']);
+  });
+
+  it('nicht in der Formular-Vorschau', () => {
+    sharepic.set(true);
+    component.vorschau = true;
+    expect(component.sharepicSichtbar).toBeFalse();
+  });
+
+  it('oeffnet den Dialog mit Fassung, Aussage, Thema und Link und zaehlt ein geteiltes Bild', () => {
+    sharepic.set(true);
+    dialog.open.and.returnValue({ afterClosed: () => of('geteilt') } as any);
+
+    component.alsBildTeilen();
+
+    const daten = dialog.open.calls.mostRecent().args[1]!.data as any;
+    expect(daten).toEqual(
+      jasmine.objectContaining({
+        titel: 'Windkraft schafft Arbeitsplätze',
+        text: 'Text der Fassung',
+        aussage: 'Windräder kosten Jobs.',
+        thema: { name: 'Klima', motiv: 'themen/klima.svg' },
+      }),
+    );
+    expect(daten.link).toContain(`/beitrag/${INHALT_ID}`);
+    expect(usage.trackContentUsage).toHaveBeenCalledWith(INHALT_ID, undefined);
+  });
+
+  it('zaehlt nichts, wenn der Dialog ohne Bild schliesst', () => {
+    sharepic.set(true);
+    dialog.open.and.returnValue({ afterClosed: () => of(undefined) } as any);
+
+    component.alsBildTeilen();
+
+    expect(usage.trackContentUsage).not.toHaveBeenCalled();
+  });
+
+  it('oeffnet bei ausgeschaltetem Schalter nichts', () => {
+    component.alsBildTeilen();
+    expect(dialog.open).not.toHaveBeenCalled();
   });
 });

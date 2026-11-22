@@ -45,6 +45,8 @@ export interface KartenStatement {
   aehnlichkeit: number;
   /** Prozent, 0-100. */
   antwortqualitaet: number;
+  /** Die Themen der Aussage aus der Suche, fuer Teilen als Bild (#756); fehlt ohne. */
+  themen?: Thema[];
 }
 
 /** Was das Siegel einer Karte zeigt und erklaert (#427, GLOSSARY.md "Siegel", "Guete"). */
@@ -272,6 +274,7 @@ function statement(paket: Suchpaket): KartenStatement | undefined {
     text,
     aehnlichkeit: Math.round((paket.statement_similarity_score ?? 0) * 100),
     antwortqualitaet: Math.round((paket.reply_relevance ?? 0) * 100),
+    ...(paket.themen?.length ? { themen: paket.themen } : {}),
   };
 }
 

@@ -258,7 +258,8 @@ class Settings(BaseSettings):
     def ist_startkonto(self, user_id: Optional[str]) -> bool:
         return bool(user_id) and user_id in self.startkonto_kennungen()
 
-    # Seit #708 sind punkte_aktiv, abzeichen_sichtbar_aktiv und gepostet_aktiv nur die
+    # Seit #708 sind punkte_aktiv, abzeichen_sichtbar_aktiv, gepostet_aktiv und die
+    # Felder der spaeteren Schalter (SCHALTER in services/schalter_service.py) nur die
     # Obergrenze: Wirksam sind sie erst, wenn zusaetzlich ein Admin sie auf der Seite
     # "Schalter" einschaltet (services/schalter_service.py, schalter_wirksam). Im Code
     # nicht direkt abfragen.
@@ -288,6 +289,11 @@ class Settings(BaseSettings):
     # Standard aus, unabhaengig von punkte_aktiv: eine eigene Verarbeitung, die erst
     # mit Satz in DSFA und Datenschutzerklaerung eingeschaltet wird.
     gepostet_aktiv: bool = False
+    # Teilen als Bild (#756): Die Karte malt im Browser ein Bild (Sharepic) und gibt es
+    # ans Teilen-Menue des Geraets; der Server sieht davon nichts. Obergrenze an, weil
+    # nichts uebertragen oder gespeichert wird; Standard aus ist der Admin-Wert
+    # (services/schalter_service.py, ohne Eintrag aus).
+    sharepic_aktiv: bool = True
     # Gewichte und Deckel der drei Stufen (domain/punkte.py): Tun klein und je Tag
     # gedeckelt, Quests mehr, Wirkung bei anderen am meisten.
     punkte_nutzung: int = Field(default=10, ge=0)
