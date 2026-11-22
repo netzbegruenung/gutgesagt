@@ -734,7 +734,7 @@ class ModerationService:
 
         Die Verweise gehen fuer jeden Beitragstyp weg, unabhaengig von content_type:
         Aussagen verweisen auf Beitraege jedes Typs (#294). Erst Verweise, Stimmen,
-        "ausformuliert in" und Varianten, dann der Beitrag: Scheitert davor etwas,
+        "ausformuliert in", Varianten und Merkliste (#758), dann der Beitrag: Scheitert davor etwas,
         bleibt der Beitrag stehen und ein erneuter Versuch raeumt auf. Andersherum
         stuende ein Verweis auf einen Beitrag, den kein zweiter Aufruf mehr findet. Was ein abgebrochener Lauf
         ohne zweiten Versuch hinterlaesst: services/content/verweise_entfernen.py.
@@ -756,8 +756,8 @@ class ModerationService:
         Raises:
             VerweiseNichtEntfernt: Aussagen verweisen noch auf den Beitrag; er ist
                 nicht entfernt.
-            Datenbankfehler beim Loeschen von Stimmen oder "ausformuliert in" gehen
-                weiter; der Beitrag ist dann ebenfalls nicht entfernt.
+            Datenbankfehler beim Loeschen von Stimmen, "ausformuliert in" oder
+                Merkliste gehen weiter; der Beitrag ist dann ebenfalls nicht entfernt.
         """
         beitrag = await self._beitrag_laden(content_id)
         if beitrag is None:
@@ -775,26 +775,20 @@ class ModerationService:
         varianten = await asyncio.to_thread(
             self._varianten().verknuepfungen_entfernen, UUID(content_id)
         )
+        # Gemerkt hat ihn danach niemand mehr (#758); wie die Stimmen vor dem Beitrag,
+        # sonst blieben Eintraege, die kein zweiter Lauf mehr findet.
+        gemerkt = await asyncio.to_thread(
+            self._merkliste().loeschen_fuer_beitrag, UUID(content_id)
+        )
         logger.info(
             f"Content {content_id}: {stimmen} votes, {ausformuliert} "
-            f"raw input links and {varianten} variant links deleted"
+            f"raw input links, {varianten} variant links and {gemerkt} "
+            f"Merkliste entries deleted"
         )
 
         if not await self.moderation_repo.entfernen(content_id):
             logger.warning(f"Content {content_id} could not be deleted")
             return False
-
-        # Gemerkt hat ihn niemand mehr (#758); ein Fehler macht die Loeschung nicht
-        # rueckgaengig, die Merkliste laesst ihn ohnehin aus (404 beim Laden).
-        try:
-            await asyncio.to_thread(
-                self._merkliste().loeschen_fuer_beitrag, UUID(content_id)
-            )
-        except Exception as e:
-            logger.warning(
-                f"Content {content_id} deleted, removing it from Merklisten failed "
-                f"({type(e).__name__})"
-            )
 
         # Eine Sperre des Beitrags gilt als aufgehoben, damit ihre Frist laeuft und
         # der Autor keine Sperrnachricht zu einem Beitrag sieht, den es nicht mehr

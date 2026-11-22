@@ -169,6 +169,8 @@ describe('MeineBeitraegeComponent', () => {
           provide: MerklisteService,
           useValue: {
             an: an.asReadonly(),
+            eingewilligt: () => true,
+            bereit: () => an(),
             eintraege: signal([]).asReadonly(),
             laden: () => of([]),
             istGemerkt: () => false,
@@ -191,6 +193,12 @@ describe('MeineBeitraegeComponent', () => {
       tabWaehlen('Gemerkt');
       expect(sichtbar('app-gemerkt')).toBeTrue();
       expect(sichtbar('app-album')).toBeFalse();
+
+      // Schaltet ein Admin ab, faellt der offene Reiter auf Meine Beitraege zurueck
+      an.set(false);
+      fixture.detectChanges();
+      expect(sichtbar('app-album')).toBeTrue();
+      expect(tabs()[0].getAttribute('aria-selected')).toBe('true');
     });
 
     it('zeigt unter "Meine Einwürfe" die eigenen Einwuerfe statt der Beitraege', async () => {

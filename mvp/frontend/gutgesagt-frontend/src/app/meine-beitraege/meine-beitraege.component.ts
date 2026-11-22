@@ -102,9 +102,19 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
     private snackBar: MatSnackBar,
   ) { }
 
+  /** Ob der Schalter der Merkliste an ist (#758). */
+  get gemerktAn(): boolean {
+    return this.merkliste.an();
+  }
+
   /** Die Tabs; „Gemerkt“ nur, solange der Schalter der Merkliste an ist. */
   get tabs(): ReadonlyArray<{ wert: MeineTab; name: string }> {
-    return this.merkliste.an() ? [...TABS, GEMERKT_TAB] : TABS;
+    return this.gemerktAn ? [...TABS, GEMERKT_TAB] : TABS;
+  }
+
+  /** Der angezeigte Tab: „Gemerkt“ bei ausgeschaltetem Schalter faellt auf Meine Beitraege zurueck. */
+  get aktiverTab(): MeineTab {
+    return this.tab === 'gemerkt' && !this.gemerktAn ? 'beitraege' : this.tab;
   }
 
   ngOnInit() {
@@ -209,7 +219,7 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
 
   /** Pfeiltasten, Pos1 und Ende waehlen den Tab und setzen den Fokus mit. */
   tabTaste(event: KeyboardEvent): void {
-    const jetzt = this.tabs.findIndex((eintrag) => eintrag.wert === this.tab);
+    const jetzt = this.tabs.findIndex((eintrag) => eintrag.wert === this.aktiverTab);
     tabMitTasteWaehlen(event, jetzt, this.tabs.length, (ziel) => this.tabWaehlen(this.tabs[ziel].wert));
   }
 

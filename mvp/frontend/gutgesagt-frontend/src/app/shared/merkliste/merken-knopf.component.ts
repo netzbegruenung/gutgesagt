@@ -19,7 +19,8 @@ export const MERKEN_TEXTE = {
 
 /**
  * Der Knopf „Merken“ an der Beitragskarte (#758): Symbol mit Wort, nach dem Tippen
- * „Gemerkt“. Nur angemeldet und nur mit eingeschaltetem Schalter `merkliste`; sonst
+ * „Gemerkt“. Nur angemeldet, mit Art.-9-Einwilligung und mit eingeschaltetem Schalter
+ * `merkliste`; sonst
  * steht nichts da. Keine Zahl: Wie oft andere etwas gemerkt haben, zeigt Gut gesagt nicht.
  */
 @Component({
@@ -56,7 +57,9 @@ export class MerkenKnopfComponent {
   private readonly nutzer = toSignal(this.auth.userInfo$, { initialValue: this.auth.getUserInfo() });
   readonly laeuft = signal(false);
 
-  readonly sichtbar = computed(() => this.merkliste.an() && !!this.nutzer()?.isAuthenticated && !!this.id());
+  // Nur mit Einwilligung: Ohne sie sperrt das Backend die Liste, und ein Knopf, der nur den
+  // Hinweis zur Einwilligung ausloest, draengte (wie „Ja, gepostet“).
+  readonly sichtbar = computed(() => this.merkliste.bereit() && !!this.nutzer()?.isAuthenticated && !!this.id());
   readonly gemerkt = computed(() => {
     this.merkliste.eintraege();
     return this.merkliste.istGemerkt(this.id());

@@ -47,8 +47,8 @@ Umgebung benutzt** — die Kommandos sind identisch, nur der eingesetzte Wert ni
   nicht nach dem Zustand.
 - **Ein Admin entfernt endgültig**
   (`DELETE /api/v1/moderation/content/{content_type}/{id}`): Der Punkt ist danach aus
-  Qdrant weg, mit ihm seine Stimmen (`votes`) und das „ausformuliert in“ der Einwürfe
-  zu ihm (`raw_input_content_links`); offene Meldungen zu ihm stehen danach auf
+  Qdrant weg, mit ihm seine Stimmen (`votes`), das „ausformuliert in“ der Einwürfe
+  zu ihm (`raw_input_content_links`) und die Einträge in Merklisten (`merkliste`, #758); offene Meldungen zu ihm stehen danach auf
   bearbeitet, bearbeitete und abgewiesene behalten ihre Entscheidung. Das ist der Weg
   für Schritt 3, wenn ein Text die Person erkennbar macht, und sonst für nichts:
   Gemeldete Beiträge sperrt ein Admin, statt sie zu entfernen. Denselben Weg nimmt die
@@ -300,7 +300,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
   UTC-Tag nach `geloescht_am`; die 30 Tage zählen ab dann, also höchstens einen Tag nach
   dem Löschen. Das gilt auch für Altbestand, der vor #421 gelöscht wurde. Entfernt wird
   über `ModerationService.delete_content`, denselben Weg wie beim Admin: erst Verweise der
-  Aussagen, Stimmen und „ausformuliert in“, dann der Punkt. Wie beim Admin stehen offene
+  Aussagen, Stimmen, „ausformuliert in“ und Merkliste, dann der Punkt. Wie beim Admin stehen offene
   Meldungen zum Beitrag danach auf bearbeitet, hier ohne Admin (`reviewed_by` leer), und
   ihre 180 Tage beginnen. Bearbeitete und abgewiesene behalten Entscheidung und Frist.
   Scheitert ein Schritt, bleibt der Beitrag stehen und der nächste Lauf versucht es erneut. Gesperrte Beiträge

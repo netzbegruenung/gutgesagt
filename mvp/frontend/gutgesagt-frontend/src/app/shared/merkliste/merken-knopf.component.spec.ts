@@ -10,18 +10,20 @@ import { MERKEN_TEXTE, MerkenKnopfComponent } from './merken-knopf.component';
 describe('MerkenKnopfComponent (#758)', () => {
   let fixture: ComponentFixture<MerkenKnopfComponent>;
   let an: WritableSignal<boolean>;
+  let eingewilligt: WritableSignal<boolean>;
   let eintraege: WritableSignal<Gemerkt[]>;
   let nutzer: BehaviorSubject<{ isAuthenticated: boolean } | null>;
-  let merkliste: { an: unknown; eintraege: unknown; istGemerkt: jasmine.Spy; sicherstellen: jasmine.Spy; umschalten: jasmine.Spy };
+  let merkliste: { bereit: unknown; eintraege: unknown; istGemerkt: jasmine.Spy; sicherstellen: jasmine.Spy; umschalten: jasmine.Spy };
   let snackBar: jasmine.SpyObj<MatSnackBar>;
 
   beforeEach(async () => {
     an = signal(true);
+    eingewilligt = signal(true);
     eintraege = signal([]);
     nutzer = new BehaviorSubject<{ isAuthenticated: boolean } | null>({ isAuthenticated: true });
     const ids = computed(() => new Set(eintraege().map((e) => e.content_id)));
     merkliste = {
-      an: an.asReadonly(),
+      bereit: () => an() && eingewilligt(),
       eintraege: eintraege.asReadonly(),
       istGemerkt: jasmine.createSpy('istGemerkt').and.callFake((id: string) => ids().has(id)),
       sicherstellen: jasmine.createSpy('sicherstellen'),
@@ -53,6 +55,15 @@ describe('MerkenKnopfComponent (#758)', () => {
     fixture.detectChanges();
 
     expect(knopf()).toBeNull();
+  });
+
+  it('zeigt nichts und laedt nichts ohne Art.-9-Einwilligung', () => {
+    merkliste.sicherstellen.calls.reset();
+    eingewilligt.set(false);
+    fixture.detectChanges();
+
+    expect(knopf()).toBeNull();
+    expect(merkliste.sicherstellen).not.toHaveBeenCalled();
   });
 
   it('zeigt nichts ohne Anmeldung', () => {

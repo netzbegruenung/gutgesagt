@@ -44,6 +44,10 @@ class StimmenDerPerson(Protocol):
     def loeschen_fuer_person(self, user_id: str, session=None) -> int: ...
 
 
+class MerklisteDerPerson(Protocol):
+    def loeschen_fuer_person(self, user_id: str, session=None) -> int: ...
+
+
 class LoeschauftraegeDerPerson(Protocol):
     def anlegen(self, user_id: str, session=None) -> None: ...
 
@@ -54,7 +58,7 @@ class Art9EinwilligungService:
         repository: Art9EinwilligungRepository,
         stimmen: Optional[StimmenDerPerson] = None,
         loeschauftraege: Optional[LoeschauftraegeDerPerson] = None,
-        merkliste: Optional[StimmenDerPerson] = None,
+        merkliste: Optional[MerklisteDerPerson] = None,
     ):
         """
         ``stimmen``: loescht beim Widerruf die Stimmen; ``loeschauftraege``: legt
