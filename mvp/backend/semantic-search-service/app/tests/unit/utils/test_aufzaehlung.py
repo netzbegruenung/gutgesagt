@@ -25,9 +25,9 @@ class TestMitPunkten:
             ("- eins", "• eins"),
             ("* eins", "• eins"),
             (LISTE, PUNKTE),
-            # Einrueckung bleibt, mehrere Leerzeichen danach werden eins.
-            ("  -   eins", "  • eins"),
-            ("-\teins", "• eins"),
+            # Nur das Zeichen wechselt: Einrueckung, Leerraum und Laenge bleiben.
+            ("  -   eins", "  •   eins"),
+            ("-\teins", "•\teins"),
             # Windows-Zeilenenden und Leerzeilen bleiben.
             ("a\r\n- b\r\n\r\n- c", "a\r\n• b\r\n\r\n• c"),
         ],
@@ -44,11 +44,16 @@ class TestMitPunkten:
             "--- Trennlinie",
             "# Kein Markdown",
             "• schon ein Punkt",
+            "-",
             "",
         ],
     )
     def test_sonst_bleibt_der_text(self, text):
         assert mit_punkten(text) == text
+
+    def test_laenge_bleibt_fuer_die_grenzen_der_dtos(self):
+        text = "-         x\n*\tzwei"
+        assert len(mit_punkten(text)) == len(text)
 
     def test_none_bleibt_none(self):
         assert mit_punkten(None) is None

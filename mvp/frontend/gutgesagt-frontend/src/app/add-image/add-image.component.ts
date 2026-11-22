@@ -234,6 +234,8 @@ export class AddImageComponent implements AfterViewInit, OnDestroy {
     return this.imageForm.get('caption')?.value?.length ?? 0;
   }
 
+  readonly aufzaehlungHinweis = AUFZAEHLUNG_HINWEIS;
+
   /**
    * Die Vorschau als KartenDaten, zwischengespeichert, solange sich nichts aendert.
    * Ohne Nutzung und Datum: Ueber einen Entwurf sagen sie nichts. Nach einem Ladefehler

@@ -1314,6 +1314,17 @@ describe('AddCommentaryComponent', () => {
       expect(component.vorschauKarte.extra?.lang).toBe('• lang');
     });
 
+    it('zeigt den Aufzaehlungshinweis am Kommentar nur bei leerem Feld, danach den Plattform-Hinweis', () => {
+      fixture.detectChanges();
+      const hinweisAmText = () =>
+        fixture.nativeElement.querySelector('#text')?.closest('mat-form-field')?.querySelector('.aufzaehlung-hinweis');
+      expect(hinweisAmText()?.textContent).toContain('Aufzählung: Zeile mit „-“ beginnen');
+
+      component.commentaryForm.patchValue({ text: 'Die Pumpe rechnet sich.' });
+      fixture.detectChanges();
+      expect(hinweisAmText()).toBeNull();
+    });
+
     it('bieten unter der Kurzfassung einen Kuerzungsvorschlag aus dem Kommentar an (#403)', () => {
       ausfuellen();
       aufklappen();

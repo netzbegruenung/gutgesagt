@@ -1154,7 +1154,7 @@ describe('AddGenerictextComponent', () => {
       fixture.detectChanges();
 
       expect(component.vorschauKarte.text).toBe('Zwei Gründe:\n• billiger\n• sauberer');
-      expect(fixture.nativeElement.querySelector('.aufzaehlung-hinweis')?.textContent).toContain('Aufzählung: Zeile mit - beginnen');
+      expect(fixture.nativeElement.querySelector('.aufzaehlung-hinweis')?.textContent).toContain('Aufzählung: Zeile mit „-“ beginnen');
     });
   });
 
