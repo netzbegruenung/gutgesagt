@@ -23,6 +23,8 @@ export interface HerkunftPruefenStand {
   laeuft: boolean;
   geprueft: number;
   letzter_lauf: string | null;
+  /** Alle auffälligen; die Liste zeigt höchstens 200 davon. */
+  auffaellig_gesamt: number;
   auffaellig: AuffaelligeHerkunft[];
 }
 

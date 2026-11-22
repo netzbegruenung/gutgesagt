@@ -12,8 +12,12 @@ sichtbaren Herkuenfte abrufen und tote oder umgezogene fuer Admins auflisten.
   teilen, nur einmal.
 - Am Beitrag aendert sich nichts. Gespeichert wird je Herkunft nur Adresse, Ergebnis,
   Status, Weiterleitungsziel und Zeitpunkte (Tabelle ``herkunft_pruefung``).
-- Takt: stuendlich nachsehen; faellig ist ein Lauf einmal je UTC-Tag ab
-  ``NACHT_STUNDE`` Uhr. Ein Admin kann einen Lauf auch sofort anstossen.
+- Takt: stuendlich nachsehen; faellig ist ein Lauf einmal je UTC-Tag zwischen
+  ``NACHT_STUNDE`` und ``NACHT_ENDE_STUNDE`` Uhr. Ein Admin kann einen Lauf auch sofort
+  anstossen.
+- Schalter aus: Der Takt leert die Tabelle einmal (nichts bleibt gespeichert, auch nicht
+  zu inzwischen geloeschten Herkuenften) und tut danach nichts mehr, bis er wieder an ist.
+- Fehler loggen nur ihren Typ: Datenbankfehler tragen sonst Adressen im Text.
 """
 
 import asyncio
@@ -36,7 +40,9 @@ SCHALTER = "herkunft_pruefen"
 ABSTAND_SEKUNDEN = 1.0
 HERKUENFTE_HOECHSTENS = 2000
 AUFFAELLIGE_HOECHSTENS = 200
+# Faellig nur in diesem Fenster (UTC), damit "nachts" auch nach einem Neustart gilt
 NACHT_STUNDE = 2
+NACHT_ENDE_STUNDE = 6
 TAKT_SEKUNDEN = 60 * 60
 
 
@@ -71,6 +77,8 @@ class HerkunftPruefenService:
         self._abstand = abstand_sekunden
         self._uhr = uhr
         self._lauf: Optional[asyncio.Task] = None
+        # Nach dem Ausschalten einmal geleert; None: noch nicht gesehen
+        self._geleert: Optional[bool] = None
 
     @property
     def laeuft(self) -> bool:
@@ -88,12 +96,36 @@ class HerkunftPruefenService:
         """Einen Lauf im Hintergrund starten; False, wenn schon einer laeuft."""
         if self.laeuft:
             return False
-        self._lauf = asyncio.create_task(self.lauf())
+        self._lauf = asyncio.create_task(self._lauf_ohne_ausnahme())
         return True
+
+    async def _lauf_ohne_ausnahme(self) -> None:
+        try:
+            await self.lauf()
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.error(f"Herkunft pruefen: Lauf abgebrochen: {type(e).__name__}")
+
+    def abbrechen(self) -> None:
+        """Beim Herunterfahren aus main.py: einen laufenden Lauf abbrechen."""
+        if self.laeuft:
+            self._lauf.cancel()
+
+    async def aus_leeren(self) -> None:
+        """Bei ausgeschaltetem Schalter einmal alle Ergebnisse loeschen."""
+        if self._geleert:
+            return
+        entfernt = await asyncio.to_thread(self._repository.uebrige_loeschen, [])
+        self._geleert = True
+        if entfernt:
+            logger.info(
+                f"Herkunft pruefen: Schalter aus, {entfernt} Ergebnisse geloescht"
+            )
 
     async def faellig(self) -> bool:
         jetzt = self._uhr()
-        if jetzt.hour < NACHT_STUNDE:
+        if not NACHT_STUNDE <= jetzt.hour < NACHT_ENDE_STUNDE:
             return False
         letzter = await asyncio.to_thread(self._repository.letzter_lauf)
         return letzter is None or letzter.astimezone(timezone.utc).date() < jetzt.date()
@@ -103,6 +135,11 @@ class HerkunftPruefenService:
         if not self._wirksam():
             return 0
         herkuenfte = [h for h in await self._laden() if ist_link(h.adresse)]
+        if len(herkuenfte) >= HERKUENFTE_HOECHSTENS:
+            logger.warning(
+                f"Herkunft pruefen: Grenze von {HERKUENFTE_HOECHSTENS} Herkuenften "
+                "erreicht, der Rest bleibt ungeprueft"
+            )
         herkuenfte = herkuenfte[:HERKUENFTE_HOECHSTENS]
         pool = None
         if self._pruefen is None:
@@ -158,14 +195,19 @@ async def pruefen_im_takt(
 ) -> None:
     """
     Hintergrund-Task aus main.py: stuendlich nachsehen, ob ein Lauf faellig ist. Bei
-    ausgeschaltetem Schalter fragt er weder die Herkuenfte noch die Tabelle ab.
+    ausgeschaltetem Schalter ruft er nichts ab und liest keine Herkuenfte; er leert nur
+    einmal die Tabelle (``aus_leeren``).
     """
     while True:
         try:
-            if service.wirksam() and not service.laeuft and await service.faellig():
-                service.anstossen()
+            if not service.wirksam():
+                await service.aus_leeren()
+            else:
+                service._geleert = False
+                if not service.laeuft and await service.faellig():
+                    service.anstossen()
         except Exception as e:
-            logger.error(f"Herkunft pruefen: {type(e).__name__}", exc_info=True)
+            logger.error(f"Herkunft pruefen: {type(e).__name__}")
         await asyncio.sleep(takt_sekunden)
 
 

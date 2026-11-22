@@ -54,6 +54,9 @@ const ZEIT = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'numeric'
           Prüfung läuft, die Liste füllt sich von selbst …
         </p>
 
+        <p *ngIf="stand!.auffaellig_gesamt > stand!.auffaellig.length" class="hinweis">
+          Gezeigt werden die {{ stand!.auffaellig.length }}, die am längsten auffallen.
+        </p>
         <ul *ngIf="stand!.auffaellig.length; else alleGut" class="liste">
           <li *ngFor="let h of stand!.auffaellig; trackBy: kennung" [class]="'eintrag ' + h.ergebnis" data-testid="auffaellig">
             <p class="art">
@@ -63,7 +66,8 @@ const ZEIT = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'numeric'
             <a class="adresse" [href]="h.adresse" target="_blank" rel="noopener noreferrer nofollow">{{ h.adresse }}</a>
             <p *ngIf="h.ziel" class="ziel">
               <mat-icon aria-hidden="true">subdirectory_arrow_right</mat-icon>
-              <span>Jetzt: <a [href]="h.ziel" target="_blank" rel="noopener noreferrer nofollow">{{ h.ziel }}</a></span>
+              <span *ngIf="zielVerlinken(h); else zielText">Jetzt: <a [href]="h.ziel" target="_blank" rel="noopener noreferrer nofollow">{{ h.ziel }}</a></span>
+              <ng-template #zielText><span>Leitet weiter auf: <span class="ziel-text">{{ h.ziel }}</span></span></ng-template>
             </p>
             <p *ngIf="h.auffaellig_seit" class="seit">Auffällig seit {{ datum(h.auffaellig_seit) }}</p>
           </li>
@@ -134,9 +138,9 @@ export class HerkunftPruefenComponent implements OnInit {
 
   zusammenfassung(s: HerkunftPruefenStand): string {
     if (!s.letzter_lauf) {
-      return s.laeuft ? 'Erste Prüfung läuft.' : 'Noch nicht geprüft; die erste Prüfung läuft heute Nacht.';
+      return s.laeuft ? 'Erste Prüfung läuft.' : 'Noch nicht geprüft; die erste Prüfung läuft in der kommenden Nacht.';
     }
-    const zahl = s.auffaellig.length;
+    const zahl = s.auffaellig_gesamt;
     const auffaellig = zahl === 1 ? '1 auffällig' : `${zahl} auffällig`;
     return `${s.geprueft} Links geprüft, ${auffaellig}, zuletzt ${ZEIT.format(new Date(s.letzter_lauf))}`;
   }
@@ -148,6 +152,14 @@ export class HerkunftPruefenComponent implements OnInit {
   artText(h: AuffaelligeHerkunft): string {
     const wort = this.art(h).wort;
     return h.http_status && h.ergebnis !== 'umgezogen' ? `${wort} (HTTP ${h.http_status})` : wort;
+  }
+
+  /**
+   * Ein Weiterleitungsziel setzt der fremde Server. Verlinkt wird es nur als http(s) und nicht
+   * bei „gesperrt“ (etwa eine interne Adresse); sonst steht es als Text da.
+   */
+  zielVerlinken(h: AuffaelligeHerkunft): boolean {
+    return h.ergebnis !== 'gesperrt' && !!h.ziel && /^https?:\/\//i.test(h.ziel);
   }
 
   datum(wert: string): string {

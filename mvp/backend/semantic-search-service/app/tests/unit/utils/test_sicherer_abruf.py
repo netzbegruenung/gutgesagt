@@ -51,12 +51,23 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             "/nach-ftp": "ftp://quelle.test/datei",
             "/schleife": "/schleife",
             "/zu-tot": "/weg",
+            "/anderer-port": "http://quelle.test:6379/",
         }
         if pfad in weiter:
             self.send_response(301)
             self.send_header(
                 "Location", weiter[pfad].format(port=self.server.server_address[1])
             )
+            self.end_headers()
+            return
+        if pfad == "/ohne-location":
+            self.send_response(302)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        if pfad == "/bremst":
+            self.send_response(429)
+            self.send_header("Content-Length", "0")
             self.end_headers()
             return
         if pfad == "/nur-get" and self.command == "HEAD":
@@ -76,12 +87,23 @@ class _Handler(http.server.BaseHTTPRequestHandler):
 
 
 @pytest.fixture(scope="module")
-def server():
+def _mock_server():
     srv = http.server.ThreadingHTTPServer((MOCK, 0), _Handler)
     faden = threading.Thread(target=srv.serve_forever, daemon=True)
     faden.start()
     yield srv.server_address[1]
     srv.shutdown()
+
+
+@pytest.fixture
+def server(_mock_server, monkeypatch):
+    """Port des Mock-Servers; nur fuer den Test zusaetzlich erlaubt."""
+    monkeypatch.setattr(
+        sicherer_abruf,
+        "ERLAUBTE_PORTS",
+        sicherer_abruf.ERLAUBTE_PORTS | {_mock_server},
+    )
+    return _mock_server
 
 
 def _aufloesen(tabelle):
@@ -143,6 +165,28 @@ class TestErgebnisse:
         assert _pruefen(f"http://quelle.test:{server}/nur-get").ergebnis == OK
         assert [a[0] for a in _Handler.anfragen] == ["HEAD", "GET"]
 
+    def test_umleitung_ohne_ziel_ist_fehler(self, server):
+        e = _pruefen(f"http://quelle.test:{server}/ohne-location")
+        assert (e.ergebnis, e.http_status) == (FEHLER, 302)
+
+    def test_bei_429_kein_zweiter_abruf(self, server):
+        _Handler.anfragen.clear()
+        e = _pruefen(f"http://quelle.test:{server}/bremst")
+        assert (e.ergebnis, e.http_status) == (FEHLER, 429)
+        assert [a[0] for a in _Handler.anfragen] == ["HEAD"]
+
+    def test_zweite_adresse_wenn_die_erste_nicht_antwortet(self, server):
+        """Dual-Stack ohne Route: die naechste geprueften Adresse versuchen."""
+        NAMEN["zwei.test"] = ["127.0.0.2", MOCK]
+        try:
+            e = _pruefen(
+                f"http://zwei.test:{server}/",
+                erlaubt=lambda ip: ip in ("127.0.0.2", MOCK),
+            )
+        finally:
+            del NAMEN["zwei.test"]
+        assert e.ergebnis == OK
+
     def test_schleife_bricht_ab(self, server):
         assert _pruefen(f"http://quelle.test:{server}/schleife").ergebnis == FEHLER
 
@@ -176,6 +220,10 @@ class TestSsrf:
         )
         assert e.ergebnis == GESPERRT
 
+    def test_weiterleitung_auf_anderen_port_gesperrt(self, server):
+        e = _pruefen(f"http://quelle.test:{server}/anderer-port")
+        assert e.ergebnis == GESPERRT
+
     def test_weiterleitung_auf_anderes_schema_gesperrt(self, server):
         assert _pruefen(f"http://quelle.test:{server}/nach-ftp").ergebnis == GESPERRT
 
@@ -205,12 +253,31 @@ class TestSsrf:
             "http://192.168.1.1/",
             "http://nutzer:geheim@quelle.test/",
             "gopher://quelle.test/",
+            "http://quelle.test:6379/",
+            "http://quelle.test:99999/",
+            "http://[::1]/",
         ],
     )
     def test_adresse_selbst_gesperrt(self, url):
         _Handler.anfragen.clear()
         assert _pruefen(url, erlaubt=lambda ip: True).ergebnis == GESPERRT
         assert _Handler.anfragen == []
+
+
+@pytest.mark.parametrize(
+    "url", ["http://2130706433/", "http://0x7f.1/", "http://017700000001/"]
+)
+def test_zahlenform_einer_ip_mit_echter_aufloesung_gesperrt(url):
+    """Dezimal-, Hex- und Oktalform loest getaddrinfo zu 127.0.0.1 auf: gesperrt, ohne Netz."""
+
+    async def lauf():
+        pool = neuer_pool()
+        try:
+            return await link_pruefen(pool, url)
+        finally:
+            await pool.aclose()
+
+    assert asyncio.run(lauf()).ergebnis == GESPERRT
 
 
 @pytest.mark.parametrize(
@@ -232,6 +299,14 @@ class TestSsrf:
         ("::ffff:127.0.0.1", False),
         ("::ffff:10.0.0.1", False),
         ("kein-ip", False),
+        # IPv4 in IPv6 eingebettet: es zaehlt die eingebettete Adresse
+        ("64:ff9b::a00:1", False),
+        ("64:ff9b::5db8:d822", True),
+        ("::7f00:1", False),
+        ("::ffff:0:a00:1", False),
+        ("2002:0a00:0001::1", False),
+        ("2001:0:4136:e378:8000:63bf:f5ff:fffe", False),
+        ("fec0::1", False),
     ],
 )
 def test_adresse_erlaubt(ip, erlaubt):

@@ -51,7 +51,21 @@ GESPERRT = "gesperrt"
 
 # Antworten, nach denen ein GET nachfragt: manche Server kennen HEAD nicht oder lehnen
 # ihn ab, liefern die Seite aber aus.
-_NOCHMAL_MIT_GET = {400, 403, 404, 405, 406, 429, 500, 501, 503}
+# 429 und 503 nicht: Wer bremst, bekommt nicht sofort die naechste Anfrage.
+_NOCHMAL_MIT_GET = {400, 403, 404, 405, 406, 500, 501}
+
+# Nur diese Ports: Sonst liessen sich ueber den Dienst Ports fremder Rechner abtasten.
+ERLAUBTE_PORTS = frozenset({80, 443, 8080, 8443})
+
+# IPv6-Bereiche mit einer IPv4-Adresse in den letzten 32 Bit (NAT64, IPv4-kompatibel,
+# IPv4-translated): Es zaehlt die eingebettete Adresse.
+_EINGEBETTET_V4 = (
+    ipaddress.ip_network("64:ff9b::/96"),
+    ipaddress.ip_network("64:ff9b:1::/48"),
+    ipaddress.ip_network("::/96"),
+    ipaddress.ip_network("::ffff:0:0:0/96"),
+)
+_SITE_LOCAL = ipaddress.ip_network("fec0::/10")
 
 
 class AdresseGesperrt(Exception):
@@ -72,8 +86,16 @@ def adresse_erlaubt(ip: str) -> bool:
         adresse = ipaddress.ip_address(ip.split("%", 1)[0])
     except ValueError:
         return False
-    if isinstance(adresse, ipaddress.IPv6Address) and adresse.ipv4_mapped:
-        adresse = adresse.ipv4_mapped
+    if isinstance(adresse, ipaddress.IPv6Address):
+        if adresse in _SITE_LOCAL:
+            return False
+        eingebettet = adresse.ipv4_mapped or adresse.sixtofour
+        if eingebettet is None and adresse.teredo:
+            eingebettet = adresse.teredo[1]
+        if eingebettet is None and any(adresse in netz for netz in _EINGEBETTET_V4):
+            eingebettet = ipaddress.IPv4Address(int(adresse) & 0xFFFFFFFF)
+        if eingebettet is not None:
+            return adresse_erlaubt(str(eingebettet))
     return adresse.is_global and not adresse.is_multicast
 
 
@@ -87,6 +109,12 @@ def adresse_pruefen(url: str) -> None:
         raise AdresseGesperrt("Nur http und https")
     if teile.username is not None or teile.password is not None:
         raise AdresseGesperrt("Keine Zugangsdaten in der Adresse")
+    try:
+        port = teile.port
+    except ValueError:
+        raise AdresseGesperrt("Port nicht lesbar") from None
+    if port is not None and port not in ERLAUBTE_PORTS:
+        raise AdresseGesperrt("Port nicht erlaubt")
 
 
 Aufloesen = Callable[[str, int], Awaitable[List[str]]]
@@ -133,13 +161,21 @@ class _GeprueftesNetz(httpcore.AsyncNetworkBackend):
         # entschiede die Reihenfolge, wohin verbunden wird.
         if not adressen or not all(self._erlaubt(a) for a in adressen):
             raise AdresseGesperrt("IP-Adresse nicht erlaubt")
-        return await self._innen.connect_tcp(
-            adressen[0],
-            port,
-            timeout=timeout,
-            local_address=local_address,
-            socket_options=socket_options,
-        )
+        # Der Reihe nach, alle geprueft: Ohne IPv6-Route waere sonst ein Link mit
+        # IPv6- und IPv4-Adresse "nicht erreichbar".
+        letzter: Optional[Exception] = None
+        for adresse in dict.fromkeys(adressen):
+            try:
+                return await self._innen.connect_tcp(
+                    adresse,
+                    port,
+                    timeout=timeout,
+                    local_address=local_address,
+                    socket_options=socket_options,
+                )
+            except (httpcore.ConnectError, httpcore.ConnectTimeout) as fehler:
+                letzter = fehler
+        raise letzter or httpcore.ConnectError("keine Adresse")
 
     async def connect_unix_socket(self, path, timeout=None, socket_options=None):
         raise AdresseGesperrt("Kein Unix-Socket")
@@ -214,9 +250,13 @@ async def _kopf(
 
 
 def _host_kopf(roh) -> bytes:
+    host = roh.raw_host
+    if b":" in host:
+        # IPv6-Literal: im Host-Kopf in eckigen Klammern
+        host = b"[" + host + b"]"
     if roh.port is None:
-        return roh.raw_host
-    return roh.raw_host + b":" + str(roh.port).encode()
+        return host
+    return host + b":" + str(roh.port).encode()
 
 
 async def _pruefen(pool: httpcore.AsyncConnectionPool, url: str) -> Abrufergebnis:

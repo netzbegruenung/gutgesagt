@@ -49,6 +49,7 @@ def dienst():
         return_value=HerkunftPruefungStand(
             geprueft=3,
             letzter_lauf=ZEIT,
+            auffaellig_gesamt=1,
             auffaellig=[
                 HerkunftPruefung(
                     herkunft_id=uuid.UUID("11111111-1111-4111-8111-111111111111"),
@@ -97,6 +98,7 @@ def test_aus_nichts_sichtbar_kein_lauf(admin_werte, dienst, obergrenze, admin_we
         "laeuft": False,
         "geprueft": 0,
         "letzter_lauf": None,
+        "auffaellig_gesamt": 0,
         "auffaellig": [],
     }
     assert client.post(f"{URL}/lauf", headers=ADMIN).status_code == 404

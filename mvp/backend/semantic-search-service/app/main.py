@@ -75,7 +75,11 @@ from repositories.usage_tracking_repository import get_usage_repository
 from services.entdoppelung import pruefwerte_verwerfen_im_takt
 from repositories.gepostet_repository import get_gepostet_repository
 from services.abzeichen_service import abzeichen_im_takt, abzeichen_service_setzen
-from services.herkunft_pruefen import herkunft_pruefen_bauen, pruefen_im_takt
+from services.herkunft_pruefen import (
+    get_herkunft_pruefen_service,
+    herkunft_pruefen_bauen,
+    pruefen_im_takt,
+)
 from services.muster_hinweise_service import (
     loeschen_im_takt as muster_hinweise_loeschen_im_takt,
 )
@@ -266,6 +270,10 @@ async def lifespan(app: FastAPI):
                 task = getattr(app.state, name, None)
                 if task is not None:
                     task.cancel()
+            # Ein laufender Lauf "Herkunft pruefen" haengt nicht am Takt (#759)
+            herkunft = get_herkunft_pruefen_service()
+            if herkunft is not None:
+                herkunft.abbrechen()
             manager = get_embeddings_manager()
             await manager.shutdown()
             close_app_database()

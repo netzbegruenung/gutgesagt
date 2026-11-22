@@ -321,11 +321,13 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   `tests/regression/SUCHTESTSET.md`, section Inhaltstor.
 - `SEMANTIC_SEARCH_HERKUNFT_PRUEFEN_AKTIV` - upper bound of the Schalter `herkunft_pruefen`
   (#759, default `true`: no personal data); takes effect only when an admin switches it on.
-  Then the service fetches the links of all visible Herkünfte once a night from 02:00 UTC
-  (`services/herkunft_pruefen.py`, one request per second at most, HEAD then GET, headers only)
+  Then the service fetches the links of all visible Herkünfte once a night between 02:00 and
+  06:00 UTC (`services/herkunft_pruefen.py`, one request per second at most, HEAD then GET,
+  headers only, ports 80, 443, 8080 and 8443 only)
   and lists dead or moved ones for admins (table `herkunft_pruefung`). Outbound HTTP(S) from the
   semantic service to arbitrary hosts; only http/https, every resolved address must be global,
-  also after redirects (`utils/sicherer_abruf.py`). No proxy from the environment is used.
+  also after redirects, IPv4 embedded in IPv6 included (`utils/sicherer_abruf.py`). No proxy
+  from the environment is used. Switched off, the hourly task empties the table once.
 - `DOCKER_CONTAINER` - set to `true` inside containers to enforce strict path validation
 
 ## Startup Scripts

@@ -30,6 +30,8 @@ class HerkunftPruefung:
 class HerkunftPruefungStand:
     geprueft: int
     letzter_lauf: Optional[datetime]
+    # Alle auffaelligen, auch ueber die Grenze der Liste hinaus
+    auffaellig_gesamt: int
     auffaellig: List[HerkunftPruefung]
 
 
@@ -92,10 +94,13 @@ class HerkunftPruefungRepository:
     def stand(self, ok: str, hoechstens: int) -> HerkunftPruefungStand:
         """Wie viele geprueft sind, wann zuletzt, und die auffaelligen (laengste zuerst)."""
         with self.db.get_session() as session:
-            geprueft, letzter = session.execute(
+            geprueft, letzter, auffaellig_gesamt = session.execute(
                 select(
                     func.count(HerkunftPruefungZeile.herkunft_id),
                     func.max(HerkunftPruefungZeile.geprueft_am),
+                    func.count(HerkunftPruefungZeile.herkunft_id).filter(
+                        HerkunftPruefungZeile.ergebnis != ok
+                    ),
                 )
             ).one()
             zeilen = (
@@ -114,6 +119,7 @@ class HerkunftPruefungRepository:
             return HerkunftPruefungStand(
                 geprueft=geprueft or 0,
                 letzter_lauf=letzter,
+                auffaellig_gesamt=auffaellig_gesamt or 0,
                 auffaellig=[
                     HerkunftPruefung(
                         herkunft_id=z.herkunft_id,

@@ -8,13 +8,14 @@ import { environment } from '../../../environments/environment';
 
 const URL = `${environment.baseUrl}/api/v1/herkunft-pruefen`;
 
-const AUS: HerkunftPruefenStand = { aktiv: false, laeuft: false, geprueft: 0, letzter_lauf: null, auffaellig: [] };
+const AUS: HerkunftPruefenStand = { aktiv: false, laeuft: false, geprueft: 0, letzter_lauf: null, auffaellig_gesamt: 0, auffaellig: [] };
 
 const AN: HerkunftPruefenStand = {
   aktiv: true,
   laeuft: false,
   geprueft: 12,
   letzter_lauf: '2026-11-22T03:00:00Z',
+  auffaellig_gesamt: 2,
   auffaellig: [
     {
       herkunft_id: 'a',
@@ -86,10 +87,25 @@ describe('HerkunftPruefenComponent', () => {
   });
 
   it('sagt es, wenn alle Links gehen', () => {
-    http.expectOne(URL).flush({ ...AN, auffaellig: [] });
+    http.expectOne(URL).flush({ ...AN, auffaellig_gesamt: 0, auffaellig: [] });
     fixture.detectChanges();
 
     expect(el().textContent).toContain('Alle geprüften Links gehen.');
+  });
+
+  it('verlinkt ein gesperrtes Weiterleitungsziel nicht', () => {
+    http.expectOne(URL).flush({
+      ...AN,
+      auffaellig_gesamt: 1,
+      auffaellig: [{ ...AN.auffaellig[0], ergebnis: 'gesperrt', http_status: null, ziel: 'http://10.0.0.7/' }],
+    });
+    fixture.detectChanges();
+
+    const eintrag = el().querySelector('[data-testid="auffaellig"]') as HTMLElement;
+    expect(eintrag.textContent).toContain('Leitet weiter auf: http://10.0.0.7/');
+    expect(Array.from(eintrag.querySelectorAll('a')).map((a) => a.getAttribute('href'))).toEqual([
+      'https://quelle.example/weg',
+    ]);
   });
 
   it('stößt mit „Jetzt prüfen“ einen Lauf an und lädt gleich nach', () => {

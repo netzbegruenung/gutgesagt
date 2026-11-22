@@ -45,6 +45,8 @@ class HerkunftPruefenResponse(BaseModel):
     laeuft: bool = False
     geprueft: int = 0
     letzter_lauf: Optional[datetime] = None
+    # Alle auffaelligen; die Liste zeigt hoechstens AUFFAELLIGE_HOECHSTENS davon
+    auffaellig_gesamt: int = 0
     auffaellig: List[AuffaelligeHerkunft] = []
 
 
@@ -70,6 +72,7 @@ async def herkunft_pruefen_stand(
         laeuft=dienst.laeuft,
         geprueft=stand.geprueft,
         letzter_lauf=stand.letzter_lauf,
+        auffaellig_gesamt=stand.auffaellig_gesamt,
         auffaellig=[AuffaelligeHerkunft(**vars(z)) for z in stand.auffaellig],
     )
 

@@ -71,6 +71,7 @@ class TestHerkunftPruefungRepository:
         _speichern(repo, A, "https://a.example/", "tot", T1)
         _speichern(repo, B, "https://b.example/", "tot", T0)
 
+        _speichern(repo, uuid.uuid4(), "https://c.example/", "ok", T0)
         stand = repo.stand("ok", 1)
-        assert stand.geprueft == 2
+        assert stand.geprueft == 3 and stand.auffaellig_gesamt == 2
         assert [e.herkunft_id for e in stand.auffaellig] == [B]

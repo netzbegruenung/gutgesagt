@@ -126,6 +126,19 @@ class TestLauf:
         assert abgerufen == ["https://a.example/"]
         repo.uebrige_loeschen.assert_not_called()
 
+    def test_fehler_im_angestossenen_lauf_loggt_nur_den_typ(self, caplog):
+        dienst, repo, _, _, _ = _dienst([HerkunftLink(A, "https://geheim.example/")])
+        repo.speichern.side_effect = RuntimeError("INSERT https://geheim.example/")
+
+        async def lauf():
+            assert dienst.anstossen()
+            await dienst._lauf
+
+        asyncio.run(lauf())
+
+        assert "RuntimeError" in caplog.text
+        assert "geheim" not in caplog.text
+
     def test_anstossen_nur_einmal_gleichzeitig(self):
         async def lauf():
             sperre = asyncio.Event()
@@ -155,6 +168,9 @@ class TestTakt:
             (1, None, False),
             (3, datetime(2026, 11, 21, 3, 0, tzinfo=timezone.utc), True),
             (3, datetime(2026, 11, 22, 2, 10, tzinfo=timezone.utc), False),
+            # Nur nachts: nach einem Neustart tagsueber wartet er bis zur Nacht
+            (14, None, False),
+            (6, None, False),
         ],
     )
     def test_faellig_einmal_je_tag_ab_der_nacht(self, stunde, letzter, faellig):
@@ -164,8 +180,8 @@ class TestTakt:
 
         assert asyncio.run(dienst.faellig()) is faellig
 
-    def test_takt_bei_schalter_aus_liest_nichts(self, monkeypatch):
-        dienst, repo, _, geladen, _ = _dienst(
+    def test_takt_bei_schalter_aus_ruft_nichts_ab_und_leert_einmal(self):
+        dienst, repo, abgerufen, geladen, _ = _dienst(
             [HerkunftLink(A, "https://a.example/")], an=False
         )
 
@@ -176,7 +192,29 @@ class TestTakt:
 
         asyncio.run(einmal())
 
-        assert repo.method_calls == [] and geladen == []
+        assert geladen == [] and abgerufen == []
+        # Nur das Leeren, einmal, auch wenn der Takt mehrmals nachsieht
+        assert [c[0] for c in repo.method_calls] == ["uebrige_loeschen"]
+        repo.uebrige_loeschen.assert_called_once_with([])
+
+    def test_nach_wiedereinschalten_leert_das_naechste_ausschalten_erneut(self):
+        dienst, repo, _, _, schalter = _dienst([], an=False)
+        repo.letzter_lauf.return_value = datetime(
+            2026, 11, 22, 2, 0, tzinfo=timezone.utc
+        )
+
+        async def schritte():
+            aufgabe = asyncio.create_task(pruefen_im_takt(dienst, takt_sekunden=0.01))
+            await asyncio.sleep(0.03)
+            schalter["an"] = True
+            await asyncio.sleep(0.03)
+            schalter["an"] = False
+            await asyncio.sleep(0.03)
+            aufgabe.cancel()
+
+        asyncio.run(schritte())
+
+        assert repo.uebrige_loeschen.call_count == 2
 
     def test_takt_bei_schalter_an_stoesst_an(self):
         dienst, repo, abgerufen, _, _ = _dienst([HerkunftLink(A, "https://a.example/")])
