@@ -28,6 +28,10 @@ export const AuthInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: 
   const einwilligungZustand = inject(Art9EinwilligungZustand);
   const authService = inject(AuthService);
 
+  // Beim Absenden festhalten: Ein 401 auf eine Anfrage von vor dem Anmelden (etwa eine stille
+  // Abfrage, deren Antwort erst nach dem Anmelden kommt) beendet keine Sitzung.
+  const angemeldetGesendet = authService.getUserInfo()?.isAuthenticated === true;
+
   const modifiedRequest = req.clone({
     withCredentials: true,  // Ensures cookies are included also cross-origin
   });
@@ -38,7 +42,7 @@ export const AuthInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: 
         // Das BFF hat die Sitzung beendet (Cookie abgelaufen, Konto geloescht, Cookie aus
         // einem anderen Realm) und das Cookie geloescht. Kopfzeile und Profilbild zeigen
         // dann sofort den Abgemeldet-Zustand, auch bei stillen Abfragen, ohne Neuladen.
-        if (authService.getUserInfo()?.isAuthenticated) {
+        if (angemeldetGesendet && authService.getUserInfo()?.isAuthenticated) {
           authService.setUserInfo({ isAuthenticated: false, userId: null, userName: null, claims: null });
         }
         // Check if the request is for a public endpoint. Hintergrund-Abfragen (Nachladen,

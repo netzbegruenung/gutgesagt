@@ -212,7 +212,8 @@ den Aussteller der Kennung im Cookie mit `Keycloak__Authority` und weist abweich
 (`BFF/Services/AnmeldeAussteller.cs`, Log-Zeile „Session of user … ended: the session was
 issued by another realm“ mit Pseudonym). Ohne diese Prüfung liefen sie bis zu 14 Tage weiter
 und schickten die alte Kennung; was die Person darunter anlegte, trug die alte. Ein künftiger
-Realm-Wechsel braucht dafür nur die neue Authority. Ist eine BFF ohne diese Prüfung schon
+Realm-Wechsel braucht dafür nur die neue Authority. Verglichen wird die ganze Adresse: Zieht
+Keycloak auf einen anderen Hostnamen um, endet ebenso jede Sitzung einmal. Ist eine BFF ohne diese Prüfung schon
 umgestellt worden (Produktion am 20.11.2026), stellt nach ihrem Rollout ein Nachhol-Lauf von
 `kennungen_umstellen.py` (derselbe Aufruf wie unten in Schritt 7) um, was unter alten
 Kennungen liegen geblieben ist.

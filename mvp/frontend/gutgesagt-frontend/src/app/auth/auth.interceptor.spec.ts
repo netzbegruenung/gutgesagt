@@ -282,6 +282,7 @@ describe('AuthInterceptor', () => {
 
     expect(router.navigate).not.toHaveBeenCalled();
   });
+
   // Beendet das BFF die Sitzung mitten in der Nutzung (etwa ein Cookie aus dem alten Realm),
   // zeigt die App den Abgemeldet-Zustand bei der naechsten Anfrage, ohne Neuladen.
   describe('Sitzung vom BFF beendet', () => {
@@ -307,6 +308,15 @@ describe('AuthInterceptor', () => {
 
       expect(auth.getUserInfo()?.isAuthenticated).toBeFalse();
       expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('laesst eine Anmeldung stehen, wenn die Anfrage vor ihr abgeschickt wurde', () => {
+      auth.setUserInfo({ isAuthenticated: false, userId: null, userName: null, claims: null });
+      httpClient.get('/api/v1/moderation/reports', { context: stillerKontext() }).subscribe({ error: () => {} });
+      auth.setUserInfo(angemeldet);
+      httpMock.expectOne('/api/v1/moderation/reports').flush(null, { status: 401, statusText: 'Unauthorized' });
+
+      expect(auth.getUserInfo()).toEqual(angemeldet);
     });
 
     it('laesst die Anmeldung bei anderen Fehlern stehen', () => {
