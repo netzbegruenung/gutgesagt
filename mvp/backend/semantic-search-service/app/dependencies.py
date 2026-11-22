@@ -32,6 +32,7 @@ from services.suchen_ohne_treffer_service import (
 )
 from services.unbeantwortete_aussagen_service import UnbeantworteteAussagenService
 from services.aussage_themen_service import AussageThemenService
+from services.themen_aussagen_service import ThemenAussagenService
 from repositories.aussage_themen_repository import get_aussage_themen_repository
 from repositories.implementations.qdrant.qdrant_repository_factory import (
     QdrantRepositoryFactory,
@@ -252,6 +253,20 @@ def get_themen_vorschlag_service() -> "ThemenVorschlagService":
             ),
         )
     return _themen_vorschlag_service
+
+
+def get_themen_aussagen_service(
+    statement_service: StatementService = Depends(get_statement_service),
+) -> ThemenAussagenService:
+    """
+    "Alles zum Thema" (#754). Die Nutzung erst beim Aufruf nachschlagen: Das
+    Repository baut beim ersten Zugriff eine Verbindung auf.
+    """
+    return ThemenAussagenService(
+        get_aussage_themen_repository(),
+        statement_service,
+        lambda ids: get_usage_repository().get_usage_counts_batch(ids),
+    )
 
 
 def get_unbeantwortete_aussagen_service(

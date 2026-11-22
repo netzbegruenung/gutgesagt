@@ -12,7 +12,8 @@ export const VORSCHLAG_AB_ZEICHEN = 12;
 /**
  * Themenvorschlaege (#401) zum Text eines Formulars, fuer <app-themen-auswahl [vorschlaege]>.
  * Fragt nach einer Pause beim Tippen; ein neuer Text verwirft die offene Antwort. Scheitert
- * die Abfrage, gibt es keinen Vorschlag (ThemenService.vorschlaege). Gewaehlt wird nichts.
+ * die Abfrage, gibt es keinen Vorschlag (ThemenService.vorschlaege). Sind Vorschlaege im
+ * Dienst aus (ThemenService.vorschlaegeAn, Standard), fragt sie nie. Gewaehlt wird nichts.
  *
  * Im Konstruktor (Injektionskontext) anlegen: Sie hoert mit der Komponente auf.
  * `geaendert` ruft sie nach jedem neuen Vorschlag, etwa fuer markForCheck bei OnPush.
@@ -29,7 +30,11 @@ export class ThemenVorschlaege {
         map((text) => text.trim()),
         debounceTime(VORSCHLAG_PAUSE_MS),
         distinctUntilChanged(),
-        switchMap((text) => (text.length < VORSCHLAG_AB_ZEICHEN ? of([]) : service.vorschlaege(text, hoechstens))),
+        switchMap((text) =>
+          text.length < VORSCHLAG_AB_ZEICHEN
+            ? of([])
+            : service.vorschlaegeAn().pipe(switchMap((an) => (an ? service.vorschlaege(text, hoechstens) : of([])))),
+        ),
         takeUntilDestroyed(),
       )
       .subscribe((vorschlaege) => {

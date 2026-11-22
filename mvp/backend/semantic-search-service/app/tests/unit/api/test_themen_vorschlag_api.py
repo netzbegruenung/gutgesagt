@@ -32,6 +32,7 @@ def vorschlag():
     themen_service = MagicMock()
     app.dependency_overrides[get_themen_vorschlag_service] = lambda: service
     app.dependency_overrides[get_aussage_themen_service] = lambda: themen_service
+    app.dependency_overrides[get_settings] = lambda: Settings(themen_vorschlaege=True)
     with patch(
         "api.v1.statement.themen_vorschlag_rate_limiter.is_rate_limited",
         AsyncMock(return_value=False),
@@ -101,6 +102,20 @@ class TestThemenVorschlaege:
         assert resp.status_code == 200
         assert resp.json() == {"themen": []}
         assert "geheimer Text" not in caplog.text
+
+    def test_standard_ist_aus(self):
+        """Maintainer 22.11.2026: aus, bis es etwa 200 Zuordnungen von Hand gibt."""
+        assert Settings().themen_vorschlaege is False
+
+    def test_die_liste_sagt_ob_vorschlaege_an_sind(self, vorschlag):
+        an = TestClient(app).get("/api/v1/statement/themen", headers=ANGEMELDET)
+        app.dependency_overrides[get_settings] = lambda: Settings(
+            themen_vorschlaege=False
+        )
+        aus = TestClient(app).get("/api/v1/statement/themen", headers=ANGEMELDET)
+
+        assert an.json()["vorschlaege"] is True
+        assert aus.json()["vorschlaege"] is False
 
     def test_abgeschaltet_leer_ohne_rechnen(self, vorschlag):
         service, _ = vorschlag

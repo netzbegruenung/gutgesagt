@@ -61,13 +61,10 @@ class Schwellen:
 
 
 def namenstext(thema: Thema) -> str:
-    """Name und Stichwoerter eines Themas als ein Text fuer den Namensvektor.
-
-    Die Stichwoerter kommen mit #754 (PR #755) an Thema; bis dahin nur der Name."""
-    stichwoerter = getattr(thema, "stichwoerter", ()) or ()
-    if not stichwoerter:
+    """Name und Stichwoerter eines Themas (#754) als ein Text fuer den Namensvektor."""
+    if not thema.stichwoerter:
         return thema.name
-    return f"{thema.name}: {', '.join(stichwoerter)}"
+    return f"{thema.name}: {', '.join(thema.stichwoerter)}"
 
 
 def _normiert(vektor: np.ndarray) -> np.ndarray:

@@ -1,0 +1,116 @@
+/*
+ * "Alles zum Thema" (#754): ein eingelassener Kasten ueber den Treffern, mobil zuerst.
+ * Farben nur aus den Tokens (custom-theme.scss), damit der Dunkelmodus mitgeht; Links in
+ * --akzent-schrift wie bei "Oft gesucht" (Kontrast AA hell und dunkel).
+ */
+:host {
+  display: block;
+  text-align: left;
+}
+
+.alles-zum-thema {
+  margin: 0 0 var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
+  background-color: var(--mulde);
+  border-left: 4px solid var(--linie-klee);
+  border-radius: var(--border-radius-medium);
+  color: var(--text);
+}
+
+.kasten-titel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0 0 var(--spacing-xs);
+  font-size: 1.1rem;
+  line-height: 1.3;
+}
+
+.kasten-vorsatz {
+  font-weight: normal;
+  color: var(--text-leise);
+}
+
+.kasten-thema {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kasten-motiv {
+  display: block;
+  flex-shrink: 0;
+}
+
+.kasten-liste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kasten-liste li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 8px;
+  padding: 6px 0;
+}
+
+.kasten-liste li + li {
+  border-top: 1px solid var(--linie);
+}
+
+.kasten-aussage {
+  color: var(--akzent-schrift);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+  /* Zielgroesse mindestens 24 px (WCAG 2.2, 2.5.8) */
+  display: inline-block;
+  min-height: 24px;
+  padding: 2px 0;
+}
+
+.kasten-aussage:focus-visible,
+.kasten-alle:focus-visible {
+  outline: 2px solid var(--akzent-tanne);
+  outline-offset: 2px;
+}
+
+.kasten-zahl {
+  font-size: 13px;
+  color: var(--text-leise);
+  white-space: nowrap;
+}
+
+.kasten-aktionen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: var(--spacing-sm);
+}
+
+.kasten-alle {
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--akzent-schrift);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.kasten-alle:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.kasten-fehler {
+  margin: var(--spacing-xs) 0 0;
+  font-size: 14px;
+}

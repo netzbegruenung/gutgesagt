@@ -5,13 +5,12 @@ Modell: Vektoren von Hand, die Messung mit Modell steht in tests/regression/THEM
 """
 
 import asyncio
-from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 import numpy as np
 import pytest
 
-from domain.themen import THEMEN
+from domain.themen import THEMEN, Thema
 from services.themen_vorschlag import (
     NLI_KANDIDATEN,
     NLI_VORLAGE,
@@ -34,16 +33,10 @@ def einheit(*werte: float) -> np.ndarray:
 
 class TestNamenstext:
     def test_ohne_stichwoerter_nur_der_name(self):
-        assert namenstext(THEMEN[0]) == THEMEN[0].name
+        assert namenstext(Thema("verkehr", "Verkehr", "")) == "Verkehr"
 
     def test_mit_stichwoertern_name_und_stichwoerter(self):
-        @dataclass(frozen=True)
-        class MitStichwoertern:
-            schluessel: str
-            name: str
-            stichwoerter: tuple
-
-        thema = MitStichwoertern("verkehr", "Verkehr", ("Auto", "Bahn"))
+        thema = Thema("verkehr", "Verkehr", "", ("Auto", "Bahn"))
         assert namenstext(thema) == "Verkehr: Auto, Bahn"
 
 

@@ -12,7 +12,7 @@ from core.config import settings
 from services.themen_vorschlag import Schwellen, ThemenVorschlagService
 from tests.regression.themen_messset import BEISPIELE
 
-# Untergrenzen mit Luft: Ohne Stichwoerter und ohne die anderen Aussagen des
+# Untergrenzen mit Luft: Noch ohne Stichwoerter (vor #755) und ohne die anderen Aussagen des
 # Startbestands in den Prototypen trafen am 22.11.2026 27 von 47 Themen (R 0,57), bei
 # P ueber 0,75 (THEMEN.md misst mit allen anderen Aussagen: P 0,76, R 0,66).
 PRECISION_MINDESTENS = 0.7

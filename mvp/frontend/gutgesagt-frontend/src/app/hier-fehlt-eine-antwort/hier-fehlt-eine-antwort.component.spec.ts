@@ -52,7 +52,8 @@ describe('HierFehltEineAntwortComponent', () => {
     fixture = TestBed.createComponent(HierFehltEineAntwortComponent);
     http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
-    http.expectOne(THEMEN_URL).flush({ themen: THEMEN });
+    // Themenvorschlaege (#401) an, damit die Seite sie zeigt; Standard im Dienst ist aus.
+    http.expectOne(THEMEN_URL).flush({ themen: THEMEN, vorschlaege: true });
   });
 
   afterEach(() => http.verify());

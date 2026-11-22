@@ -269,12 +269,13 @@ async def vorab_anlegen(
 
 # Die feste Themenliste (domain/themen.json), fuer die Auswahl beim Zuordnen.
 @router.get("/themen", response_model=ThemenResponse)
-async def themen_liste() -> ThemenResponse:
+async def themen_liste(settings: Settings = Depends(get_settings)) -> ThemenResponse:
     return ThemenResponse(
         themen=[
             ThemaDto(schluessel=t.schluessel, name=t.name, motiv=t.motiv)
             for t in THEMEN
-        ]
+        ],
+        vorschlaege=settings.themen_vorschlaege,
     )
 
 

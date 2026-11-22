@@ -394,9 +394,11 @@ class Settings(BaseSettings):
     # daher Werte um 0 bis 0,5) und hoechstens so weit hinter dem naechsten Thema. Mit
     # themen_vorschlag_nli streicht das NLI-Modell Kandidaten unter
     # themen_vorschlag_folgerung_ab; aus, weil es in der Messung mehr Treffer strich
-    # als Fehler. themen_vorschlaege = false schaltet den Endpunkt ab (leere Liste).
-    # Gemessen in tests/regression/THEMEN.md.
-    themen_vorschlaege: bool = True
+    # als Fehler. Standard aus, bis es etwa 200 Zuordnungen von Hand gibt (Maintainer,
+    # 22.11.2026): Dann meldet /themen vorschlaege = false, das Frontend fragt nicht,
+    # und der Endpunkt liefert eine leere Liste. Einschalten mit
+    # SEMANTIC_SEARCH_THEMEN_VORSCHLAEGE=true. Gemessen in tests/regression/THEMEN.md.
+    themen_vorschlaege: bool = False
     themen_vorschlag_ab: float = Field(default=0.10, ge=-1.0, le=1.0)
     themen_vorschlag_abstand_hoechstens: float = Field(default=0.05, ge=0.0, le=2.0)
     themen_vorschlag_nli: bool = False

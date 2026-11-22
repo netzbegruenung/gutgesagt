@@ -133,6 +133,9 @@ class AussageVorabResponse(AddStatementResponse):
 
 class ThemenResponse(BaseModel):
     themen: List[ThemaDto]
+    # Ob Themenvorschlaege (#401) an sind (themen_vorschlaege); aus fragt das Frontend
+    # nicht nach ihnen.
+    vorschlaege: bool = False
 
 
 class ThemenZuordnenRequest(BaseModel):

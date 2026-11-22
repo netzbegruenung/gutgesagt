@@ -13,6 +13,8 @@ export interface Thema {
 
 export interface ThemenResponse {
     themen: Thema[];
+    /** Ob Themenvorschlaege (#401) an sind; fehlt bei aelteren Diensten (dann aus). */
+    vorschlaege?: boolean;
 }
 
 export interface ThemenZuordnenRequest {

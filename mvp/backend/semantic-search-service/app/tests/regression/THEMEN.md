@@ -19,6 +19,14 @@ cd mvp/backend/semantic-search-service/app
 ../venv/bin/python -m tests.regression.themen_messen --nli --zeit
 ```
 
+## Ein- und ausschalten
+
+Standard ist **aus**, bis es in Produktion etwa 200 Zuordnungen von Hand gibt und das echte
+Testset nachgemessen ist (Maintainer, 22.11.2026). Aus meldet `GET /statement/themen`
+`vorschlaege: false`; das Frontend fragt dann nicht nach Vorschlägen und zeigt keine, und
+`/themen/vorschlaege` liefert eine leere Liste. Einschalten mit
+`SEMANTIC_SEARCH_THEMEN_VORSCHLAEGE=true` (`CONFIG.md`).
+
 ## Welche Daten
 
 Maßgeblich ist das **Testset**: die Zuordnungen von Hand aus Produktion, als Datei für Admins
@@ -44,7 +52,7 @@ beim Einwerfen höchstens zwei.
 
 **Warum die Mitte.** Ohne sie liegen alle Ähnlichkeiten zwischen 0,8 und 0,9, auch für
 fremde Themen; ein Prototyp aus vielen Aussagen gleicht dann eher „politische Aussage“ als
-seinem Thema. Mit der Mitte stieg der Treffer des ersten Themas von 0,80 auf 0,94 (mit
+seinem Thema. Mit der Mitte stieg der Treffer des ersten Themas von 0,80 auf 0,95 (mit
 Stichwörtern), die Schwellen trennen deutlich besser.
 
 **Leave-one-out.** Je Aussage werden die Prototypen aus allen anderen gebaut; die Aussage
@@ -55,27 +63,26 @@ ohne Hold-out. 72 davon hat derselbe Agent formuliert und zugeordnet, der auch d
 gebaut hat. Aussagekräftiger ist deshalb der **Startbestand** (30 Aussagen, von Menschen
 geschrieben, nicht für die Messung): Er ist unten die Leitzahl.
 
-## Ergebnis vom 22.11.2026
+## Ergebnis vom 22.11.2026 (Stichwörter: Stand nach #755)
 
 Vorläufiges Messset, 104 Aussagen, `intfloat/multilingual-e5-base`, gewählte Schwelle
 `ab 0,10`, `abstand 0,05`. P = Precision, R = Recall über alle vorgeschlagenen Themen.
 
 | Stand | erstes Thema passt | eins der ersten zwei | P (höchstens 3) | R | ohne Vorschlag | Themen je Aussage |
 |---|---|---|---|---|---|---|
-| ohne Stichwörter (heute `main`) | 0,85 | 0,95 | 0,80 | 0,67 | 1 % | 1,2 |
-| mit Stichwörtern aus #754 (PR #755) | **0,94** | **0,98** | **0,89** | **0,72** | 2 % | 1,2 |
+| ohne Stichwörter (vor #755) | 0,85 | 0,95 | 0,80 | 0,67 | 1 % | 1,2 |
+| mit Stichwörtern (#754, seit PR #755 auf `main`) | **0,95** | **0,98** | **0,89** | **0,72** | 2 % | 1,2 |
 | nur Namen, ohne Zuordnungen von Hand | 0,68 | 0,87 | 0,65 | 0,60 | 4 % | 1,4 |
-| nur Namen mit Stichwörtern | 0,87 | 0,91 | 0,77 | 0,69 | 1 % | 1,3 |
+| nur Namen mit Stichwörtern | 0,86 | 0,92 | 0,78 | 0,69 | 1 % | 1,3 |
 
-**Leitzahl Startbestand** (30 Aussagen): erstes Thema 0,77 ohne und 0,87 mit Stichwörtern,
+**Leitzahl Startbestand** (30 Aussagen): erstes Thema 0,77 ohne und 0,90 mit Stichwörtern,
 P/R 0,76/0,66 bzw. 0,85/0,70. Beim Einwerfen (höchstens zwei) liegt P um 0,01 bis 0,02 höher
 bei gleichem R.
 
-Zum Start in Produktion gibt es wenige Zuordnungen von Hand und, bis #755 gemergt ist, keine
-Stichwörter: Dann gilt etwa die Zeile „nur Namen, ohne Zuordnungen von Hand“ (P 0,65, R 0,60).
-Mit jeder Zuordnung von Hand rückt es Richtung erste Zeile.
+Ohne Zuordnungen von Hand gilt die Zeile „nur Namen mit Stichwörtern“ (P 0,78, R 0,69); mit
+jeder Zuordnung rückt es Richtung zweite Zeile. Eingeschaltet wird ohnehin erst bei etwa 200.
 
-Precision / Recall je Schwelle, höchstens drei, ohne Stichwörter (heute `main`):
+Precision / Recall je Schwelle, höchstens drei, ohne Stichwörter (vor #755):
 
 | ab | abstand 0,03 | abstand 0,05 | abstand 0,08 | abstand 0,12 |
 |---|---|---|---|---|
@@ -91,8 +98,8 @@ Dasselbe mit Stichwörtern (#755):
 | ab | abstand 0,03 | abstand 0,05 | abstand 0,08 | abstand 0,12 |
 |---|---|---|---|---|
 | 0,00 | 0,89 / 0,71 | 0,86 / 0,74 | 0,76 / 0,78 | 0,69 / 0,80 |
-| 0,08 | 0,91 / 0,69 | 0,87 / 0,73 | 0,80 / 0,76 | 0,73 / 0,78 |
-| **0,10** | 0,91 / 0,69 | **0,89 / 0,72** | 0,82 / 0,76 | 0,76 / 0,76 |
+| 0,08 | 0,91 / 0,69 | 0,87 / 0,73 | 0,79 / 0,76 | 0,73 / 0,78 |
+| **0,10** | 0,91 / 0,69 | **0,89 / 0,72** | 0,82 / 0,76 | 0,75 / 0,76 |
 | 0,14 | 0,93 / 0,67 | 0,91 / 0,70 | 0,88 / 0,74 | 0,84 / 0,74 |
 | 0,16 | 0,94 / 0,63 | 0,93 / 0,65 | 0,90 / 0,68 | 0,87 / 0,68 |
 | 0,20 | 0,93 / 0,56 | 0,94 / 0,57 | 0,94 / 0,59 | 0,92 / 0,59 |

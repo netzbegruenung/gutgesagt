@@ -106,6 +106,7 @@ describe('EinwerfenComponent', () => {
           useValue: {
             liste: () => (themenListe ? of(themenListe) : throwError(() => new Error('nicht ladbar'))),
             vorschlaege: vorschlaegeSpy,
+            vorschlaegeAn: () => of(true),
           },
         },
         {
