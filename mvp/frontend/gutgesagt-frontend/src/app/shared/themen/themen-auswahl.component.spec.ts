@@ -89,4 +89,65 @@ describe('ThemenAuswahlComponent', () => {
     expect(knopf('Klima').firstElementChild).toBe(bild);
     expect(knopf('Verkehr').querySelector('img')).toBeNull();
   });
+
+  describe('Themenvorschlaege (#401)', () => {
+    function hinweis(): string {
+      return fixture.nativeElement.querySelector('.themen-hinweis').textContent.trim();
+    }
+
+    function vorschlagen(vorschlaege: string[]): void {
+      fixture.componentRef.setInput('vorschlaege', vorschlaege);
+      fixture.detectChanges();
+    }
+
+    it('markiert Vorschlaege sichtbar mit Text, nicht nur mit Farbe', () => {
+      vorschlagen(['verkehr']);
+
+      const chip = knopf('Verkehrvorgeschlagen');
+      expect(chip.classList).toContain('vorgeschlagen');
+      expect(chip.querySelector('.vorschlag-marke')?.textContent).toBe('vorgeschlagen');
+      expect(chip.getAttribute('aria-pressed')).toBe('false');
+      expect(knopf('Klima').classList).not.toContain('vorgeschlagen');
+    });
+
+    it('nennt die Vorschlaege auch im Hinweis darunter', () => {
+      vorschlagen(['verkehr', 'klima']);
+
+      expect(hinweis()).toBe('Bis zu drei Themen, optional. Vorgeschlagen: Verkehr und Klima.');
+    });
+
+    it('waehlt nichts von selbst; ein Tipp uebernimmt den Vorschlag', () => {
+      vorschlagen(['verkehr']);
+      expect(gemeldet).toEqual([]);
+
+      knopf('Verkehrvorgeschlagen').click();
+
+      expect(gemeldet).toEqual([['verkehr']]);
+    });
+
+    it('ein gewaehlter Vorschlag ist kein Vorschlag mehr', () => {
+      vorschlagen(['verkehr', 'europa']);
+      setzen(['verkehr']);
+
+      expect(knopf('Verkehr').classList).not.toContain('vorgeschlagen');
+      expect(knopf('Verkehr').getAttribute('aria-pressed')).toBe('true');
+      expect(hinweis()).toBe('Bis zu drei Themen, optional. Vorgeschlagen: Europa.');
+    });
+
+    it('ist die Grenze erreicht, zeigt es keine Vorschlaege mehr', () => {
+      fixture.componentRef.setInput('hoechstens', 2);
+      vorschlagen(['europa']);
+      setzen(['klima', 'verkehr']);
+
+      expect(knopf('Europa').classList).not.toContain('vorgeschlagen');
+      expect(hinweis()).toBe('Bis zu zwei Themen, optional.');
+    });
+
+    it('uebergeht unbekannte Schluessel', () => {
+      vorschlagen(['gibt-es-nicht']);
+
+      expect(hinweis()).toBe('Bis zu drei Themen, optional.');
+      expect(fixture.nativeElement.querySelectorAll('.vorgeschlagen').length).toBe(0);
+    });
+  });
 });

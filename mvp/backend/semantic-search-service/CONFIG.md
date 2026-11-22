@@ -73,6 +73,11 @@ nano .env
 | `SEMANTIC_SEARCH_SUCHE_INHALTSTOR_AB` | With `…_INHALTSTOR`: lower end of the band (Aussage similarity, raw score on the direct path) | `0.82` |
 | `SEMANTIC_SEARCH_SUCHE_INHALTSTOR_AUSSAGE_BIS` | With `…_INHALTSTOR`: from this Aussage similarity a statement hit counts without a shared word | `0.92` |
 | `SEMANTIC_SEARCH_SUCHE_INHALTSTOR_DIREKT_BIS` | With `…_INHALTSTOR`: from this raw score a direct hit counts without a shared word | `0.90` |
+| `SEMANTIC_SEARCH_THEMEN_VORSCHLAEGE` | Themenvorschläge (#401, `services/themen_vorschlag.py`) while creating an Aussage or an Einwurf; `false` returns an empty list. Nothing is stored; same embedding model as the search, no extra model; `tests/regression/THEMEN.md` | `true` |
+| `SEMANTIC_SEARCH_THEMEN_VORSCHLAG_AB` | Minimum similarity of the text to a Thema prototype (centred, so values around 0 to 0.5) | `0.10` |
+| `SEMANTIC_SEARCH_THEMEN_VORSCHLAG_ABSTAND_HOECHSTENS` | A Thema is suggested only up to this distance behind the best one | `0.05` |
+| `SEMANTIC_SEARCH_THEMEN_VORSCHLAG_NLI` | NLI model as second opinion on the five nearest Themen (drops those below `…_FOLGERUNG_AB`); off, it dropped more hits than errors in the measurement, adds about 0.2 s | `false` |
+| `SEMANTIC_SEARCH_THEMEN_VORSCHLAG_FOLGERUNG_AB` | With `…_NLI`: minimum entailment for „In diesem Satz geht es um {Thema}.“ | `0.5` |
 | `SEMANTIC_SEARCH_APP_DATABASE_URL` | App database connection string | localhost:5433 |
 | `SEMANTIC_SEARCH_LOG_LEVEL` | Logging level (DEBUG, INFO, etc.) | INFO |
 | `SEMANTIC_SEARCH_KEYCLOAK_URL`, `…_KEYCLOAK_ADMIN_CLIENT_ID`, `…_KEYCLOAK_ADMIN_CLIENT_SECRET` | Keycloak admin API for redeeming Einladungen; without them Einladungen can only be managed. Set only together with the BFF switch to the new realm (`docs/KEYCLOAK_REALM.md`, order) | unset |

@@ -92,6 +92,7 @@ from utils.rate_limiter import (
     kuerzungsvorschlag_rate_limiter,
     report_rate_limiter,
     search_query_statement_rate_limiter,
+    themen_vorschlag_rate_limiter,
 )
 import asyncio
 
@@ -164,6 +165,7 @@ async def lifespan(app: FastAPI):
                     get_nutzung_rate_limiter(),
                     spracherkennung_rate_limiter,
                     kuerzungsvorschlag_rate_limiter,
+                    themen_vorschlag_rate_limiter,
                 ]
             )
         )

@@ -90,6 +90,7 @@
             </button>
             <div *ngIf="themenOffen" id="einwurf-themen-auswahl" class="themen-auswahl-rahmen">
                 <app-themen-auswahl [themen]="themenListe" [gewaehlt]="themen" [hoechstens]="hoechstensThemen"
+                                    [vorschlaege]="themenVorschlaege.vorschlaege"
                                     beschriftung="Themen des Einwurfs"
                                     (gewaehltChange)="themenSetzen($event)"></app-themen-auswahl>
             </div>

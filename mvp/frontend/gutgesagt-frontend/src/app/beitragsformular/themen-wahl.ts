@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl } from '@angular/forms';
 import { Thema } from '../services/dtos/themenDtos';
 import { ThemenService } from '../services/themen.service';
+import { ThemenVorschlaege } from '../shared/themen/themen-vorschlaege';
 import { AntwortAuf } from './antwort-auf/antwort-auf.component';
 import { themenWaehlbar } from './aussage-fuer-anfrage';
 
@@ -21,6 +22,8 @@ export class ThemenWahl {
   private vorschlag: string[] = [];
   /** Ob die Themenwahl zuletzt zu sehen war; der Vorschlag kommt nur beim Erscheinen. */
   private warWaehlbar = false;
+  /** Themenvorschlaege (#401) zum Text der neuen Aussage, fuer [vorschlaege]. */
+  readonly themenVorschlaege = new ThemenVorschlaege();
 
   constructor(private readonly themen: AbstractControl<string[] | null>) {
     // Ist die Liste nicht ladbar, fehlt die Themenwahl; speichern geht trotzdem.
@@ -58,6 +61,7 @@ export class ThemenWahl {
       this.vorschlagEinsetzen();
     }
     this.warWaehlbar = waehlbar;
+    this.themenVorschlaege.text(waehlbar ? aussage.text : '');
   }
 
   /**
@@ -80,6 +84,7 @@ export class ThemenWahl {
   zuruecksetzen(): void {
     this.warWaehlbar = false;
     this.themen.setValue([]);
+    this.themenVorschlaege.text('');
   }
 
   /**

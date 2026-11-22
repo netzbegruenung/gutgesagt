@@ -27,6 +27,25 @@
 
 /* Aussehen der Chips: global .chip (styles.css), gleich im Fangkorb und im Album */
 
+/*
+ * Themenvorschlag (#401): Rand in Primaer, zarter Grund und der Hinweis „vorgeschlagen“ als
+ * Text im Chip, damit er auch ohne Farbe lesbar ist. Gewaehlt sieht er aus wie jeder
+ * gewaehlte Chip (dann ist er kein Vorschlag mehr).
+ */
+.thema-chip.vorgeschlagen {
+  border: 2px solid var(--primaer);
+  /* Gleich hoch und breit wie mit 1px-Rand */
+  padding: 3px 13px;
+  background: var(--primaer-tint);
+}
+
+.vorschlag-marke {
+  margin-left: 2px;
+  font-size: 12px;
+  font-style: italic;
+  /* Schrift des Chips (akzent-schrift auf primaer-tint, wie a.chip:hover), nicht leiser */
+}
+
 .themen-hinweis {
   margin: 4px 0 0;
   font-size: 13px;

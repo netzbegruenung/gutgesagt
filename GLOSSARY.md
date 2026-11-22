@@ -327,6 +327,10 @@ _Avoid_: Quelle, Herkunft (das ist die Angabe, worauf sich ein Beitrag stützt)
 Die Zuordnungen von Hand mit dem Text ihrer Aussage, als Datei für Admins. Damit wird geprüft, wie gut spätere Themenvorschläge treffen. Es enthält keine Personendaten; Aussagen aus Suchanfragen gehören nicht dazu.
 _Avoid_: Eval-Set, Trainingsdaten, Goldstandard
 
+**Themenvorschlag**:
+Ein Thema, das die Themenwahl beim Anlegen einer Aussage oder beim Einwerfen hervorhebt („vorgeschlagen“), weil der getippte Text den Aussagen mit diesem Thema und seinem Namen nahekommt; höchstens drei, beim Einwerfen zwei. Ein Tipp übernimmt es wie jede andere Wahl; von selbst gesetzt wird nichts, die Zuordnung bleibt von Hand. Beim nachträglichen Zuordnen (Ergebnis- und Detailseite, Admin-Seite) gibt es keine Vorschläge, damit das Testset möglichst unbeeinflusst bleibt. Messung in `tests/regression/THEMEN.md` des Semantic-Search-Service.
+_Avoid_: Auto-Tagging, Klassifikation, automatische Zuordnung
+
 ## Nutzung und Bewertung
 
 **Nutzung**:

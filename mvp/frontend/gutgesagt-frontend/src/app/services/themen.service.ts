@@ -10,6 +10,8 @@ import {
   Thema,
   ThemenResponse,
   ThemenTestsetResponse,
+  ThemenVorschlagRequest,
+  ThemenVorschlagResponse,
   ThemenZuordnenRequest,
   ThemenZuordnenResponse,
 } from './dtos/themenDtos';
@@ -129,5 +131,19 @@ export class ThemenService {
   /** Admin: die Zuordnungen von Hand als Testset. */
   testset(): Observable<ThemenTestsetResponse> {
     return this.http.get<ThemenTestsetResponse>(`${this.basis}/testset`);
+  }
+
+  /**
+   * Themenvorschlaege zu einem Text (#401): Schluessel, das naechste zuerst. Nur ein
+   * Vorschlag, gespeichert wird nichts. Still: Scheitert es, gibt es keinen Vorschlag.
+   */
+  vorschlaege(text: string, hoechstens: number): Observable<string[]> {
+    const request: ThemenVorschlagRequest = { text, hoechstens };
+    return this.http
+      .post<ThemenVorschlagResponse>(`${this.basis}/vorschlaege`, request, { context: stillerKontext() })
+      .pipe(
+        map((antwort) => antwort.themen),
+        catchError(() => of([])),
+      );
   }
 }

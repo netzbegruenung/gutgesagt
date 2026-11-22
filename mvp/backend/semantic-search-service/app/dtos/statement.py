@@ -8,7 +8,12 @@ from domain.models.statement import Statement, StatementReplysuggestion
 from domain.models.content_origin import ContentOrigin
 from domain.models.content_status import ContentStatus
 from domain.models.content_type import ContentType
-from domain.themen import NACH_SCHLUESSEL, Zuordnungsart, themen_pruefen
+from domain.themen import (
+    HOECHSTENS_JE_AUSSAGE,
+    NACH_SCHLUESSEL,
+    Zuordnungsart,
+    themen_pruefen,
+)
 
 
 ### Aussage nach aussen ###
@@ -164,6 +169,23 @@ class ThemenZuordnungDto(BaseModel):
 
 class ThemenTestsetResponse(BaseModel):
     zuordnungen: List[ThemenZuordnungDto]
+
+
+class ThemenVorschlagRequest(BaseModel):
+    """Ein Text, zu dem Themen vorgeschlagen werden sollen (#401); nichts wird gespeichert."""
+
+    # So lang wie ein Einwurf; eingebettet werden davon nur die ersten 512 Token.
+    text: str = Field(..., max_length=5000)
+    # Fuer eine Aussage bis zu drei, beim Einwerfen bis zu zwei (domain/themen.py).
+    hoechstens: int = Field(
+        default=HOECHSTENS_JE_AUSSAGE, ge=1, le=HOECHSTENS_JE_AUSSAGE
+    )
+
+
+class ThemenVorschlagResponse(BaseModel):
+    """Die vorgeschlagenen Themen (Schluessel), das naechste zuerst; leer ohne Vorschlag."""
+
+    themen: List[str]
 
 
 class UnbeantworteteAussageDto(BaseModel):

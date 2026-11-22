@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     # under TYPE_CHECKING to avoid pulling the registry/service graph at module load.
     from services.content.base_content_service import BaseContentService
     from services.abzeichen_service import AbzeichenService
+    from services.themen_vorschlag import ThemenVorschlagService
 from core.config import settings, Settings
 from utils.rate_limiter import RateLimiter
 from services.orchestration.content_orchestrator import ContentOrchestrator
@@ -198,6 +199,46 @@ def get_aussage_themen_service(
     statement_service: StatementService = Depends(get_statement_service),
 ) -> AussageThemenService:
     return AussageThemenService(get_aussage_themen_repository(), statement_service)
+
+
+_themen_vorschlag_service: Optional["ThemenVorschlagService"] = None
+
+
+def get_themen_vorschlag_service(
+    themen_service: AussageThemenService = Depends(get_aussage_themen_service),
+) -> "ThemenVorschlagService":
+    """
+    Der eine ThemenVorschlagService des Prozesses (#401): Er haelt die Prototypen und die
+    Vektoren der Zuordnungen von Hand im Speicher. Die Beispiele kommen aus dem Testset;
+    AussageThemenService ist zustandslos, der der ersten Anfrage reicht fuer alle.
+    """
+    global _themen_vorschlag_service
+    if _themen_vorschlag_service is None:
+        from core.config import NLI_MODELL
+        from services.dieselbe_behauptung.nli_modell import nli_modell
+        from services.embeddings.qdrant_embeddings_manager import (
+            get_embeddings_manager,
+        )
+        from services.themen_vorschlag import Schwellen, ThemenVorschlagService
+
+        einstellungen = get_settings()
+
+        async def beispiele_laden():
+            return [(z.text, list(z.themen)) for z in await themen_service.testset()]
+
+        _themen_vorschlag_service = ThemenVorschlagService(
+            einbetter=get_embeddings_manager(),
+            beispiele_laden=beispiele_laden,
+            schwellen=Schwellen(
+                einstellungen.themen_vorschlag_ab,
+                einstellungen.themen_vorschlag_abstand_hoechstens,
+                einstellungen.themen_vorschlag_folgerung_ab,
+            ),
+            folgerer=(
+                nli_modell(NLI_MODELL) if einstellungen.themen_vorschlag_nli else None
+            ),
+        )
+    return _themen_vorschlag_service
 
 
 def get_unbeantwortete_aussagen_service(

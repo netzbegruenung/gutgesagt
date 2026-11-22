@@ -219,6 +219,52 @@ class NliModell:
         finally:
             self._sperre.release()
 
+    def _folgerungen_rechnen(
+        self, paare: List[Tuple[str, str]]
+    ) -> Optional[List[float]]:
+        """Unter self._sperre aufrufen. Nur eine Richtung (Praemisse, Hypothese): die
+        Folgerung je Paar; None, wenn das Modell nicht verfuegbar ist oder scheitert."""
+        try:
+            if not self._laden():
+                return None
+            richtungen = self._wahrscheinlichkeiten(
+                [a for a, _ in paare], [b for _, b in paare]
+            )
+        except Exception as e:
+            logger.warning("NLI-Urteil gescheitert (%s)", type(e).__name__)
+            return None
+        return [r.folgerung for r in richtungen]
+
+    def folgerungen_sync(
+        self, paare: Sequence[Tuple[str, str]]
+    ) -> Optional[List[float]]:
+        """Wie folgerungen, blockierend und ohne Frist; fuer Messskripte."""
+        if not paare:
+            return []
+        with self._sperre:
+            return self._folgerungen_rechnen(list(paare))
+
+    async def folgerungen(
+        self,
+        paare: Sequence[Tuple[str, str]],
+        warte_hoechstens: Optional[float] = None,
+    ) -> Optional[List[float]]:
+        """
+        Je Paar (Praemisse, Hypothese) die Wahrscheinlichkeit der Folgerung, nur in diese
+        Richtung: fuer Zero-Shot-Fragen wie die Themenvorschlaege (#401). None wie bei
+        urteile: Modell nicht verfuegbar, laedt noch oder ist laenger belegt.
+        """
+        if not paare:
+            return []
+        if warte_hoechstens is not None and self._modell is None:
+            return None
+        if not await self._sperre_holen(warte_hoechstens):
+            return None
+        try:
+            return await asyncio.to_thread(self._folgerungen_rechnen, list(paare))
+        finally:
+            self._sperre.release()
+
 
 _MODELLE: Dict[Tuple[str, Optional[str]], NliModell] = {}
 _MODELLE_SPERRE = threading.Lock()

@@ -1,4 +1,5 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { TextFieldModule } from '@angular/cdk/text-field';
@@ -12,6 +13,7 @@ import {
 import { ThemenService } from '../services/themen.service';
 import { Thema } from '../services/dtos/themenDtos';
 import { ThemenAuswahlComponent } from '../shared/themen/themen-auswahl.component';
+import { ThemenVorschlaege } from '../shared/themen/themen-vorschlaege';
 import {
   EinwurfBeitrag,
   StufenAnzeige,
@@ -143,6 +145,8 @@ export class EinwerfenComponent implements OnInit, OnDestroy {
   themenListe: Thema[] = [];
   /** Ob die Themenauswahl aufgeklappt ist; bleibt nach dem Einwerfen, wie die Person sie hatte. */
   themenOffen = false;
+  /** Themenvorschlaege (#401) zum Hinweis-Text, hoechstens zwei wie die Wahl. */
+  readonly themenVorschlaege = new ThemenVorschlaege(HOECHSTENS_THEMEN_JE_EINWURF);
 
   einwurfForm: FormGroup;
 
@@ -187,6 +191,10 @@ export class EinwerfenComponent implements OnInit, OnDestroy {
       hinweis: ['', Validators.maxLength(HINWEIS_LIMIT)],
       themen: [[] as string[]],
     });
+    this.einwurfForm
+      .get('hinweis')!
+      .valueChanges.pipe(takeUntilDestroyed())
+      .subscribe((hinweis: string | null) => this.themenVorschlaege.text(hinweis));
   }
 
   ngOnInit(): void {

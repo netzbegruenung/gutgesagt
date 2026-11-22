@@ -389,6 +389,18 @@ class Settings(BaseSettings):
     suche_inhaltstor_ab: float = Field(default=0.82, ge=0.0, le=1.0)
     suche_inhaltstor_aussage_bis: float = Field(default=0.92, ge=0.0, le=1.01)
     suche_inhaltstor_direkt_bis: float = Field(default=0.90, ge=0.0, le=1.01)
+    # Themenvorschlaege (#401, services/themen_vorschlag.py): ein Thema wird
+    # vorgeschlagen ab dieser Aehnlichkeit zu seinem Prototyp (um die Mitte verschoben,
+    # daher Werte um 0 bis 0,5) und hoechstens so weit hinter dem naechsten Thema. Mit
+    # themen_vorschlag_nli streicht das NLI-Modell Kandidaten unter
+    # themen_vorschlag_folgerung_ab; aus, weil es in der Messung mehr Treffer strich
+    # als Fehler. themen_vorschlaege = false schaltet den Endpunkt ab (leere Liste).
+    # Gemessen in tests/regression/THEMEN.md.
+    themen_vorschlaege: bool = True
+    themen_vorschlag_ab: float = Field(default=0.10, ge=-1.0, le=1.0)
+    themen_vorschlag_abstand_hoechstens: float = Field(default=0.05, ge=0.0, le=2.0)
+    themen_vorschlag_nli: bool = False
+    themen_vorschlag_folgerung_ab: float = Field(default=0.5, ge=0.0, le=1.0)
 
     # Keyword overlap boosting configuration
     enable_keyword_overlap_boost: bool = (

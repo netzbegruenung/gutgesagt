@@ -9,8 +9,10 @@ from dependencies import (
     require_nutzungsbedingungen,
     get_aufrufer,
     get_aussage_themen_service,
+    get_settings,
     get_statement_service,
     get_suchen_ohne_treffer_service,
+    get_themen_vorschlag_service,
     get_unbeantwortete_aussagen_service,
     require_admin,
     require_user,
@@ -40,6 +42,8 @@ from dtos.statement import (
     ThemaDto,
     ThemenResponse,
     ThemenTestsetResponse,
+    ThemenVorschlagRequest,
+    ThemenVorschlagResponse,
     ThemenZuordnenRequest,
     ThemenZuordnenResponse,
     ThemenZuordnungDto,
@@ -68,7 +72,12 @@ from services.aussage_themen_service import AussageThemenService, themen_beim_an
 from domain.themen import NACH_SCHLUESSEL, THEMEN, ThemaUngueltig
 from core.fehler import INTERNER_FEHLER
 from utils.client_identity import derive_client_key
-from utils.rate_limiter import aehnliche_aussagen_rate_limiter
+from utils.rate_limiter import (
+    aehnliche_aussagen_rate_limiter,
+    themen_vorschlag_rate_limiter,
+)
+from services.themen_vorschlag import ThemenVorschlagService
+from core.config import Settings
 
 logger = get_logger(__name__)
 
@@ -267,6 +276,29 @@ async def themen_liste() -> ThemenResponse:
             for t in THEMEN
         ]
     )
+
+
+# Themenvorschlaege (#401) zu einem Text, waehrend jemand eine Aussage anlegt oder
+# einwirft: nur ein Vorschlag, gespeichert wird nichts, auch nicht der Text. Faellt der
+# Vorschlag aus (Modell, Datenbank), ist die Liste leer: Waehlen geht wie vorher.
+@router.post("/themen/vorschlaege", response_model=ThemenVorschlagResponse)
+async def themen_vorschlaege(
+    request: ThemenVorschlagRequest,
+    user_id: str = Depends(require_user),
+    settings: Settings = Depends(get_settings),
+    vorschlag_service: ThemenVorschlagService = Depends(get_themen_vorschlag_service),
+) -> ThemenVorschlagResponse:
+    if await themen_vorschlag_rate_limiter.is_rate_limited(user_id):
+        raise HTTPException(status_code=429, detail="Too many requests")
+    if not settings.themen_vorschlaege:
+        return ThemenVorschlagResponse(themen=[])
+    try:
+        themen = await vorschlag_service.vorschlagen(request.text, request.hoechstens)
+    except Exception as e:
+        # Nur der Typ, nie der Text.
+        logger.warning(f"Themenvorschlag gescheitert: {type(e).__name__}")
+        themen = []
+    return ThemenVorschlagResponse(themen=themen)
 
 
 # Die Themen einer Aussage von Hand setzen: ersetzt die bisherigen, eine leere

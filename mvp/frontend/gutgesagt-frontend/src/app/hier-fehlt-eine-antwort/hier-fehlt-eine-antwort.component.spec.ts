@@ -20,6 +20,7 @@ const ENTFERNEN_URL = (id: string) => `${environment.baseUrl}/api/v1/moderation/
 const VORAB_URL = `${environment.baseUrl}/api/v1/statement/vorab`;
 const THEMEN_URL = `${environment.baseUrl}/api/v1/statement/themen`;
 const ZUORDNEN_URL = `${THEMEN_URL}/zuordnen`;
+const VORSCHLAG_URL = `${THEMEN_URL}/vorschlaege`;
 const THEMEN = [
   { schluessel: 'klima', name: 'Klima' },
   { schluessel: 'energie-heizen', name: 'Energie und Heizen' },
@@ -393,12 +394,29 @@ describe('HierFehltEineAntwortComponent', () => {
       const anfrage = http.expectOne(SPRACHE_URL);
       expect(anfrage.request.body).toEqual({ text: 'Heat pumps are far too expensive' });
       anfrage.flush({ sprache: 'en' });
+      http.expectOne(VORSCHLAG_URL).flush({ themen: [] });
       fixture.detectChanges();
 
       expect(element().querySelector('.vorab .sprachhinweis')!.textContent).toContain(
         'Diese Aussage ist offenbar nicht auf Deutsch',
       );
       expect((element().querySelector('button.aussage-anlegen') as HTMLButtonElement).disabled).toBeFalse();
+    }));
+
+    it('hebt Themenvorschlaege zum Text hervor, ohne sie zu waehlen (#401)', fakeAsync(() => {
+      eingeben('Das Tempolimit bringt nichts');
+      tick(1000);
+      const anfrage = http.expectOne(VORSCHLAG_URL);
+      expect(anfrage.request.body).toEqual({ text: 'Das Tempolimit bringt nichts', hoechstens: 3 });
+      anfrage.flush({ themen: ['verkehr'] });
+      fixture.detectChanges();
+
+      const chip = element().querySelector('.vorab-themen .thema-chip.vorgeschlagen') as HTMLButtonElement;
+      expect(chip.textContent).toContain('Verkehr');
+      expect(chip.getAttribute('aria-pressed')).toBe('false');
+      chip.click();
+      fixture.detectChanges();
+      expect(chip.getAttribute('aria-pressed')).toBe('true');
     }));
 
     it('schickt zu kurze Aussagen nicht ab', () => {
