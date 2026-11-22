@@ -138,6 +138,8 @@ export interface EinwurfAngaben {
   kopfSatz?: string;
   /** Offen oder destilliert (`istVerwerfbar`); wer verwerfen darf, entscheidet die Karte. */
   verwerfbar: boolean;
+  /** Die Namen der beim Einwerfen gewaehlten Themen, in der Reihenfolge der Themenliste; leer oder fehlend ohne. */
+  themen?: string[];
 }
 
 export interface KartenDaten {
@@ -536,6 +538,7 @@ export function ausEinwurf(einwurf: Einwurf): KartenDaten {
       beitraege: beitraegeVonEinwurf(einwurf),
       beitragZustand: nichtSichtbar(einwurf),
       verwerfbar: istVerwerfbar(einwurf),
+      themen: (einwurf.themen ?? []).map((t) => t.name),
     },
   };
 }

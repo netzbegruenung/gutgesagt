@@ -1797,6 +1797,40 @@ describe('AddCommentaryComponent', () => {
       expect(seite().querySelector('.einwurf-kopf')!.textContent).toContain('Notiz');
     });
 
+    it('setzt die Themen des Einwurfs als Vorauswahl, sobald eine neue Aussage gewaehlt ist', () => {
+      component.vorbefuellung = {
+        einwurfId: 'id-1',
+        titel: 'Satz',
+        url: null,
+        kopf: {} as any,
+        themen: ['verkehr', 'klima'],
+      };
+      component.ngOnChanges({ vorbefuellung: new SimpleChange(null, component.vorbefuellung, true) });
+      // Noch keine Aussage: keine Themenwahl, also auch keine Vorauswahl
+      expect(component.commentaryForm.value.themen).toEqual([]);
+
+      component.aussageSetzen({ id: '', text: 'Eine neue Aussage mit Text', neuGewaehlt: true });
+      expect(component.commentaryForm.value.themen).toEqual(['verkehr', 'klima']);
+
+      // Aenderbar: Wer alle abwaehlt, bekommt sie nicht zurueck, solange die Wahl offen bleibt
+      component.themenWahl.setzen([]);
+      component.aussageSetzen({ id: '', text: 'Eine neue Aussage mit mehr Text', neuGewaehlt: true });
+      expect(component.commentaryForm.value.themen).toEqual([]);
+
+      // Eine vorhandene Aussage behaelt ihre Themen: die Vorauswahl faellt weg
+      component.themenWahl.setzen(['klima']);
+      component.aussageSetzen({ id: 'a-1', text: 'Vorhandene Aussage' });
+      expect(component.commentaryForm.value.themen).toEqual([]);
+    });
+
+    it('setzt die Vorauswahl gleich, wenn die neue Aussage schon gewaehlt ist', () => {
+      component.aussageSetzen({ id: '', text: 'Eine neue Aussage mit Text', neuGewaehlt: true });
+      component.vorbefuellung = { einwurfId: 'id-1', titel: 'Satz', url: null, kopf: {} as any, themen: ['europa'] };
+      component.ngOnChanges({ vorbefuellung: new SimpleChange(null, component.vorbefuellung, true) });
+
+      expect(component.commentaryForm.value.themen).toEqual(['europa']);
+    });
+
     it('zeigt die Herkunft kompakt', () => {
       vorbefuellen('https://example.org/p');
       fixture.detectChanges();

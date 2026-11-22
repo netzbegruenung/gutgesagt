@@ -173,3 +173,50 @@
 .gleicher-link .gleicher-link-fuss {
     margin-top: 6px;
 }
+
+/* Themen: eine Zeile zum Aufklappen, darunter die Chips. Ziel mind. 44 px hoch (mobil zuerst). */
+.einwurf-themen {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.themen-aufklappen {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    max-width: 100%;
+    min-height: 44px;
+    padding: 4px 12px 4px 6px;
+    border: 1px solid var(--feldrand);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--akzent-schrift);
+    font: inherit;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.themen-aufklappen:hover {
+    background: var(--primaer-tint);
+}
+
+.themen-aufklappen:focus-visible {
+    outline: 2px solid var(--akzent-tanne);
+    outline-offset: 2px;
+}
+
+.themen-optional {
+    color: var(--text-leise);
+}
+
+.themen-gewaehlt {
+    font-weight: 600;
+}
+
+/* Die Chips hier mind. 44 px: Daumen auf dem Handy, Formular statt Filterleiste */
+.themen-auswahl-rahmen ::ng-deep .thema-chip {
+    min-height: 44px;
+}

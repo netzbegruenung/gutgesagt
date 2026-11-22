@@ -371,7 +371,16 @@ describe('karten-daten', () => {
         beitraege: [],
         beitragZustand: null,
         verwerfbar: true,
+        themen: [],
       });
+    });
+
+    it('nimmt die Namen der beim Einwerfen gewaehlten Themen mit', () => {
+      const karte = ausEinwurf(
+        einwurf({ themen: [{ schluessel: 'klima', name: 'Klima' }, { schluessel: 'europa', name: 'Europa' }] }),
+      );
+
+      expect(karte.einwurfAngaben!.themen).toEqual(['Klima', 'Europa']);
     });
 
     it('uebernimmt das Kennzeichen eigener Einwurf vom Server (#385)', () => {

@@ -34,6 +34,11 @@ export interface Vorbefuellung {
   url: string | null;
   /** Der Einwurf als Kopf ueber dem Formular: Sandband, Link, der Satz. */
   kopf?: KartenDaten;
+  /**
+   * Die beim Einwerfen gewaehlten Themen (Schluessel): die Vorauswahl fuer eine neue
+   * Aussage (ThemenWahl.vorschlagen). Leer oder fehlend ohne.
+   */
+  themen?: string[];
 }
 
 /**
@@ -63,6 +68,7 @@ export class DestillierUebergabeService {
           einwurfId: einwurf.id,
           titel,
           url: einwurf.url ? trackingParameterEntfernen(einwurf.url) : null,
+          themen: (einwurf.themen ?? []).map((t) => t.schluessel),
           kopf: karte.einwurfAngaben ? { ...karte, einwurfAngaben: { ...karte.einwurfAngaben, kopfSatz: titel || undefined } } : karte,
         };
       }),

@@ -1280,6 +1280,27 @@ describe('BeitragskarteComponent', () => {
       auth.getUserInfo.and.returnValue({ isAuthenticated: true, userId: 'test-user', ...nutzer } as UserInfo);
     }
 
+    it('zeigt die beim Einwerfen gewaehlten Themen als Liste, ohne Themen keine', () => {
+      zeigen(
+        einwurfKarte({
+          themen: [
+            { schluessel: 'klima', name: 'Klima' },
+            { schluessel: 'verkehr', name: 'Verkehr' },
+          ],
+        }),
+        { variante: 'einwurf' },
+      );
+      const liste = element('.einwurf-themen');
+      expect(liste.getAttribute('aria-label')).toBe('Themen');
+      expect(Array.from(liste.querySelectorAll('li')).map((li) => (li as HTMLElement).textContent?.trim())).toEqual([
+        'Klima',
+        'Verkehr',
+      ]);
+
+      zeigen(einwurfKarte(), { variante: 'einwurf' });
+      expect(element('.einwurf-themen')).toBeNull();
+    });
+
     it('erlaubt Admins das Verwerfen fremder und einwerferloser Einwuerfe', () => {
       alsNutzer({ isAdmin: true });
 

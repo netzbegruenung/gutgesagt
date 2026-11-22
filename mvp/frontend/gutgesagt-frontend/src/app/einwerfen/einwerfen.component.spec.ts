@@ -20,6 +20,14 @@ import { Meilenstein } from '../services/usage-tracking.service';
 import { erwarteCc0Hinweis } from '../shared/cc0-hinweis/cc0-hinweis.testing';
 import { FANGKORB_BESCHREIBUNG, MENUE_ICONS } from '../shared/fangkorb-texte';
 import { Art9EinwilligungZustand } from '../services/art9-einwilligung-zustand';
+import { ThemenService } from '../services/themen.service';
+import { Thema } from '../services/dtos/themenDtos';
+
+const THEMEN: Thema[] = [
+  { schluessel: 'klima', name: 'Klima' },
+  { schluessel: 'verkehr', name: 'Verkehr' },
+  { schluessel: 'europa', name: 'Europa' },
+];
 
 describe('hinweisVorschlag', () => {
   it('legt den Seitentitel ohne "Seitentitel:" vor (P44)', () => {
@@ -63,6 +71,8 @@ describe('EinwerfenComponent', () => {
   let meilensteinHinweis: jasmine.SpyObj<MeilensteinHinweisService>;
   let eigeneEinwuerfe = 1;
   let neueMeilensteine: Meilenstein[] = [];
+  /** Was die Themenliste liefert; null: nicht ladbar. */
+  let themenListe: Thema[] | null = THEMEN;
 
   /**
    * Die Vorbelegung passiert in ngOnInit, also muss eine Ablage liegen, bevor die
@@ -89,6 +99,12 @@ describe('EinwerfenComponent', () => {
         { provide: EinwurfService, useValue: serviceSpy },
         { provide: MeilensteinHinweisService, useValue: meilensteinHinweis },
         {
+          provide: ThemenService,
+          useValue: {
+            liste: () => (themenListe ? of(themenListe) : throwError(() => new Error('nicht ladbar'))),
+          },
+        },
+        {
           provide: LoggingService,
           useValue: jasmine.createSpyObj('LoggingService', ['debug', 'error', 'warn']),
         },
@@ -102,7 +118,7 @@ describe('EinwerfenComponent', () => {
   }
 
   function eingeben(link: string, hinweis: string): void {
-    component.einwurfForm.setValue({ link, hinweis });
+    component.einwurfForm.patchValue({ link, hinweis });
     fixture.detectChanges();
   }
 
@@ -239,7 +255,7 @@ describe('EinwerfenComponent', () => {
       eingeben('', 'zwei');
       component.einwerfen();
 
-      expect(component.einwurfForm.value).toEqual({ link: '', hinweis: '' });
+      expect(component.einwurfForm.value).toEqual({ link: '', hinweis: '', themen: [] });
       expect(component.eingeworfen).toBe(2);
       expect(component.fehler).toBeNull();
     });
@@ -282,8 +298,89 @@ describe('EinwerfenComponent', () => {
       expect(component.einwurfForm.value).toEqual({
         link: 'https://example.org/a',
         hinweis: 'nicht verlieren',
+        themen: [],
       });
       expect(component.eingeworfen).toBe(0);
+    });
+  });
+
+  describe('Themen beim Einwerfen', () => {
+    afterEach(() => (themenListe = THEMEN));
+
+    function aufklappen(): HTMLButtonElement {
+      const knopf = fixture.nativeElement.querySelector('.themen-aufklappen') as HTMLButtonElement;
+      knopf.click();
+      fixture.detectChanges();
+      return knopf;
+    }
+
+    function chip(name: string): HTMLButtonElement {
+      const chips = Array.from(fixture.nativeElement.querySelectorAll('.thema-chip')) as HTMLButtonElement[];
+      return chips.find((c) => c.textContent?.trim() === name)!;
+    }
+
+    it('ist eingeklappt: ohne Thema bleibt das Formular wie vorher', async () => {
+      await erstellen();
+
+      const knopf = fixture.nativeElement.querySelector('.themen-aufklappen') as HTMLButtonElement;
+      expect(knopf.getAttribute('aria-expanded')).toBe('false');
+      expect(knopf.textContent).toContain('Thema (optional)');
+      expect(fixture.nativeElement.querySelector('.thema-chip')).toBeNull();
+    });
+
+    it('schickt ohne gewaehltes Thema kein Themenfeld', async () => {
+      await erstellen();
+      eingeben('https://example.org/a', '');
+
+      component.einwerfen();
+
+      expect(einwurfService.einwerfen).toHaveBeenCalledWith({ url: 'https://example.org/a' });
+    });
+
+    it('laesst aufgeklappt bis zu zwei Themen waehlen und schickt sie mit', async () => {
+      await erstellen();
+      const knopf = aufklappen();
+      expect(knopf.getAttribute('aria-expanded')).toBe('true');
+      expect(knopf.getAttribute('aria-controls')).toBe('einwurf-themen-auswahl');
+
+      chip('Verkehr').click();
+      fixture.detectChanges();
+      chip('Klima').click();
+      fixture.detectChanges();
+
+      expect(chip('Europa').disabled).toBeTrue();
+      expect(fixture.nativeElement.querySelector('.themen-hinweis').textContent.trim()).toBe(
+        'Bis zu zwei Themen, optional.',
+      );
+      expect(knopf.textContent).toContain('Verkehr, Klima');
+
+      eingeben('', 'ein Fund');
+      component.einwerfen();
+      expect(einwurfService.einwerfen).toHaveBeenCalledWith({ content: 'ein Fund', themen: ['verkehr', 'klima'] });
+    });
+
+    it('leert die Themen nach dem Einwerfen, die Auswahl bleibt offen', async () => {
+      await erstellen();
+      aufklappen();
+      chip('Klima').click();
+      eingeben('', 'ein Fund');
+
+      component.einwerfen();
+      fixture.detectChanges();
+
+      expect(component.themen).toEqual([]);
+      expect(component.themenOffen).toBeTrue();
+      expect(chip('Klima').getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('zeigt ohne ladbare Liste keine Themenwahl, einwerfen geht trotzdem', async () => {
+      themenListe = null;
+      await erstellen();
+
+      expect(fixture.nativeElement.querySelector('.themen-aufklappen')).toBeNull();
+      eingeben('', 'ein Fund');
+      component.einwerfen();
+      expect(einwurfService.einwerfen).toHaveBeenCalledWith({ content: 'ein Fund' });
     });
   });
 
@@ -405,6 +502,7 @@ describe('EinwerfenComponent', () => {
       expect(component.einwurfForm.value).toEqual({
         link: 'https://www.instagram.com/reel/ABC/',
         hinweis: '',
+        themen: [],
       });
       expect(component.ausShare).toBeTrue();
       expect(component.istVorbelegt).toBeFalse();
@@ -479,7 +577,7 @@ describe('EinwerfenComponent', () => {
     it('befuellt nichts, wenn nichts abgelegt wurde', async () => {
       await erstellen(null);
 
-      expect(component.einwurfForm.value).toEqual({ link: '', hinweis: '' });
+      expect(component.einwurfForm.value).toEqual({ link: '', hinweis: '', themen: [] });
       expect(component.ausShare).toBeFalse();
     });
 
@@ -489,6 +587,7 @@ describe('EinwerfenComponent', () => {
       expect(component.einwurfForm.value).toEqual({
         link: 'https://example.org/a',
         hinweis: 'Ein Seitentitel',
+        themen: [],
       });
     });
   });

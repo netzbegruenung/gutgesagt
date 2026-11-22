@@ -129,7 +129,7 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
 - **Betroffene:** Mitwirkende; Dritte, die in Beiträgen, Links oder „Gepostet von“ genannt
   sind.
 - **Daten:** Text, Kennung von Autor und letzter Änderung, Zeitpunkte, Änderungsverlauf ohne
-  alten Wortlaut, Kennung des CC0-Hinweises; Einwürfe mit Hinweis, Link, Weg und Kennungen der
+  alten Wortlaut, Kennung des CC0-Hinweises; Einwürfe mit Hinweis, Link, Weg, bis zu zwei Themen und Kennungen der
   einwerfenden Person und der Personen mit Sätzen; Kontoname des ursprünglichen Posters. Daten
   Dritter, auch deren politische Zuordnung.
 - **Empfänger:** Beiträge für alle, auch Besucher; der Anzeigename daran nur für Angemeldete;

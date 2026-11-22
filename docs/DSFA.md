@@ -395,7 +395,8 @@ Empfänger und Ort“.
 - **Rechtsgrundlage:** Art. 6 Abs. 1 lit. b, lit. f für die Herkunft (`DSE:841-843`); Art. 9 Abs. 2
   lit. a (`A9:22-23`).
 - **Daten:** Hinweis, Link, Zeitpunkt, Weg, Kennung der einwerfenden Person und der Personen mit
-  Sätzen (`DSE:814-822`).
+  Sätzen (`DSE:814-822`); optional bis zu zwei Themen aus der festen Liste, ohne eigene Kennung
+  oder eigenen Zeitpunkt (Tabelle `einwurf_themen`, geht mit dem Einwurf).
 - **Frist:** 365 Tage nach der letzten Arbeit, ausformulierte solange der Beitrag (`LK:155-156`).
 - **Risiko:** Alle Mitwirkenden sehen, wer was eingeworfen hat (`DSE:825-831`). Links zeigen oft auf
   Profile Dritter (`DSE:835-837`).

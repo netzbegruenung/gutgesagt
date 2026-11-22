@@ -3,7 +3,15 @@ import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators }
 import { CommonModule } from '@angular/common';
 import { TextFieldModule } from '@angular/cdk/text-field';
 import { MatBottomSheet } from '@angular/material/bottom-sheet';
-import { Einwurf, EinwurfService, EinwerfenRequest } from '../services/einwurf.service';
+import {
+  Einwurf,
+  EinwurfService,
+  EinwerfenRequest,
+  HOECHSTENS_THEMEN_JE_EINWURF,
+} from '../services/einwurf.service';
+import { ThemenService } from '../services/themen.service';
+import { Thema } from '../services/dtos/themenDtos';
+import { ThemenAuswahlComponent } from '../shared/themen/themen-auswahl.component';
 import {
   EinwurfBeitrag,
   StufenAnzeige,
@@ -94,8 +102,10 @@ export function hinweisVorschlag(geteilt: GeteilteFelder): string | null {
 /**
  * Einwerfen: zwei Felder, Link und Hinweis fuer andere. Eines davon genuegt.
  *
- * Keine Kategorien, keine Labels, keine Schalter -- alles Weitere ist schon
- * Destillieren. Kommt der Einwurf aus dem Teilen-Menue, steht der Link im
+ * Kein Titel, kein Typ, keine Schalter -- das ist schon Destillieren. Optional bis zu
+ * zwei Themen aus der festen Liste, eingeklappt hinter "Thema (optional)": Wer keins
+ * waehlt, ist so schnell wie vorher; die Themen sind ein Fingerzeig fuer andere und
+ * beim Ausformulieren die Vorauswahl fuer eine neue Aussage. Kommt der Einwurf aus dem Teilen-Menue, steht der Link im
  * Link-Feld; Seitentitel (ohne Seitenname) und uebriger Text stehen als markierte Vorbelegung im
  * Hinweis-Feld und werden nur gespeichert, wenn die Person sie stehen laesst.
  *
@@ -106,7 +116,15 @@ export function hinweisVorschlag(geteilt: GeteilteFelder): string | null {
 @Component({
   selector: 'app-einwerfen',
   standalone: true,
-  imports: [...SHARED_IMPORTS, CommonModule, RouterLink, TextFieldModule, Cc0HinweisComponent, EinwilligungHinweisComponent],
+  imports: [
+    ...SHARED_IMPORTS,
+    CommonModule,
+    RouterLink,
+    TextFieldModule,
+    Cc0HinweisComponent,
+    EinwilligungHinweisComponent,
+    ThemenAuswahlComponent,
+  ],
   templateUrl: './einwerfen.component.html',
   styleUrls: ['./einwerfen.component.css'],
 })
@@ -119,6 +137,12 @@ export class EinwerfenComponent implements OnInit, OnDestroy {
   readonly fangkorbPfad = ROUTES.RAW_INPUT_LIST;
   readonly kettenIcons = KETTEN_ICONS;
   readonly menueIcons = MENUE_ICONS;
+  readonly hoechstensThemen = HOECHSTENS_THEMEN_JE_EINWURF;
+
+  /** Die feste Themenliste; leer, solange sie nicht geladen (oder nicht ladbar) ist. */
+  themenListe: Thema[] = [];
+  /** Ob die Themenauswahl aufgeklappt ist; bleibt nach dem Einwerfen, wie die Person sie hatte. */
+  themenOffen = false;
 
   einwurfForm: FormGroup;
 
@@ -156,14 +180,21 @@ export class EinwerfenComponent implements OnInit, OnDestroy {
     private logger: LoggingService,
     private navigationService: NavigationService,
     private bottomSheet: MatBottomSheet,
+    private themenService: ThemenService,
   ) {
     this.einwurfForm = this.fb.group({
       link: ['', nurEinLink],
       hinweis: ['', Validators.maxLength(HINWEIS_LIMIT)],
+      themen: [[] as string[]],
     });
   }
 
   ngOnInit(): void {
+    // Ist die Liste nicht ladbar, fehlt die Themenwahl; einwerfen geht trotzdem.
+    this.themenService
+      .liste()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({ next: (liste) => (this.themenListe = liste), error: () => (this.themenListe = []) });
     // Vor der Vorbelegung: Auch ein geteilter Link wird geprueft.
     this.gleichenLinkPruefen();
     const geteilt = this.geteilteFelderHolen();
@@ -265,6 +296,23 @@ export class EinwerfenComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Die gewaehlten Schluessel. */
+  get themen(): string[] {
+    return this.einwurfForm.value.themen ?? [];
+  }
+
+  themenSetzen(themen: string[]): void {
+    this.einwurfForm.patchValue({ themen });
+  }
+
+  /** Die Namen der gewaehlten Themen fuer die eingeklappte Zeile, etwa „Klima, Verkehr“. */
+  get gewaehlteThemenNamen(): string {
+    return this.themen
+      .map((s) => this.themenListe.find((t) => t.schluessel === s)?.name)
+      .filter((name): name is string => !!name)
+      .join(', ');
+  }
+
   get link(): string {
     return (this.einwurfForm.value.link ?? '').trim();
   }
@@ -311,6 +359,9 @@ export class EinwerfenComponent implements OnInit, OnDestroy {
     if (this.ausShare) {
       anfrage.source_channel = 'share';
     }
+    if (this.themen.length) {
+      anfrage.themen = this.themen;
+    }
 
     this.wirdGespeichert = true;
     this.fehler = null;
@@ -322,7 +373,7 @@ export class EinwerfenComponent implements OnInit, OnDestroy {
         this.eingeworfen += 1;
         // Formular bleibt offen und leer: drei Sachen hintereinander einwerfen
         // ist der Normalfall, nicht die Ausnahme.
-        this.einwurfForm.reset({ link: '', hinweis: '' });
+        this.einwurfForm.reset({ link: '', hinweis: '', themen: [] });
         this.vorbelegung = null;
         this.ausShare = false;
         this.erfolgZeigen();
@@ -339,7 +390,7 @@ export class EinwerfenComponent implements OnInit, OnDestroy {
         }
         this.fehler =
           error?.status === 422
-            ? 'Damit kann der Fangkorb nichts anfangen. Bitte prüfe den Link.'
+            ? 'Damit kann der Fangkorb nichts anfangen. Bitte prüfe den Link und die Themen.'
             : 'Der Einwurf konnte nicht gespeichert werden. Bitte versuche es erneut.';
       },
     });

@@ -66,4 +66,15 @@ describe('ThemenAuswahlComponent', () => {
   it('nennt die Grenze im Hinweis', () => {
     expect(fixture.nativeElement.querySelector('.themen-hinweis').textContent.trim()).toBe('Bis zu drei Themen, optional.');
   });
+
+  it('laesst mit hoechstens 2 nur zwei Themen zu und sagt das', () => {
+    fixture.componentRef.setInput('hoechstens', 2);
+    setzen(['klima', 'verkehr']);
+
+    expect(knopf('Europa').disabled).toBeTrue();
+    expect(knopf('Verkehr').disabled).toBeFalse();
+    knopf('Europa').click();
+    expect(gemeldet).toEqual([]);
+    expect(fixture.nativeElement.querySelector('.themen-hinweis').textContent.trim()).toBe('Bis zu zwei Themen, optional.');
+  });
 });

@@ -154,6 +154,8 @@ export class AddPostComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['vorbefuellung'] && this.vorbefuellung) {
+      // Die Themen des Einwurfs: Vorauswahl, sobald eine neue Aussage gewaehlt ist (ThemenWahl).
+      this.themenWahl.vorschlagen(this.vorbefuellung.themen ?? []);
       this.postForm.patchValue({
         title: this.vorbefuellung.titel,
         ...(this.vorbefuellung.url ? { url: this.vorbefuellung.url } : {}),

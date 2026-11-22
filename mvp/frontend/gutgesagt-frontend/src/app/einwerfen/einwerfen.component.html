@@ -76,6 +76,25 @@
             <mat-hint align="end">{{ hinweisFeld.value.length }}/{{ hinweisLimit }}</mat-hint>
         </mat-form-field>
 
+        <!-- Optional bis zu zwei Themen (Sebastian 22.11.). Eingeklappt: 19 Themen fuellten mobil
+             sonst den Bildschirm, und ohne Thema bleibt Einwerfen so schnell wie vorher.
+             Fehlt die Liste (nicht ladbar), fehlt die Zeile; einwerfen geht trotzdem. -->
+        <div *ngIf="themenListe.length" class="einwurf-themen">
+            <button type="button" class="themen-aufklappen"
+                    [attr.aria-expanded]="themenOffen" aria-controls="einwurf-themen-auswahl"
+                    (click)="themenOffen = !themenOffen">
+                <mat-icon aria-hidden="true">{{ themenOffen ? 'expand_less' : 'expand_more' }}</mat-icon>
+                <span class="themen-aufklappen-text">
+                    Thema <span class="themen-optional">(optional)</span><ng-container *ngIf="gewaehlteThemenNamen">: <span class="themen-gewaehlt">{{ gewaehlteThemenNamen }}</span></ng-container>
+                </span>
+            </button>
+            <div *ngIf="themenOffen" id="einwurf-themen-auswahl" class="themen-auswahl-rahmen">
+                <app-themen-auswahl [themen]="themenListe" [gewaehlt]="themen" [hoechstens]="hoechstensThemen"
+                                    beschriftung="Themen des Einwurfs"
+                                    (gewaehltChange)="themenSetzen($event)"></app-themen-auswahl>
+            </div>
+        </div>
+
         <p appCc0Hinweis></p>
         <div class="einwurf-aktionen">
             <button mat-raised-button color="primary" type="submit"

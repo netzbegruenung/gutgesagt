@@ -197,7 +197,76 @@ class TestEinwerfen:
             "submitted_by",
             "source_channel",
             "cc0_wortlaut",
+            # optional, ohne Angabe leer (TestThemenBeimEinwerfen)
+            "themen",
         }
+        assert repository.create.call_args.kwargs["themen"] == []
+
+
+@pytest.mark.unit
+@pytest.mark.api
+class TestThemenBeimEinwerfen:
+    def test_ohne_themen_bleibt_der_eingang_wie_er_war(self, client, repository):
+        antwort = client.post(
+            ADD_URL, json={"content": "ein Fund"}, headers={"X-User": "testuser"}
+        )
+
+        assert antwort.status_code == 201
+        assert repository.create.call_args.kwargs["themen"] == []
+
+    def test_ein_oder_zwei_themen_werden_gespeichert(self, client, repository):
+        antwort = client.post(
+            ADD_URL,
+            json={"url": "https://example.org/a", "themen": ["verkehr", "klima"]},
+            headers={"X-User": "testuser"},
+        )
+
+        assert antwort.status_code == 201
+        assert repository.create.call_args.kwargs["themen"] == ["verkehr", "klima"]
+
+    @pytest.mark.parametrize(
+        "themen",
+        [
+            ["klima", "verkehr", "europa"],
+            ["klima", "klima"],
+            ["heizungsgesetz"],
+            "klima",
+        ],
+        ids=["drei", "doppelt", "unbekannt", "kein-array"],
+    )
+    def test_ungueltige_themen_sind_422_und_nichts_gespeichert(
+        self, client, repository, themen
+    ):
+        antwort = client.post(
+            ADD_URL,
+            json={"content": "ein Fund", "themen": themen},
+            headers={"X-User": "testuser"},
+        )
+
+        assert antwort.status_code == 422
+        repository.create.assert_not_called()
+
+    def test_liste_liefert_themen_mit_namen(self, client, repository):
+        repository.get_all.return_value = [
+            _gespeicherter_einwurf(themen=["klima", "weggefallen"])
+        ]
+        repository.count.return_value = 1
+
+        antwort = client.get(LIST_URL, headers={"X-User": "testuser"})
+
+        assert antwort.status_code == 200
+        themen = antwort.json()["results"][0]["themen"]
+        assert [t["schluessel"] for t in themen] == ["klima"]
+        assert themen[0]["name"] == "Klima"
+        assert themen[0]["motiv"]
+
+    def test_einwurf_ohne_themen_liefert_leere_liste(self, client, repository):
+        repository.get_by_id.return_value = _gespeicherter_einwurf()
+
+        antwort = client.get(EINZEL_URL, headers={"X-User": "testuser"})
+
+        assert antwort.status_code == 200
+        assert antwort.json()["themen"] == []
 
 
 @pytest.mark.unit
