@@ -247,7 +247,7 @@ mat-sidenav-content {
 
 .unified-empty-state .schon-gesucht {
   color: var(--text-leise);
-  margin: -0.75rem 0 1.25rem;
+  margin: 0 0 1.25rem;
 }
 
 .unified-empty-state .action-buttons-top {

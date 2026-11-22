@@ -398,7 +398,7 @@ describe('ResultViewComponent: Nicht dabei?', () => {
   it('sagt ohne Treffer, wie viele Personen schon danach gesucht haben, ab zwei (#362)', () => {
     const seite = oeffnen(true, false, [SCHON_DA, AEHNLICH], 3);
     expect(seite.querySelector('.unified-empty-state .schon-gesucht')?.textContent)
-      .toContain('Danach haben in den letzten vier Wochen schon 3 Personen gesucht, dich eingerechnet.');
+      .toContain('Danach haben in den letzten vier Wochen schon 3 Personen gesucht.');
   });
 
   it('zeigt ohne Zahl keinen Hinweis auf andere Personen (#362)', () => {

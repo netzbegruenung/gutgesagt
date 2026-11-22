@@ -363,15 +363,27 @@ class TestSuchenOhneTreffer:
 
         assert eins != zwei
 
+    def _vorhandene_aussage(self, app, service, suchen_ohne_treffer, **felder):
+        """Die Suche landet auf einer vorhandenen Aussage; schon 3 Personen."""
+        aussage = uuid.uuid4()
+        service.add_statement = AsyncMock(return_value=(False, aussage, "klima"))
+        werte = {
+            "origin": ContentOrigin.MANUALLY_CREATED,
+            "replysuggestions_count": 1,
+            **felder,
+        }
+        service.get = AsyncMock(return_value=MagicMock(**werte))
+        suchen_ohne_treffer.sichtbar_fuer_alle = AsyncMock(return_value=frozenset())
+        suchen_ohne_treffer.schon_gesucht.return_value = 3
+        app.dependency_overrides[get_search_query_statement_recorder] = _recorder
+        return aussage
+
     def test_ohne_treffer_nennt_die_zahl_der_personen(
         self, suchapp, suchen_ohne_treffer
     ):
         """#362: "Danach haben schon N Personen gesucht", auch fuer Besucher."""
         app, service = suchapp
-        aussage = uuid.uuid4()
-        service.add_statement = AsyncMock(return_value=(False, aussage, "klima"))
-        app.dependency_overrides[get_search_query_statement_recorder] = _recorder
-        suchen_ohne_treffer.schon_gesucht.return_value = 3
+        aussage = self._vorhandene_aussage(app, service, suchen_ohne_treffer)
 
         resp = TestClient(app).post(
             SEARCH_URL, json={"query_text": "klima", "limit": 10}, headers=BESUCHER
@@ -383,7 +395,46 @@ class TestSuchenOhneTreffer:
         namen = [aufruf[0] for aufruf in suchen_ohne_treffer.method_calls]
         assert namen.index("erfassen") < namen.index("schon_gesucht")
 
-    def test_unter_der_schwelle_keine_zahl(self, suchapp, suchen_ohne_treffer):
+    def test_verborgene_suchanfrage_bekommt_keine_zahl(
+        self, suchapp, suchen_ohne_treffer
+    ):
+        """Vormoderation (P6): unter der Schwelle, ungeprueft oder abgelehnt."""
+        app, service = suchapp
+        self._vorhandene_aussage(
+            app,
+            service,
+            suchen_ohne_treffer,
+            origin=ContentOrigin.SEARCH_QUERY,
+            replysuggestions_count=0,
+        )
+
+        resp = TestClient(app).post(
+            SEARCH_URL, json={"query_text": "klima", "limit": 10}, headers=BESUCHER
+        )
+
+        assert resp.json()["personen_ohne_treffer"] is None
+        suchen_ohne_treffer.schon_gesucht.assert_not_awaited()
+
+    def test_freigegebene_suchanfrage_bekommt_die_zahl(
+        self, suchapp, suchen_ohne_treffer
+    ):
+        app, service = suchapp
+        aussage = self._vorhandene_aussage(
+            app,
+            service,
+            suchen_ohne_treffer,
+            origin=ContentOrigin.SEARCH_QUERY,
+            replysuggestions_count=0,
+        )
+        suchen_ohne_treffer.sichtbar_fuer_alle.return_value = frozenset({aussage})
+
+        resp = TestClient(app).post(
+            SEARCH_URL, json={"query_text": "klima", "limit": 10}, headers=BESUCHER
+        )
+
+        assert resp.json()["personen_ohne_treffer"] == 3
+
+    def test_eben_angelegte_aussage_fragt_nicht(self, suchapp, suchen_ohne_treffer):
         app, _ = suchapp
         app.dependency_overrides[get_search_query_statement_recorder] = _recorder
 
@@ -392,12 +443,25 @@ class TestSuchenOhneTreffer:
         )
 
         assert resp.json()["personen_ohne_treffer"] is None
+        suchen_ohne_treffer.schon_gesucht.assert_not_awaited()
+
+    def test_nicht_gezaehlt_fragt_nicht(self, suchapp, suchen_ohne_treffer):
+        app, service = suchapp
+        self._vorhandene_aussage(app, service, suchen_ohne_treffer)
+        suchen_ohne_treffer.erfassen.side_effect = RuntimeError("weg")
+
+        resp = TestClient(app).post(
+            SEARCH_URL, json={"query_text": "klima", "limit": 10}
+        )
+
+        assert resp.json()["personen_ohne_treffer"] is None
+        suchen_ohne_treffer.schon_gesucht.assert_not_awaited()
 
     def test_fehler_beim_lesen_der_zahl_laesst_die_suche_nicht_scheitern(
         self, suchapp, suchen_ohne_treffer
     ):
-        app, _ = suchapp
-        app.dependency_overrides[get_search_query_statement_recorder] = _recorder
+        app, service = suchapp
+        self._vorhandene_aussage(app, service, suchen_ohne_treffer)
         suchen_ohne_treffer.schon_gesucht.side_effect = RuntimeError("weg")
 
         resp = TestClient(app).post(

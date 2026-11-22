@@ -294,8 +294,9 @@ class SuchenOhneTrefferService:
         (WOCHEN_STANDARD) ohne Treffer nach dieser Aussage gesucht haben, die eben
         gezaehlte Suche eingerechnet; None unter MINDESTANZAHL, wie auf den Listen.
         Nur eine Zahl, gelesen aus den Zaehlern, die erfassen ohnehin schreibt: kein
-        Text, keine Freigabe noetig, nichts zusaetzlich gespeichert. Auch Besucher
-        sehen sie (Entscheidung des Maintainers vom 28.10.2026).
+        Text, nichts zusaetzlich gespeichert. Auch Besucher sehen sie (Entscheidung des
+        Maintainers vom 28.10.2026 in #362), aber nur zu einer Aussage, die sie sehen
+        duerfen: Das prueft der Suchpfad (api/v1/search.py, Vormoderation P6).
         """
         if statement_id is None:
             return None

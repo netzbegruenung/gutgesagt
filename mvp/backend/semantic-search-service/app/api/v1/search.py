@@ -459,6 +459,7 @@ async def search_by_text(
         # getrennt vom Suchereignis. Das Tagespseudonym dient nur dazu, Personen zu
         # unterscheiden, gespeichert wird es dort nicht. total_results zaehlt nur,
         # was ueber der Schwelle des SearchOrchestrators lag.
+        gezaehlt = False
         try:
             suchen_ohne_treffer.erfassen(
                 statement_id,
@@ -466,6 +467,7 @@ async def search_by_text(
                 tagespseudonym(user_id=user_id, besucher_merkmal=merkmal, moment=jetzt),
                 heute=jetzt.date(),
             )
+            gezaehlt = True
         except Exception as e:
             # Nur der Fehlertyp: SQLAlchemy-Fehler tragen die Parameter, und
             # statement_id neben dem Zeitstempel der Logzeile waere genau der
@@ -473,9 +475,17 @@ async def search_by_text(
             logger.warning(f"Failed to count search without hits: {type(e).__name__}")
 
         # "Danach haben schon N Personen gesucht" (#362): nur nach einer Suche ohne
-        # Treffer, nur die Zahl und erst ab zwei Personen. Scheitert das Lesen, fehlt
-        # nur der Hinweis.
-        if total_results == 0:
+        # Treffer, die gezaehlt wurde, nur die Zahl und erst ab zwei Personen. Nur zu
+        # einer Aussage, die der Aufrufer sehen darf (antwort_id, Vormoderation P6):
+        # Zu einer verborgenen oder abgelehnten Suchanfrage verriete die Zahl, dass
+        # gerade jemand fast dasselbe gesucht hat. Eben angelegt heisst ohnehin eine
+        # Person. Scheitert das Lesen, fehlt nur der Hinweis.
+        if (
+            total_results == 0
+            and gezaehlt
+            and antwort_id is not None
+            and not statement_was_new
+        ):
             try:
                 response.personen_ohne_treffer = (
                     await suchen_ohne_treffer.schon_gesucht(
