@@ -50,6 +50,19 @@ _EA = (
     "auch mit dem heutigen Strommix. Der Vorsprung wächst mit jedem neuen Windrad."
 )
 
+# Eine lange Ergaenzung (Text etwa vervierfacht) und ein kurzer Kommentar (Review #764).
+_WP_LANG = (
+    " Wichtig ist außerdem eine gute Planung durch einen Fachbetrieb. Vor dem Einbau "
+    "sollte eine Heizlastberechnung gemacht werden, damit die Pumpe nicht zu groß oder "
+    "zu klein ausfällt. Viele Hausbesitzer unterschätzen, wie viel ein hydraulischer "
+    "Abgleich bringt. Auch die Lage der Außeneinheit spielt eine Rolle, wegen des "
+    "Schalls für die Nachbarn. Wer zusätzlich eine Photovoltaikanlage auf dem Dach hat, "
+    "kann einen Teil des Stroms selbst erzeugen und spart so zusätzlich. In Skandinavien "
+    "heizen schon heute die meisten Häuser mit Wärmepumpen, auch bei minus zwanzig Grad. "
+    "Die Erfahrungen dort zeigen, dass die Technik ausgereift ist."
+)
+_KURZ = "Gute Zusammenfassung der Studie."
+
 PAARE = [
     # --- bleibt: kleine Korrekturen
     TextPaar("B01", "bleibt", "tippfehler", _WP, _WP.replace("effizient", "effizent")),
@@ -177,6 +190,37 @@ PAARE = [
         "Auch in vielen Altbauten arbeitet eine Wärmepumpe effizient. Der Staat fördert "
         "den Einbau mit bis zu 70 Prozent.",
     ),
+    # --- bleibt: aus dem Review von #764 (Laenge, Links, kurze Kommentare)
+    TextPaar(
+        "B22",
+        "bleibt",
+        "kuerzung",
+        _WP,
+        "Auch in vielen Altbauten arbeitet eine Wärmepumpe effizient.",
+    ),
+    TextPaar("B23", "bleibt", "ergaenzung", _WP, _WP + _WP_LANG),
+    TextPaar("B24", "bleibt", "kuerzung", _WP + _WP_LANG, _WP),
+    TextPaar(
+        "B25",
+        "bleibt",
+        "zusatz",
+        _WP,
+        _WP + " Mehr: https://www.bafa.de/DE/Energie/Effiziente_Gebaeude/",
+    ),
+    TextPaar(
+        "B26",
+        "bleibt",
+        "umformulierung",
+        "Stimmt, gilt auch im Altbau.",
+        "Richtig, das gilt auch für Altbauten.",
+    ),
+    TextPaar(
+        "B27",
+        "bleibt",
+        "zusatz",
+        _KURZ,
+        _KURZ + " https://www.ise.fraunhofer.de/de/presse.html",
+    ),
     # --- verfaellt: Gegenteil
     TextPaar(
         "V01",
@@ -246,4 +290,13 @@ PAARE = [
         _EA,
         "Bitte teilt diesen Beitrag! Mehr dazu auf unserer Seite.",
     ),
+    TextPaar(
+        "V11",
+        "verfaellt",
+        "fremd",
+        _WP,
+        "Gasheizungen sollten ab 2030 verboten werden, weil sie das Klima schädigen. "
+        "Fernwärme ist in Städten die bessere Wahl.",
+    ),
+    TextPaar("V12", "verfaellt", "fremd", _KURZ, "Windräder töten kaum Vögel."),
 ]

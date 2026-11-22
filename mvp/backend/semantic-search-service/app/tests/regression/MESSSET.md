@@ -340,30 +340,35 @@ gleich, aber nicht erkannt (24): C01, C05, C08, C09, C10, C11, C12, C13, WI02, W
 
 ## Geänderter Text (#636)
 
-Bleibt der Titel eines Kommentars oder einer Hintergrundinfo und ändert sich nur der Text,
-sollen Stimmen verfallen, wenn der Text etwas anderes sagt, aber nie bei kleinen Korrekturen.
-Gemessen am 22.11.2026 an 31 Paaren (`text_fassung_paare.py`, alte und neue Fassung von sechs
-Beispieltexten; die Labels hat ein Agent gesetzt, abgenommen sind sie noch nicht):
-21 *bleibt* (Tippfehler, Satzzeichen, klein geschrieben, Ergänzung, Kürzung, Umformulierung,
-korrigierte Zahl), 10 *verfällt* (5 Gegenteil, 2 anderer Standpunkt, 3 ganz anderer Text).
+Ändert sich der Text eines Kommentars oder einer Hintergrundinfo, sollen Stimmen verfallen,
+wenn der Text etwas anderes sagt, aber nie bei kleinen Korrekturen. Gemessen am 22.11.2026
+an 39 Paaren (`text_fassung_paare.py`, alte und neue Fassung von acht Beispieltexten,
+rund 30 bis 850 Zeichen; die Labels hat ein Agent gesetzt, abgenommen sind sie noch nicht):
+27 *bleibt* (Tippfehler, Satzzeichen, klein geschrieben, Ergänzung bis zum Vierfachen,
+Kürzung bis auf einen Satz, angehängter Link, Umformulierung, korrigierte Zahl), 12 *verfällt*
+(5 Gegenteil, 2 anderer Standpunkt, 5 ganz anderer Text).
 
 | Signal | *bleibt* | Gegenteil | anderer Standpunkt | ganz anderer Text |
 |---|---|---|---|---|
-| passage/passage | 0,945–1,000 | 0,938–0,988 | 0,903–0,941 | 0,831–0,840 |
-| NLI beidseitige Folgerung (min) | 0,001–0,999 | 0,000–0,003 | 0,000–0,001 | 0,000–0,001 |
-| NLI Widerspruch (max) | 0,000–0,996 | 0,970–1,000 | 0,008–0,881 | 0,002–0,009 |
+| passage/passage | 0,915–1,000 | 0,938–0,988 | 0,903–0,941 | 0,815–0,840 |
+| NLI beidseitige Folgerung (min) | 0,000–0,999 | 0,000–0,003 | 0,000–0,001 | 0,000–0,002 |
+| NLI Widerspruch (max) | 0,000–0,996 | 0,970–1,000 | 0,008–0,881 | 0,001–0,009 |
 
 - **Die Regel des Titels passt nicht auf Texte:** Ergänzung und Kürzung folgern nur in eine
-  Richtung (B05–B09, B20, B21: Folgerung 0,001–0,528). Mit τ = 0,95 verlören sie die Stimmen.
+  Richtung (z. B. B05–B09, B22–B24: Folgerung 0,000–0,528). Mit τ = 0,95 verlören sie die
+  Stimmen.
 - **Widerspruch trennt nicht:** Eine korrigierte Zahl widerspricht der alten Fassung so sicher
   wie ein Gegenteil (B14, B16, B18, B19: 0,948–0,996).
 - **Ähnlichkeit trennt nur den ganz anderen Text:** Gegenteile liegen mitten unter den
   Korrekturen (V03 0,988).
-- **Gewählt:** `text_verfall_aehnlichkeit_unter = 0,90` (passage/passage, `fassung.gleicher_text`).
-  Abstand 0,045 zur niedrigsten Umformulierung (B15) und 0,06 zum höchsten ganz anderen Text
-  (V09); andere Kommentare zur selben Aussage liegen laut den Kommentar-Paaren oben bei
-  höchstens 0,899. Gegenteil und anderer Standpunkt unter gleichem Titel behalten ihre Stimmen
-  (bekannte Lücke, V01–V07).
+- **Gewählt:** `text_verfall_aehnlichkeit_unter = 0,88` (passage/passage, `fassung.gleicher_text`).
+  Abstand 0,035 zur niedrigsten Korrektur (B22, Kürzung auf den ersten Satz) und 0,04 zum
+  höchsten ganz anderen Text (V09). Geprüft wird der Text auch, wenn der Titel umformuliert
+  wurde.
+- **Grenzen:** Gegenteil und anderer Standpunkt behalten ihre Stimmen (V01–V07). Ein
+  ausgetauschter Text zum selben Thema kann über der Schwelle liegen (verwandte Kommentare der
+  Dubletten-Paare oben: 0,817–0,899). Eine Übersetzung ins Englische lag bei 0,876 und verlöre
+  die Stimmen (nicht im Messset). Kurz- und Langfassung des Kommentars werden nicht verglichen.
 
 ```bash
 cd mvp/backend/semantic-search-service/app

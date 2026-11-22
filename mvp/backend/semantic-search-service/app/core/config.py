@@ -177,13 +177,15 @@ class Settings(BaseSettings):
     # Derselbe Text mit anderer Zahl liegt darueber und gilt als Dublette,
     # Umformulierungen zum Teil darunter. Die Schwelle trennt das nicht; siehe #387.
     generic_text_similarity_threshold: float = 0.975
-    # Stimmenverfall bei geaendertem Text unter gleichem Titel (#636): Stimmen verfallen,
-    # wenn die passage/passage-Aehnlichkeit von altem und neuem Text darunter liegt
-    # (fassung.gleicher_text), nur mit dieselbe_aussage_nli = an wie beim Titel.
+    # Stimmenverfall bei geaendertem Text (#636): Stimmen verfallen, wenn die
+    # passage/passage-Aehnlichkeit von altem und neuem Text darunter liegt
+    # (fassung.gleicher_text). Nutzt nur die Einbettung, kein NLI-Modell; wirkt aber wie
+    # der Titel-Fall nur mit dieselbe_aussage_nli = an (ein Schalter fuer den Verfall).
     # Gemessen am Messset "Geaenderter Text" (tests/regression/MESSSET.md): Korrekturen,
-    # Ergaenzungen, Kuerzungen und Umformulierungen ab 0,945, ganz andere Texte
-    # hoechstens 0,840; andere Kommentare zur selben Aussage hoechstens 0,899 (oben).
-    text_verfall_aehnlichkeit_unter: float = Field(default=0.90, ge=0.0, le=1.0)
+    # Ergaenzungen, Kuerzungen, Links und Umformulierungen ab 0,915, ganz andere Texte
+    # hoechstens 0,840. Ein ausgetauschter Text zum selben Thema kann darueber liegen
+    # (verwandte Kommentare 0,817-0,899, oben) und behaelt dann die Stimmen.
+    text_verfall_aehnlichkeit_unter: float = Field(default=0.88, ge=0.0, le=1.0)
     # Vorschlaege im Feld "Antwort auf" (#387, frueher Konstante im Frontend):
     # Aussagen ab dieser query/query-Aehnlichkeit. Gemessen fuer EMBEDDING_MODELL
     # (passende Aussagen 0,892-0,940). Widerspricht eine Aussage dem Getippten in einer

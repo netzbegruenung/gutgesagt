@@ -449,20 +449,37 @@ class TestStimmenBeiGeaendertemText:
         text.assert_not_awaited()
         loeschen.assert_not_called()
 
-    async def test_geaenderter_titel_entscheidet_allein(self, test_settings, speicher):
-        """Titel und Text geaendert: Die Behauptung im Titel entscheidet (#427)."""
+    async def test_umformulierter_titel_und_ganz_anderer_text_verfallen(
+        self, test_settings, speicher
+    ):
+        """Titel umformuliert (dieselbe Behauptung), Text ausgetauscht: Der Text zaehlt."""
         speicher.add_test_data("commentary", [_beitrag(title=ALT)])
         text = AsyncMock(return_value=False)
-        loeschen = Mock()
+        loeschen = Mock(return_value=1)
         service = _mit_text_pruefung(test_settings, speicher, text, loeschen)
+        neuer_titel = "Auch im Altbau lohnt sich die Wärmepumpe"
+        await service.aendern(
+            uuid.UUID(BEITRAG_ID), AUTOR, _aenderung(neuer_titel, text="Neu.")
+        )
+        service.gleiche_behauptung.assert_awaited_once_with(ALT, neuer_titel)
+        text.assert_awaited_once_with(ALTER_TEXT, "Neu.")
+        loeschen.assert_called_once()
+
+    async def test_andere_behauptung_im_titel_prueft_den_text_nicht_mehr(
+        self, test_settings, speicher
+    ):
+        speicher.add_test_data("commentary", [_beitrag(title=ALT)])
+        text = AsyncMock(return_value=True)
+        loeschen = Mock(return_value=1)
+        service = _mit_text_pruefung(test_settings, speicher, text, loeschen)
+        service.gleiche_behauptung = AsyncMock(return_value=False)
         await service.aendern(
             uuid.UUID(BEITRAG_ID),
             AUTOR,
-            _aenderung("Auch im Altbau lohnt sich die Wärmepumpe", text="Neu."),
+            _aenderung("Wärmepumpe lohnt sich im Altbau nicht", text="Neu."),
         )
-        service.gleiche_behauptung.assert_awaited_once()
         text.assert_not_awaited()
-        loeschen.assert_not_called()
+        loeschen.assert_called_once()
 
     async def test_pruefung_wirft_stimmen_bleiben(self, test_settings, speicher):
         speicher.add_test_data("commentary", [_beitrag(title=ALT)])

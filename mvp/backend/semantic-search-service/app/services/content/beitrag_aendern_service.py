@@ -7,11 +7,11 @@ und Titelregel (CODING_STANDARDS.md). Es gelten dieselben Grenzen wie beim Anleg
 Geschrieben werden nur die geaenderten Felder; Nutzung, Verknuepfungen mit Aussagen
 und Einwuerfen bleiben. Stimmen bleiben, solange der Titel - die Behauptung des
 Beitrags - dieselbe Behauptung trifft; erkennt die NLI-Stufe das nicht, verfallen sie
-(#427, StatementService.gleiche_behauptung). Bleibt der Titel, verfallen sie auch, wenn
-der Text ein ganz anderer ist (#636, StatementService.gleicher_text). Ohne Entscheidung
-(Stufe nicht an, kein Modell, keine Antwort) bleiben sie. Der Vektor wird aus dem neuen Text berechnet, damit
-die Suche ihn findet, und edit_history haelt fest, wer wann geaendert hat (ohne den
-alten Wortlaut).
+(#427, StatementService.gleiche_behauptung). Sie verfallen auch, wenn der Text ein
+ganz anderer ist (#636, StatementService.gleicher_text). Ohne Entscheidung (Stufe
+nicht an, kein Modell, keine Antwort) bleiben sie. Der Vektor wird aus dem neuen Text
+berechnet, damit die Suche ihn findet, und edit_history haelt fest, wer wann geaendert
+hat (ohne den alten Wortlaut).
 """
 
 import asyncio
@@ -229,44 +229,41 @@ class BeitragAendernService:
     ) -> None:
         """
         Stimmen verfallen, wenn der neue Titel nicht dieselbe Behauptung trifft wie der
-        alte (#427), oder bei gleichem Titel der Text ein ganz anderer ist (#636). Erst
-        nach dem Schreiben: Die Aenderung steht auch dann, wenn die Pruefung oder das
-        Loeschen scheitert; die Stimmen bleiben dann.
+        alte (#427) oder der Text ein ganz anderer ist (#636); geprueft wird nur, was
+        sich ueber die Normalform hinaus geaendert hat, der Titel zuerst. Erst nach dem
+        Schreiben: Die Aenderung steht auch dann, wenn die Pruefung oder das Loeschen
+        scheitert; die Stimmen bleiben dann.
         """
         if self.stimmen_loeschen is None or alte_fassung is None:
             return
         alter_titel, alter_text = alte_fassung
-        if alter_titel and text_normalisiert(alter_titel) != text_normalisiert(
-            aenderung.titel
-        ):
-            # Der Titel hat sich geaendert: Er traegt die Behauptung und entscheidet
-            # allein, auch wenn der Text mitgeaendert wurde.
-            pruefung, alt, neu, was = (
+        pruefungen = [
+            (
                 self.gleiche_behauptung,
                 alter_titel,
                 aenderung.titel,
                 "andere Behauptung",
-            )
-        elif alter_text and text_normalisiert(alter_text) != text_normalisiert(
-            aenderung.text
-        ):
-            pruefung, alt, neu, was = (
-                self.gleicher_text,
-                alter_text,
-                aenderung.text,
-                "ganz anderer Text",
-            )
-        else:
-            return
-        if pruefung is None:
-            return
+            ),
+            (self.gleicher_text, alter_text, aenderung.text, "ganz anderer Text"),
+        ]
+        for pruefung, alt, neu, was in pruefungen:
+            if pruefung is None or not alt:
+                continue
+            if text_normalisiert(alt) == text_normalisiert(neu):
+                continue
+            if await self._anders(pruefung, alt, neu):
+                await self._verfallen_lassen(beitrag_id, was)
+                return
+
+    async def _anders(self, pruefung, alt: str, neu: str) -> bool:
+        """True nur bei einem klaren "nicht dasselbe"; Fehler und None heissen nein."""
         try:
-            gleich = await pruefung(alt, neu)
+            return await pruefung(alt, neu) is False
         except Exception as e:
             logger.warning(f"Pruefung der Fassung gescheitert: {type(e).__name__}")
-            return
-        if gleich is not False:
-            return
+            return False
+
+    async def _verfallen_lassen(self, beitrag_id: uuid.UUID, was: str) -> None:
         try:
             verfallen = await asyncio.to_thread(self.stimmen_loeschen, beitrag_id)
         except Exception as e:
