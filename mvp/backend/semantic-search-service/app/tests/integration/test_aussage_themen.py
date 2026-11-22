@@ -132,3 +132,14 @@ def test_ergaenzen_gleichzeitig_gewinnt_genau_eine_wahl(neue_datenbank):
     gespeichert = repository.themen_von([A])[A]
     assert len(gespeichert) == 1
     assert all(e == gespeichert for e in ergebnisse)
+
+
+def test_aussagen_mit_thema(neue_datenbank):
+    """Die Aussagen eines Themas fuer "Alles zum Thema" (#754)."""
+    repository = _repository(neue_datenbank)
+    repository.setzen(A, ["klima", "verkehr"], VON_HAND)
+    repository.setzen(B, ["klima"], VON_HAND)
+    repository.setzen(C, ["europa"], VON_HAND)
+
+    assert sorted(repository.aussagen_mit_thema("klima")) == [A, B]
+    assert repository.aussagen_mit_thema("wohnen") == []

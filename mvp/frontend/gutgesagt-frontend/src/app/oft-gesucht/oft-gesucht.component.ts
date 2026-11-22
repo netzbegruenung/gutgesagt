@@ -98,6 +98,8 @@ export function aussagenAuswaehlen(
 export class OftGesuchtComponent implements OnInit {
   /** Der Suchtext ohne Treffer; diese Aussage wird nicht noch einmal vorgeschlagen. */
   @Input() suchtext = '';
+  /** Aussagen, die schon auf der Seite stehen ("Alles zum Thema", #754); nicht doppelt. */
+  @Input() ohneAussagen: readonly string[] = [];
 
   aussagen: AussageKurz[] = [];
   /** Besucher landen bei "Hier fehlt eine Antwort" auf der Anmeldung; der Link sagt das. */
@@ -114,6 +116,11 @@ export class OftGesuchtComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     private destroyRef: DestroyRef,
   ) {}
+
+  /** Die Aussagen ohne die, die schon auf der Seite stehen. */
+  get gezeigt(): AussageKurz[] {
+    return this.aussagen.filter((a) => !this.ohneAussagen.includes(a.id));
+  }
 
   get titel(): string {
     return OFT_GESUCHT_TITEL[this.quelle];
