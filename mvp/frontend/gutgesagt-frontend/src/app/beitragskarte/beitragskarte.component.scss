@@ -802,6 +802,9 @@ h4.karte-titel {
 
 .karte--einwurf {
   width: 100%;
+  // Rand nur in Listen ohne Grund (Fangkorb, Meine Einwuerfe), die ihn setzen; der
+  // Schatten ist der aller Karten (.karte)
+  border: var(--einwurf-liste-rand, none);
 
   &:focus-visible {
     outline: 2px solid var(--akzent-tanne);

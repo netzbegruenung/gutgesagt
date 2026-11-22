@@ -524,6 +524,12 @@ describe('FangkorbComponent', () => {
       const stil = () => getComputedStyle(fixture.nativeElement.querySelector('.karten'));
       expect(stil().backgroundColor).toBe('rgba(0, 0, 0, 0)');
       expect(stil().paddingLeft).toBe('0px');
+      // Im Hellen hebt ein feiner Rand die weisse Karte von der weissen Seite ab
+      const karte = getComputedStyle(fixture.nativeElement.querySelector('article.karte--einwurf'));
+      expect(karte.borderTopWidth).toBe('1px');
+      expect(karte.borderTopStyle).toBe('solid');
+      expect(karte.borderTopColor).toBe('rgb(224, 224, 224)'); // --linie
+      expect(karte.boxShadow).not.toBe('none');
     });
 
     it('zeichnet die Kartenliste auch im Dunkelmodus ohne Grund und Rand (wie #750)', () => {
@@ -535,6 +541,8 @@ describe('FangkorbComponent', () => {
         expect(stil.backgroundColor).toBe('rgba(0, 0, 0, 0)');
         // Im Dunkeln hatte die Liste einen Rand (--kartenliste-rand), im Hellen nie.
         expect(stil.borderTopStyle).toBe('none');
+        // Die Karten selbst: im Dunkeln traegt die Flaeche, kein Rand
+        expect(getComputedStyle(fixture.nativeElement.querySelector('article.karte--einwurf')).borderTopStyle).toBe('none');
       } finally {
         document.documentElement.removeAttribute('data-theme');
       }
