@@ -981,6 +981,33 @@ class SchalterVerlaufZeile(Base):
     __table_args__ = (Index("idx_schalter_verlauf_geaendert_am", "geaendert_am"),)
 
 
+class HerkunftPruefungZeile(Base):
+    """
+    Ergebnis von "Herkunft pruefen" (#759) je Herkunft mit Link: zuletzt gesehener
+    HTTP-Status, Ergebnis (utils/sicherer_abruf.py), Weiterleitungsziel, wann zuletzt
+    geprueft und seit wann der Link auffaellt. Nichts zur Person: keine Kennung, kein
+    Beitrag, nur die Adresse, die ohnehin an der Herkunft steht.
+
+    Zeilen zu Herkuenften, die es nicht mehr gibt (geloescht, gesperrt), loescht der
+    naechste Lauf (services/herkunft_pruefen.py, docs/LOESCHKONZEPT.md).
+
+    Neue Tabelle: create_all legt sie beim Start an. Das Skript
+    postgres-app/migrations/2026-11-22-759-herkunft-pruefung.sql dokumentiert das Schema.
+    """
+
+    __tablename__ = "herkunft_pruefung"
+
+    herkunft_id = Column(SQLUUID(as_uuid=True), primary_key=True)
+    adresse = Column(String(2048), nullable=False)
+    ergebnis = Column(String(32), nullable=False)
+    http_status = Column(Integer, nullable=True)
+    ziel = Column(String(2048), nullable=True)
+    geprueft_am = Column(DateTime(timezone=True), nullable=False)
+    auffaellig_seit = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (Index("idx_herkunft_pruefung_ergebnis", "ergebnis"),)
+
+
 class AufrufHeuteZeile(Base):
     """
     Seitenaufrufe des laufenden Tages je Tagespseudonym (#761,

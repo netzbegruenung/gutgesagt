@@ -53,6 +53,7 @@ from api.v1.linkvorschau import router as linkvorschau_router
 from api.v1.kuerzungsvorschlag import router as kuerzungsvorschlag_router
 from api.v1.art9_einwilligung import router as art9_einwilligung_router
 from api.v1.nutzungsbedingungen import router as nutzungsbedingungen_router
+from api.v1.herkunft_pruefen import router as herkunft_pruefen_router
 from api.v1.aufrufe import router as aufrufe_router
 from services.cleanup.bereinigungsjob import bereinigungsjob_starten
 from services.suchen_ohne_treffer_service import (
@@ -75,6 +76,11 @@ from repositories.usage_tracking_repository import get_usage_repository
 from services.entdoppelung import pruefwerte_verwerfen_im_takt
 from repositories.gepostet_repository import get_gepostet_repository
 from services.abzeichen_service import abzeichen_im_takt, abzeichen_service_setzen
+from services.herkunft_pruefen import (
+    get_herkunft_pruefen_service,
+    herkunft_pruefen_bauen,
+    pruefen_im_takt,
+)
 from services.aufrufe_service import verdichten_im_takt as aufrufe_verdichten_im_takt
 from repositories.aufrufe_repository import get_aufrufe_repository
 from services.muster_hinweise_service import (
@@ -235,6 +241,12 @@ async def lifespan(app: FastAPI):
             )
             logger.info("✅ Milestone badge task started")
 
+        # Herkunft pruefen (#759): Der Takt sieht stuendlich nach; ohne wirksamen
+        # Schalter ruft er nichts ab und liest nichts (services/herkunft_pruefen.py).
+        app.state.herkunft_pruefen = asyncio.create_task(
+            pruefen_im_takt(herkunft_pruefen_bauen())
+        )
+
         # Seitenaufrufe (#761): Tagespseudonyme vergangener Tage zu Tageszahlen
         # verdichten und loeschen, auch bei ausgeschaltetem Schalter (loescht nur).
         app.state.aufrufe_verdichten = asyncio.create_task(
@@ -262,11 +274,16 @@ async def lifespan(app: FastAPI):
                 "pruefwerte_verwerfen",
                 "muster_hinweise_loeschen",
                 "abzeichen_rechnen",
+                "herkunft_pruefen",
                 "aufrufe_verdichten",
             ):
                 task = getattr(app.state, name, None)
                 if task is not None:
                     task.cancel()
+            # Ein laufender Lauf "Herkunft pruefen" haengt nicht am Takt (#759)
+            herkunft = get_herkunft_pruefen_service()
+            if herkunft is not None:
+                herkunft.abbrechen()
             manager = get_embeddings_manager()
             await manager.shutdown()
             close_app_database()
@@ -394,6 +411,11 @@ app.include_router(
     nutzungsbedingungen_router,
     prefix="/api/v1/nutzungsbedingungen",
     tags=["nutzungsbedingungen"],
+)
+app.include_router(
+    herkunft_pruefen_router,
+    prefix="/api/v1/herkunft-pruefen",
+    tags=["herkunft-pruefen"],
 )
 app.include_router(aufrufe_router, prefix="/api/v1/aufrufe", tags=["aufrufe"])
 
