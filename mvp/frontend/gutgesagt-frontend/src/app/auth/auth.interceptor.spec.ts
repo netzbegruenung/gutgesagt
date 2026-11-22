@@ -7,6 +7,7 @@ import { Subject } from 'rxjs';
 import { AuthInterceptor } from './auth.interceptor';
 import { stillerKontext } from '../shared/selbst-nachladen';
 import { Art9EinwilligungZustand } from '../services/art9-einwilligung-zustand';
+import { AuthService } from './auth.service';
 
 describe('AuthInterceptor', () => {
   let httpClient: HttpClient;
@@ -280,5 +281,39 @@ describe('AuthInterceptor', () => {
     req.flush(testData);
 
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+  // Beendet das BFF die Sitzung mitten in der Nutzung (etwa ein Cookie aus dem alten Realm),
+  // zeigt die App den Abgemeldet-Zustand bei der naechsten Anfrage, ohne Neuladen.
+  describe('Sitzung vom BFF beendet', () => {
+    let auth: AuthService;
+    const angemeldet = { isAuthenticated: true, userId: 'k-1', userName: 'Test', claims: null };
+
+    beforeEach(() => {
+      auth = TestBed.inject(AuthService);
+      auth.setUserInfo(angemeldet);
+    });
+
+    it('meldet bei einem 401 in der App ab', () => {
+      httpClient.get('/api/v1/content/mycontents').subscribe({ error: () => {} });
+      httpMock.expectOne('/api/v1/content/mycontents').flush(null, { status: 401, statusText: 'Unauthorized' });
+
+      expect(auth.getUserInfo()?.isAuthenticated).toBeFalse();
+      expect(auth.getUserInfo()?.userId).toBeNull();
+    });
+
+    it('meldet auch bei einer stillen Abfrage ab, ohne umzuleiten', () => {
+      httpClient.get('/api/v1/moderation/reports', { context: stillerKontext() }).subscribe({ error: () => {} });
+      httpMock.expectOne('/api/v1/moderation/reports').flush(null, { status: 401, statusText: 'Unauthorized' });
+
+      expect(auth.getUserInfo()?.isAuthenticated).toBeFalse();
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('laesst die Anmeldung bei anderen Fehlern stehen', () => {
+      httpClient.get('/api/test').subscribe({ error: () => {} });
+      httpMock.expectOne('/api/test').flush(null, { status: 500, statusText: 'Server Error' });
+
+      expect(auth.getUserInfo()).toEqual(angemeldet);
+    });
   });
 });

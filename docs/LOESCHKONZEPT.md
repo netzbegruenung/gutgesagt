@@ -73,9 +73,10 @@ besteht (`BFF/Services/KontoPruefung.cs`), und weist das Cookie sonst ab und lö
 - **Nach dem Umstellen der Kennungen auf den Realm** (`docs/KEYCLOAK_REALM.md`,
   „Kennungen umstellen“) hat ein Mitglied der Netzbegrünung zwei Kennungen: die im Realm
   und die alte, die im Realm am Konto als Kennung beim Identity Provider `netzbegruenung`
-  steht. Ein Cookie mit der alten gilt bis zu 14 Tage nach dem Umstellen der BFF, und was
-  die Person darunter anlegt, trägt die alte. In dieser Zeit beide Kennungen in
-  `geloeschte-konten.txt` eintragen und Schritt 1 bis 3 für beide ausführen.
+  steht. Ein Cookie mit der alten weist das BFF ab, weil es aus dem alten Realm stammt
+  (`BFF/Services/AnmeldeAussteller.cs`); vor dieser Prüfung galt es bis zu 14 Tage nach dem
+  Umstellen der BFF, und was die Person darunter anlegte, trägt die alte. Deshalb weiter
+  beide Kennungen in `geloeschte-konten.txt` eintragen und Schritt 1 bis 3 für beide ausführen.
 
 Beide Dateien liest das BFF spätestens nach fünf Minuten neu
 (`BFF/Services/ManagedUserService.cs:16`, `BFF/Services/GeloeschteKontenService.cs`), nach

@@ -12,9 +12,12 @@ namespace BFF.Services;
 ///
 /// Abgewiesen wird ein Cookie, wenn
 ///   - seine Kennung in der Liste geloeschter Konten steht (beide Kontoarten), oder
-///   - es von einem Beta-Zugang stammt, der nicht mehr in managed-users.json steht.
-/// Beides liest nur bereits geladene Dateien (Cache fuenf Minuten), die Pruefung kostet also
-/// keinen Netzaufruf.
+///   - es von einem Beta-Zugang stammt, der nicht mehr in managed-users.json steht, oder
+///   - es aus einer Keycloak-Anmeldung stammt, deren Aussteller (<c>iss</c>) nicht der
+///     konfigurierte Realm ist (<see cref="AnmeldeAussteller"/>), etwa nach dem Umzug in den
+///     eigenen Realm: Dort traegt es noch die alte Kennung.
+/// Das liest nur bereits geladene Dateien (Cache fuenf Minuten) und Claims, die Pruefung kostet
+/// also keinen Netzaufruf.
 /// </summary>
 public static class KontoPruefung
 {
@@ -38,6 +41,12 @@ public static class KontoPruefung
                  && await services.GetRequiredService<ManagedUserService>().GetUserByIdAsync(kennung) == null)
         {
             grund = "the Beta-Zugang is no longer in managed-users.json";
+        }
+        else if (principal.FindFirst(AuthController.AuthMethodClaim)?.Value != AuthController.AuthMethodManaged
+                 && services.GetService<AnmeldeAussteller>() is { } aussteller
+                 && !aussteller.StammtVonHier(principal))
+        {
+            grund = "the session was issued by another realm";
         }
 
         if (grund == null)

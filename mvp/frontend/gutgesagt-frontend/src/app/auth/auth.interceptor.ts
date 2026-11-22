@@ -14,6 +14,7 @@ import {
 } from '../services/art9-einwilligung.service';
 import { Art9EinwilligungZustand } from '../services/art9-einwilligung-zustand';
 import { STILLE_ABFRAGE } from '../shared/selbst-nachladen';
+import { AuthService } from './auth.service';
 
 export const EINWILLIGUNG_FEHLT_HINWEIS = 'Zum Beitragen und Bewerten brauchst du deine Einwilligung.';
 /** Dasselbe, wenn die Zustimmung zu den Nutzungsbedingungen fehlt; die führt auf dieselbe Seite. */
@@ -25,6 +26,7 @@ export const AuthInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: 
   const router = inject(Router);  // Inject Router for navigation
   const snackBar = inject(MatSnackBar);
   const einwilligungZustand = inject(Art9EinwilligungZustand);
+  const authService = inject(AuthService);
 
   const modifiedRequest = req.clone({
     withCredentials: true,  // Ensures cookies are included also cross-origin
@@ -33,6 +35,12 @@ export const AuthInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: 
   return next(modifiedRequest).pipe(
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401) {
+        // Das BFF hat die Sitzung beendet (Cookie abgelaufen, Konto geloescht, Cookie aus
+        // einem anderen Realm) und das Cookie geloescht. Kopfzeile und Profilbild zeigen
+        // dann sofort den Abgemeldet-Zustand, auch bei stillen Abfragen, ohne Neuladen.
+        if (authService.getUserInfo()?.isAuthenticated) {
+          authService.setUserInfo({ isAuthenticated: false, userId: null, userName: null, claims: null });
+        }
         // Check if the request is for a public endpoint. Hintergrund-Abfragen (Nachladen,
         // Zahl am Admin-Link) leiten nie um: Sonst risse eine abgelaufene Sitzung die
         // Person mitten beim Tippen auf /login.

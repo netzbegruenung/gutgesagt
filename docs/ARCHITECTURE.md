@@ -190,6 +190,10 @@ The old dummy login (`POST /login`, user id `test-user-id-1`) is gone since #488
 5. BFF validates token and creates session
 6. BFF injects user context in API calls
 
+On every request with the session cookie the BFF also checks that its issuer is the configured
+realm (`Keycloak:Authority`) and ends sessions from another realm, e.g. after a realm switch
+(`BFF/Services/KontoPruefung.cs`, `AnmeldeAussteller.cs`).
+
 ## Deployment Configurations
 
 ### Docker Compose Files
