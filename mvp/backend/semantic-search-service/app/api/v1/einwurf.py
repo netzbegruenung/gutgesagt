@@ -1,6 +1,6 @@
 """
 Fangkorb-Endpunkte: einwerfen, auflisten, nach gleichem Link suchen, einzeln
-lesen und destillieren.
+lesen, Themen aendern und destillieren.
 
 Drei Stufen: Einwerfen, Destillieren (einen Satz formulieren, je Person),
 Ausformulieren (den Einwurf mit einem Beitrag verknuepfen, einem neuen oder einem
@@ -20,6 +20,7 @@ from pydantic import ValidationError
 
 from dependencies import (
     require_art9_einwilligung,
+    require_nutzungsbedingungen,
     get_aufrufer,
     get_commentary_service,
     get_generic_text_service,
@@ -46,6 +47,7 @@ from dtos.einwurf import (
     EinwurfResponse,
     SatzSpeichernRequest,
     EinwurfStatusRequest,
+    EinwurfThemenRequest,
 )
 from services.beitrag_fuer_aufrufer import (
     AUSFORMULIERER,
@@ -352,6 +354,45 @@ async def satz_speichern(
         raise HTTPException(
             status_code=500, detail="Der Satz konnte nicht gespeichert werden."
         )
+
+
+@router.put(
+    "/{einwurf_id}/themen",
+    response_model=EinwurfResponse,
+    dependencies=[Depends(require_nutzungsbedingungen)],
+)
+async def themen_setzen(
+    einwurf_id: uuid.UUID,
+    request: EinwurfThemenRequest,
+    aufrufer: Aufrufer = Depends(get_aufrufer),
+    repository: EinwurfRepository = Depends(get_einwurf_repository),
+) -> EinwurfResponse:
+    """
+    Die Themen eines Einwurfs nachtraeglich setzen (Fangkorb, Meine Einwuerfe,
+    Destillier-Ansicht); ersetzt die bisherigen, eine leere Liste entfernt alle.
+
+    Wer das darf, folgt dem Destillieren, nicht dem Verwerfen: jede angemeldete Person,
+    in jeder Stufe. Die Themen sind ein Fingerzeig fuer andere und die Vorauswahl der
+    Aussage beim Ausformulieren; wer destilliert, soll beides richtigstellen koennen,
+    ohne den Einwerfer zu fragen. Gespeichert wird nicht, wer geaendert hat: Deshalb
+    wie das Zuordnen von Themen an Aussagen nur mit Zustimmung zu den
+    Nutzungsbedingungen (NB_NUR), ohne Art.-9-Einwilligung. Hoechstens zwei, nur aus
+    der Liste, keins doppelt, sonst 422.
+    """
+    person = _angemeldete_person(aufrufer.kennung)
+    try:
+        row = repository.themen_setzen(einwurf_id, request.themen, person)
+    except EinwurfNichtGefunden:
+        raise HTTPException(status_code=404, detail=NICHT_GEFUNDEN)
+    except Exception as e:
+        logger.error(
+            f"Fehler in PUT /rawinput/{{id}}/themen: {type(e).__name__}", exc_info=True
+        )
+        raise HTTPException(
+            status_code=500, detail="Die Themen konnten nicht gespeichert werden."
+        )
+    # Ohne Zustand der Beitraege (#507): Die Karte laedt nach, die Ansicht braucht ihn nicht.
+    return (await _einwuerfe_fuer_aufrufer([row], aufrufer))[0]
 
 
 async def _beitrag_pruefen(

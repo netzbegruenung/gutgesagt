@@ -453,6 +453,63 @@ class EinwurfRepository:
             )
             raise
 
+    def themen_setzen(
+        self,
+        raw_input_id: uuid.UUID,
+        themen: Sequence[str],
+        current_user: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Die Themen eines Einwurfs ersetzen; eine leere Liste entfernt alle.
+
+        Gleich in welcher Stufe: Destillieren darf jede angemeldete Person auch einen
+        ausformulierten oder verworfenen Einwurf, und die Themen sind die Vorauswahl
+        fuer die Aussage dabei. Die Einwurf-Zeile ist gesperrt (FOR UPDATE), damit zwei
+        gleichzeitige Aenderungen nicht beide stehen bleiben und mehr als zwei ergeben.
+        Wer geaendert hat, wird nicht gespeichert, wie beim Einwerfen.
+
+        Args:
+            themen: Schluessel aus der Themenliste, schon geprueft (EinwurfThemenRequest)
+            current_user: fuer ``own_draft`` in der Antwort
+
+        Raises:
+            EinwurfNichtGefunden: den Einwurf gibt es nicht
+        """
+        try:
+            with self.db.get_session() as session:
+                row = (
+                    session.query(Einwurf)
+                    .filter(Einwurf.id == raw_input_id)
+                    .with_for_update()
+                    .one_or_none()
+                )
+                if row is None:
+                    raise EinwurfNichtGefunden(raw_input_id)
+                session.execute(
+                    delete(EinwurfThemaZeile).where(
+                        EinwurfThemaZeile.raw_input_id == raw_input_id
+                    )
+                )
+                session.add_all(
+                    EinwurfThemaZeile(raw_input_id=raw_input_id, thema=thema)
+                    for thema in themen
+                )
+                session.commit()
+                logger.info(
+                    f"Einwurf {raw_input_id}: Themen geaendert (jetzt {len(themen)})"
+                )
+                return self._mit_saetzen_und_ausformuliert_in(
+                    session, [row], current_user
+                )[0]
+        except EinwurfNichtGefunden:
+            raise
+        except Exception as e:
+            logger.error(
+                f"Fehler beim Aendern der Themen eines Einwurfs: {type(e).__name__}",
+                exc_info=True,
+            )
+            raise
+
     def set_status(
         self,
         raw_input_id: uuid.UUID,
