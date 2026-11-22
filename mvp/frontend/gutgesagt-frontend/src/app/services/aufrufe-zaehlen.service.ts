@@ -39,7 +39,12 @@ export class AufrufeZaehlenService {
   }
 
   private melden(pfad: string): void {
-    if (pfad === this.letzte || pfad.startsWith('/admin')) {
+    if (pfad.startsWith('/admin')) {
+      // Zurueck aus dem Admin-Bereich zaehlt die Seite wieder
+      this.letzte = null;
+      return;
+    }
+    if (pfad === this.letzte) {
       return;
     }
     this.letzte = pfad;

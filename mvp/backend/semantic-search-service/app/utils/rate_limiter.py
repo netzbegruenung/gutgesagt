@@ -119,6 +119,11 @@ feedback_rate_limiter = RateLimiter(max_requests=5, window_minutes=15)
 einladung_rate_limiter = RateLimiter(max_requests=30, window_minutes=15)
 einladung_pruefen_rate_limiter = RateLimiter(max_requests=60, window_minutes=15)
 
+# Seitenaufrufe zaehlen (#761), ohne Anmeldung: 120 je Anschluss in 10 Minuten. Ein
+# Seitenwechsel ist eine Meldung; hinter einem gemeinsamen Anschluss (Buero, Parteitag)
+# klicken viele. Darueber wird still nicht gezaehlt, es entsteht keine Schreiblast.
+aufrufe_rate_limiter = RateLimiter(max_requests=120, window_minutes=10)
+
 # Gegenlesen beim Schreiben (#358): 300 je Person in 10 Minuten. Das Formular fragt
 # etwa eine Sekunde nach jeder Eingabepause nach; das sind beim zuegigen Schreiben
 # weniger als 30 in der Minute.

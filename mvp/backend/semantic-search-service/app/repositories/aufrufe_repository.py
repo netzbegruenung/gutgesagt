@@ -57,16 +57,18 @@ class AufrufeRepository:
         dazu (Aufrufe und Besucher addiert). Gibt die Zahl geloeschter Zeilen zurueck.
         """
         with self.db.get_session() as session:
-            zeilen = session.execute(
-                select(
-                    AufrufHeuteZeile.tag,
-                    func.sum(AufrufHeuteZeile.aufrufe),
-                    func.count(AufrufHeuteZeile.pseudonym),
-                )
+            # Loeschen und Zaehlen in einem Schritt: Was zwischen einem SELECT und dem
+            # DELETE dazukaeme, ginge sonst verloren.
+            geloescht = session.execute(
+                delete(AufrufHeuteZeile)
                 .where(AufrufHeuteZeile.tag < heute)
-                .group_by(AufrufHeuteZeile.tag)
+                .returning(AufrufHeuteZeile.tag, AufrufHeuteZeile.aufrufe)
             ).all()
-            for tag, aufrufe, besucher in zeilen:
+            je_tag: dict = {}
+            for tag, aufrufe in geloescht:
+                summe, besucher = je_tag.get(tag, (0, 0))
+                je_tag[tag] = (summe + aufrufe, besucher + 1)
+            for tag, (aufrufe, besucher) in je_tag.items():
                 einfuegen = pg_insert(AufrufTagZeile).values(
                     tag=tag, aufrufe=int(aufrufe), besucher=int(besucher)
                 )
@@ -81,9 +83,7 @@ class AufrufeRepository:
                         },
                     )
                 )
-            return session.execute(
-                delete(AufrufHeuteZeile).where(AufrufHeuteZeile.tag < heute)
-            ).rowcount
+            return len(geloescht)
 
     def heute(self, tag: date) -> AufrufTag:
         """Der laufende Tag bisher, aus den Pseudonymen gezaehlt (ohne sie zu nennen)."""

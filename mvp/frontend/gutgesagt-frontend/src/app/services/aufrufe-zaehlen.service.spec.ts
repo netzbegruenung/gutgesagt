@@ -55,6 +55,14 @@ describe('AufrufeZaehlenService (#761)', () => {
     http.expectNone(URL);
   });
 
+  it('zählt dieselbe Seite nach einem Abstecher in den Admin-Bereich wieder', async () => {
+    await router.navigateByUrl('/search');
+    http.expectOne(URL).flush(null, { status: 204, statusText: 'No Content' });
+    await router.navigateByUrl('/admin/dashboard');
+    await router.navigateByUrl('/search');
+    http.expectOne(URL).flush(null, { status: 204, statusText: 'No Content' });
+  });
+
   it('hört nach 404 (Schalter aus) für diesen Start auf', async () => {
     await router.navigateByUrl('/search');
     http.expectOne(URL).flush(null, { status: 404, statusText: 'Not Found' });

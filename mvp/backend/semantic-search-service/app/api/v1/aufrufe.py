@@ -3,7 +3,8 @@ Seitenaufrufe und Besucher je Tag (#761). Logik: services/aufrufe_service.py.
 
 - ``POST /zaehlen``: ohne Anmeldung (BFF: EndpointPolicy.AllowAnonymous), ohne Inhalt.
   204, wenn gezaehlt; ohne wirksamen Schalter ``aufrufe_zaehlen`` 404 und nichts
-  gespeichert. Ein Fehler beim Speichern kostet nur diesen Aufruf (204), die Seite
+  gespeichert. Ueber dem Rate-Limit (utils/rate_limiter.py) ebenfalls 204, ohne zu
+  zaehlen. Ein Fehler beim Speichern kostet nur diesen Aufruf (204), die Seite
   wartet nie darauf.
 - ``GET ""``: nur fuer Admins, die Tageszahlen fuer Admin -> Kennzahlen; ohne Schalter
   ``aktiv: false`` und nichts sonst.
@@ -24,6 +25,8 @@ from repositories.aufrufe_repository import AufrufeRepository, get_aufrufe_repos
 from services import aufrufe_service
 from services.schalter_service import schalter_wirksam
 from utils.besucher_pseudonym import besucher_merkmal
+from utils.client_identity import derive_client_key
+from utils.rate_limiter import aufrufe_rate_limiter
 
 logger = get_logger(__name__)
 
@@ -58,6 +61,9 @@ async def aufruf_zaehlen(
 ) -> Response:
     if not schalter_wirksam(aufrufe_service.SCHALTER, settings):
         raise HTTPException(status_code=404, detail="Not found")
+    # Ueber der Grenze still nicht zaehlen (204): Aufblaehen kostet keine Schreiblast.
+    if await aufrufe_rate_limiter.is_rate_limited(derive_client_key(request)):
+        return Response(status_code=204)
     # Das Merkmal (Anschluss) lebt nur in dieser Anfrage; gespeichert wird das Pseudonym.
     merkmal = besucher_merkmal(request)
     try:

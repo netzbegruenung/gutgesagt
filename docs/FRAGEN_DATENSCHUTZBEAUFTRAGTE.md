@@ -37,6 +37,14 @@ zu einer von vier Klassen (Datenschutzerklärung, „Verwendung von Beiträgen�
 des Pseudonyms. Zu klären bleibt, ob das Bilden des Pseudonyms aus der IP-Adresse allein § 25
 TDDDG berührt.
 
+**Zusatz (#761, gebaut, ausgeschaltet):** Für die Seitenaufrufe schickt das Frontend je
+Seitenwechsel eine eigene, leere Anfrage an den Server, die nur dem Zählen dient; die Person hat
+davon keinen eigenen Nutzen. Bei der Suche entsteht das Pseudonym dagegen an einer Anfrage, die
+ohnehin nötig ist. Die EDSA-Leitlinien 2/2023 nennen solche vom Skript ausgelösten
+Zähl-Anfragen (Pixel, Tracking-Links) ausdrücklich. Zweite Frage daher: Fällt diese Zähl-Anfrage
+unter § 25 Abs. 1 TDDDG, und wenn ja, greift Abs. 2 Nr. 2 (unbedingt erforderlich) oder braucht
+sie eine Einwilligung? Bis zur Antwort bleibt der Schalter `aufrufe_zaehlen` aus.
+
 **Empfehlung:** Ja: § 25 TDDDG ist nach der DSK-Auslegung nicht berührt, und Art. 6 Abs. 1
 lit. f trägt, weil sich Pseudonyme verschiedener Tage auch mit Datenbank und Konfiguration nicht
 verknüpfen lassen.

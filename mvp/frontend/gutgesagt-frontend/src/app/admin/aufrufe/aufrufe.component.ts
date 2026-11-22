@@ -50,16 +50,16 @@ const ZAHL = new Intl.NumberFormat('de-DE');
               <th scope="col">Tag</th>
               <th scope="col" class="zahl">Aufrufe</th>
               <th scope="col" class="zahl">Besucher</th>
-              <th scope="col" class="balken-spalte"><span class="visually-hidden">Besucher als Balken</span></th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let t of zeilen()" [class.heute]="t === stand!.heute" data-testid="aufruf-tag">
               <th scope="row">{{ t === stand!.heute ? 'Heute bisher' : tag(t.tag) }}</th>
               <td class="zahl">{{ zahl(t.aufrufe) }}</td>
-              <td class="zahl">{{ zahl(t.besucher) }}</td>
-              <td class="balken-spalte" aria-hidden="true">
-                <span class="balken" [style.width.%]="anteil(t)"></span>
+              <td class="besucher">
+                <span class="besucher-zahl">{{ zahl(t.besucher) }}</span>
+                <!-- Nur Schmuck: die Zahl steht daneben -->
+                <span class="balken-spur" aria-hidden="true"><span class="balken" [style.width.%]="anteil(t)"></span></span>
               </td>
             </tr>
           </tbody>
@@ -75,12 +75,13 @@ const ZAHL = new Intl.NumberFormat('de-DE');
     tbody th { font-weight: 400; white-space: nowrap; }
     tr.heute th, tr.heute td { font-weight: 700; }
     .zahl { text-align: right; white-space: nowrap; width: 1%; }
-    .balken-spalte { width: 40%; min-width: 48px; }
+    .besucher { display: flex; align-items: center; gap: 8px; }
+    .besucher-zahl { min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; }
+    .balken-spur { flex: 1 1 auto; min-width: 48px; }
     .balken { display: block; height: 10px; min-width: 2px; border-radius: 5px; background: var(--akzent-tanne); }
     .hinweis { color: var(--text-leise); margin: 12px 0 0; }
     @media (max-width: 479px) {
       th, td { padding: 6px 4px; }
-      .balken-spalte { width: 25%; }
     }
   `],
 })

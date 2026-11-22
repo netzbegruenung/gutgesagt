@@ -83,6 +83,18 @@ class TestZaehlen:
         assert antwort.status_code == 404
         assert repo.method_calls == []
 
+    def test_ueber_dem_rate_limit_still_nicht_gezaehlt(self, werte, repo, monkeypatch):
+        limiter = Mock()
+
+        async def begrenzt(schluessel):
+            return True
+
+        limiter.is_rate_limited = begrenzt
+        monkeypatch.setattr(modul, "aufrufe_rate_limiter", limiter)
+
+        assert _client(repo).post(f"{URL}/zaehlen", headers=ADRESSE).status_code == 204
+        repo.zaehlen.assert_not_called()
+
     def test_fehler_beim_speichern_kostet_nur_den_aufruf(self, werte, repo):
         repo.zaehlen.side_effect = RuntimeError("weg")
         assert _client(repo).post(f"{URL}/zaehlen", headers=ADRESSE).status_code == 204
