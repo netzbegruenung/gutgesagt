@@ -120,6 +120,11 @@ export interface BesuchResponse {
   ausformulierte_einwuerfe?: number;
   /** Kommentare und Hintergrundinfos anderer aus den letzten 7 Tagen (Zeitraum, kein Stand). */
   neue_beitraege?: number;
+  /**
+   * Antworten anderer auf eigene Aussagen aus den letzten 7 Tagen (#760). null oder fehlend:
+   * Schalter „antworten_hinweis“ aus, dann gibt es weder Kachel noch Reiter „Meine Aussagen“.
+   */
+  antworten_auf_eigene_aussagen?: number | null;
 }
 
 export interface TrendingContent {

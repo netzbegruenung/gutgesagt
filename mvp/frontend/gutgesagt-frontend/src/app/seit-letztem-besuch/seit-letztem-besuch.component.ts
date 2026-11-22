@@ -57,12 +57,33 @@ const positiv = (wert: number | null | undefined): number => (wert && wert > 0 ?
 
 /**
  * Alle Kacheln mit Neuem (Zahl groesser 0), in der Reihenfolge, in der sie stehen und
- * in der sie bei mehr als MAX_KACHELN wegfallen: zuerst, was die eigenen Beitraege und
- * Einwuerfe betrifft, zuletzt die neuen Beitraege, die „Frisch aus der Community“ direkt
+ * in der sie bei mehr als MAX_KACHELN wegfallen: zuerst, was die eigenen Aussagen, Beitraege
+ * und Einwuerfe betrifft, zuletzt die neuen Beitraege, die „Frisch aus der Community“ direkt
  * darunter ohnehin zeigt.
  */
 export function neuesListe(stand: NeuesStand): NeuesEintrag[] {
   const liste: NeuesEintrag[] = [];
+
+  // Antworten auf eigene Aussagen (#760): zuerst, sie betreffen die Person am meisten
+  const antworten = positiv(stand.antworten_auf_eigene_aussagen);
+  if (antworten) {
+    const eine = antworten === 1;
+    const wort = eine ? 'neue Antwort auf deine Aussagen' : 'neue Antworten auf deine Aussagen';
+    liste.push({
+      art: 'antworten',
+      ziel: ROUTES.MEINE_BEITRAEGE,
+      queryParams: { [MEINE_TAB_PARAM]: 'aussagen' },
+      icon: 'forum',
+      zahl: `${antworten}`,
+      wort,
+      zeitraum: ZEITRAUM,
+      satz: `${antworten} ${wort}, ${ZEITRAUM}`,
+      zeile: eine
+        ? 'neue Antwort auf deine Aussagen in den letzten 7 Tagen.'
+        : 'neue Antworten auf deine Aussagen in den letzten 7 Tagen.',
+      knopf: 'Meine Aussagen',
+    });
+  }
 
   const nutzung = positiv(stand.nutzung_seit_letztem_besuch);
   if (nutzung) {

@@ -58,6 +58,7 @@ from repositories.punkte_einwilligung_repository import (
     get_punkte_einwilligung_repository,
 )
 from services.gepostet_service import GepostetService, get_gepostet_service
+from services import antworten_hinweis
 from services.art9_einwilligung_service import get_art9_einwilligung_service
 from services.usage_tracking_service import get_usage_service
 from services.beitrag_laden import BeitragLader, BeitragUnlesbar
@@ -135,6 +136,10 @@ class BesuchResponse(BaseModel):
     # Kommentare und Hintergrundinfos anderer aus den letzten BESUCH_ZEITRAUM_TAGE
     # Tagen, die Typen von "Frisch aus der Community". Ebenfalls ein Zeitraum.
     neue_beitraege: int = 0
+    # Antworten anderer auf eigene Aussagen aus den letzten BESUCH_ZEITRAUM_TAGE Tagen
+    # (#760, services/antworten_hinweis.py). None, solange der Schalter
+    # antworten_hinweis aus ist: Dann zeigt das Frontend weder Kachel noch Reiter.
+    antworten_auf_eigene_aussagen: Optional[int] = None
 
 
 # So lange warten die Nebenzahlen (alles ausser der Nutzung) hoechstens; danach gilt
@@ -796,21 +801,37 @@ async def besuch(
     seit = datetime.now(timezone.utc) - timedelta(days=BESUCH_ZEITRAUM_TAGE)
     # Alle Zahlen zugleich: Die Nebenzahlen haben eine Zeitgrenze, die Nutzung
     # nicht; scheitert sie, ist der Besuch gescheitert (500).
+    # Ohne Schalter fragt der Besuch die eigenen Aussagen gar nicht erst ab (#760).
+    mit_antworten = schalter_wirksam(antworten_hinweis.SCHALTER, settings)
     try:
-        anzahl, neu, wartend, ausformuliert, beitraege = await asyncio.gather(
-            get_usage_service().nutzung_seit_letztem_besuch(current_user),
+        antworten = (
             _hoechstens(
-                _neue_einwuerfe(current_user, einwuerfe, gesehen), 0, "Neue Einwuerfe"
-            ),
-            _hoechstens(_unbeantwortete_aussagen(unbeantwortete), 0, "Unbeantwortete"),
-            _hoechstens(
-                _ausformulierte_einwuerfe(current_user, einwuerfe, seit),
-                0,
-                "Ausformulierte Einwuerfe",
-            ),
-            _hoechstens(
-                _neue_beitraege(current_user, settings, seit), 0, "Neue Beitraege"
-            ),
+                _neue_antworten(current_user, settings, seit), 0, "Neue Antworten"
+            )
+            if mit_antworten
+            else _keine()
+        )
+        anzahl, neu, wartend, ausformuliert, beitraege, antworten = (
+            await asyncio.gather(
+                get_usage_service().nutzung_seit_letztem_besuch(current_user),
+                _hoechstens(
+                    _neue_einwuerfe(current_user, einwuerfe, gesehen),
+                    0,
+                    "Neue Einwuerfe",
+                ),
+                _hoechstens(
+                    _unbeantwortete_aussagen(unbeantwortete), 0, "Unbeantwortete"
+                ),
+                _hoechstens(
+                    _ausformulierte_einwuerfe(current_user, einwuerfe, seit),
+                    0,
+                    "Ausformulierte Einwuerfe",
+                ),
+                _hoechstens(
+                    _neue_beitraege(current_user, settings, seit), 0, "Neue Beitraege"
+                ),
+                antworten,
+            )
         )
     except Exception as e:
         logger.error(
@@ -825,6 +846,102 @@ async def besuch(
         unbeantwortete_aussagen_mehr=wartend >= LIMIT_STANDARD,
         ausformulierte_einwuerfe=max(0, ausformuliert),
         neue_beitraege=max(0, beitraege),
+        antworten_auf_eigene_aussagen=max(0, antworten) if mit_antworten else None,
+    )
+
+
+async def _keine() -> int:
+    return 0
+
+
+async def _neue_antworten(person: str, settings: Settings, seit: datetime) -> int:
+    """
+    Neue Antworten anderer auf die eigenen Aussagen seit ``seit`` (#760); liest nur,
+    was an den Aussagen steht, und speichert nichts. Bei einem Fehler 0.
+    """
+    try:
+        aussagen = await antworten_hinweis.eigene_aussagen(
+            person,
+            antworten_hinweis.statement_repository(settings),
+            seit,
+            mit_titeln=False,
+        )
+        return antworten_hinweis.neue_antworten(aussagen)
+    except Exception as e:
+        logger.warning(
+            f"Neue Antworten fuer {log_pseudonym(person)} nicht gezaehlt: "
+            f"{type(e).__name__}"
+        )
+        return 0
+
+
+class AntwortAufAussageResponse(BaseModel):
+    id: uuid.UUID
+    content_type: str
+    titel: str
+    verknuepft_am: datetime
+    von_dir: bool
+    neu: bool
+
+
+class EigeneAussageResponse(BaseModel):
+    id: uuid.UUID
+    text: str
+    created: datetime
+    antworten: list[AntwortAufAussageResponse]
+
+
+class EigeneAussagenResponse(BaseModel):
+    # Zeitraum, in dem eine Antwort als neu gilt, wie die Kachel
+    zeitraum_tage: int
+    aussagen: list[EigeneAussageResponse]
+
+
+@router.get("/users/me/aussagen", response_model=EigeneAussagenResponse)
+async def eigene_aussagen(
+    current_user: str = Depends(require_user),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Die eigenen Aussagen der angemeldeten Person mit ihren Antworten, Ziel der Kachel
+    "neue Antworten auf deine Aussagen" (#760). Ohne Schalter antworten_hinweis 404.
+    Nichts zu anderen Personen: je Antwort nur "von dir" oder nicht.
+    """
+    if not schalter_wirksam(antworten_hinweis.SCHALTER, settings):
+        raise HTTPException(status_code=404, detail="Not found")
+    seit = datetime.now(timezone.utc) - timedelta(days=BESUCH_ZEITRAUM_TAGE)
+    try:
+        aussagen = await antworten_hinweis.eigene_aussagen(
+            current_user, antworten_hinweis.statement_repository(settings), seit
+        )
+    except Exception as e:
+        logger.error(
+            f"Eigene Aussagen von {log_pseudonym(current_user)} nicht gelesen: "
+            f"{type(e).__name__}",
+            exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail="Internal server error")
+    return EigeneAussagenResponse(
+        zeitraum_tage=BESUCH_ZEITRAUM_TAGE,
+        aussagen=[
+            EigeneAussageResponse(
+                id=a.id,
+                text=a.text,
+                created=a.created,
+                antworten=[
+                    AntwortAufAussageResponse(
+                        id=x.id,
+                        content_type=getattr(x.content_type, "value", x.content_type),
+                        titel=x.titel,
+                        verknuepft_am=x.verknuepft_am,
+                        von_dir=x.von_dir,
+                        neu=x.neu,
+                    )
+                    for x in a.antworten
+                ],
+            )
+            for a in aussagen
+        ],
     )
 
 

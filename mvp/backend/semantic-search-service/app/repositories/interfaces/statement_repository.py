@@ -143,6 +143,14 @@ class IStatementRepository(
         """
         pass
 
+    async def antwort_autoren(self, ids: List[uuid.UUID]) -> Dict[uuid.UUID, str]:
+        """
+        Of the given reply-suggestion IDs, the visible Beitraege with their
+        original_author (#760: new answers by others to one's own Aussagen). Not
+        abstract: only the Qdrant repository needs it.
+        """
+        raise NotImplementedError
+
     @abstractmethod
     async def sichtbare_antworten(self, ids: List[uuid.UUID]) -> List[AntwortKurz]:
         """

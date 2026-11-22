@@ -535,6 +535,10 @@ _Avoid_: Opt-in, Freigabe, Sichtbarkeitseinstellung
 Der Tab in „Meine Beiträge“, in dem eine Person ihre eigenen Einwürfe mit ihrer Stufe sieht: Ausformulierte führen zu ihren Beiträgen, verworfene sind als solche erkennbar. Ist keiner der Beiträge eines ausformulierten Einwurfs mehr sichtbar, steht statt „Ausformuliert“ „Beitrag gesperrt“ oder „Beitrag gelöscht“, und es gibt nichts anzusehen; so auch beim Einwerfen. Im Fangkorb steht Ausformuliertes nicht. Nach dem Ausformulieren des eigenen Einwurfs führt „Zu meinen Einwürfen“ hierher; nach einem fremden geht es mit „Zum Fangkorb“ in den Fangkorb. Hier erfährt der Einwerfer, was aus seinen Fundstücken geworden ist. Die Karten bieten dieselben Griffe wie im Fangkorb; ein offener Einwurf lässt sich von hier aus gleich destillieren.
 _Avoid_: Meine Funde, Mein Fangkorb, Eingereichtes
 
+**Meine Aussagen**:
+Der dritte Tab in „Meine Beiträge“, nur mit dem Schalter `antworten_hinweis`: die Aussagen, die eine Person selbst angelegt hat, je mit den Beiträgen, die darauf antworten. Antworten anderer aus den letzten sieben Tagen tragen „Neu“; ihre Zahl steht als Kachel unter „Seit deinem letzten Besuch“. Wer geantwortet hat, steht nicht da, nur ob es die Person selbst war (#760).
+_Avoid_: Meine Behauptungen, Meine Fragen
+
 **Nutzungsstatistik**:
 Wie oft die Beiträge einer Person genutzt wurden, insgesamt und je Beitrag; unter Meine Beiträge steht die Gesamtzahl. Jede Person sieht nur die eigene; wessen Statistik gemeint ist, ergibt sich aus der Anmeldung, nie aus einer Kennung in der Adresse.
 _Avoid_: Usage Stats, Nutzerstatistik

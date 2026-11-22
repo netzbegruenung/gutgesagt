@@ -12,6 +12,7 @@ const TITEL: Record<string, string> = {
   punkte: 'Punkte und Meilensteine',
   abzeichen_sichtbar: 'Abzeichen am Anzeigenamen',
   gepostet: 'Rückfrage „Ja, gepostet“',
+  antworten_hinweis: 'Neue Antworten auf eigene Aussagen',
 };
 
 /**

@@ -537,6 +537,29 @@ class StatementRepository(
             )
         return [gefunden[i] for i in ids if i in gefunden]
 
+    async def antwort_autoren(self, ids: List[uuid.UUID]) -> Dict[uuid.UUID, str]:
+        """
+        Die sichtbaren Beitraege unter den IDs (weder gesperrt noch geloescht) mit
+        ihrem original_author (#760); ein Abruf je _IDS_JE_ABRUF IDs, nur zwei Felder
+        mehr als sichtbare_antworten. Die Autorin verlaesst den Dienst nicht: Der
+        Aufrufer macht daraus nur "von dir" oder "von anderen".
+        """
+        if not ids:
+            return {}
+        punkte = await self._abrufen(ids, ["content_type", "status", "original_author"])
+        autoren: Dict[uuid.UUID, str] = {}
+        for punkt in punkte:
+            payload = punkt.payload or {}
+            if (
+                payload.get("content_type") not in _BEITRAGSTYPEN
+                or payload.get("status") in AUSGEBLENDET_WERTE
+            ):
+                continue
+            autoren[uuid.UUID(str(punkt.id))] = str(
+                payload.get("original_author") or ""
+            )
+        return autoren
+
     async def _abrufen(
         self, ids: Iterable[uuid.UUID], felder: List[str]
     ) -> List["Record"]:

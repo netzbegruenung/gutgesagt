@@ -77,7 +77,18 @@ def client(dienst, einwuerfe, gesehen, unbeantwortete, inhalte):
 
     with patch.object(
         usage_module, "get_usage_service", return_value=dienst
-    ), patch.object(usage_module, "get_content_repository", return_value=inhalte):
+    ), patch.object(
+        usage_module, "get_content_repository", return_value=inhalte
+    ), patch.object(
+        # Antworten auf eigene Aussagen (#760): eigene Tests in
+        # test_antworten_hinweis_api.py; hier ohne eigene Aussagen
+        usage_module.antworten_hinweis,
+        "statement_repository",
+        return_value=Mock(
+            get_by_author=AsyncMock(return_value=[]),
+            antwort_autoren=AsyncMock(return_value={}),
+        ),
+    ):
         yield TestClient(app)
 
 
@@ -93,6 +104,7 @@ class TestSeitLetztemBesuch:
             "unbeantwortete_aussagen_mehr": False,
             "ausformulierte_einwuerfe": 2,
             "neue_beitraege": 6,
+            "antworten_auf_eigene_aussagen": 0,
         }
         dienst.nutzung_seit_letztem_besuch.assert_awaited_once_with("kim-1")
 
@@ -165,6 +177,7 @@ class TestSeitDeinemLetztenBesuch:
             "unbeantwortete_aussagen_mehr": False,
             "ausformulierte_einwuerfe": 0,
             "neue_beitraege": 0,
+            "antworten_auf_eigene_aussagen": 0,
         }
         assert "kim-1" not in caplog.text
 
