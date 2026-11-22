@@ -110,6 +110,23 @@ describe('NavigationService.goBack', () => {
       expect(router.url).toBe('/search');
     }));
 
+    it('laesst ein Ziel der Hauptnavigation denselben Hook abwarten', fakeAsync(() => {
+      const { hook, aufrufe, fertig } = haengenderHook();
+      router.navigateByUrl('/destillieren/e-1');
+      tick();
+      service.registerBeforeBack(hook);
+
+      service.navigiereZu('/contributions');
+      tick();
+
+      expect(aufrufe()).toBe(1);
+      expect(router.url).toBe('/destillieren/e-1');
+
+      fertig();
+      tick();
+      expect(router.url).toBe('/contributions');
+    }));
+
     it('fuehrt das Haus zur Startseite, nicht eine Ebene hoeher', fakeAsync(() => {
       router.navigateByUrl('/destillieren/e-1');
       tick();

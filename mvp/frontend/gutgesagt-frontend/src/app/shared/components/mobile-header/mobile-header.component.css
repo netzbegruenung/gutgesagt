@@ -8,6 +8,11 @@
   border-bottom: 1px solid var(--linie);
   position: sticky;
   top: 0;
+  /* viewport-fit=cover (index.html): nichts unter Statusleiste oder Kamera-Aussparung */
+  box-sizing: content-box;
+  padding-top: env(safe-area-inset-top);
+  padding-left: max(4px, env(safe-area-inset-left));
+  padding-right: max(4px, env(safe-area-inset-right));
   z-index: 100;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
@@ -49,7 +54,7 @@
 /*
  * min-width: 0, damit der Titel schrumpfen darf. Ohne das ist die Mindestbreite
  * eines Flex-Elements seine Textbreite: Ein langer Titel ("Beitrag verfassen")
- * schob bei 360 px Avatar, Ordner und Menue aus dem Bild.
+ * schob bei 360 px Avatar und Beitragen aus dem Bild.
  */
 .mobile-header-title {
   flex: 1;
@@ -137,8 +142,23 @@
   font-weight: 500;
 }
 
-.menu-button {
-  margin-right: 4px;
+/* Profilbild mit ▾: zeigt, dass es ein Menue oeffnet (Konto) */
+.konto-knopf-mobil {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  padding: 0 2px 0 4px;
+  border-radius: 24px;
+}
+
+.konto-knopf-mobil .mobile-header-avatar {
+  width: 40px;
+  height: 40px;
+}
+
+.konto-pfeil {
+  color: var(--akzent-schrift);
+  margin-left: -2px;
 }
 
 /* Ensure proper touch targets */

@@ -14,6 +14,7 @@
          aria-describedby="rundgang-text"
          aria-roledescription="Rundgang-Schritt"
          cdkTrapFocus
+         [class.blase--oben]="karteOben()"
          [style.left.px]="blasenOrt().left" [style.top.px]="blasenOrt().top">
         <div class="kopf">
             <img src="marke/wegweiser.svg" alt="" width="40" height="40">
