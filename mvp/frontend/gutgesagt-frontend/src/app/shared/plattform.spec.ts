@@ -46,6 +46,9 @@ describe('plattformAusUrl', () => {
     expect(plattformAusUrl('https://social.example.org/@a@gruene.social/1')).toBe('mastodon');
     expect(plattformAusUrl('https://social.example.org/users/a/statuses/1')).toBe('mastodon');
     expect(plattformAusUrl('https://social.example.org/@a/1?lang=de#antworten')).toBe('mastodon');
+    expect(plattformAusUrl('https://social.example.org/web/@a/1')).toBe('mastodon');
+    expect(plattformAusUrl('https://social.example.org/deck/@a/1')).toBe('mastodon');
+    expect(plattformAusUrl('https://social.example.org/@a/1/embed')).toBe('mastodon');
   });
 
   it('zaehlt auf fremden Hosts nur Mastodon-Posts, keine Profile oder aehnliche Pfade', () => {
@@ -53,6 +56,7 @@ describe('plattformAusUrl', () => {
     expect(plattformAusUrl('https://medium.com/@a/titel-1a2b3c')).toBe('web');
     expect(plattformAusUrl('https://social.example.org/@a/1/reblogs')).toBe('web');
     expect(plattformAusUrl('https://example.org/blog/@a/1')).toBe('web');
+    expect(plattformAusUrl('https://social.example.org/@a@b@c/1')).toBe('web');
   });
 
   it('laesst bekannte Plattformen vor der Mastodon-Heuristik', () => {

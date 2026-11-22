@@ -53,6 +53,13 @@ describe('passtZumFilter', () => {
     }
   });
 
+  it('filtert Mastodon-Posts als Mastodon, nicht als Web', () => {
+    const mastodonPost = einwurf({ url: 'https://norden.social/@a/113456789012345678' });
+
+    expect(passtZumFilter(mastodonPost, filter({ plattformen: ['web'] }))).toBeFalse();
+    expect(passtZumFilter(mastodonPost, filter({ plattformen: ['mastodon'] }))).toBeTrue();
+  });
+
   it('blendet abgewaehlte Plattformen aus', () => {
     const ohneInstagram = filter({ plattformen: ['youtube', 'tiktok', 'web'] });
 

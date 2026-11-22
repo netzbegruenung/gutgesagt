@@ -403,6 +403,13 @@ describe('karten-daten', () => {
       expect(karte.einwurfAngaben!.linkText).toBe('beispiel-zeitung.de/artikel/1');
     });
 
+    it('nennt bei einem Mastodon-Post die Plattform, die Instanz steht im Link', () => {
+      const karte = ausEinwurf(einwurf({ url: 'https://norden.social/@a/113456789012345678' }));
+
+      expect(karte.einwurfAngaben!.herkunft).toBe('Mastodon');
+      expect(karte.einwurfAngaben!.linkText).toContain('norden.social');
+    });
+
     it('wiederholt den Link nicht als Titel', () => {
       expect(ausEinwurf(einwurf({ content: 'https://www.instagram.com/reel/ABC/' })).titel).toBeNull();
     });

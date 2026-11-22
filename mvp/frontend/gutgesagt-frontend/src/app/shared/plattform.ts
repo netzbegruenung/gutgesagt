@@ -47,12 +47,15 @@ const DOMAINS: ReadonlyArray<[Plattform, string[]]> = [
 /**
  * Heuristik fuer Mastodon-Posts auf beliebigen Instanzen: die Post-Adresse
  * `/@name/123` (auch `/@name@andere.instanz/123`, wenn eine Instanz einen
- * fremden Post zeigt) und die ActivityPub-Form `/users/name/statuses/123`.
+ * fremden Post zeigt), dieselbe mit `/web/` oder `/deck/` davor bzw. `/embed`
+ * dahinter, und die ActivityPub-Form `/users/name/statuses/123`.
  * Greift erst nach den bekannten Domains, damit etwa threads.net/@a/post/1 oder
  * tiktok.com/@a/video/1 bei ihrer Plattform bleiben. Ein blosses Profil (`/@name`)
- * zaehlt auf fremden Hosts nicht - das sagt zu wenig.
+ * zaehlt auf fremden Hosts nicht - das sagt zu wenig. Andere Fediverse-Software
+ * mit demselben Muster (etwa Pixelfed) zaehlt mit; die Auswahl bleibt aenderbar.
  */
-const MASTODON_PFAD = /^\/(@[^/@]+(@[^/]+)?|users\/[^/]+\/statuses)\/\d+\/?$/;
+const MASTODON_PFAD =
+  /^\/(?:(?:web|deck)\/)?(?:@[^/@]+(?:@[^/@]+)?|users\/[^/]+\/statuses)\/\d+(?:\/embed)?\/?$/;
 
 /**
  * Die Plattform zu einem Link, oder null ohne Link.
