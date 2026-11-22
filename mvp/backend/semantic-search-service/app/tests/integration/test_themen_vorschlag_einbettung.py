@@ -40,6 +40,7 @@ async def test_neue_aussage_bekommt_ihr_thema(real_embeddings_manager):
         real_embeddings_manager, [(b.text, list(b.themen)) for b in BEISPIELE]
     )
 
+    await service.vorbereiten()
     vorschlag = await service.vorschlagen("Auf der Autobahn sollte man 130 fahren.", 3)
 
     assert vorschlag and vorschlag[0] == "verkehr"
@@ -55,6 +56,7 @@ async def test_startbestand_leave_one_out_ueber_der_untergrenze(
     # Die Aussagen des Startbestands kennt der Service nicht: Prototypen nur aus den
     # anderen, wie ein neuer Text.
     service = _service(real_embeddings_manager, andere)
+    await service.vorbereiten()
     richtig = falsch = verpasst = 0
     for b in start:
         vorschlag = set(await service.vorschlagen(b.text, 3))

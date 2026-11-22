@@ -82,7 +82,7 @@
         <div *ngIf="themenListe.length" class="einwurf-themen">
             <button type="button" class="themen-aufklappen"
                     [attr.aria-expanded]="themenOffen" aria-controls="einwurf-themen-auswahl"
-                    (click)="themenOffen = !themenOffen">
+                    (click)="themenUmschalten()">
                 <mat-icon aria-hidden="true">{{ themenOffen ? 'expand_less' : 'expand_more' }}</mat-icon>
                 <span class="themen-aufklappen-text">
                     Thema <span class="themen-optional">(optional)</span><ng-container *ngIf="gewaehlteThemen.length">:<ng-container *ngFor="let thema of gewaehlteThemen; let letztes = last">&ngsp;<span class="themen-gewaehlt"><img *ngIf="thema.motiv" class="thema-motiv" [src]="thema.motiv" alt="" aria-hidden="true" width="16" height="16">{{ thema.name }}</span><ng-container *ngIf="!letztes">,</ng-container></ng-container></ng-container>

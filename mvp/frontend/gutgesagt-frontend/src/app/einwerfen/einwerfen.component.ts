@@ -191,10 +191,21 @@ export class EinwerfenComponent implements OnInit, OnDestroy {
       hinweis: ['', Validators.maxLength(HINWEIS_LIMIT)],
       themen: [[] as string[]],
     });
+    // Nur bei aufgeklappter Themenwahl: Wer sie nicht sieht, schickt den Hinweis nicht ab.
     this.einwurfForm
       .get('hinweis')!
       .valueChanges.pipe(takeUntilDestroyed())
-      .subscribe((hinweis: string | null) => this.themenVorschlaege.text(hinweis));
+      .subscribe(() => this.vorschlagsTextSetzen());
+  }
+
+  /** Themenwahl auf- oder zuklappen; aufgeklappt fragt sie nach Vorschlaegen zum Hinweis. */
+  themenUmschalten(): void {
+    this.themenOffen = !this.themenOffen;
+    this.vorschlagsTextSetzen();
+  }
+
+  private vorschlagsTextSetzen(): void {
+    this.themenVorschlaege.text(this.themenOffen ? this.einwurfForm.value.hinweis : '');
   }
 
   ngOnInit(): void {

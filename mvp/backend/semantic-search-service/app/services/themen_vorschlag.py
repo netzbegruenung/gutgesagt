@@ -44,6 +44,8 @@ logger = logging.getLogger(__name__)
 NLI_VORLAGE = "In diesem Satz geht es um {}."
 # So viele naechste Themen prueft das NLI-Modell; je Kandidat ein Paar, etwa 20 ms.
 NLI_KANDIDATEN = 5
+# Nach einem gescheiterten Bau so viele Sekunden bis zum naechsten Versuch.
+NEU_NACH_FEHLER = 60.0
 
 
 @dataclass(frozen=True)
@@ -61,7 +63,7 @@ class Schwellen:
 def namenstext(thema: Thema) -> str:
     """Name und Stichwoerter eines Themas als ein Text fuer den Namensvektor.
 
-    Die Stichwoerter kommen mit #754 an Thema; bis dahin nur der Name."""
+    Die Stichwoerter kommen mit #754 (PR #755) an Thema; bis dahin nur der Name."""
     stichwoerter = getattr(thema, "stichwoerter", ()) or ()
     if not stichwoerter:
         return thema.name
@@ -186,6 +188,15 @@ class ThemenVorschlagService:
     Haelt die Prototypen im Speicher und baut sie hoechstens alle `neu_nach` Sekunden
     neu, damit neue Zuordnungen von Hand ankommen. Vektoren schon eingebetteter Texte
     bleiben im Speicher; neu eingebettet werden nur neue Texte.
+
+    Gebaut wird im Hintergrund (ein Task, nie zwei zugleich): Waehrend eines Neubaus
+    gelten die alten Prototypen. Beim ersten Bau wartet ein Vorschlag hoechstens
+    `erster_bau_wartet` Sekunden und ist sonst leer.
+
+    Eingebettet wird wie ueberall im Dienst in der Ereignisschleife, nicht in einem
+    Thread: Das Einbettungsmodell teilt sich die Suche, und zwei Einbettungen zugleich
+    ueberbuchten die CPU-Threads (embedding_threads). Ein Vorschlag kostet eine
+    Einbettung (rund 30 ms); der Bau gibt die Schleife nach jedem Text frei.
     """
 
     def __init__(
@@ -196,6 +207,7 @@ class ThemenVorschlagService:
         folgerer: Optional[Folgerer] = None,
         neu_nach: float = 600.0,
         nli_wartet_hoechstens: float = 1.0,
+        erster_bau_wartet: float = 2.0,
         uhr: Callable[[], float] = time.monotonic,
     ):
         self._einbetter = einbetter
@@ -204,11 +216,13 @@ class ThemenVorschlagService:
         self._folgerer = folgerer
         self._neu_nach = neu_nach
         self._nli_wartet_hoechstens = nli_wartet_hoechstens
+        self._erster_bau_wartet = erster_bau_wartet
         self._uhr = uhr
         self._prototypen: Optional[Prototypen] = None
-        self._gebaut_um = 0.0
+        # Wann zuletzt gebaut oder vergeblich versucht; None: noch nie.
+        self._gebaut_um: Optional[float] = None
         self._vektoren: Dict[str, np.ndarray] = {}
-        self._sperre = asyncio.Lock()
+        self._bau: Optional[asyncio.Task] = None
 
     def _einbetten(self, text: str) -> np.ndarray:
         # Als float32-Array: 3 KB je Text statt rund 25 KB als Liste von floats.
@@ -218,45 +232,68 @@ class ThemenVorschlagService:
             )
         return self._vektoren[text]
 
-    def _bauen_sync(self, beispiele: List[Tuple[str, List[str]]]) -> Prototypen:
-        namen = {t.schluessel: self._einbetten(namenstext(t)) for t in THEMEN}
-        bekannt = {namenstext(t) for t in THEMEN} | {text for text, _ in beispiele}
-        # Texte, die nicht mehr im Testset stehen (geloescht, umgeordnet), vergessen.
-        self._vektoren = {t: v for t, v in self._vektoren.items() if t in bekannt}
-        return prototypen_bauen(
-            namen, [(self._einbetten(text), themen) for text, themen in beispiele]
-        )
+    async def _bauen(self) -> None:
+        """Ein Bau; scheitert er, bleiben die alten Prototypen (oder keine)."""
+        try:
+            beispiele = await self._beispiele_laden()
+            texte = [namenstext(t) for t in THEMEN] + [t for t, _ in beispiele]
+            # Texte, die nicht mehr im Testset stehen (geloescht, umgeordnet), vergessen.
+            bekannt = set(texte)
+            self._vektoren = {t: v for t, v in self._vektoren.items() if t in bekannt}
+            for text in texte:
+                if text not in self._vektoren:
+                    self._einbetten(text)
+                    await asyncio.sleep(0)
+            namen = {t.schluessel: self._vektoren[namenstext(t)] for t in THEMEN}
+            self._prototypen = prototypen_bauen(
+                namen, [(self._vektoren[text], themen) for text, themen in beispiele]
+            )
+            logger.info(
+                f"Themen-Prototypen gebaut aus {len(beispiele)} Zuordnungen von Hand"
+            )
+        except Exception as e:
+            logger.warning(f"Themen-Prototypen nicht gebaut: {type(e).__name__}")
+            # Nach einem Fehler (etwa Modell beim Start noch nicht bereit) frueher neu
+            # versuchen als nach neu_nach, aber nicht bei jeder Anfrage.
+            self._gebaut_um = self._uhr() - self._neu_nach + NEU_NACH_FEHLER
+            return
+        self._gebaut_um = self._uhr()
 
-    async def _prototypen_holen(self) -> Prototypen:
-        async with self._sperre:
-            veraltet = self._uhr() - self._gebaut_um >= self._neu_nach
-            if self._prototypen is None or veraltet:
-                try:
-                    beispiele = await self._beispiele_laden()
-                except Exception as e:
-                    if self._prototypen is None:
-                        raise
-                    # Mit den alten Prototypen weiter, beim naechsten Mal neu versuchen.
-                    logger.warning(
-                        f"Themen-Prototypen nicht neu gebaut: {type(e).__name__}"
-                    )
-                    self._gebaut_um = self._uhr()
-                    return self._prototypen
-                self._prototypen = await asyncio.to_thread(self._bauen_sync, beispiele)
-                self._gebaut_um = self._uhr()
-                logger.info(
-                    f"Themen-Prototypen gebaut aus {len(beispiele)} Zuordnungen von Hand"
-                )
-            return self._prototypen
+    def _bau_anstossen(self) -> Optional[asyncio.Task]:
+        """Startet einen Bau, wenn keiner laeuft und noch keiner war oder der letzte (auch
+        ein gescheiterter) laenger als neu_nach her ist; liefert den laufenden Bau."""
+        laeuft = self._bau is not None and not self._bau.done()
+        faellig = (
+            self._gebaut_um is None or self._uhr() - self._gebaut_um >= self._neu_nach
+        )
+        if not laeuft and faellig:
+            self._bau = asyncio.create_task(self._bauen())
+        return self._bau
+
+    async def vorbereiten(self) -> None:
+        """Baut die Prototypen vorab (etwa beim Start), damit der erste Vorschlag nicht
+        wartet."""
+        bau = self._bau_anstossen()
+        if bau is not None:
+            await asyncio.shield(bau)
 
     async def vorschlagen(self, text: str, hoechstens: int) -> List[str]:
-        """Die vorgeschlagenen Themen zu einem Text, das naechste zuerst; [] bei leerem Text."""
+        """Die vorgeschlagenen Themen zu einem Text, das naechste zuerst; [] bei leerem
+        Text oder solange es noch keine Prototypen gibt."""
         text = text.strip()
         if not text or hoechstens <= 0:
             return []
-        prototypen = await self._prototypen_holen()
-        vektor = await asyncio.to_thread(self._einbetter.encode_query, text)
-        rang = rangliste(vektor, prototypen)
+        bau = self._bau_anstossen()
+        if self._prototypen is None and bau is not None:
+            # shield: Bricht die Anfrage ab, baut der Task trotzdem fertig.
+            try:
+                await asyncio.wait_for(asyncio.shield(bau), self._erster_bau_wartet)
+            except asyncio.TimeoutError:
+                return []
+        prototypen = self._prototypen
+        if prototypen is None:
+            return []
+        rang = rangliste(self._einbetter.encode_query(text), prototypen)
         folgerungen = await self._zweite_meinung(text, rang)
         return auswaehlen(rang, self._schwellen, hoechstens, folgerungen)
 

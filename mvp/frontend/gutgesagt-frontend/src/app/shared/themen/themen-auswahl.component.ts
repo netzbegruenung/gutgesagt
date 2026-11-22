@@ -32,7 +32,7 @@ function undListe(namen: string[]): string {
               [class.vorgeschlagen]="istVorgeschlagen(thema)"
               [attr.aria-pressed]="istGewaehlt(thema)"
               [disabled]="!istGewaehlt(thema) && voll"
-              (click)="umschalten(thema)"><img *ngIf="thema.motiv" class="thema-motiv" [src]="thema.motiv" alt="" aria-hidden="true" width="18" height="18">{{ thema.name }}<span *ngIf="istVorgeschlagen(thema)" class="vorschlag-marke">vorgeschlagen</span></button>
+              (click)="umschalten(thema)"><img *ngIf="thema.motiv" class="thema-motiv" [src]="thema.motiv" alt="" aria-hidden="true" width="18" height="18">{{ thema.name }}<span *ngIf="istVorgeschlagen(thema)" class="vorschlag-marke"><span class="visually-hidden">, </span>vorgeschlagen</span></button>
     </div>
     <p class="themen-hinweis">{{ hinweis }}</p>
   `,

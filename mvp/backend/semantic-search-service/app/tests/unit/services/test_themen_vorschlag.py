@@ -15,7 +15,6 @@ from domain.themen import THEMEN
 from services.themen_vorschlag import (
     NLI_KANDIDATEN,
     NLI_VORLAGE,
-    Prototypen,
     Schwellen,
     ThemenVorschlagService,
     auswaehlen,
@@ -217,7 +216,9 @@ class TestService:
         await s.vorschlagen("Bahn", 3)
         assert len(geladen) == 1
         uhr.jetzt = 601.0
-        await s.vorschlagen("Bahn", 3)
+        # Der Neubau laeuft im Hintergrund; der Vorschlag nimmt die alten Prototypen.
+        assert await s.vorschlagen("Bahn", 3) == ["verkehr"]
+        await s.vorbereiten()
         assert len(geladen) == 2
         # Schon eingebettete Beispiele werden nicht neu eingebettet.
         assert s._einbetter.aufrufe.count("Bahn") == 3 + 1
@@ -235,15 +236,41 @@ class TestService:
         s = service(texte={"Bahn": auf("verkehr")}, uhr=uhr, laden=laden)
         await s.vorschlagen("Bahn", 3)
         uhr.jetzt = 601.0
+        await s.vorbereiten()
 
+        assert len(aufrufe) == 2
         assert await s.vorschlagen("Bahn", 3) == ["verkehr"]
 
-    async def test_scheitert_der_erste_bau_scheitert_der_vorschlag(self):
+    async def test_scheitert_der_erste_bau_leer_und_nicht_bei_jeder_anfrage_neu(self):
+        uhr = Uhr()
+        aufrufe = []
+
         async def laden():
+            aufrufe.append(1)
             raise RuntimeError("Datenbank weg")
 
-        with pytest.raises(RuntimeError):
-            await service(laden=laden).vorschlagen("Bahn", 3)
+        s = service(laden=laden, uhr=uhr)
+        assert await s.vorschlagen("Bahn", 3) == []
+        assert await s.vorschlagen("Bahn", 3) == []
+        assert len(aufrufe) == 1
+        uhr.jetzt = 601.0
+        await s.vorbereiten()
+        assert len(aufrufe) == 2
+
+    async def test_dauert_der_erste_bau_zu_lange_leer_und_er_baut_fertig(self):
+        freigabe = asyncio.Event()
+
+        async def laden():
+            await freigabe.wait()
+            return []
+
+        s = service(texte={"Bahn": auf("verkehr")}, laden=laden)
+        s._erster_bau_wartet = 0.01
+
+        assert await s.vorschlagen("Bahn", 3) == []
+        freigabe.set()
+        await s.vorbereiten()
+        assert await s.vorschlagen("Bahn", 3) == ["verkehr"]
 
     async def test_zweite_meinung_auf_den_naechsten_kandidaten(self):
         folgerer = Folgerer({"verkehr": 0.1, "klima": 0.9})
@@ -269,8 +296,3 @@ class TestService:
         await asyncio.gather(*(s.vorschlagen("Bahn", 3) for _ in range(5)))
 
         assert len(geladen) == 1
-
-
-def test_prototypen_sind_unveraenderlich_gebaut():
-    p = prototypen_bauen({"a": einheit(1, 0)}, [])
-    assert isinstance(p, Prototypen)

@@ -48,7 +48,12 @@ seinem Thema. Mit der Mitte stieg der Treffer des ersten Themas von 0,80 auf 0,9
 Stichwörtern), die Schwellen trennen deutlich besser.
 
 **Leave-one-out.** Je Aussage werden die Prototypen aus allen anderen gebaut; die Aussage
-selbst steckt nie in ihrem Prototyp.
+selbst steckt weder in ihrem Prototyp noch in der Mitte.
+
+**Optimistisch.** Schwelle, Abstand und Namensgewicht sind auf denselben 104 Aussagen gewählt,
+ohne Hold-out. 72 davon hat derselbe Agent formuliert und zugeordnet, der auch die Messung
+gebaut hat. Aussagekräftiger ist deshalb der **Startbestand** (30 Aussagen, von Menschen
+geschrieben, nicht für die Messung): Er ist unten die Leitzahl.
 
 ## Ergebnis vom 22.11.2026
 
@@ -58,15 +63,30 @@ Vorläufiges Messset, 104 Aussagen, `intfloat/multilingual-e5-base`, gewählte S
 | Stand | erstes Thema passt | eins der ersten zwei | P (höchstens 3) | R | ohne Vorschlag | Themen je Aussage |
 |---|---|---|---|---|---|---|
 | ohne Stichwörter (heute `main`) | 0,85 | 0,95 | 0,80 | 0,67 | 1 % | 1,2 |
-| mit Stichwörtern aus #754 | **0,94** | **0,98** | **0,89** | **0,72** | 2 % | 1,2 |
+| mit Stichwörtern aus #754 (PR #755) | **0,94** | **0,98** | **0,89** | **0,72** | 2 % | 1,2 |
 | nur Namen, ohne Zuordnungen von Hand | 0,68 | 0,87 | 0,65 | 0,60 | 4 % | 1,4 |
 | nur Namen mit Stichwörtern | 0,87 | 0,91 | 0,77 | 0,69 | 1 % | 1,3 |
 
-Nur der Startbestand (30 Aussagen, von Menschen geschrieben): erstes Thema 0,77 ohne und 0,87
-mit Stichwörtern, P/R 0,76/0,66 bzw. 0,85/0,70. Beim Einwerfen (höchstens zwei) liegt P um
-0,01 bis 0,02 höher bei gleichem R.
+**Leitzahl Startbestand** (30 Aussagen): erstes Thema 0,77 ohne und 0,87 mit Stichwörtern,
+P/R 0,76/0,66 bzw. 0,85/0,70. Beim Einwerfen (höchstens zwei) liegt P um 0,01 bis 0,02 höher
+bei gleichem R.
 
-Precision und Recall je Schwelle, mit Stichwörtern, höchstens drei:
+Zum Start in Produktion gibt es wenige Zuordnungen von Hand und, bis #755 gemergt ist, keine
+Stichwörter: Dann gilt etwa die Zeile „nur Namen, ohne Zuordnungen von Hand“ (P 0,65, R 0,60).
+Mit jeder Zuordnung von Hand rückt es Richtung erste Zeile.
+
+Precision / Recall je Schwelle, höchstens drei, ohne Stichwörter (heute `main`):
+
+| ab | abstand 0,03 | abstand 0,05 | abstand 0,08 | abstand 0,12 |
+|---|---|---|---|---|
+| 0,00 | 0,81 / 0,65 | 0,76 / 0,67 | 0,68 / 0,73 | 0,61 / 0,79 |
+| 0,08 | 0,82 / 0,64 | 0,79 / 0,67 | 0,71 / 0,71 | 0,66 / 0,77 |
+| **0,10** | 0,82 / 0,64 | **0,80 / 0,67** | 0,75 / 0,71 | 0,69 / 0,76 |
+| 0,14 | 0,84 / 0,61 | 0,81 / 0,63 | 0,80 / 0,66 | 0,79 / 0,69 |
+| 0,16 | 0,87 / 0,57 | 0,86 / 0,58 | 0,85 / 0,61 | 0,85 / 0,64 |
+| 0,20 | 0,88 / 0,45 | 0,86 / 0,46 | 0,87 / 0,47 | 0,86 / 0,48 |
+
+Dasselbe mit Stichwörtern (#755):
 
 | ab | abstand 0,03 | abstand 0,05 | abstand 0,08 | abstand 0,12 |
 |---|---|---|---|---|
@@ -99,6 +119,11 @@ CPU der Entwicklungs-VM, vier Threads, Median / 95 %:
 | Vorschlag (Text einbetten, 19 Prototypen vergleichen) | 31 ms / 38 ms |
 | zusätzlich NLI über fünf Kandidaten (aus) | 202 ms / 252 ms |
 | Prototypen bauen (104 Texte einbetten, alle zehn Minuten nur neue) | 1,5 s |
+
+Gemessen auf der Entwicklungs-VM, nicht auf der Ziel-VM. Eingebettet wird im Dienst wie die
+Suche in der Ereignisschleife, nicht in einem Thread (das Modell teilt sich die Suche). Der
+Bau läuft im Hintergrund, Text für Text; solange es noch keine Prototypen gibt, wartet ein
+Vorschlag höchstens zwei Sekunden und ist sonst leer.
 
 Kein neues Modell und kein neues Paket: Einbettungs- und NLI-Modell sind im Dienst ohnehin
 geladen. Im Speicher bleiben je Text des Testsets ein Vektor (768 Zahlen float32, 3 KB) und

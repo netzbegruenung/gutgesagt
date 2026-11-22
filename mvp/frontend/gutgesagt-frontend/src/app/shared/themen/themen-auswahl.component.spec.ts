@@ -103,9 +103,10 @@ describe('ThemenAuswahlComponent', () => {
     it('markiert Vorschlaege sichtbar mit Text, nicht nur mit Farbe', () => {
       vorschlagen(['verkehr']);
 
-      const chip = knopf('Verkehrvorgeschlagen');
+      const chip = knopf('Verkehr, vorgeschlagen');
       expect(chip.classList).toContain('vorgeschlagen');
-      expect(chip.querySelector('.vorschlag-marke')?.textContent).toBe('vorgeschlagen');
+      expect(chip.querySelector('.vorschlag-marke')?.textContent).toBe(', vorgeschlagen');
+      expect(chip.querySelector('.vorschlag-marke .visually-hidden')?.textContent).toBe(', ');
       expect(chip.getAttribute('aria-pressed')).toBe('false');
       expect(knopf('Klima').classList).not.toContain('vorgeschlagen');
     });
@@ -120,7 +121,7 @@ describe('ThemenAuswahlComponent', () => {
       vorschlagen(['verkehr']);
       expect(gemeldet).toEqual([]);
 
-      knopf('Verkehrvorgeschlagen').click();
+      knopf('Verkehr, vorgeschlagen').click();
 
       expect(gemeldet).toEqual([['verkehr']]);
     });

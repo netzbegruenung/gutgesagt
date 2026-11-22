@@ -204,30 +204,43 @@ def get_aussage_themen_service(
 _themen_vorschlag_service: Optional["ThemenVorschlagService"] = None
 
 
-def get_themen_vorschlag_service(
-    themen_service: AussageThemenService = Depends(get_aussage_themen_service),
-) -> "ThemenVorschlagService":
+class _EinbetterDesDienstes:
+    """Der Embeddings-Manager erst beim Einbetten geholt: Ist er noch nicht gestartet,
+    scheitert der Vorschlag im Service (leere Liste), nicht schon die Dependency."""
+
+    def encode_query(self, query: str):
+        from services.embeddings.qdrant_embeddings_manager import (
+            get_embeddings_manager,
+        )
+
+        return get_embeddings_manager().encode_query(query)
+
+
+def get_themen_vorschlag_service() -> "ThemenVorschlagService":
     """
     Der eine ThemenVorschlagService des Prozesses (#401): Er haelt die Prototypen und die
-    Vektoren der Zuordnungen von Hand im Speicher. Die Beispiele kommen aus dem Testset;
-    AussageThemenService ist zustandslos, der der ersten Anfrage reicht fuer alle.
+    Vektoren der Zuordnungen von Hand im Speicher; die Beispiele kommen aus dem Testset
+    (AussageThemenService.testset). Wirft nicht: Fehlt der Statement-Service oder das
+    Modell noch, scheitert erst der Bau bzw. die Einbettung, und der Vorschlag ist leer.
+    Die Schwellen liest er einmal beim ersten Aufruf; geaendert wirken sie nach einem
+    Neustart.
     """
     global _themen_vorschlag_service
     if _themen_vorschlag_service is None:
         from core.config import NLI_MODELL
         from services.dieselbe_behauptung.nli_modell import nli_modell
-        from services.embeddings.qdrant_embeddings_manager import (
-            get_embeddings_manager,
-        )
         from services.themen_vorschlag import Schwellen, ThemenVorschlagService
 
         einstellungen = get_settings()
 
         async def beispiele_laden():
+            themen_service = AussageThemenService(
+                get_aussage_themen_repository(), get_statement_service()
+            )
             return [(z.text, list(z.themen)) for z in await themen_service.testset()]
 
         _themen_vorschlag_service = ThemenVorschlagService(
-            einbetter=get_embeddings_manager(),
+            einbetter=_EinbetterDesDienstes(),
             beispiele_laden=beispiele_laden,
             schwellen=Schwellen(
                 einstellungen.themen_vorschlag_ab,
