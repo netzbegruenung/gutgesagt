@@ -8,6 +8,7 @@ from domain.models.commentary import CommentaryReference, Stil, Zweck
 from domain.models.content_status import ContentStatus
 from domain.models.content_type import ContentType
 from domain.models.generic_text import GenericTextReference
+from utils.aufzaehlung import mit_punkten
 
 if TYPE_CHECKING:
     from services.dublette import Dublette
@@ -184,3 +185,9 @@ class BeitragAendernRequest(BaseModel):
     @classmethod
     def ohne_leerraum_am_rand(cls, wert):
         return wert.strip() if isinstance(wert, str) else wert
+
+    # Aufzaehlung wie beim Anlegen: "* " und "- " am Zeilenanfang werden zu "• ".
+    @field_validator("text", "short_text", "long_text")
+    @classmethod
+    def aufzaehlung_mit_punkten(cls, wert):
+        return mit_punkten(wert)

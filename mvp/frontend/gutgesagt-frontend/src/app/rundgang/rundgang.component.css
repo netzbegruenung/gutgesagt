@@ -134,6 +134,11 @@ p {
     width: auto;
 }
 
+:host(.schmal) .blase.blase--oben {
+    top: 12px !important;
+    bottom: auto;
+}
+
 :host(.schmal) .pfeil {
     display: none;
 }

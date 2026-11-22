@@ -3,10 +3,11 @@ import { Router } from '@angular/router';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { EMPTY, Observable } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { EMPTY, Observable, defer } from 'rxjs';
+import { catchError, filter, map, switchMap, tap } from 'rxjs/operators';
 
 import { EinwurfBeitragSheetComponent, EinwurfBeitragSheetDaten } from './einwurf-beitrag-sheet.component';
+import { EinwurfThemenSheetComponent, EinwurfThemenSheetDaten } from './einwurf-themen-sheet.component';
 import { SCHRITT_PARAM } from '../destillieren/destillier-uebergabe.service';
 import { EinwurfService } from '../services/einwurf.service';
 import { LoggingService } from '../services/logging.service';
@@ -34,10 +35,10 @@ export class EinwurfAktionenService {
   ) {}
 
   /**
-   * Meldet einmal, wenn der Einwurf verworfen ist - dann laedt die Seite ihre Liste
-   * neu, weil er seine Stufe gewechselt hat. Alle anderen Griffe wirken sofort und
-   * melden nichts. Verwerfen startet erst mit dem Abonnement; die Seite haengt ihr
-   * eigenes Ende (takeUntil) an.
+   * Meldet einmal, wenn der Einwurf verworfen ist oder seine Themen geaendert sind -
+   * dann laedt die Seite ihre Liste neu. Alle anderen Griffe wirken sofort und melden
+   * nichts. Verwerfen und das Themen-Sheet starten erst mit dem Abonnement; die Seite
+   * haengt ihr eigenes Ende (takeUntil) an.
    */
   ausfuehren(karte: KartenDaten, aktion: EinwurfAktion): Observable<void> {
     const angaben = karte.einwurfAngaben;
@@ -65,6 +66,8 @@ export class EinwurfAktionenService {
         break;
       case 'verwerfen':
         return this.verwerfen(angaben.einwurfId);
+      case 'themenAendern':
+        return this.themenAendern(karte);
     }
     return EMPTY;
   }
@@ -86,6 +89,33 @@ export class EinwurfAktionenService {
         ariaLabel: karte.titel || 'Beiträge zu diesem Einwurf',
       });
     }
+  }
+
+  /**
+   * Die Themen im Sheet aendern; jeder Klick speichert dort gleich. Meldet nach dem
+   * Schliessen, wenn sich etwas geaendert hat, auch beim Wegwischen, und erst, wenn alles
+   * gespeichert ist.
+   */
+  private themenAendern(karte: KartenDaten): Observable<void> {
+    const angaben = karte.einwurfAngaben!;
+    return defer(() => {
+      const daten: EinwurfThemenSheetDaten = {
+        einwurfId: angaben.einwurfId,
+        themen: angaben.themen ?? [],
+        titel: karte.titel ?? angaben.linkText,
+      };
+      const ref = this.bottomSheet.open(EinwurfThemenSheetComponent, {
+        data: daten,
+        ariaLabel: 'Themen ändern',
+      });
+      return ref.afterDismissed().pipe(
+        map((geaendert) => geaendert === true || ref.instance?.geaendert === true),
+        filter((geaendert) => geaendert),
+        // Erst neu laden, wenn alles gespeichert ist: Wer gleich nach dem Klick schliesst,
+        // saehe sonst den alten Stand.
+        switchMap(() => this.einwurfService.themenGespeichert(angaben.einwurfId)),
+      );
+    });
   }
 
   private linkKopieren(link: string | null): void {

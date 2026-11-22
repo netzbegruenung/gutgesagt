@@ -3,44 +3,20 @@
     @if (aufStart) {
         <a class="skip-to-main" href="#suche" (click)="zurSuche($event)" data-testid="skip-link">Zur Suche</a>
     }
-    <mat-sidenav-container class="sidenav-container">
-        <mat-sidenav #sidenav mode="over" position="end" class="mobile-sidenav">
-            <app-mobile-menu
-                [userInfo]="userInfo"
-                [selectedProfilePictureUrl]="selectedProfilePictureUrl"
-                (closeMenu)="sidenav.close()"
-                (home)="navigateToHome()"
-                (contribute)="navigateToContributeView()"
-                (meineBeitraege)="navigateToMeineBeitraege()"
-                (einwerfen)="navigateToEinwerfenView()"
-                (fangkorb)="navigateToFangkorbView()"
-                (login)="login()"
-                (loginToContribute)="loginWithReturnUrl('/contribute')"
-                (logout)="logout()"
-                (help)="openHelpDialog()"
-                (rundgang)="rundgangStarten($event)"
-                (profilbild)="openProfilbildDialog()"
-                (feedback)="openFeedbackDialog()">
-            </app-mobile-menu>
-        </mat-sidenav>
+    <main id="hauptinhalt" class="main mat-elevation-z8" [class.mit-unterleiste]="isMobile || isTablet">
+        <!-- Kopf am Handy: Pfeil bzw. Logo, Titel, Profilbild (Konto) und (+) -->
+        <app-mobile-header
+            *ngIf="isMobile || isTablet"
+            [userInfo]="userInfo"
+            [selectedProfilePictureUrl]="selectedProfilePictureUrl"
+            (login)="login()"
+            [beitragenNeu]="rundgang.beitragenNeu()"
+            (contribute)="navigateToContributeView()">
+        </app-mobile-header>
 
-        <mat-sidenav-content>
-            <main id="hauptinhalt" class="main mat-elevation-z8">
-                <!-- Mobile Header - Only shown on mobile devices -->
-                <app-mobile-header
-                    *ngIf="isMobile || isTablet"
-                    [userInfo]="userInfo"
-                    [selectedProfilePictureUrl]="selectedProfilePictureUrl"
-                    (openMenu)="toggleMobileMenu()"
-                    (login)="login()"
-                    [beitragenNeu]="rundgang.beitragenNeu()"
-                    (logout)="logout()"
-                    (contribute)="navigateToContributeView()">
-                </app-mobile-header>
-
-                <!-- Desktop Header - Hidden on mobile -->
-                <div class="component-box" *ngIf="!isMobile && !isTablet">
-                    <div class="header" [class.header--titel-lang]="titelLang">
+        <!-- Kopf am Desktop -->
+        <div class="component-box" *ngIf="!isMobile && !isTablet">
+            <div class="header" [class.header--titel-lang]="titelLang">
                 <div class="left-header-box">
                     <button mat-icon-button
                             *ngIf="showBackButton"
@@ -50,11 +26,11 @@
                         <mat-icon>arrow_back</mat-icon>
                     </button>
                     <!--
-                        Das Logo ist der Weg zur Startseite (#620, statt "Start" rechts im
-                        Kopf); zugaenglicher Name "Startseite". Es steht vor der
-                        Ueberschrift, nicht darin, damit sie weiter nur die Seite nennt
-                        ("Fangkorb"). Ueber den NavigationService statt per routerLink:
-                        Die Destillier-Ansicht soll erst ihren Satz speichern duerfen.
+                        Das Logo ist der Weg zur Startseite (#620); zugaenglicher Name
+                        "Startseite". Es steht vor der Ueberschrift, nicht darin, damit sie
+                        weiter nur die Seite nennt ("Fangkorb"). Ueber den NavigationService
+                        statt per routerLink: Die Destillier-Ansicht soll erst ihren Satz
+                        speichern duerfen.
                     -->
                     <a class="logo-link" href="/" aria-label="Startseite" data-testid="logo-startseite"
                        (click)="$event.preventDefault(); zurStartseite()">
@@ -65,128 +41,42 @@
                     </h1>
                 </div>
 
+                <!--
+                    Navigation Variante 3 (22.11.2026): dieselben Ziele wie in der unteren
+                    Leiste am Handy, sichtbar mit Icon und Text: Suchen, Einwerfen, Fangkorb,
+                    Meine Beitraege, [+ Beitragen], Mehr. Das Profilbild mit Namen oeffnet
+                    nur noch das Konto.
+                -->
                 <div class="right-header-box">
-                    <!-- Anonym nur "Anmelden": kein "Nicht angemeldet", kein Avatar-Platzhalter (#599) -->
-                    <span class="user-info-compact" *ngIf="userInfo?.isAuthenticated">
-                        <span class="welcome-text">Hallo </span>
-                        <span class="text-bold">{{ userInfo?.userName }}</span>
-                    </span>
+                    <app-hauptnavigation modus="kopf">
+                        @if (userInfo?.isAuthenticated) {
+                            <button mat-raised-button class="dark-green-button beitragen-knopf" (click)="navigateToContributeView()"
+                                    [matTooltip]="neuHinweis" [matTooltipDisabled]="!rundgang.beitragenNeu()">
+                                <mat-icon>add</mat-icon> <span class="beitragen-text">Beitragen</span>
+                                <!-- Neu-Punkt, bis Mitmachen beantwortet ist (#587); was er heisst,
+                                     sagt der Tooltip, fuer Screenreader als Beschreibung (#644) -->
+                                @if (rundgang.beitragenNeu()) {
+                                    <span class="neu-punkt" aria-hidden="true"></span>
+                                }
+                            </button>
+                        } @else if (!aufAnmeldeseite) {
+                            <!-- Anonym nur "Anmelden": kein "Nicht angemeldet", kein Avatar-Platzhalter (#599) -->
+                            <button mat-raised-button class="dark-green-button anmelden-knopf" (click)="login()">
+                                Anmelden
+                            </button>
+                        }
+                    </app-hauptnavigation>
 
-                    <!--
-                        Angemeldet oeffnet der Avatar ein kleines Profilmenue wie mobil
-                        (Einwerfen, Fangkorb, Meine Beitraege ... Abmelden); frueher wuerfelte ein Klick ein
-                        neues Bild. Ohne Anmeldung gibt es ihn nicht: Der Weg zum
-                        Anmelden ist der Knopf daneben (#343, #599).
-                    -->
-                    <button *ngIf="userInfo?.isAuthenticated"
-                        type="button"
-                        class="avatar-container avatar-klickbar"
-                        [matMenuTriggerFor]="profilmenue"
-                        aria-label="Profilmenü öffnen">
-                        <img [src]="selectedProfilePictureUrl"
-                            alt="Profilbild"
-                            class="profile-avatar" />
-                    </button>
-                    <!--
-                        Schnell einwerfen und Fangkorb stehen hier statt als zwei unbeschriftete
-                        Symbole im Kopf (#620); auf der Beitragen-Seite gibt es sie ausserdem.
-                    -->
-                    <mat-menu #profilmenue="matMenu">
-                        <button mat-menu-item type="button" class="profilmenue-eintrag"
-                            (click)="navigateToEinwerfenView()" data-testid="einwerfen-eintrag">
-                            <mat-icon aria-hidden="true">{{ menueIcons.einwerfen }}</mat-icon>
-                            <span>Schnell einwerfen</span>
+                    @if (userInfo?.isAuthenticated) {
+                        <app-konto-menue #konto></app-konto-menue>
+                        <button type="button" class="konto-knopf" [matMenuTriggerFor]="konto.menue"
+                                aria-haspopup="menu" data-testid="konto-knopf">
+                            <img [src]="selectedProfilePictureUrl" alt="" class="profile-avatar konto-avatar" />
+                            <span class="visually-hidden">Profilmenü: </span>
+                            <span class="konto-name">{{ userInfo?.userName }}</span>
+                            <mat-icon class="konto-pfeil" aria-hidden="true">expand_more</mat-icon>
                         </button>
-                        <button mat-menu-item type="button" class="profilmenue-eintrag"
-                            (click)="navigateToFangkorbView()" data-testid="fangkorb-eintrag">
-                            <mat-icon aria-hidden="true">{{ menueIcons.fangkorb }}</mat-icon>
-                            <span>Fangkorb</span>
-                        </button>
-                        <button mat-menu-item type="button" class="profilmenue-eintrag"
-                            (click)="navigateToMeineBeitraege()">
-                            <mat-icon aria-hidden="true">{{ menueIcons.meineBeitraege }}</mat-icon>
-                            <span>Meine Beiträge</span>
-                        </button>
-                        <button mat-menu-item type="button" class="profilmenue-eintrag" (click)="openProfilbildDialog()">
-                            <mat-icon>face</mat-icon>
-                            <span>Profilbild wählen</span>
-                        </button>
-                        <button mat-menu-item type="button" class="profilmenue-eintrag" (click)="navigateToEinwilligung()">
-                            <mat-icon>fact_check</mat-icon>
-                            <span>{{ datenschutzEinstellungen }}</span>
-                        </button>
-                        <button mat-menu-item type="button" class="profilmenue-eintrag" (click)="logout()">
-                            <mat-icon>logout</mat-icon>
-                            <span>Abmelden</span>
-                        </button>
-                    </mat-menu>
-
-                    <!--
-                        Desktop-Kopf in einer Zeile: beschriftete Textlinks (Admin, Hier fehlt
-                        eine Antwort, Feedback, Hilfe) und der eine Primaerknopf.
-                        Abmelden, Schnell einwerfen und Fangkorb stehen im Profilmenue
-                        (#512, #620).
-                    -->
-                    <ng-container *ngIf="userInfo?.isAuthenticated">
-                        <!-- Unter 1200 px werden die Textlinks zu runden Icon-Knoepfen, der
-                             Text bleibt fuer Screenreader (kopf-text). -->
-                        <a class="header-link" *ngIf="userInfo?.isAdmin" routerLink="/admin/dashboard" matTooltip="Admin"
-                           [matTooltipDisabled]="!kopfSchmal">
-                            <mat-icon class="kopf-icon" aria-hidden="true">admin_panel_settings</mat-icon>
-                            <span class="kopf-text">Admin</span>
-                            <app-offene-meldungen-zahl></app-offene-meldungen-zahl>
-                        </a>
-
-                        <!-- Auf der Seite selbst als aktiv markiert (aria-current, #645) -->
-                        <a class="header-link" [routerLink]="hierFehltEineAntwortPfad" matTooltip="Hier fehlt eine Antwort"
-                           routerLinkActive="header-link--aktiv" ariaCurrentWhenActive="page"
-                           [matTooltipDisabled]="!kopfSchmal">
-                            <mat-icon class="kopf-icon" aria-hidden="true">contact_support</mat-icon>
-                            <span class="kopf-text">Hier fehlt eine Antwort</span>
-                        </a>
-
-                        <button mat-raised-button class="dark-green-button beitragen-knopf" (click)="navigateToContributeView()"
-                                [matTooltip]="neuHinweis" [matTooltipDisabled]="!rundgang.beitragenNeu()">
-                            <mat-icon>add</mat-icon> <span class="beitragen-text">Beitragen</span>
-                            <!-- Neu-Punkt, bis Mitmachen beantwortet ist (#587); was er heisst,
-                                 sagt der Tooltip, fuer Screenreader als Beschreibung (#644) -->
-                            @if (rundgang.beitragenNeu()) {
-                                <span class="neu-punkt" aria-hidden="true"></span>
-                            }
-                        </button>
-                    </ng-container>
-                    <ng-container *ngIf="!userInfo?.isAuthenticated && !aufAnmeldeseite">
-                        <button mat-raised-button class="dark-green-button" (click)="login()">
-                            Anmelden
-                        </button>
-                    </ng-container>
-
-                    <!-- Feedback und Hilfe als Textlinks wie "Hier fehlt eine Antwort": Drei runde
-                         Symbole ohne Beschriftung waren nicht zu deuten (#599); unter 1200 px
-                         werden sie wie die anderen Textlinks zu runden Icon-Knoepfen. -->
-                    <button type="button" class="header-link" (click)="openFeedbackDialog()"
-                        matTooltip="Feedback" [matTooltipDisabled]="!kopfSchmal" data-testid="feedback-knopf">
-                        <mat-icon class="kopf-icon" aria-hidden="true">feedback</mat-icon>
-                        <span class="kopf-text">Feedback</span>
-                    </button>
-
-                    <button type="button" class="header-link hilfe-knopf" (click)="openHelpDialog()"
-                        matTooltip="Hilfe" [matTooltipDisabled]="!kopfSchmal">
-                        <mat-icon class="kopf-icon" aria-hidden="true">help_outline</mat-icon>
-                        <span class="kopf-text">Hilfe</span>
-                    </button>
-
-                    <!-- Hell/dunkel, klein am Ende der Zeile; ohne eigene Wahl gilt das Geraet -->
-                    <app-farbschema-knopf></app-farbschema-knopf>
-
-                    <!--
-                        Hier standen ausserdem ein Beitragen- und ein Menue-Knopf mit
-                        *ngIf="isMobile || isTablet" - innerhalb dieses Blocks, der
-                        selbst nur bei !isMobile && !isTablet gerendert wird. Die
-                        Breakpoints sind disjunkt, die Bedingung war also nie wahr.
-                        Beide Knoepfe gibt es mobil im eigenen Kopf (app-mobile-header).
-                    -->
-
+                    }
                 </div>
             </div>
         </div>
@@ -199,8 +89,11 @@
 
         <app-footer></app-footer>
     </main>
-        </mat-sidenav-content>
-    </mat-sidenav-container>
+
+    <!-- Untere Leiste am Handy (Variante 3), ausserhalb von main: fest am unteren Rand -->
+    @if (isMobile || isTablet) {
+        <app-hauptnavigation modus="leiste"></app-hauptnavigation>
+    }
 </div>
 
 <!-- Rundgaenge (#389); die Schritte stehen in rundgang-daten.ts. Erst geladen, wenn einer

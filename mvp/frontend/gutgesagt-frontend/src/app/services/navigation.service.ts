@@ -130,6 +130,14 @@ export class NavigationService {
   }
 
   /**
+   * Ein Ziel der Hauptnavigation (Kopf am Desktop, untere Leiste am Handy). Wartet
+   * denselben Hook ab wie Pfeil und Logo, damit ein offener Satz nicht verloren geht.
+   */
+  async navigiereZu(pfad: string): Promise<void> {
+    await this.mitVorherErledigen(() => this.router.navigateByUrl(pfad));
+  }
+
+  /**
    * Erst erledigen, was die Seite angemeldet hat, dann navigieren - und nur
    * einmal zugleich.
    *

@@ -10,6 +10,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError, BehaviorSubject } from 'rxjs';
 import { MatDialogModule } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
+import { BreakpointObserver } from '@angular/cdk/layout';
 
 describe('AppComponent - Anonymous User Functionality', () => {
   let component: AppComponent;
@@ -28,7 +29,7 @@ describe('AppComponent - Anonymous User Functionality', () => {
     );
 
     const navigationServiceSpy = jasmine.createSpyObj('NavigationService',
-      ['navigateToLogin', 'navigateToContribute', 'navigateToMeineBeitraege']
+      ['navigateToLogin', 'navigateToContribute', 'navigateToMeineBeitraege', 'navigiereZu', 'navigateHome']
     );
 
     const routerSpy = jasmine.createSpyObj('Router', ['navigate', 'createUrlTree', 'serializeUrl'], {
@@ -49,6 +50,8 @@ describe('AppComponent - Anonymous User Functionality', () => {
         { provide: NavigationService, useValue: navigationServiceSpy },
         { provide: Router, useValue: routerSpy },
         { provide: LoggingService, useValue: loggingServiceSpy },
+        // Desktop-Kopf, unabhaengig von der Fenstergroesse des Testbrowsers
+        { provide: BreakpointObserver, useValue: { observe: () => of({ matches: false, breakpoints: {} }) } },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -99,7 +102,7 @@ describe('AppComponent - Anonymous User Functionality', () => {
 
       const compiled: HTMLElement = fixture.nativeElement;
       expect(compiled.textContent).not.toContain('Nicht angemeldet');
-      expect(compiled.querySelector('.right-header-box .avatar-container')).toBeNull();
+      expect(compiled.querySelector('[data-testid="konto-knopf"]')).toBeNull();
       expect(compiled.querySelector('.right-header-box .user-info-compact')).toBeNull();
       expect(compiled.textContent).toContain('Anmelden');
     });
@@ -174,7 +177,8 @@ describe('AppComponent - Anonymous User Functionality', () => {
       const compiled = fixture.nativeElement;
       // Check for username display instead of "Willkommen" as the template shows username
       expect(compiled.textContent).toContain('Test User');
-      expect(compiled.textContent).toContain('Abmelden');
+      // Abmelden steht im Profilmenue am Profilbild (app.component.kopf.spec.ts)
+      expect(compiled.querySelector('[data-testid="konto-knopf"]')).not.toBeNull();
     });
 
     it('should show "Beitragen" button for authenticated users', () => {
@@ -228,7 +232,7 @@ describe('AppComponent - Anonymous User Functionality', () => {
 
       if (myContribLink) {
         (myContribLink as HTMLElement).click();
-        expect(navigationService.navigateToMeineBeitraege).toHaveBeenCalled();
+        expect(navigationService.navigiereZu).toHaveBeenCalledWith('/contributions');
       } else {
         // If link not found, might be in mobile menu or not visible
         pending('Link element not found in current view');

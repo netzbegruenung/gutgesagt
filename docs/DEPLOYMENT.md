@@ -187,6 +187,10 @@ Behaviour change on rollout: a system where a variable is already `true` (for ex
 `SEMANTIC_SEARCH_PUNKTE_AKTIV=true` on test) has that function **off** after the update until an
 admin switches it on. Before switching on Punkte or Abzeichen on production: DSFA decided
 (`docs/DSFA.md`, section 7).
+`SEMANTIC_SEARCH_HERKUNFT_PRUEFEN_AKTIV` (#759) defaults to `true`, since checking links involves
+no personal data; the Schalter is still off until an admin switches it on. Once on, the semantic
+service makes outbound HTTP(S) requests to the hosts of the Herkünfte; where egress is
+restricted, the list shows them as „nicht erreichbar“.
 
 ### 🚧 Updating Production
 

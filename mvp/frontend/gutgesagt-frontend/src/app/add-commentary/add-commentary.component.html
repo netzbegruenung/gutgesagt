@@ -28,6 +28,8 @@
                               cdkTextareaAutosize cdkAutosizeMinRows="4" cdkAutosizeMaxRows="16"></textarea>
                     <mat-hint *ngIf="textLaenge" class="plattform-hinweis"
                               [class.zu-lang]="textLaenge > plattformGrenze">{{ plattformHinweis }}</mat-hint>
+                    <!-- Solange das Feld leer ist; beim Tippen steht hier der Plattform-Hinweis -->
+                    <mat-hint *ngIf="!textLaenge" class="aufzaehlung-hinweis">{{ aufzaehlungHinweis }}</mat-hint>
                     <mat-hint align="end">{{ textLaenge }} / {{ textMax }}</mat-hint>
                     <mat-error *ngIf="commentaryForm.get('text')?.hasError('required')">Der Kommentar fehlt.</mat-error>
                     <mat-error *ngIf="commentaryForm.get('text')?.hasError('minlength')">Mindestens 10 Zeichen.</mat-error>
@@ -73,6 +75,7 @@
                         <textarea matInput id="lang" formControlName="lang" [attr.maxlength]="langMax"
                                   placeholder="Mit Begründung und Herkunft"
                                   cdkTextareaAutosize cdkAutosizeMinRows="4" cdkAutosizeMaxRows="20"></textarea>
+                        <mat-hint class="aufzaehlung-hinweis">{{ aufzaehlungHinweis }}</mat-hint>
                         <mat-hint align="end">{{ langLaenge }} / {{ langMax }}</mat-hint>
                         <mat-error *ngIf="commentaryForm.get('lang')?.hasError('maxlength')">Höchstens {{ langMax }} Zeichen.</mat-error>
                     </mat-form-field>
@@ -100,6 +103,12 @@
                         <app-themen-auswahl [themen]="themenWahl.liste" [gewaehlt]="commentaryForm.value.themen"
                                             beschriftung="Themen der neuen Aussage"
                                             (gewaehltChange)="themenWahl.setzen($event)"></app-themen-auswahl>
+                    </div>
+                    <!-- Eine vorhandene Aussage: ihre Themen, aenderbar wie auf der Ergebnisseite (gelten fuer alle Beitraege zu ihr) -->
+                    <div *ngIf="themenWahl.vorhandene as vorhanden" class="themen-feld themen-der-aussage">
+                        <span class="feld-beschriftung">Themen der Aussage</span>
+                        <app-aussage-themen [aussage]="vorhanden"></app-aussage-themen>
+                        <p class="themen-hinweis">Gelten für alle Beiträge zu dieser Aussage.</p>
                     </div>
                 </div>
 

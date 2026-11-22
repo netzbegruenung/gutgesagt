@@ -269,6 +269,18 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
 - **TOM:** Platzhalter „Bild laden“, das Bild lädt erst nach Klick und nur für dieses eine Bild;
   der Klick wird nicht gemerkt (DSE „Bilder von fremden Servern“).
 
+### T12 Herkunft prüfen (gebaut, ausgeschaltet)
+
+- **Zweck:** tote oder umgezogene Links unter „Herkunft“ für Admins auflisten (#759).
+- **Personenbezug:** keiner. Der Dienst ruft die Adressen der Herkünfte nachts selbst ab, ohne
+  Bezug zu einer Person: kein Cookie, ein User-Agent nur mit dem Namen des Werkzeugs
+  (`GutGesagt-Herkunftspruefung/1.0`). Der fremde Server sieht die IP-Adresse des Servers von
+  Gut gesagt, nicht die einer Person. Gespeichert werden Adresse, Ergebnis, Status, Ziel und
+  Zeitpunkte (`herkunft_pruefung`), ohne Kennung oder Beitrag.
+- **TOM:** Schalter `herkunft_pruefen` (Standard aus); nur http/https, keine internen Adressen,
+  auch nicht nach Weiterleitungen (`utils/sicherer_abruf.py`); höchstens ein Abruf je Sekunde.
+  Als Eintrag geführt, weil der Dienst damit fremde Server anspricht.
+
 ## Offen
 
 Gesammelt in DSFA 8.6: AV-Vertrag (F1), SMTP-Server (F2), Verschlüsselung der Sicherungen (F3),
