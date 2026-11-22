@@ -262,10 +262,12 @@ describe('RundgangComponent', () => {
       flush();
     }));
 
-    it('gibt den Fokus an den Hilfe-Knopf, wenn der Ausgangspunkt weg ist (Start aus der Hilfe)', fakeAsync(() => {
+    it('gibt den Fokus an „Mehr“, wenn der Ausgangspunkt weg ist (Start aus Hilfe oder Menü)', fakeAsync(() => {
+      const navigation = document.createElement('app-hauptnavigation');
       const hilfe = document.createElement('button');
-      hilfe.className = 'hilfe-knopf';
-      seite.appendChild(hilfe);
+      hilfe.className = 'mehr-knopf';
+      navigation.appendChild(hilfe);
+      seite.appendChild(navigation);
       ausloeser.focus();
       starten();
       ausloeser.remove();
@@ -332,6 +334,22 @@ describe('RundgangComponent', () => {
       expect(stil.right).toBe('12px');
       expect(b.querySelector('.pfeil')).toBeNull();
       expect(b.textContent).toContain('Text schmal');
+      flush();
+    }));
+
+    // Navigation 22.11.2026: „Mehr“ steht fest in der unteren Leiste, Scrollen hilft nicht
+    it('stellt die Karte nach oben, wenn das Ziel fest am unteren Rand steht', fakeAsync(() => {
+      const eins = seite.querySelector('#probe-eins') as HTMLElement;
+      eins.style.position = 'fixed';
+      eins.style.top = 'auto';
+      eins.style.bottom = '0px';
+      starten(0);
+      const b = blase()!;
+      expect(b.classList).toContain('blase--oben');
+      expect(getComputedStyle(b).top).toBe('12px');
+      // Der Kegel wird nicht gekappt: Er umfasst das ganze Ziel
+      const r = eins.getBoundingClientRect();
+      expect(kegel()!.getBoundingClientRect().height).toBeCloseTo(r.height + 16, 0);
       flush();
     }));
 

@@ -13,6 +13,11 @@ ein Fluent-Emoji im Stil der Meilensteine, bei Europa eine eigene Zeichnung
 (public/themen/HINWEIS-EUROPA.txt). Es ist rein dekorativ, der Name steht immer
 daneben. Dass jedes Thema eins hat und die Datei existiert, pruefen
 tests/unit/domain/test_themen.py und scripts/tests/test_themen_motive.py.
+
+Die Stichwoerter sind gaengige Begriffe aus der Kommentarspalten-Debatte zum Thema. Sie
+haengen nicht an Aussagen, sondern ordnen nur kurze Sucheingaben einem Thema zu
+("Alles zum Thema", domain/themen_abgleich.py, #754). Ein Begriff steht bei genau
+einem Thema; das prueft test_themen.py.
 """
 
 import json
@@ -38,6 +43,7 @@ class Thema:
     schluessel: str
     name: str
     motiv: str
+    stichwoerter: Tuple[str, ...] = ()
 
 
 class Zuordnungsart(StrEnum):
@@ -56,7 +62,13 @@ class ThemaUngueltig(Validierungsfehler):
 def _laden() -> Tuple[Thema, ...]:
     with _DATEI.open(encoding="utf-8") as datei:
         return tuple(
-            Thema(e["schluessel"], e["name"], e["motiv"]) for e in json.load(datei)
+            Thema(
+                e["schluessel"],
+                e["name"],
+                e["motiv"],
+                tuple(e.get("stichwoerter", ())),
+            )
+            for e in json.load(datei)
         )
 
 

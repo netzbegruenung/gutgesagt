@@ -327,6 +327,10 @@ _Avoid_: Sammlung, Galerie, Profil
 Wie ein Thema an eine Aussage kam: von Hand durch eine Person oder später durch eine Automatik. Wer zugeordnet hat und wann, wird nicht gespeichert.
 _Avoid_: Quelle, Herkunft (das ist die Angabe, worauf sich ein Beitrag stützt)
 
+**Stichwort**:
+Ein gängiger Begriff aus der Kommentarspalten-Debatte, der zu genau einem Thema gehört, etwa „Wärmepumpe“ zu „Energie und Heizen“; jedes Thema hat fünf bis zwölf. Stichwörter hängen nicht an Aussagen, sie sind kein freies Schlagwort: Sie ordnen nur kurze Sucheingaben aus einem bis drei Wörtern einem Thema zu. Dann steht über den Treffern „Alles zum Thema“ mit den meistgenutzten Aussagen des Themas, auch wenn die Suche selbst nichts findet; der Name des Themas zählt dabei wie ein Stichwort.
+_Avoid_: Tag, Schlagwort, Keyword
+
 **Testset**:
 Die Zuordnungen von Hand mit dem Text ihrer Aussage, als Datei für Admins. Damit wird geprüft, wie gut spätere Themenvorschläge treffen. Es enthält keine Personendaten; Aussagen aus Suchanfragen gehören nicht dazu.
 _Avoid_: Eval-Set, Trainingsdaten, Goldstandard

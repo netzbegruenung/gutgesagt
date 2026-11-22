@@ -129,3 +129,14 @@ async def test_suche_ohne_einzelne_suchanfrage_mit_gefragter(
     )
 
     assert {t.id for t in treffer} == {von_person, beantwortet, gefragt}
+
+
+async def test_kuratierte_mit_ids_nur_die_darunter(statement_service, bestand):
+    """Die Aussagen eines Themas (#754): Filter nach IDs und kuratiert, in Qdrant."""
+    von_person, beantwortet, einzeln, gefragt = bestand
+
+    aussagen = await statement_service.kuratierte([von_person, einzeln, gefragt])
+
+    # Die unbeantworteten Suchanfragen fallen weg, auch wenn ihre ID dabei ist.
+    assert {a.id for a in aussagen} == {von_person}
+    assert await statement_service.kuratierte([]) == []

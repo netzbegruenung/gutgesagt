@@ -3,14 +3,13 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { ActivatedRoute, Router, RouterLinkActive } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { MatDialog } from '@angular/material/dialog';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { AppComponent } from './app.component';
 import { AuthService, UserInfo } from './auth/auth.service';
 import { NavigationService } from './services/navigation.service';
-import { FarbschemaService } from './services/farbschema.service';
 import { FeedbackDialogComponent } from './shared/feedback/feedback-dialog.component';
 import {
   ALTE_PROFILBILD_SCHLUESSEL,
@@ -26,9 +25,9 @@ import { ZuTunService } from './services/zu-tun.service';
 import { ModerationService } from './services/moderation.service';
 
 /**
- * Der Desktop-Kopf aus den Befunden der Testsessions (#343): ein Weg zum Anmelden,
- * der Avatar wuerfelt nicht, sondern oeffnet angemeldet ein Profilmenue (Meine
- * Beitraege, Abmelden), und der Knopf "Feedback" ist fuer alle erreichbar.
+ * Der Desktop-Kopf: ein Weg zum Anmelden (#343), und seit der Navigation Variante 3
+ * (22.11.2026) die Ziele sichtbar mit Icon und Text. Das Profilbild oeffnet nur das
+ * Konto, Hilfe, Feedback und Co. stehen unter "Mehr".
  */
 describe('AppComponent - Desktop-Kopf', () => {
   let fixture: ComponentFixture<AppComponent>;
@@ -60,8 +59,8 @@ describe('AppComponent - Desktop-Kopf', () => {
     return fixture.nativeElement.querySelector('.header') as HTMLElement;
   }
 
-  function avatar(): HTMLElement {
-    return kopf().querySelector('.avatar-container') as HTMLElement;
+  function konto(): HTMLElement {
+    return kopf().querySelector('[data-testid="konto-knopf"]') as HTMLElement;
   }
 
   beforeEach(async () => {
@@ -76,6 +75,7 @@ describe('AppComponent - Desktop-Kopf', () => {
       'navigateToEinwerfen',
       'navigateToFangkorb',
       'navigateHome',
+      'navigiereZu',
       'goBack',
     ]);
     dialog = jasmine.createSpyObj('MatDialog', ['open']);
@@ -104,31 +104,57 @@ describe('AppComponent - Desktop-Kopf', () => {
       .compileComponents();
   });
 
+  /** Sichtbarer Text ohne die Namen der Material-Icons, Leerraum zusammengezogen. */
+  function text(e: Element): string {
+    const kopie = e.cloneNode(true) as HTMLElement;
+    kopie.querySelectorAll('mat-icon, .visually-hidden').forEach((i) => i.remove());
+    return kopie.textContent!.replace(/\s+/g, ' ').trim();
+  }
+
+  /** Einträge eines offenen Menüs (Overlay). */
+  function menueTexte(selektor: string): string[] {
+    return Array.from(document.querySelectorAll(`${selektor} [mat-menu-item]`)).map(text);
+  }
+
+  async function klickUndWarten(element: HTMLElement): Promise<void> {
+    element.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  function mehrKnopf(): HTMLElement {
+    return kopf().querySelector('app-hauptnavigation .mehr-knopf') as HTMLElement;
+  }
+
+  /** Sichtbarer Text der Navigation im Kopf, in der Reihenfolge der Anzeige. */
+  function navigationTexte(): string[] {
+    return Array.from(
+      kopf().querySelectorAll('app-hauptnavigation .ziel-text, app-hauptnavigation .dark-green-button'),
+    ).map(text);
+  }
+
   describe('Besucher', () => {
     beforeEach(() => starten(BESUCHER));
 
-    it('hat genau einen Weg zum Anmelden: den Knopf, und keinen Avatar (#599)', () => {
+    it('hat genau einen Weg zum Anmelden: den Knopf, und kein Profilbild (#599)', () => {
       const anmelden = Array.from(kopf().querySelectorAll('button, [role="button"]')).filter(
         (e) => e.textContent?.includes('Anmelden') || e.getAttribute('aria-label') === 'Anmelden'
       );
       expect(anmelden.length).toBe(1);
       expect(anmelden[0].tagName).toBe('BUTTON');
 
-      expect(avatar()).toBeNull();
+      expect(konto()).toBeNull();
       expect(kopf().textContent).not.toContain('Nicht angemeldet');
     });
 
     it('meldet nur ueber einen Klick im Kopf an, egal wie das Element beschriftet ist', () => {
       const komponente = fixture.componentInstance;
       const anmelden = spyOn(komponente, 'login');
-      const anmeldenMitZiel = spyOn(komponente, 'loginWithReturnUrl');
-      // Der Umschalter hell/dunkel setzt das Attribut am Testdokument und den localStorage
-      spyOn(TestBed.inject(FarbschemaService), 'umschalten');
 
-      const klickbar = kopf().querySelectorAll('button, a, [role="button"], [tabindex], .avatar-container, img');
+      const klickbar = kopf().querySelectorAll('button, a, [role="button"], [tabindex], img');
       klickbar.forEach((e) => (e as HTMLElement).click());
 
-      expect(anmelden.calls.count() + anmeldenMitZiel.calls.count()).toBe(1);
+      expect(anmelden.calls.count()).toBe(1);
     });
 
     // #620: Das Logo ist der Weg zur Startseite, "Start" im Kopf entfaellt
@@ -144,11 +170,25 @@ describe('AppComponent - Desktop-Kopf', () => {
       expect(navigation.navigateHome).toHaveBeenCalledTimes(1);
     });
 
-    it('sieht den Knopf Feedback und oeffnet damit das Formular', () => {
-      const knopf = kopf().querySelector('[data-testid="feedback-knopf"]') as HTMLElement;
-      expect(knopf.textContent).toContain('Feedback');
+    // Navigation Variante 3 (22.11.2026): reduziert, aber dieselbe Ordnung wie angemeldet
+    it('zeigt Suchen, Hilfe, Anmelden und Mehr, ohne die Ziele fuer Angemeldete', () => {
+      expect(navigationTexte()).toEqual(['Suchen', 'Hilfe', 'Anmelden', 'Mehr']);
+    });
 
-      knopf.click();
+    it('oeffnet die Hilfe direkt und Feedback unter "Mehr"', async () => {
+      (kopf().querySelector('app-hauptnavigation .hilfe-knopf') as HTMLElement).click();
+      expect(dialog.open).toHaveBeenCalledTimes(1);
+
+      await klickUndWarten(mehrKnopf());
+      expect(menueTexte('.mehr-menue')).toEqual([
+        jasmine.stringContaining('Rundgang Antwort finden'),
+        jasmine.stringContaining('Rundgang Selbst beitragen'),
+        'Feedback',
+        jasmine.stringMatching(/Dunkel anzeigen|Hell anzeigen/),
+      ]);
+      (Array.from(document.querySelectorAll('.mehr-menue .mehr-eintrag')) as HTMLElement[])
+        .find((e) => e.textContent!.includes('Feedback'))!
+        .click();
 
       expect(dialog.open).toHaveBeenCalledWith(FeedbackDialogComponent, jasmine.anything());
     });
@@ -179,104 +219,89 @@ describe('AppComponent - Desktop-Kopf', () => {
   describe('Angemeldet', () => {
     beforeEach(() => starten(ANGEMELDET));
 
-    it('markiert den Kopf-Link "Hier fehlt eine Antwort" auf seiner Seite mit aria-current (#645)', () => {
-      const link = fixture.debugElement
-        .queryAll(By.css('a.header-link'))
-        .find((e) => (e.nativeElement as HTMLElement).textContent?.includes('Hier fehlt eine Antwort'))!;
-      const aktiv = link.injector.get(RouterLinkActive);
+    function kontoEintrag(text: string): HTMLElement {
+      return (Array.from(document.querySelectorAll('.konto-menue .profilmenue-eintrag')) as HTMLElement[]).find((e) =>
+        e.textContent?.includes(text),
+      )!;
+    }
 
-      expect(aktiv.ariaCurrentWhenActive).toBe('page');
+    // Anlass (Sebastian 22.11.2026): Wie man zu „Meine Beiträge“ kommt, musste man jedes Mal ueberlegen
+    it('zeigt die Ziele sichtbar mit Icon und Text: Suchen, Einwerfen, Fangkorb, Meine Beitraege, Beitragen, Mehr', () => {
+      expect(navigationTexte()).toEqual(['Suchen', 'Einwerfen', 'Fangkorb', 'Meine Beiträge', 'Beitragen', 'Mehr']);
+      for (const ziel of Array.from(kopf().querySelectorAll('app-hauptnavigation .ziel'))) {
+        expect(ziel.querySelector('.ziel-text')!.textContent!.trim()).not.toBe('');
+      }
+      const icons = Array.from(kopf().querySelectorAll('app-hauptnavigation .ziel-icon'));
+      expect(icons.length).toBe(4);
+      icons.forEach((icon) => expect(icon.getAttribute('aria-hidden')).toBe('true'));
     });
 
-    function profilmenue(): HTMLElement[] {
-      return Array.from(document.querySelectorAll('.profilmenue-eintrag')) as HTMLElement[];
-    }
+    it('markiert das aktive Ziel mit aria-current="page"', () => {
+      const aktuell = Array.from(kopf().querySelectorAll('[aria-current="page"]'));
+      expect(aktuell.length).toBe(1);
+      expect(aktuell[0].textContent).toContain('Suchen');
+    });
 
-    function eintrag(text: string): HTMLElement {
-      return profilmenue().find((e) => e.textContent?.includes(text))!;
-    }
+    it('fuehrt mit einem Klick zu Meine Beitraege, ueber den NavigationService', () => {
+      const link = kopf().querySelector('app-hauptnavigation [data-ziel="meine"]') as HTMLAnchorElement;
+      expect(link.getAttribute('href')).toBe('/contributions');
 
-    async function menueOeffnen(): Promise<void> {
-      avatar().click();
-      fixture.detectChanges();
-      await fixture.whenStable();
-    }
+      link.click();
 
-    it('Klick auf den Avatar oeffnet das Profilmenue und wuerfelt kein neues Bild', async () => {
+      expect(navigation.navigiereZu).toHaveBeenCalledOnceWith('/contributions');
+    });
+
+    it('zeigt das Profilbild mit Namen und ▾, als Menue-Knopf', () => {
+      expect(konto().tagName).toBe('BUTTON');
+      expect(konto().getAttribute('aria-haspopup')).toBe('menu');
+      expect(konto().textContent).toContain('Profilmenü');
+      expect(konto().querySelector('.konto-name')!.textContent!.trim()).toBe('Test User');
+      expect(konto().querySelector('img')!.getAttribute('alt')).toBe('');
+    });
+
+    it('oeffnet am Profilbild nur das Konto und wuerfelt kein neues Bild', async () => {
       const vorher = fixture.componentInstance.selectedProfilePictureUrl;
 
-      expect(avatar().tagName).toBe('BUTTON');
-      expect(avatar().getAttribute('aria-label')).toBe('Profilmenü öffnen');
-      expect(avatar().getAttribute('aria-haspopup')).toBe('menu');
+      await klickUndWarten(konto());
 
-      avatar().click();
-      fixture.detectChanges();
-      await fixture.whenStable();
-
-      expect(profilmenue().map((e) => e.textContent?.trim())).toEqual([
-        jasmine.stringContaining('Schnell einwerfen'),
-        jasmine.stringContaining('Fangkorb'),
-        jasmine.stringContaining('Meine Beiträge'),
+      expect(menueTexte('.konto-menue')).toEqual([
         jasmine.stringContaining('Profilbild wählen'),
         jasmine.stringContaining('Datenschutz-Einstellungen'),
         jasmine.stringContaining('Abmelden'),
       ]);
-      expect(navigation.navigateToMeineBeitraege).not.toHaveBeenCalled();
       expect(fixture.componentInstance.selectedProfilePictureUrl).toBe(vorher);
       expect(sessionStorage.getItem('profilePicture')).toBeNull();
     });
 
-    it('oeffnet das Profilmenue mit der Tastatur und fuehrt zu Meine Beitraege', async () => {
-      avatar().focus();
-      avatar().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-      avatar().click(); // Enter auf einem <button> loest im Browser den Klick aus
-      fixture.detectChanges();
-      await fixture.whenStable();
+    it('oeffnet das Profilmenue mit der Tastatur, Fokus auf dem ersten Eintrag', async () => {
+      konto().focus();
+      konto().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await klickUndWarten(konto()); // Enter auf einem <button> loest im Browser den Klick aus
 
-      expect(document.activeElement).toBe(profilmenue()[0]);
-      eintrag('Meine Beiträge').click();
-
-      expect(navigation.navigateToMeineBeitraege).toHaveBeenCalledTimes(1);
-    });
-
-    // #620: statt zweier unbeschrifteter Symbole im Kopf
-    it('fuehrt ueber das Profilmenue zu Schnell einwerfen und in den Fangkorb', async () => {
-      await menueOeffnen();
-      eintrag('Schnell einwerfen').click();
-      expect(navigation.navigateToEinwerfen).toHaveBeenCalledTimes(1);
-
-      await menueOeffnen();
-      eintrag('Fangkorb').click();
-      expect(navigation.navigateToFangkorb).toHaveBeenCalledTimes(1);
+      expect(document.activeElement).toBe(kontoEintrag('Profilbild wählen'));
     });
 
     it('meldet ueber das Profilmenue ab', async () => {
       const auth = TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>;
-      avatar().click();
-      fixture.detectChanges();
-      await fixture.whenStable();
+      await klickUndWarten(konto());
 
-      eintrag('Abmelden').click();
+      kontoEintrag('Abmelden').click();
 
       expect(auth.logout).toHaveBeenCalledTimes(1);
     });
 
     it('fuehrt ueber das Profilmenue zur Art.-9-Einwilligung (#489)', async () => {
-      avatar().click();
-      fixture.detectChanges();
-      await fixture.whenStable();
+      await klickUndWarten(konto());
 
-      eintrag('Datenschutz-Einstellungen').click();
+      kontoEintrag('Datenschutz-Einstellungen').click();
 
       expect(router.navigate).toHaveBeenCalledWith(['/einwilligung']);
     });
 
     it('oeffnet ueber das Profilmenue den Dialog Profilbild waehlen', async () => {
-      avatar().click();
-      fixture.detectChanges();
-      await fixture.whenStable();
+      await klickUndWarten(konto());
 
-      eintrag('Profilbild wählen').click();
+      kontoEintrag('Profilbild wählen').click();
 
       expect(dialog.open).toHaveBeenCalledWith(ProfilbildDialogComponent, jasmine.anything());
     });
@@ -288,16 +313,32 @@ describe('AppComponent - Desktop-Kopf', () => {
       service.waehlen(option.id);
       fixture.detectChanges();
 
-      expect(avatar().querySelector('img')?.getAttribute('src')).toBe(option.url);
-      expect(avatar().querySelector('img')?.getAttribute('alt')).toBe('Profilbild');
+      expect(konto().querySelector('img')?.getAttribute('src')).toBe(option.url);
       localStorage.removeItem(PROFILBILD_SCHLUESSEL);
     });
 
-    it('hat im Kopf keinen eigenen Link Meine Beitraege mehr neben dem Avatar', () => {
-      const links = Array.from(kopf().querySelectorAll('button, [role="button"]')).filter(
-        (e) => e.textContent?.includes('Meine Beiträge') || e.getAttribute('aria-label') === 'Meine Beiträge anzeigen'
-      );
-      expect(links.length).toBe(0);
+    it('stellt Hilfe, Rundgaenge, Feedback, Hier fehlt eine Antwort und Hell/Dunkel unter "Mehr"', async () => {
+      expect(mehrKnopf().getAttribute('aria-haspopup')).toBe('menu');
+
+      await klickUndWarten(mehrKnopf());
+
+      expect(menueTexte('.mehr-menue')).toEqual([
+        'Hier fehlt eine Antwort',
+        'Hilfe',
+        jasmine.stringContaining('Rundgang Antwort finden'),
+        jasmine.stringContaining('Rundgang Selbst beitragen'),
+        'Feedback',
+        jasmine.stringMatching(/Dunkel anzeigen|Hell anzeigen/),
+      ]);
+    });
+
+    it('oeffnet Feedback unter "Mehr"', async () => {
+      await klickUndWarten(mehrKnopf());
+      (Array.from(document.querySelectorAll('.mehr-menue .mehr-eintrag')) as HTMLElement[])
+        .find((e) => e.textContent!.includes('Feedback'))!
+        .click();
+
+      expect(dialog.open).toHaveBeenCalledWith(FeedbackDialogComponent, jasmine.anything());
     });
 
     // Design-Audit A1/B4 (#512): Abmelden nur im Profilmenue.
@@ -308,24 +349,13 @@ describe('AppComponent - Desktop-Kopf', () => {
       expect(abmelden.length).toBe(0);
     });
 
-    // #620: Der Kopf hatte angemeldet acht Elemente, zwei davon unbeschriftete Symbole
-    it('hat keine unbeschrifteten Symbol-Knoepfe fuer Fangkorb und Einwerfen mehr', () => {
-      expect(kopf().querySelector('[data-testid="fangkorb-knopf"]')).toBeNull();
-      expect(kopf().querySelector('[aria-label="Schnell einwerfen"]')).toBeNull();
+    // Grundsatz „Immer alles auch visuell lesbar“: kein Knopf nur mit Symbol (ausser Zurueck)
+    it('hat keine unbeschrifteten Symbol-Knoepfe im Kopf', () => {
       expect(kopf().querySelectorAll('button[mat-icon-button]:not(.back-button-header)').length).toBe(0);
+      expect(kopf().querySelector('.farbschema-knopf')).toBeNull();
     });
 
-    // #599: drei runde Symbole ohne Beschriftung waren nicht zu deuten
-    it('beschriftet Feedback und Hilfe als Textlinks mit Symbol fuer schmale Kopfzeilen, ohne "Start" (#620)', () => {
-      const textlinks = Array.from(kopf().querySelectorAll('button.header-link'));
-      expect(textlinks.map((k) => k.querySelector('.kopf-text')!.textContent!.trim())).toEqual(['Feedback', 'Hilfe']);
-      expect(kopf().querySelector('[data-testid="start-knopf"]')).toBeNull();
-      for (const k of textlinks) {
-        expect(k.querySelector('mat-icon')!.getAttribute('aria-hidden')).toBe('true');
-      }
-    });
-
-    it('setzt lange Titel kleiner und laesst die Begruessung weichen, kurze nicht', () => {
+    it('setzt lange Titel kleiner, kurze nicht', () => {
       const komponente = fixture.componentInstance;
       komponente.pageTitle = 'Hintergrundinfo verfassen';
       fixture.detectChanges();
@@ -335,20 +365,6 @@ describe('AppComponent - Desktop-Kopf', () => {
       komponente.pageTitle = 'Fangkorb';
       fixture.detectChanges();
       expect(kopf().classList).not.toContain('header--titel-lang');
-    });
-
-    it('behaelt fuer Screenreader den Namen der Textlinks, auch wenn sie als Icon erscheinen', () => {
-      const link = Array.from(kopf().querySelectorAll('a.header-link')).find((a) =>
-        a.textContent!.includes('Hier fehlt eine Antwort'),
-      )!;
-      expect(link.querySelector('.kopf-text')!.textContent!.trim()).toBe('Hier fehlt eine Antwort');
-      expect(link.querySelector('mat-icon')!.getAttribute('aria-hidden')).toBe('true');
-    });
-
-    it('sieht den Knopf Feedback ebenfalls', () => {
-      (kopf().querySelector('[data-testid="feedback-knopf"]') as HTMLElement).click();
-
-      expect(dialog.open).toHaveBeenCalledWith(FeedbackDialogComponent, jasmine.anything());
     });
   });
 
@@ -460,11 +476,11 @@ describe('AppComponent - Desktop-Kopf', () => {
       TestBed.overrideProvider(ModerationService, { useValue: moderation });
       starten(ANGEMELDET);
 
-      expect(kopf().querySelector('app-offene-meldungen-zahl')).toBeNull();
+      expect(document.querySelector('app-offene-meldungen-zahl')).toBeNull();
       expect(moderation.getReports).not.toHaveBeenCalled();
     });
 
-    it('zeigt am Admin-Link die Zahl offener Meldungen', () => {
+    it('zeigt unter "Mehr" am Admin-Eintrag die Zahl offener Meldungen', async () => {
       TestBed.overrideProvider(ZuTunService, {
         useValue: {
           meldungen$: of({ daten: { anzahl: 3, mehr: false, aelteste: null }, fehler: false }),
@@ -473,9 +489,9 @@ describe('AppComponent - Desktop-Kopf', () => {
       });
       starten({ ...ANGEMELDET, isAdmin: true });
 
-      const admin = (Array.from(kopf().querySelectorAll('a.header-link')) as HTMLElement[]).find((a) =>
-        a.textContent?.includes('Admin'),
-      )!;
+      await klickUndWarten(mehrKnopf());
+
+      const admin = document.querySelector('.mehr-menue .mehr-admin') as HTMLElement;
       expect(admin.querySelector('.zahl')!.textContent!.trim()).toBe('3');
       expect(admin.textContent).toContain('3 offene Meldungen');
     });

@@ -245,12 +245,17 @@ class StatementService(
         """Wie get_all, ohne die unbeantworteten Suchanfragen unter der Schwelle."""
         return await self._repository.get_all_curated(limit, offset, ueber_der_schwelle)
 
-    async def kuratierte(self) -> List[StatementDbEntry]:
+    async def kuratierte(
+        self, ids: Optional[Iterable[uuid.UUID]] = None
+    ) -> List[StatementDbEntry]:
         """
         Alle sichtbaren Aussagen ohne die unbeantworteten Suchanfragen
-        (StatementRepository.kuratierte), fuer die Zuordnung von Themen.
+        (StatementRepository.kuratierte), fuer die Zuordnung von Themen; mit
+        ``ids`` nur die darunter (Aussagen eines Themas, #754).
         """
-        return await self._repository.kuratierte()
+        if ids is None:
+            return await self._repository.kuratierte()
+        return await self._repository.kuratierte(ids)
 
     async def zaehle_unbeantwortete_suchanfragen(
         self, ids: AbstractSet[uuid.UUID]
