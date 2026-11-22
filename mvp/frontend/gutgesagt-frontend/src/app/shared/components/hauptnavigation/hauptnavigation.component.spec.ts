@@ -335,9 +335,25 @@ describe('HauptnavigationComponent', () => {
       bauen('leiste');
       expect(punkt()).not.toBeNull();
 
+      oeffnen('/fangkorb');
+      expect(punkt()).not.toBeNull();
+
       oeffnen('/contributions');
 
       expect(punkt()).toBeNull();
+    }));
+
+    it('kommt nach einem Kontowechsel mit neuem Besuchsstand wieder', fakeAsync(() => {
+      besuch$.next({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: 1 });
+      bauen('leiste');
+      oeffnen('/contributions');
+      expect(punkt()).toBeNull();
+
+      person$.next({ ...ANGEMELDET, userId: 'anderes-konto' });
+      besuch$.next({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: 2 });
+      fixture.detectChanges();
+
+      expect(punkt()).not.toBeNull();
     }));
   });
 });

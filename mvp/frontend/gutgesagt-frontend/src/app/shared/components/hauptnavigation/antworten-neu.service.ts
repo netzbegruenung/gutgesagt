@@ -51,5 +51,5 @@ export class AntwortenNeuService {
   }
 }
 
-/** Der Zusatz zum zugänglichen Namen des Ziels „Meine“; leer ohne Neues. */
+/** Der Zusatz zum zugänglichen Namen des Ziels „Meine“; das Template hängt ihn nur bei Neuem an. */
 export const ANTWORTEN_ZUSATZ = ', neue Antworten auf deine Aussagen';

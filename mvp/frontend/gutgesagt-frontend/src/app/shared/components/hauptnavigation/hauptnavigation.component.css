@@ -37,7 +37,6 @@
     line-height: 0;
 }
 
-/* Neue Einwürfe im Fangkorb; die Zahl selbst ist stumm, der Linkname nennt sie */
 /* Punkt an „Meine“ (#760): Rand in der Flächenfarbe, damit er auf jedem Grund absetzt */
 .punkt {
     position: absolute;
@@ -51,6 +50,7 @@
     box-sizing: border-box;
 }
 
+/* Neue Einwürfe im Fangkorb; die Zahl selbst ist stumm, der Linkname nennt sie */
 .zaehler {
     position: absolute;
     top: -6px;
@@ -187,6 +187,12 @@
 :host(.hauptnavigation--leiste) .zaehler {
     top: -2px;
     right: 4px;
+}
+
+/* In der Leiste hat der Icon-Rahmen 18 px Rand: Der Punkt sitzt sonst neben der Pille */
+:host(.hauptnavigation--leiste) .punkt {
+    top: 2px;
+    right: 14px;
 }
 
 /* Admin-Zahl im Menü neben dem Wort */
