@@ -22,7 +22,7 @@ const ZAHLWORT: Record<number, string> = { 2: 'zwei', 3: 'drei' };
               [class.gewaehlt]="istGewaehlt(thema)"
               [attr.aria-pressed]="istGewaehlt(thema)"
               [disabled]="!istGewaehlt(thema) && voll"
-              (click)="umschalten(thema)">{{ thema.name }}</button>
+              (click)="umschalten(thema)"><img *ngIf="thema.motiv" class="thema-motiv" [src]="'/' + thema.motiv" alt="" aria-hidden="true" width="18" height="18">{{ thema.name }}</button>
     </div>
     <p class="themen-hinweis">{{ hinweis }}</p>
   `,

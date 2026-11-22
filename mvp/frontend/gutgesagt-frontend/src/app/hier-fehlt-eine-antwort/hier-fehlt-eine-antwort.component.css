@@ -48,6 +48,9 @@
 
 /* Themen ruhig im Hellgruen der Auswahl: 8,2:1 hell (Tanne auf Hellgruen), 11,8:1 dunkel */
 .thema-marke {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 13px;
   line-height: 1.3;
   padding: 3px 10px;

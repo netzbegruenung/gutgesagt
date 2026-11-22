@@ -19,7 +19,7 @@ import { Thema } from '../../services/dtos/themenDtos';
       <button *ngFor="let thema of themen" type="button" class="chip thema-chip"
               [class.gewaehlt]="aktiv === thema.schluessel"
               [attr.aria-pressed]="aktiv === thema.schluessel"
-              (click)="waehlen(thema.schluessel)">{{ thema.name }}</button>
+              (click)="waehlen(thema.schluessel)"><img *ngIf="thema.motiv" class="thema-motiv" [src]="'/' + thema.motiv" alt="" aria-hidden="true" width="18" height="18">{{ thema.name }}</button>
     </div>
   `,
   styleUrls: ['./themen.css'],

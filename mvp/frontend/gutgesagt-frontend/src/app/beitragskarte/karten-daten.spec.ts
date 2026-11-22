@@ -375,12 +375,13 @@ describe('karten-daten', () => {
       });
     });
 
-    it('nimmt die Namen der beim Einwerfen gewaehlten Themen mit', () => {
-      const karte = ausEinwurf(
-        einwurf({ themen: [{ schluessel: 'klima', name: 'Klima' }, { schluessel: 'europa', name: 'Europa' }] }),
-      );
+    it('nimmt die beim Einwerfen gewaehlten Themen samt Motiv mit', () => {
+      const themen = [
+        { schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' },
+        { schluessel: 'europa', name: 'Europa', motiv: 'themen/europa.svg' },
+      ];
 
-      expect(karte.einwurfAngaben!.themen).toEqual(['Klima', 'Europa']);
+      expect(ausEinwurf(einwurf({ themen })).einwurfAngaben!.themen).toEqual(themen);
     });
 
     it('uebernimmt das Kennzeichen eigener Einwurf vom Server (#385)', () => {
