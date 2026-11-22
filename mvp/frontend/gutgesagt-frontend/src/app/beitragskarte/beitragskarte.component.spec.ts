@@ -1436,6 +1436,13 @@ describe('BeitragskarteComponent', () => {
       expect(koerper.querySelector('.quelle-symbol')!.textContent!.trim()).toBe('photo_camera');
     });
 
+    it('zeigt fuer einen Mastodon-Post die Sprechblase wie bei Bluesky', () => {
+      zeigen(einwurfKarte('https://norden.social/@a/113456789012345678'), { variante: 'einwurf' });
+
+      expect(element('.einwurf-herkunft').textContent!.trim()).toBe('Mastodon');
+      expect(element('.quelle-symbol').textContent!.trim()).toBe('forum');
+    });
+
     it('zeigt das Bildsymbol fuer einen Einwurf nur mit Bild', () => {
       zeigen(einwurfKarte(null, 'https://beispiel.de/bild.jpg'), { variante: 'einwurf' });
 

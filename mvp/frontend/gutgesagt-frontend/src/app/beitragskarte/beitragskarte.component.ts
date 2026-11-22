@@ -68,6 +68,7 @@ const QUELLEN_SYMBOLE: Record<Plattform, string> = {
   threads: 'forum',
   x: 'forum',
   bluesky: 'forum',
+  mastodon: 'forum',
   web: 'public',
 };
 
