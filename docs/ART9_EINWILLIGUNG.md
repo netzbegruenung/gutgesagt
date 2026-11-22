@@ -263,8 +263,9 @@ Ticket (`CODING_STANDARDS.md`, „Legal texts change through their own ticket“
   „Datenschutz-Einstellungen““ (bis #644 „Einwilligung“); der Name steht als
   `DATENSCHUTZ_EINSTELLUNGEN` in `mvp/frontend/gutgesagt-frontend/src/app/shared/fangkorb-texte.ts`
   (auch Seitentitel von `/einwilligung`; die Karte darauf heißt weiter „Einwilligung“, so
-  finden auch Personen mit dem Wortlaut `2026-11-05-b` den Widerruf), der Eintrag in `mvp/frontend/gutgesagt-frontend/src/app/app.component.html` und
-  `mvp/frontend/gutgesagt-frontend/src/app/shared/components/mobile-menu/mobile-menu.html`.
+  finden auch Personen mit dem Wortlaut `2026-11-05-b` den Widerruf), der Eintrag im Profilmenü am
+  Profilbild, Desktop und mobil, in
+  `mvp/frontend/gutgesagt-frontend/src/app/shared/components/konto-menue/konto-menue.component.ts`.
 
 Ohne Änderung zieht die E2E-Anmeldung mit
 (`mvp/frontend/gutgesagt-frontend/e2e/tests/anmelden.setup.ts`): Sie nimmt den aktuellen

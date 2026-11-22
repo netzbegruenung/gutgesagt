@@ -83,12 +83,6 @@ main * {
     margin-right: 0 !important;
 }
 
-.left-header-box .user-info {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-}
-
 .right-header-box {
     flex: 1;
     min-width: 0;
@@ -103,184 +97,11 @@ main * {
     flex-shrink: 0;
 }
 
-/* Wird es eng, weicht zuerst die Begruessung (als Ganzes mit Auslassung), nie ein Knopf */
-.right-header-box > .user-info-compact {
-    display: block;
-    flex-shrink: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Neben einem langen Titel ist fuer die Begruessung erst ab 1440 px Platz */
-@media (max-width: 1439px) {
-    .header--titel-lang .right-header-box > .user-info-compact {
-        display: none;
-    }
-}
-
-.right-header-box .mat-mdc-icon-button {
-    width: 44px;
-    height: 44px;
-    padding: 10px;
-}
-
-.user-info-compact {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-    white-space: nowrap;
-}
-
-/* Textlinks im Kopf: einer der zwei Stile neben den runden Icon-Knoepfen (#512) */
-.header-link {
-    color: var(--akzent-schrift);
-    font-weight: 600;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    transition: opacity var(--transition-fast);
-    cursor: pointer;
-    white-space: nowrap;
-    margin: 0 var(--spacing-xs);
-}
-
-.header-link .kopf-icon {
-    display: none;
-}
-
-/* Die Seite, auf der man ist: dicker unterstrichen, schmal gefuellt (#645) */
-.header-link--aktiv {
-    text-decoration-thickness: 3px;
-}
-
-/* Textlinks, die etwas oeffnen statt zu navigieren, sind Knoepfe: ohne Knopf-Optik (#599) */
-button.header-link {
-    padding: 0;
-    border: 0;
-    background: none;
-    font: inherit;
-    font-weight: 600;
-}
-
-/* Zahl offener Meldungen am Admin-Link: neben dem Wort, am runden Knopf oben rechts */
-.header-link {
-    position: relative;
-}
-
-@media (max-width: 1199px) {
-    .header-link app-offene-meldungen-zahl {
-        position: absolute;
-        top: -4px;
-        right: -6px;
-    }
-}
-
 /* Lange Titel ("Hintergrundinfo verfassen") eine Stufe kleiner, damit sie in eine Zeile passen */
 .desktop-header-title--lang {
     font-size: var(--font-size-h2-tablet);
 }
 
-/*
- * Schmale Desktops, damit Titel und Knoepfe in eine Zeile passen (#512):
- * unter 1200 px weicht die Begruessung, die Textlinks werden zu runden Icon-Knoepfen;
- * unter 1100 px zeigt Beitragen nur das Plus. Die Namen bleiben fuer Screenreader.
- */
-@media (max-width: 1199px) {
-    .right-header-box > .user-info-compact {
-        display: none;
-    }
-
-    .header-link {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 44px;
-        height: 44px;
-        margin: 0;
-        border-radius: 50%;
-        background: var(--flaeche);
-        box-shadow: var(--elevation-1);
-        color: var(--text);
-    }
-
-    .header-link--aktiv {
-        background: var(--accent-light);
-    }
-
-    .header-link .kopf-icon,
-    button.header-link .kopf-icon {
-        display: inline-block;
-    }
-
-    button.header-link {
-        background: var(--flaeche);
-    }
-
-    /* Nur noch fuer Screenreader, wie .cdk-visually-hidden */
-    .header-link .kopf-text {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip: rect(0 0 0 0);
-        white-space: nowrap;
-    }
-}
-
-@media (max-width: 1099px) {
-    .beitragen-knopf {
-        min-width: 0;
-        padding: 0 10px;
-    }
-
-    .beitragen-knopf mat-icon {
-        margin: 0;
-    }
-
-    .beitragen-knopf .beitragen-text {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip: rect(0 0 0 0);
-        white-space: nowrap;
-    }
-}
-
-.header-link:hover {
-    opacity: 0.8;
-}
-
-.help-text {
-    margin-top: 10px;
-    background-color: var(--mulde);
-    padding: 10px;
-    border-radius: var(--border-radius-medium);
-    font-size: 14px;
-    color: var(--text);
-}
-
-.help-icon {
-    cursor: help;
-}
-
-.home-icon {
-    cursor: pointer;
-}
-
-.avatar-container {
-    display: inline-block;
-}
-
-/* Nur angemeldet ein Knopf (oeffnet das Profilmenue), ohne Anmeldung ein Bild. */
-.avatar-container.avatar-klickbar {
-    cursor: pointer;
-    padding: 0;
-    border: none;
-    background: none;
-    border-radius: 50%;
-    line-height: 0;
-}
 
 .profile-avatar {
     width: var(--avatar-size-desktop);
@@ -293,227 +114,93 @@ button.header-link {
     flex-shrink: 0;
 }
 
-.avatar-klickbar .profile-avatar:hover {
-    transform: scale(1.05);
+/* ===== Navigation Variante 3 (22.11.2026) ===== */
+
+/* Unter 1440 px steht die Navigation immer in einer eigenen zweiten Zeile, statt Text
+   gegen Icons zu tauschen (Icons stehen immer mit Text) und ohne je nach Seitentitel
+   zwischen ein- und zweizeilig zu springen. */
+.header {
+    flex-wrap: wrap;
 }
 
-/* Mobile styles */
-@media (max-width: 768px) {
-    .header {
-        flex-direction: row;
-        padding: var(--spacing-sm) 0;
-        position: relative;
-    }
+.right-header-box {
+    flex: 1 0 auto;
+    height: auto;
+    min-height: var(--header-height-desktop);
+}
 
-    .left-header-box {
-        width: auto;
-        flex: 1;
-        gap: var(--spacing-sm);
-        height: 60px;
-    }
-
+@media (max-width: 1439px) {
     .right-header-box {
-        width: auto;
-        gap: var(--spacing-xs);
-        height: 60px;
-    }
-
-    .profile-avatar {
-        width: var(--avatar-size-mobile);
-        height: var(--avatar-size-mobile);
-    }
-
-    /* Show login status text on mobile, but smaller */
-    .left-header-box span {
-        font-size: 14px;
-        line-height: 1.2;
-    }
-
-    .left-header-box .header-link {
-        display: inline;
-    }
-
-    /* Mobile hamburger menu button */
-    .mobile-menu-button {
-        display: block;
-    }
-
-    /* Hide help button on mobile since it's in burger menu */
-    .desktop-only-button {
-        display: none;
+        flex-basis: 100%;
     }
 }
 
-@media (max-width: 480px) {
-    .header {
-        padding: var(--spacing-sm) 0;
-    }
-
-    .profile-avatar {
-        width: var(--avatar-size-mobile);
-        height: var(--avatar-size-mobile);
-    }
-
-    .left-header-box,
-    .right-header-box {
-        height: var(--header-height-mobile);
-    }
-
-    /* Keep login status text visible but very compact */
-    .left-header-box span {
-        font-size: 12px;
-    }
-
-    .left-header-box .text-bold {
-        display: inline;
-        font-size: 12px;
+/* Ab 1440 px (main ist hoechstens 1400 px breit) in einer Zeile mit dem Titel: Neben
+   einem langen Titel steht der Name am Profilbild nur fuer Screenreader */
+@media (min-width: 1440px) {
+    .header--titel-lang .konto-name {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
     }
 }
 
-/* Hide mobile menu button on desktop */
-@media (min-width: 769px) {
-    .mobile-menu-button {
-        display: none;
-    }
+.right-header-box > app-hauptnavigation {
+    flex-shrink: 1;
+    min-width: 0;
 }
 
-/* Show different text versions for mobile/desktop */
-.mobile-login-text {
-    display: none;
-}
-
-.mobile-only {
-    display: none;
-}
-
-/* Spacing for user info - replace br tags */
-.user-info-spacing {
-    margin-top: var(--spacing-xs);
-    display: block;
-}
-
-@media (max-width: 768px) {
-    .mobile-login-text {
-        display: inline;
-    }
-
-    .mobile-only {
-        display: block;
-    }
-
-    .desktop-only {
-        display: none;
-    }
-}
-
-@media (min-width: 769px) {
-    .mobile-only {
-        display: none;
-    }
-}
-
-/* Sidenav styles */
-.sidenav-container {
-    height: 100%;
-    /*
-     * Die zugeklappte Seitennavigation liegt rechts neben dem Fenster und macht den
-     * Container 640 px breit. overflow: hidden verhindert nur Scrollbalken - beim
-     * Oeffnen eines Dialogs scrollte der Fokus den Container um 124 px nach links,
-     * und die Seite blieb verschoben. clip laesst sich gar nicht scrollen.
-     */
-    overflow: hidden;
-    overflow: clip;
-}
-
-.mobile-sidenav {
-    width: 280px;
-    background-color: var(--flaeche);
-}
-
-.mobile-menu-content {
-    padding: var(--spacing-md);
-}
-
-.mobile-menu-header {
-    display: flex;
-    justify-content: space-between;
+/* Das Profilbild mit Namen und ▾ oeffnet nur das Konto */
+.konto-knopf {
+    display: inline-flex;
     align-items: center;
-    margin-bottom: var(--spacing-lg);
-    padding-bottom: var(--spacing-md);
-    border-bottom: 1px solid var(--linie);
-}
-
-.mobile-menu-avatar {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    box-shadow: var(--elevation-2);
-}
-
-.mobile-menu-user-info {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
-}
-
-.mobile-menu-user-info h3 {
-    margin: 0 0 var(--spacing-md) 0;
-    color: var(--akzent-schrift);
-}
-
-.mobile-menu-item {
-    width: 100%;
-    justify-content: flex-start;
-    text-align: left;
-}
-
-.mobile-menu-item mat-icon {
-    margin-right: var(--spacing-sm);
-}
-
-.close-menu-button {
-    color: var(--text-leise);
-}
-
-/* Mobile menu footer section */
-.mobile-menu-divider {
-    margin: var(--spacing-lg) 0;
-}
-
-.mobile-menu-footer {
-    display: flex;
-    flex-direction: column;
     gap: var(--spacing-sm);
-    padding-top: var(--spacing-md);
+    min-height: 48px;
+    min-width: 0;
+    padding: 2px 4px 2px 2px;
+    border: 1px solid var(--linie);
+    border-radius: 28px;
+    background: var(--flaeche);
+    color: var(--akzent-schrift);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
 }
 
-.mobile-menu-about {
-    padding: var(--spacing-md);
-    background-color: var(--mulde);
-    border-radius: var(--border-radius-medium);
-    margin-top: var(--spacing-md);
+.konto-knopf:hover {
+    background: var(--mulde);
 }
 
-.mobile-menu-about p {
-    margin: 0;
-    font-size: 14px;
-    color: var(--text-leise);
-    line-height: 1.5;
+.konto-knopf:focus-visible {
+    outline: 2px solid var(--akzent-tanne);
+    outline-offset: 2px;
 }
 
-.mobile-menu-about a {
-    color: var(--primaer-text);
-    text-decoration: var(--link-unterstrich); /* im Dunkeln unterstrichen (#588) */
+.right-header-box > .konto-knopf {
+    flex-shrink: 1;
 }
 
-
-.mobile-menu-about a:hover {
-    text-decoration: underline;
+.konto-avatar {
+    width: 40px;
+    height: 40px;
+    box-shadow: none;
 }
 
-/* Ensure sidenav content takes full height */
-mat-sidenav-content {
-    height: 100%;
-    overflow-y: auto;
-    background-color: var(--aussen-grund, var(--bg-main));
+.konto-name {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Untere Leiste am Handy: Inhalt und Fusszeile nie dahinter (WCAG 2.4.11). Die Hoehe
+   meldet die Leiste selbst, mit Safe Area und bei grosser Schrift. */
+main.mit-unterleiste {
+    padding-bottom: var(--unterleiste-hoehe, calc(64px + env(safe-area-inset-bottom)));
+    /* viewport-fit=cover: im Querformat nichts unter der Kamera-Aussparung */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
 }
