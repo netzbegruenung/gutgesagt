@@ -13,6 +13,7 @@ entschieden hat: Ist der Kandidat dieselbe Behauptung wie der Bestandstext?
 | `nli_messen.py`, `nli_gemessen.py`, `nli_bestaetiger_gemessen.py` | NLI-Stufe (#387): Urteile je Aussagepaar (erstes Modell und Bestätiger), Auswertung, Antwortzeit |
 | `test_nli_messset.py`, `../unit/test_nli_messset.py` | NLI-Stufe mit Modell (langsam) bzw. über die gespeicherten Urteile (in CI) |
 | `../unit/test_aehnlichkeit_messset_aufbau.py` | Aufbau, Umfang und Split ohne Modell (in CI) |
+| `text_fassung_paare.py`, `text_fassung_messen.py`, `test_text_fassung_messset.py` | Stimmenverfall bei geändertem Text (#636), Abschnitt „Geänderter Text“ |
 
 ```bash
 cd mvp/backend/semantic-search-service/app
@@ -336,3 +337,36 @@ gleich, aber nicht erkannt (24): C01, C05, C08, C09, C10, C11, C12, C13, WI02, W
   eigenen Prozess bis zu rund 1,6 GB zusätzlich (Modelldatei 2,2 GB). Weil er nur im
   unsicheren Band rechnet, urteilt er im Suchtestset bei 12 von 99 Suchen über je einen
   Kandidaten (`SUCHTESTSET.md`, Zerfaserung). Auf der Ziel-VM neu messen.
+
+## Geänderter Text (#636)
+
+Bleibt der Titel eines Kommentars oder einer Hintergrundinfo und ändert sich nur der Text,
+sollen Stimmen verfallen, wenn der Text etwas anderes sagt, aber nie bei kleinen Korrekturen.
+Gemessen am 22.11.2026 an 31 Paaren (`text_fassung_paare.py`, alte und neue Fassung von sechs
+Beispieltexten; die Labels hat ein Agent gesetzt, abgenommen sind sie noch nicht):
+21 *bleibt* (Tippfehler, Satzzeichen, klein geschrieben, Ergänzung, Kürzung, Umformulierung,
+korrigierte Zahl), 10 *verfällt* (5 Gegenteil, 2 anderer Standpunkt, 3 ganz anderer Text).
+
+| Signal | *bleibt* | Gegenteil | anderer Standpunkt | ganz anderer Text |
+|---|---|---|---|---|
+| passage/passage | 0,945–1,000 | 0,938–0,988 | 0,903–0,941 | 0,831–0,840 |
+| NLI beidseitige Folgerung (min) | 0,001–0,999 | 0,000–0,003 | 0,000–0,001 | 0,000–0,001 |
+| NLI Widerspruch (max) | 0,000–0,996 | 0,970–1,000 | 0,008–0,881 | 0,002–0,009 |
+
+- **Die Regel des Titels passt nicht auf Texte:** Ergänzung und Kürzung folgern nur in eine
+  Richtung (B05–B09, B20, B21: Folgerung 0,001–0,528). Mit τ = 0,95 verlören sie die Stimmen.
+- **Widerspruch trennt nicht:** Eine korrigierte Zahl widerspricht der alten Fassung so sicher
+  wie ein Gegenteil (B14, B16, B18, B19: 0,948–0,996).
+- **Ähnlichkeit trennt nur den ganz anderen Text:** Gegenteile liegen mitten unter den
+  Korrekturen (V03 0,988).
+- **Gewählt:** `text_verfall_aehnlichkeit_unter = 0,90` (passage/passage, `fassung.gleicher_text`).
+  Abstand 0,045 zur niedrigsten Umformulierung (B15) und 0,06 zum höchsten ganz anderen Text
+  (V09); andere Kommentare zur selben Aussage liegen laut den Kommentar-Paaren oben bei
+  höchstens 0,899. Gegenteil und anderer Standpunkt unter gleichem Titel behalten ihre Stimmen
+  (bekannte Lücke, V01–V07).
+
+```bash
+cd mvp/backend/semantic-search-service/app
+../venv/bin/python -m tests.regression.text_fassung_messen --nli
+../venv/bin/python -m pytest tests/regression/test_text_fassung_messset.py -m langsam -q
+```

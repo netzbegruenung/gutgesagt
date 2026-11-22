@@ -317,3 +317,175 @@ class TestStimmenBeimAendern:
         assert ergebnis is AenderErgebnis.NICHT_AUTOR
         gleich.assert_not_awaited()
         loeschen.assert_not_called()
+
+
+# --- #636: geaenderter Text unter gleichem Titel
+
+ALTER_TEXT = "Alter Text"
+
+
+@pytest.mark.asyncio
+class TestGleicherText:
+    async def test_normalisiert_gleich_ohne_einbettung(self, test_settings):
+        aehnlich = _aehnlich(0.1)
+        gleich = await fassung.gleicher_text(
+            "Ein Text.", "  ein text", test_settings, aehnlich
+        )
+        assert gleich is True
+        aehnlich.assert_not_awaited()
+
+    async def test_ganz_anderer_text_unter_der_schwelle(self, test_settings):
+        assert (
+            await fassung.gleicher_text("A", "B", test_settings, _aehnlich(0.84))
+            is False
+        )
+
+    @pytest.mark.parametrize("wert", [0.90, 0.945, 1.0])
+    async def test_korrektur_und_umformulierung_ab_der_schwelle(
+        self, test_settings, wert
+    ):
+        assert (
+            await fassung.gleicher_text("A", "B", test_settings, _aehnlich(wert))
+            is True
+        )
+
+
+@pytest.mark.asyncio
+class TestGleicherTextImStatementService:
+    def _dienst(self, test_settings, repository_factory, modus, wert=0.5):
+        settings = test_settings.model_copy(update={"dieselbe_aussage_nli": modus})
+        dienst = StatementService(
+            settings, repository_factory=repository_factory, nli=Nli(DIESELBE)
+        )
+        dienst._aehnlichkeit = _aehnlich(wert)
+        return dienst
+
+    async def test_an_entscheidet_mit_passage_einbettung(
+        self, test_settings, repository_factory
+    ):
+        dienst = self._dienst(test_settings, repository_factory, "an")
+        assert await dienst.gleicher_text("alt", "neu") is False
+        dienst._aehnlichkeit.assert_awaited_once_with(
+            "alt", "neu", content_type="passage"
+        )
+
+    @pytest.mark.parametrize("modus", ["aus", "schatten"])
+    async def test_nicht_an_entscheidet_niemand(
+        self, test_settings, repository_factory, modus
+    ):
+        dienst = self._dienst(test_settings, repository_factory, modus)
+        assert await dienst.gleicher_text("alt", "neu") is None
+        dienst._aehnlichkeit.assert_not_awaited()
+
+    async def test_fehler_entscheidet_niemand(self, test_settings, repository_factory):
+        dienst = self._dienst(test_settings, repository_factory, "an")
+        dienst._aehnlichkeit = AsyncMock(side_effect=RuntimeError())
+        assert await dienst.gleicher_text("alt", "neu") is None
+
+
+def _mit_text_pruefung(test_settings, speicher, gleicher_text, stimmen_loeschen):
+    return BeitragAendernService(
+        ContentRepository(test_settings, speicher),
+        AsyncMock(return_value=uuid.uuid4()),
+        Mock(return_value=False),
+        gleiche_behauptung=AsyncMock(return_value=True),
+        stimmen_loeschen=stimmen_loeschen,
+        gleicher_text=gleicher_text,
+    )
+
+
+@pytest.mark.asyncio
+class TestStimmenBeiGeaendertemText:
+    async def test_ganz_anderer_text_stimmen_verfallen(self, test_settings, speicher):
+        speicher.add_test_data("commentary", [_beitrag(title=ALT)])
+        text = AsyncMock(return_value=False)
+        loeschen = Mock(return_value=2)
+        service = _mit_text_pruefung(test_settings, speicher, text, loeschen)
+
+        ergebnis = await service.aendern(
+            uuid.UUID(BEITRAG_ID), AUTOR, _aenderung(ALT, text="Ganz neuer Text.")
+        )
+
+        assert ergebnis is AenderErgebnis.GEAENDERT
+        text.assert_awaited_once_with(ALTER_TEXT, "Ganz neuer Text.")
+        service.gleiche_behauptung.assert_not_awaited()
+        loeschen.assert_called_once_with(uuid.UUID(BEITRAG_ID))
+
+    async def test_hintergrundinfo_ebenso(self, test_settings, speicher):
+        speicher.add_test_data("generic_text", [_beitrag("generic_text", title=ALT)])
+        loeschen = Mock(return_value=1)
+        service = _mit_text_pruefung(
+            test_settings, speicher, AsyncMock(return_value=False), loeschen
+        )
+        await service.aendern(
+            uuid.UUID(BEITRAG_ID), AUTOR, _aenderung(ALT, text="Ganz neuer Text.")
+        )
+        loeschen.assert_called_once()
+
+    @pytest.mark.parametrize("urteil", [True, None])
+    async def test_korrektur_oder_ohne_entscheidung_stimmen_bleiben(
+        self, test_settings, speicher, urteil
+    ):
+        speicher.add_test_data("commentary", [_beitrag(title=ALT)])
+        loeschen = Mock()
+        service = _mit_text_pruefung(
+            test_settings, speicher, AsyncMock(return_value=urteil), loeschen
+        )
+        await service.aendern(
+            uuid.UUID(BEITRAG_ID), AUTOR, _aenderung(ALT, text="Alter Text, ergänzt.")
+        )
+        loeschen.assert_not_called()
+
+    async def test_nur_normalform_geaendert_ohne_pruefung(
+        self, test_settings, speicher
+    ):
+        speicher.add_test_data("commentary", [_beitrag(title=ALT)])
+        text = AsyncMock(return_value=False)
+        loeschen = Mock()
+        service = _mit_text_pruefung(test_settings, speicher, text, loeschen)
+        await service.aendern(
+            uuid.UUID(BEITRAG_ID), AUTOR, _aenderung(ALT, text="alter text!")
+        )
+        text.assert_not_awaited()
+        loeschen.assert_not_called()
+
+    async def test_geaenderter_titel_entscheidet_allein(self, test_settings, speicher):
+        """Titel und Text geaendert: Die Behauptung im Titel entscheidet (#427)."""
+        speicher.add_test_data("commentary", [_beitrag(title=ALT)])
+        text = AsyncMock(return_value=False)
+        loeschen = Mock()
+        service = _mit_text_pruefung(test_settings, speicher, text, loeschen)
+        await service.aendern(
+            uuid.UUID(BEITRAG_ID),
+            AUTOR,
+            _aenderung("Auch im Altbau lohnt sich die Wärmepumpe", text="Neu."),
+        )
+        service.gleiche_behauptung.assert_awaited_once()
+        text.assert_not_awaited()
+        loeschen.assert_not_called()
+
+    async def test_pruefung_wirft_stimmen_bleiben(self, test_settings, speicher):
+        speicher.add_test_data("commentary", [_beitrag(title=ALT)])
+        loeschen = Mock()
+        service = _mit_text_pruefung(
+            test_settings, speicher, AsyncMock(side_effect=RuntimeError()), loeschen
+        )
+        ergebnis = await service.aendern(
+            uuid.UUID(BEITRAG_ID), AUTOR, _aenderung(ALT, text="Ganz neuer Text.")
+        )
+        assert ergebnis is AenderErgebnis.GEAENDERT
+        loeschen.assert_not_called()
+
+    async def test_ohne_titelpruefung_prueft_der_text_trotzdem(
+        self, test_settings, speicher
+    ):
+        speicher.add_test_data("commentary", [_beitrag(title=ALT)])
+        loeschen = Mock(return_value=1)
+        service = _mit_text_pruefung(
+            test_settings, speicher, AsyncMock(return_value=False), loeschen
+        )
+        service.gleiche_behauptung = None
+        await service.aendern(
+            uuid.UUID(BEITRAG_ID), AUTOR, _aenderung(ALT, text="Ganz neuer Text.")
+        )
+        loeschen.assert_called_once()

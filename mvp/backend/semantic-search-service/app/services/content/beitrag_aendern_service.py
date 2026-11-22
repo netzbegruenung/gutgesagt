@@ -7,8 +7,9 @@ und Titelregel (CODING_STANDARDS.md). Es gelten dieselben Grenzen wie beim Anleg
 Geschrieben werden nur die geaenderten Felder; Nutzung, Verknuepfungen mit Aussagen
 und Einwuerfen bleiben. Stimmen bleiben, solange der Titel - die Behauptung des
 Beitrags - dieselbe Behauptung trifft; erkennt die NLI-Stufe das nicht, verfallen sie
-(#427, StatementService.gleiche_behauptung). Ohne Entscheidung (Stufe nicht an, kein
-Modell, keine Antwort) bleiben sie. Der Vektor wird aus dem neuen Text berechnet, damit
+(#427, StatementService.gleiche_behauptung). Bleibt der Titel, verfallen sie auch, wenn
+der Text ein ganz anderer ist (#636, StatementService.gleicher_text). Ohne Entscheidung
+(Stufe nicht an, kein Modell, keine Antwort) bleiben sie. Der Vektor wird aus dem neuen Text berechnet, damit
 die Suche ihn findet, und edit_history haelt fest, wer wann geaendert hat (ohne den
 alten Wortlaut).
 """
@@ -19,7 +20,7 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Awaitable, Callable, Dict, List, Optional
+from typing import Awaitable, Callable, Dict, List, Optional, Tuple
 
 from pydantic import ValidationError
 
@@ -53,6 +54,11 @@ OffeneMeldung = Callable[[uuid.UUID], bool]
 # Ob die neue Fassung (zweiter Text) dieselbe Behauptung trifft wie die alte (erster);
 # None, wenn niemand entscheiden kann (StatementService.gleiche_behauptung).
 GleicheBehauptung = Callable[[str, str], Awaitable[Optional[bool]]]
+
+# Ob der neue Text (zweiter) unter gleichem Titel noch derselbe ist wie der alte;
+# False nur bei einem ganz anderen Text, None ohne Entscheidung
+# (StatementService.gleicher_text, #636).
+GleicherText = Callable[[str, str], Awaitable[Optional[bool]]]
 
 # Alle Stimmen zu einem Beitrag loeschen, gibt die Zahl zurueck
 # (VoteRepository.loeschen_fuer_beitrag).
@@ -105,12 +111,14 @@ class BeitragAendernService:
         offene_meldung: OffeneMeldung,
         gleiche_behauptung: Optional[GleicheBehauptung] = None,
         stimmen_loeschen: Optional[StimmenLoeschen] = None,
+        gleicher_text: Optional[GleicherText] = None,
     ):
         self.repository = repository
         self.herkunft_id = herkunft_id
         self.offene_meldung = offene_meldung
         self.gleiche_behauptung = gleiche_behauptung
         self.stimmen_loeschen = stimmen_loeschen
+        self.gleicher_text = gleicher_text
 
     async def aendern(
         self, beitrag_id: uuid.UUID, aufrufer: str, aenderung: Aenderung
@@ -151,7 +159,7 @@ class BeitragAendernService:
             raise TextZuLang(f"Der Text darf höchstens {hoechstens} Zeichen lang sein")
         fassungen = _fassungen(beitrag.content_type, aenderung)
 
-        alter_titel = await self._alter_titel(beitrag_id, beitrag.content_type)
+        alte_fassung = await self._alte_fassung(beitrag_id, beitrag.content_type)
 
         jetzt = utc_jetzt()
         verknuepfungen = [
@@ -188,49 +196,74 @@ class BeitragAendernService:
             beitrag_id, beitrag.content_type.value, felder, nicht_aus=AUSGEBLENDET
         )
         logger.info(f"Beitrag {beitrag_id} vom Autor geaendert")
-        await self._stimmen_pruefen(beitrag_id, alter_titel, aenderung.titel)
+        await self._stimmen_pruefen(beitrag_id, alte_fassung, aenderung)
         return AenderErgebnis.GEAENDERT
 
-    async def _alter_titel(
+    async def _alte_fassung(
         self, beitrag_id: uuid.UUID, content_type: ContentType
-    ) -> Optional[str]:
+    ) -> Optional[Tuple[Optional[str], Optional[str]]]:
         """
-        Der Titel vor der Aenderung, nur wenn Stimmen verfallen koennen. Das aggregierte
-        Repository liest ohne Titel; darum das Modell des Typs (Kommentar und
-        Hintergrundinfo haben einen). None, wenn er sich nicht lesen laesst: Dann
+        Titel und Text vor der Aenderung, nur wenn Stimmen verfallen koennen. Das
+        aggregierte Repository liest ohne Titel; darum das Modell des Typs (Kommentar
+        und Hintergrundinfo haben einen). None, wenn sie sich nicht lesen lassen: Dann
         entscheidet niemand, die Stimmen bleiben.
         """
-        if self.gleiche_behauptung is None or self.stimmen_loeschen is None:
+        if self.stimmen_loeschen is None or (
+            self.gleiche_behauptung is None and self.gleicher_text is None
+        ):
             return None
         try:
             typisiert = await self.repository.get(
                 beitrag_id, eintrag_modell=REGISTRY[content_type].db_entry_model
             )
         except Exception as e:
-            logger.warning(f"Alter Titel nicht lesbar: {type(e).__name__}")
+            logger.warning(f"Alte Fassung nicht lesbar: {type(e).__name__}")
             return None
-        return getattr(typisiert, "title", None)
+        return getattr(typisiert, "title", None), getattr(typisiert, "text", None)
 
     async def _stimmen_pruefen(
-        self, beitrag_id: uuid.UUID, alter_titel: Optional[str], neuer_titel: str
+        self,
+        beitrag_id: uuid.UUID,
+        alte_fassung: Optional[Tuple[Optional[str], Optional[str]]],
+        aenderung: Aenderung,
     ) -> None:
         """
         Stimmen verfallen, wenn der neue Titel nicht dieselbe Behauptung trifft wie der
-        alte (#427). Erst nach dem Schreiben: Die Aenderung steht auch dann, wenn die
-        Pruefung oder das Loeschen scheitert; die Stimmen bleiben dann.
+        alte (#427), oder bei gleichem Titel der Text ein ganz anderer ist (#636). Erst
+        nach dem Schreiben: Die Aenderung steht auch dann, wenn die Pruefung oder das
+        Loeschen scheitert; die Stimmen bleiben dann.
         """
-        if (
-            self.gleiche_behauptung is None
-            or self.stimmen_loeschen is None
-            or not alter_titel
-        ):
+        if self.stimmen_loeschen is None or alte_fassung is None:
             return
-        if text_normalisiert(alter_titel) == text_normalisiert(neuer_titel):
+        alter_titel, alter_text = alte_fassung
+        if alter_titel and text_normalisiert(alter_titel) != text_normalisiert(
+            aenderung.titel
+        ):
+            # Der Titel hat sich geaendert: Er traegt die Behauptung und entscheidet
+            # allein, auch wenn der Text mitgeaendert wurde.
+            pruefung, alt, neu, was = (
+                self.gleiche_behauptung,
+                alter_titel,
+                aenderung.titel,
+                "andere Behauptung",
+            )
+        elif alter_text and text_normalisiert(alter_text) != text_normalisiert(
+            aenderung.text
+        ):
+            pruefung, alt, neu, was = (
+                self.gleicher_text,
+                alter_text,
+                aenderung.text,
+                "ganz anderer Text",
+            )
+        else:
+            return
+        if pruefung is None:
             return
         try:
-            gleich = await self.gleiche_behauptung(alter_titel, neuer_titel)
+            gleich = await pruefung(alt, neu)
         except Exception as e:
-            logger.warning(f"Pruefung der Behauptung gescheitert: {type(e).__name__}")
+            logger.warning(f"Pruefung der Fassung gescheitert: {type(e).__name__}")
             return
         if gleich is not False:
             return
@@ -241,9 +274,7 @@ class BeitragAendernService:
                 f"Stimmen zu Beitrag {beitrag_id} nicht verfallen: {type(e).__name__}"
             )
             return
-        logger.info(
-            f"Beitrag {beitrag_id}: andere Behauptung, {verfallen} Stimmen verfallen"
-        )
+        logger.info(f"Beitrag {beitrag_id}: {was}, {verfallen} Stimmen verfallen")
 
 
 def _fassungen(content_type: ContentType, aenderung: Aenderung) -> dict:
