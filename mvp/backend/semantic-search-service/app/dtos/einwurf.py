@@ -123,6 +123,19 @@ class GleicherLinkRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2000)
 
 
+class EinwurfThemenRequest(BaseModel):
+    """
+    Die Themen eines Einwurfs nachtraeglich setzen: ersetzt die bisherigen, eine leere
+    Liste entfernt alle. Dieselbe Pruefung wie beim Einwerfen (hoechstens zwei, nur aus
+    der Liste, keins doppelt), sonst 422.
+    """
+
+    themen: ThemenDesEinwurfs = Field(
+        default_factory=list,
+        description="Schluessel aus der Themenliste, hoechstens zwei",
+    )
+
+
 class SatzSpeichernRequest(BaseModel):
     """
     Der Satz: "Was ist der Punkt? Ein Satz."

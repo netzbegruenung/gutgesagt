@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 
 import { DestillierUebergabeService, Vorbefuellung } from './destillier-uebergabe.service';
 import { Einwurf, EinwurfService } from '../services/einwurf.service';
@@ -16,7 +16,8 @@ describe('DestillierUebergabeService', () => {
   let meilensteinHinweis: jasmine.SpyObj<MeilensteinHinweisService>;
 
   beforeEach(() => {
-    einwurfService = jasmine.createSpyObj('EinwurfService', ['einwurfLaden', 'updateStatus']);
+    einwurfService = jasmine.createSpyObj('EinwurfService', ['einwurfLaden', 'updateStatus', 'themenGespeichert']);
+    einwurfService.themenGespeichert.and.returnValue(of(undefined));
     router = jasmine.createSpyObj('Router', ['navigate']);
     snackBar = jasmine.createSpyObj('MatSnackBar', ['open']);
     meilensteinHinweis = jasmine.createSpyObj<MeilensteinHinweisService>('MeilensteinHinweisService', ['pruefen']);
@@ -32,6 +33,19 @@ describe('DestillierUebergabeService', () => {
       ],
     });
     service = TestBed.inject(DestillierUebergabeService);
+  });
+
+  it('laedt den Einwurf erst, wenn geaenderte Themen gespeichert sind (Vorauswahl der Aussage)', () => {
+    const gespeichert = new Subject<void>();
+    einwurfService.themenGespeichert.and.returnValue(gespeichert);
+    einwurfService.einwurfLaden.and.returnValue(of({ id: 'id-1', url: null, own_draft: null } as Einwurf));
+
+    service.vorbefuellungLaden('id-1').subscribe();
+    expect(einwurfService.einwurfLaden).not.toHaveBeenCalled();
+    gespeichert.next();
+
+    expect(einwurfService.themenGespeichert).toHaveBeenCalledOnceWith('id-1');
+    expect(einwurfService.einwurfLaden).toHaveBeenCalledOnceWith('id-1');
   });
 
   it('macht den eigenen Satz zum Titel und den bereinigten Link zur Herkunft', () => {

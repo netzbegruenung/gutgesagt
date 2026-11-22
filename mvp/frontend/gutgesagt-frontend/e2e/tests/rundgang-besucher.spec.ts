@@ -29,9 +29,9 @@ test('Besucher: Zurück im Browser beendet den Rundgang, er lässt sich neu star
   await expect(feld).toHaveValue('Windräder töten Vögel');
   await expect(page.getByRole('button', { name: 'Rundgang (1 Min.)' })).toHaveCount(0);
 
-  // Über das Menü neu starten: wieder ab Schritt 1
-  await page.locator('.mobile-header .menu-button').click();
-  await page.locator('.mobile-menu-rundgang').click();
+  // Über „Mehr“ in der unteren Leiste neu starten: wieder ab Schritt 1
+  await page.locator('app-hauptnavigation .mehr-knopf').click();
+  await page.locator('.mehr-menue .mehr-eintrag', { hasText: 'Antwort finden' }).click();
   await expect(page.locator('.blase h3')).toHaveText('Aussage eingeben');
 });
 
@@ -83,8 +83,8 @@ async function bildergeschichte(page: Page): Promise<void> {
 
 test('Besucher: Hilfe startet Selbst beitragen als Bildergeschichte', async ({ page }) => {
   await page.goto('/search');
-  await page.locator('.mobile-header .menu-button').click();
-  await page.locator('.mobile-menu-item', { hasText: 'Hilfe' }).first().click();
+  // Ohne Konto steht Hilfe direkt in der unteren Leiste
+  await page.locator('app-hauptnavigation .hilfe-knopf').click();
 
   const knopf = page.locator('app-help-dialog .rundgang-mitmachen');
   await expect(knopf).toHaveText('Selbst beitragen (3 Bilder)');
@@ -95,11 +95,11 @@ test('Besucher: Hilfe startet Selbst beitragen als Bildergeschichte', async ({ p
   await bildergeschichte(page);
 });
 
-test('Besucher: Menü startet Selbst beitragen als Bildergeschichte, nach der Anmeldung Beitragen', async ({ page }) => {
+test('Besucher: „Mehr“ startet Selbst beitragen als Bildergeschichte, nach der Anmeldung Beitragen', async ({ page }) => {
   await page.goto('/search');
-  await page.locator('.mobile-header .menu-button').click();
+  await page.locator('app-hauptnavigation .mehr-knopf').click();
 
-  const eintrag = page.locator('app-mobile-menu .mobile-menu-rundgang-mitmachen');
+  const eintrag = page.locator('.mehr-menue .mehr-eintrag', { hasText: 'Selbst beitragen' });
   await expect(eintrag).toContainText('Selbst beitragen (3 Bilder)');
   await expect(eintrag).not.toHaveAttribute('aria-disabled', 'true');
   await eintrag.scrollIntoViewIfNeeded();
