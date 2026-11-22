@@ -573,10 +573,15 @@ class TestMitKommentar:
             test_settings, test_embeddings_manager, punkte
         )
 
-        assert await repository.antwort_autoren(
+        ergebnis = await repository.antworten_mit_autor(
             [self.KOMMENTAR, self.TEXT, gesperrt, self.ZWEITE]
-        ) == {self.KOMMENTAR: "bo-2", self.TEXT: "kim-1"}
-        assert await repository.antwort_autoren([]) == {}
+        )
+        assert {k: autorin for k, (_, autorin) in ergebnis.items()} == {
+            self.KOMMENTAR: "bo-2",
+            self.TEXT: "kim-1",
+        }
+        assert ergebnis[self.KOMMENTAR][0].content_type == "commentary"
+        assert await repository.antworten_mit_autor([]) == {}
 
     async def test_kommentare_auch_in_paketen(
         self, test_settings, test_embeddings_manager

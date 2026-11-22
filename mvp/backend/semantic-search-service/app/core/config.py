@@ -289,10 +289,10 @@ class Settings(BaseSettings):
     # mit Satz in DSFA und Datenschutzerklaerung eingeschaltet wird.
     gepostet_aktiv: bool = False
     # Antworten auf eigene Aussagen (#760): Kachel auf der Startseite und Reiter "Meine
-    # Aussagen" (services/antworten_hinweis.py). Obergrenze an: nichts wird gespeichert,
-    # die Person sieht nur Zahlen zu ihren eigenen Aussagen. Wirksam erst, wenn ein
-    # Admin den Schalter einschaltet (Standard aus).
-    antworten_hinweis_aktiv: bool = True
+    # Aussagen" (services/antworten_hinweis.py). Nichts wird gespeichert, aber die
+    # Datenschutzerklaerung nennt bisher nur zwei 7-Tage-Zahlen: Standard aus wie bei
+    # gepostet_aktiv, bis der Satz dort steht.
+    antworten_hinweis_aktiv: bool = False
     # Gewichte und Deckel der drei Stufen (domain/punkte.py): Tun klein und je Tag
     # gedeckelt, Quests mehr, Wirkung bei anderen am meisten.
     punkte_nutzung: int = Field(default=10, ge=0)

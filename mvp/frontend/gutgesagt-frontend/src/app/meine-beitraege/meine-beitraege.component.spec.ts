@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideRouter, Router } from '@angular/router';
+import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
@@ -367,6 +367,26 @@ describe('MeineBeitraegeComponent', () => {
       expect(fixture.nativeElement.querySelector('app-meine-aussagen')).toBeNull();
       (fixture.nativeElement.querySelector('#meine-tab-aussagen') as HTMLButtonElement).click();
       fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('app-meine-aussagen')).not.toBeNull();
+    });
+
+    it('öffnet ?tab=aussagen nur mit Schalter, sonst bleibt „Meine Beiträge“', async () => {
+      besuchStand = new BehaviorSubject<any>({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: null });
+      konfigurieren(() => of({ beitraege: [], gesamt: 0 }));
+      const route = TestBed.inject(ActivatedRoute);
+      spyOn(route.snapshot.queryParamMap, 'get').and.returnValue('aussagen');
+      await TestBed.compileComponents();
+      fixture = TestBed.createComponent(MeineBeitraegeComponent);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.tab).toBe('beitraege');
+      expect(reiter()).toEqual(['Meine Beiträge', 'Meine Einwürfe']);
+      expect(fixture.nativeElement.querySelector('app-meine-aussagen')).toBeNull();
+
+      // Kommt der Besuch mit Schalter, oeffnet sich der gewuenschte Reiter
+      besuchStand.next({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: 1 });
+      fixture.detectChanges();
+      expect(fixture.componentInstance.tab).toBe('aussagen');
       expect(fixture.nativeElement.querySelector('app-meine-aussagen')).not.toBeNull();
     });
   });

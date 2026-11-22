@@ -1,4 +1,13 @@
-from typing import TYPE_CHECKING, AbstractSet, Dict, Iterable, List, Optional, Set
+from typing import (
+    TYPE_CHECKING,
+    AbstractSet,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+)
 import asyncio
 import logging
 import uuid
@@ -549,28 +558,34 @@ class StatementRepository(
             )
         return [gefunden[i] for i in ids if i in gefunden]
 
-    async def antwort_autoren(self, ids: List[uuid.UUID]) -> Dict[uuid.UUID, str]:
+    async def antworten_mit_autor(
+        self, ids: List[uuid.UUID]
+    ) -> Dict[uuid.UUID, Tuple[AntwortKurz, str]]:
         """
-        Die sichtbaren Beitraege unter den IDs (weder gesperrt noch geloescht) mit
-        ihrem original_author (#760); ein Abruf je _IDS_JE_ABRUF IDs, nur zwei Felder
-        mehr als sichtbare_antworten. Die Autorin verlaesst den Dienst nicht: Der
-        Aufrufer macht daraus nur "von dir" oder "von anderen".
+        Die sichtbaren Beitraege unter den IDs (weder gesperrt noch geloescht) mit Typ,
+        Titel und original_author (#760), in Paketen von _IDS_JE_ABRUF IDs. Die Autorin
+        verlaesst den Dienst nicht: Der Aufrufer macht daraus nur "von dir" oder nicht.
         """
         if not ids:
             return {}
-        punkte = await self._abrufen(ids, ["content_type", "status", "original_author"])
-        autoren: Dict[uuid.UUID, str] = {}
+        punkte = await self._abrufen(
+            ids, ["content_type", "status", "title", "text", "original_author"]
+        )
+        ergebnis: Dict[uuid.UUID, Tuple[AntwortKurz, str]] = {}
         for punkt in punkte:
             payload = punkt.payload or {}
-            if (
-                payload.get("content_type") not in _BEITRAGSTYPEN
-                or payload.get("status") in AUSGEBLENDET_WERTE
-            ):
+            typ = payload.get("content_type")
+            if typ not in _BEITRAGSTYPEN or payload.get("status") in AUSGEBLENDET_WERTE:
                 continue
-            autoren[uuid.UUID(str(punkt.id))] = str(
-                payload.get("original_author") or ""
+            titel = (payload.get("title") or "").strip() or (
+                (payload.get("text") or "").strip()[:_TITEL_OHNE_TITEL_HOECHSTENS]
             )
-        return autoren
+            kennung = uuid.UUID(str(punkt.id))
+            ergebnis[kennung] = (
+                AntwortKurz(id=kennung, content_type=typ, titel=titel),
+                str(payload.get("original_author") or ""),
+            )
+        return ergebnis
 
     async def _abrufen(
         self, ids: Iterable[uuid.UUID], felder: List[str]

@@ -78,18 +78,17 @@ def _repository():
         ]
     )
     # GESPERRT fehlt: nicht sichtbar
-    repo.antwort_autoren = AsyncMock(
+    repo.antworten_mit_autor = AsyncMock(
         side_effect=lambda ids: {
-            i: a
+            i: (
+                AntwortKurz(
+                    id=i, content_type=ContentType.COMMENTARY, titel=f"Titel {i}"
+                ),
+                a,
+            )
             for i, a in {ALT: "bo-2", NEU_ANDERE: "bo-2", NEU_ICH: "kim-1"}.items()
             if i in ids
         }
-    )
-    repo.sichtbare_antworten = AsyncMock(
-        side_effect=lambda ids: [
-            AntwortKurz(id=i, content_type=ContentType.COMMENTARY, titel=f"Titel {i}")
-            for i in ids
-        ]
     )
     return repo
 
@@ -124,7 +123,9 @@ def client(repo):
     app.dependency_overrides[get_unbeantwortete_aussagen_service] = lambda: Mock(
         liste=AsyncMock(return_value=[])
     )
-    app.dependency_overrides[get_settings] = lambda: Settings()
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        antworten_hinweis_aktiv=True
+    )
     nutzung = Mock(nutzung_seit_letztem_besuch=AsyncMock(return_value=0))
     inhalte = Mock(count_neue_von_anderen=AsyncMock(return_value=0))
     with patch.object(
@@ -212,4 +213,5 @@ def test_neue_antworten_ohne_titel_abruf():
     )
 
     assert antworten_hinweis.neue_antworten(aussagen) == 1
-    repo.sichtbare_antworten.assert_not_called()
+    repo.antworten_mit_autor.assert_awaited_once()
+    assert all(a.titel == "" for x in aussagen for a in x.antworten)

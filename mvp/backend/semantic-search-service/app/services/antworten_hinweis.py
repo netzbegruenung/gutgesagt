@@ -60,8 +60,12 @@ async def eigene_aussagen(
 ) -> List[EigeneAussage]:
     """
     Die sichtbaren eigenen Aussagen der Person, neueste zuerst, je mit ihren sichtbaren
-    Antworten (neueste Verknuepfung zuerst). ``mit_titeln=False`` spart den Abruf der
-    Titel, wenn nur gezaehlt wird (Besuch).
+    Antworten (neueste Verknuepfung zuerst); ein gebuendelter Abruf fuer alle Antworten.
+    ``mit_titeln=False`` laesst die Titel weg, wenn nur gezaehlt wird (Besuch).
+
+    Hoechstens die neuesten AUSSAGEN_HOECHSTENS Aussagen: Antworten auf aeltere zaehlen
+    dann nicht mit. Das ist eine Grenze fuer sehr aktive Konten, keine Ersparnis beim
+    Lesen (get_by_author liest alle und schneidet im Speicher).
     """
     aussagen = await repository.get_by_author(
         person, limit=AUSSAGEN_HOECHSTENS, offset=0
@@ -76,27 +80,22 @@ async def eigene_aussagen(
         for aussage in aussagen
         for vorschlag in aussage.replysuggestions
     }
-    autoren = await repository.antwort_autoren(list(verknuepft))
-    titel = {}
-    typen = {}
-    if mit_titeln and autoren:
-        for kurz in await repository.sichtbare_antworten(list(autoren)):
-            titel[kurz.id] = kurz.titel
-            typen[kurz.id] = kurz.content_type
+    gelesen = await repository.antworten_mit_autor(list(verknuepft))
     seit = _utc(seit)
     ergebnis: List[EigeneAussage] = []
     for aussage in aussagen:
         antworten = []
         for vorschlag in aussage.replysuggestions:
-            if vorschlag.id not in autoren:
+            if vorschlag.id not in gelesen:
                 continue
-            von_dir = autoren[vorschlag.id] == person
+            kurz, autorin = gelesen[vorschlag.id]
+            von_dir = autorin == person
             am = _utc(vorschlag.created)
             antworten.append(
                 AntwortAufAussage(
                     id=vorschlag.id,
-                    content_type=typen.get(vorschlag.id, vorschlag.content_type),
-                    titel=titel.get(vorschlag.id, ""),
+                    content_type=kurz.content_type,
+                    titel=kurz.titel if mit_titeln else "",
                     verknuepft_am=am,
                     von_dir=von_dir,
                     neu=not von_dir and am >= seit,
@@ -119,10 +118,19 @@ def neue_antworten(aussagen: List[EigeneAussage]) -> int:
     return len({a.id for aussage in aussagen for a in aussage.antworten if a.neu})
 
 
-def statement_repository(settings) -> IStatementRepository:
-    """Das Aussagen-Repository; entsteht erst beim Aufruf (ein Ausfall kostet nur das)."""
-    from repositories.implementations.qdrant.qdrant_repository_factory import (
-        QdrantRepositoryFactory,
-    )
+_repository = None
 
-    return QdrantRepositoryFactory().create_statement_repository(settings)
+
+def statement_repository(settings) -> IStatementRepository:
+    """
+    Das Aussagen-Repository; entsteht beim ersten Aufruf (ein Ausfall kostet nur diese
+    Zahl) und bleibt dann, statt je Besuch neu angelegt zu werden.
+    """
+    global _repository
+    if _repository is None:
+        from repositories.implementations.qdrant.qdrant_repository_factory import (
+            QdrantRepositoryFactory,
+        )
+
+        _repository = QdrantRepositoryFactory().create_statement_repository(settings)
+    return _repository

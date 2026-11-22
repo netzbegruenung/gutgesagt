@@ -1,6 +1,6 @@
 from abc import abstractmethod
 import uuid
-from typing import AbstractSet, Dict, Iterable, List, Optional, Set
+from typing import AbstractSet, Dict, Iterable, List, Optional, Set, Tuple
 
 from repositories.interfaces.base_content_repository import (
     IBaseContentRepository,
@@ -145,11 +145,13 @@ class IStatementRepository(
         """
         pass
 
-    async def antwort_autoren(self, ids: List[uuid.UUID]) -> Dict[uuid.UUID, str]:
+    async def antworten_mit_autor(
+        self, ids: List[uuid.UUID]
+    ) -> Dict[uuid.UUID, Tuple[AntwortKurz, str]]:
         """
-        Of the given reply-suggestion IDs, the visible Beitraege with their
-        original_author (#760: new answers by others to one's own Aussagen). Not
-        abstract: only the Qdrant repository needs it.
+        Of the given reply-suggestion IDs, the visible Beitraege with type, Titel and
+        original_author, fetched in batches (#760: new answers by others to one's own
+        Aussagen). Not abstract: only the Qdrant repository needs it.
         """
         raise NotImplementedError
 

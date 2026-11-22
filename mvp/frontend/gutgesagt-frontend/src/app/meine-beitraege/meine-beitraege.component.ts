@@ -80,8 +80,11 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
    */
   aussagenAn = false;
 
+  /** "Meine Aussagen" aus der Adresse (Kachel): erst gewaehlt, wenn der Besuch den Schalter bestaetigt. */
+  private aussagenGewuenscht = false;
+
   get tabs(): ReadonlyArray<{ wert: MeineTab; name: string }> {
-    return TABS.filter((eintrag) => eintrag.wert !== 'aussagen' || this.aussagenAn || this.tab === 'aussagen');
+    return TABS.filter((eintrag) => eintrag.wert !== 'aussagen' || this.aussagenAn);
   }
   eintraege: AlbumEintrag[] = [];
   private destroy$ = new Subject<void>();
@@ -111,7 +114,11 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
     // Ein Tab in der Adresse, etwa nach dem Ausformulieren "Meine Einwuerfe" (#508).
     const tab = TABS.find((eintrag) => eintrag.wert === this.route.snapshot.queryParamMap.get(MEINE_TAB_PARAM));
     if (tab) {
-      this.tabWaehlen(tab.wert);
+      if (tab.wert === 'aussagen') {
+        this.aussagenGewuenscht = true;
+      } else {
+        this.tabWaehlen(tab.wert);
+      }
       // Der Tab gilt nur fuer diesen Sprung: Bliebe er in der Adresse, oeffnete ein
       // Neuladen nach dem Wechsel zu "Meine Beitraege" wieder "Meine Einwuerfe".
       this.router.navigate([], {
@@ -122,9 +129,18 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
       });
     }
     this.usageTrackingService.besuchStand$.pipe(takeUntil(this.destroy$)).subscribe((stand) => {
+      // Scheitert der Besuch, bleibt der Reiter fuer diesen App-Start weg (kein eigener Abruf).
       const an = typeof stand?.antworten_auf_eigene_aussagen === 'number';
       if (an !== this.aussagenAn) {
         this.aussagenAn = an;
+        if (!an && this.tab === 'aussagen') {
+          this.tabWaehlen('beitraege');
+        }
+        this.cdr.markForCheck();
+      }
+      if (an && this.aussagenGewuenscht) {
+        this.aussagenGewuenscht = false;
+        this.tabWaehlen('aussagen');
         this.cdr.markForCheck();
       }
     });
