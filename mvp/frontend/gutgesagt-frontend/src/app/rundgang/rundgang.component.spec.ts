@@ -262,10 +262,12 @@ describe('RundgangComponent', () => {
       flush();
     }));
 
-    it('gibt den Fokus an den Hilfe-Knopf, wenn der Ausgangspunkt weg ist (Start aus der Hilfe)', fakeAsync(() => {
+    it('gibt den Fokus an „Mehr“, wenn der Ausgangspunkt weg ist (Start aus Hilfe oder Menü)', fakeAsync(() => {
+      const navigation = document.createElement('app-hauptnavigation');
       const hilfe = document.createElement('button');
-      hilfe.className = 'hilfe-knopf';
-      seite.appendChild(hilfe);
+      hilfe.className = 'mehr-knopf';
+      navigation.appendChild(hilfe);
+      seite.appendChild(navigation);
       ausloeser.focus();
       starten();
       ausloeser.remove();

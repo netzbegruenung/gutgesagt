@@ -1,5 +1,9 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { AuthService } from '../../../auth/auth.service';
 
 import { MobileHeaderComponent } from './mobile-header.component';
 import { NavigationService } from '../../../services/navigation.service';
@@ -24,6 +28,9 @@ describe('MobileHeaderComponent', () => {
           { path: 'workflow/add-commentary', component: LeerComponent },
         ]),
         { provide: NavigationService, useValue: navigation },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideNoopAnimations(),
       ],
     }).compileComponents();
 
@@ -44,8 +51,8 @@ describe('MobileHeaderComponent', () => {
 
   /**
    * Mobil steht im Kopf der Name der aktuellen Seite, nicht die Marke - deshalb
-   * ist er kein Link. Zur Startseite fuehren das Logo links und der erste
-   * Menueeintrag (#620).
+   * ist er kein Link. Zur Startseite fuehren das Logo links und „Suchen“ in der
+   * unteren Leiste (#620, Navigation 22.11.2026).
    */
   it('laesst den Titel reinen Text, auch abseits der Startseite', fakeAsync(() => {
     oeffnen('/fangkorb');
@@ -124,7 +131,8 @@ describe('MobileHeaderComponent', () => {
     expect(knopf.textContent!.trim()).toBe('Anmelden');
     expect(fixture.nativeElement.querySelector('.mobile-header-avatar-container')).toBeNull();
     expect(fixture.nativeElement.querySelector('.contribute-button')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.menu-button')).not.toBeNull();
+    // Das Menue ☰ gibt es nicht mehr: Hilfe und Co. stehen in der unteren Leiste (22.11.2026)
+    expect(fixture.nativeElement.querySelector('.menu-button')).toBeNull();
 
     knopf.click();
     expect(anmelden).toHaveBeenCalled();
@@ -137,17 +145,46 @@ describe('MobileHeaderComponent', () => {
     expect(fixture.nativeElement.querySelector('.mobile-header-avatar-container')).toBeNull();
   }));
 
-  it('zeigt angemeldet Avatar und "+", keinen Anmelden-Knopf', () => {
+  it('zeigt angemeldet Profilbild und "+", keinen Anmelden-Knopf und kein Menue ☰', () => {
     const komponente = fixture.componentInstance;
     komponente.userInfo = { isAuthenticated: true, userId: 'u1', userName: 'Kim', claims: null };
     komponente.showContributeButton = true;
     fixture.detectChanges();
-    const menue = spyOn(komponente.openMenu, 'emit');
 
     expect(fixture.nativeElement.querySelector('.anmelden-knopf')).toBeNull();
     expect(fixture.nativeElement.querySelector('.contribute-button')).not.toBeNull();
-    (fixture.nativeElement.querySelector('.mobile-header-avatar-container') as HTMLButtonElement).click();
-    expect(menue).toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('.menu-button')).toBeNull();
+  });
+
+  // Navigation Variante 3 (22.11.2026): Das Profilbild oeffnet nur noch das Konto
+  it('oeffnet am Profilbild nur das Konto: Name, Profilbild, Datenschutz, Abmelden', async () => {
+    const komponente = fixture.componentInstance;
+    komponente.userInfo = { isAuthenticated: true, userId: 'u1', userName: 'Kim', claims: null };
+    fixture.detectChanges();
+    const auth = TestBed.inject(AuthService);
+    const abmelden = spyOn(auth, 'logout');
+
+    const knopf = fixture.nativeElement.querySelector('.mobile-header-avatar-container') as HTMLButtonElement;
+    expect(knopf.getAttribute('aria-label')).toBe('Profilmenü');
+    expect(knopf.getAttribute('aria-haspopup')).toBe('menu');
+    knopf.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const eintraege = Array.from(document.querySelectorAll('.konto-menue [mat-menu-item]')).map((e) =>
+      e.textContent!.replace(/\s+/g, ' ').trim(),
+    );
+    expect(eintraege).toEqual([
+      'Angemeldet als Kim',
+      jasmine.stringContaining('Profilbild wählen'),
+      jasmine.stringContaining('Datenschutz-Einstellungen'),
+      jasmine.stringContaining('Abmelden'),
+    ]);
+    expect(eintraege.join(' ')).not.toContain('Meine Beiträge');
+    expect(eintraege.join(' ')).not.toContain('Hilfe');
+
+    (Array.from(document.querySelectorAll('.konto-menue .profilmenue-eintrag')).pop() as HTMLElement).click();
+    expect(abmelden).toHaveBeenCalledTimes(1);
   });
 
   it('gibt den Pfeil an den NavigationService weiter', fakeAsync(() => {
@@ -162,7 +199,8 @@ describe('MobileHeaderComponent', () => {
 /**
  * Layout bei 360 px: Ein langer Titel darf nichts aus dem Kopf schieben. Frueher
  * war der Titel ein Flex-Element ohne min-width: 0 - seine Mindestbreite war die
- * Textbreite, und Avatar, Ordner und Menue rutschten rechts hinaus.
+ * Textbreite, und Avatar, Ordner und Menue rutschten rechts hinaus (das Menue ☰
+ * gibt es seit der unteren Leiste, 22.11.2026, nicht mehr).
  */
 describe('MobileHeaderComponent: Kopfzeile bei 360 px', () => {
   let fixture: ComponentFixture<MobileHeaderComponent>;
@@ -170,7 +208,7 @@ describe('MobileHeaderComponent: Kopfzeile bei 360 px', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [MobileHeaderComponent],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MobileHeaderComponent);
@@ -202,11 +240,11 @@ describe('MobileHeaderComponent: Kopfzeile bei 360 px', () => {
   }
 
   for (const titel of ['Beitrag verfassen', 'Ein sehr langer Seitentitel, der niemals passt']) {
-    it(`zeigt Avatar, Beitragen und Menue vollstaendig bei "${titel}"`, () => {
+    it(`zeigt Profilbild und Beitragen vollstaendig bei "${titel}"`, () => {
       aufbauen(titel);
       const kopf = rechteck('.mobile-header');
 
-      for (const selektor of ['.mobile-header-avatar-container', '.contribute-button', '.menu-button']) {
+      for (const selektor of ['.mobile-header-avatar-container', '.contribute-button']) {
         const r = rechteck(selektor);
         expect(r.width).withContext(`${selektor} Breite`).toBeGreaterThan(0);
         expect(r.left).withContext(`${selektor} links`).toBeGreaterThanOrEqual(kopf.left);
@@ -216,7 +254,7 @@ describe('MobileHeaderComponent: Kopfzeile bei 360 px', () => {
     });
   }
 
-  it('zeigt anonym "Anmelden" und Menue vollstaendig neben einem langen Titel (#644)', () => {
+  it('zeigt anonym "Anmelden" vollstaendig neben einem langen Titel (#644)', () => {
     const komponente = fixture.componentInstance;
     fixture.detectChanges();
     komponente.userInfo = { isAuthenticated: false } as any;
@@ -226,7 +264,7 @@ describe('MobileHeaderComponent: Kopfzeile bei 360 px', () => {
     fixture.detectChanges();
     const kopf = rechteck('.mobile-header');
 
-    for (const selektor of ['.anmelden-knopf', '.menu-button']) {
+    for (const selektor of ['.anmelden-knopf']) {
       const r = rechteck(selektor);
       expect(r.width).withContext(`${selektor} Breite`).toBeGreaterThan(0);
       expect(r.right).withContext(`${selektor} rechts`).toBeLessThanOrEqual(kopf.right);
@@ -280,7 +318,7 @@ describe('MobileHeaderComponent – Pfeil an der echten Routentabelle', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [MobileHeaderComponent],
-      providers: [provideRouter(ohneWaechter(routes))],
+      providers: [provideRouter(ohneWaechter(routes)), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     router = TestBed.inject(Router);

@@ -33,11 +33,11 @@ interface Kasten {
 
 /** Mobile Sprechblase als Karte am unteren Rand (Klickdummy: 390 px breit). */
 const SCHMAL = '(max-width: 599px)';
-/** Ab hier zeigt die App den mobilen Kopf mit Menü statt der Knöpfe (app.component.ts). */
+/** Ab hier zeigt die App den mobilen Kopf und die untere Leiste (app.component.ts). */
 const KOPF_MOBIL = '(max-width: 959px)';
 const RUHIG = '(prefers-reduced-motion: reduce)';
-/** Hilfe-Knopf im Desktop-Kopf, mobil der Menü-Knopf. */
-const HILFE_WEG = '.hilfe-knopf, .mobile-header .menu-button';
+/** „Mehr“ in der Hauptnavigation (Kopf oder untere Leiste): Dort stehen Hilfe und Rundgänge. */
+const HILFE_WEG = 'app-hauptnavigation .mehr-knopf';
 
 function passt(query: string): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia(query).matches;

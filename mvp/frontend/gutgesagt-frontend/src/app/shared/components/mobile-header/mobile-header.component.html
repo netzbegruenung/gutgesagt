@@ -18,7 +18,7 @@
   <!--
     Reiner Text, kein Link: Mobil steht hier der Name der Seite, auf der man ist
     ("Fangkorb"), nicht die Marke - ein Link darauf fuehrte woanders hin, als er
-    verspricht. Zur Startseite fuehren das Logo links und der erste Menueeintrag.
+    verspricht. Zur Startseite fuehren das Logo links und „Suchen“ in der unteren Leiste.
   -->
   <!--
     Der Text sitzt in einem eigenen Element: Die Ellipse wirkt nur an einem
@@ -32,22 +32,25 @@
 
   <div class="mobile-header-actions">
     <!--
-      Angemeldet: Avatar (oeffnet das Menue) und Beitragen. Anonym nur ein Text-Knopf
-      "Anmelden": Ein grauer Avatar wirkte wie ein Konto, und "+" fuehrte doch nur zur
-      Anmeldung (#644, wie am Desktop seit #599).
+      Angemeldet: Profilbild (oeffnet nur das Konto: Profilbild waehlen, Datenschutz,
+      Abmelden) und Beitragen. Die Ziele stehen in der unteren Leiste (Navigation
+      Variante 3, 22.11.2026), das Menue ☰ gibt es nicht mehr. Anonym nur ein Text-Knopf
+      "Anmelden" (#644, wie am Desktop seit #599).
     -->
     <ng-container *ngIf="userInfo?.isAuthenticated; else anmeldenKnopf">
+      <app-konto-menue #konto [name]="userInfo?.userName ?? null"></app-konto-menue>
       <button type="button"
-              class="mobile-header-avatar-container"
-              (click)="openUserMenu()"
-              aria-label="Profilmenü öffnen">
+              class="mobile-header-avatar-container konto-knopf-mobil"
+              [matMenuTriggerFor]="konto.menue"
+              aria-haspopup="menu"
+              aria-label="Profilmenü">
         <img [src]="selectedProfilePictureUrl"
              alt=""
              class="mobile-header-avatar">
+        <mat-icon class="konto-pfeil" aria-hidden="true">expand_more</mat-icon>
       </button>
 
-      <!-- Beitragen; "Meine Beitraege" steht im Menue. Den Neu-Punkt erklaert der Tooltip,
-           fuer Screenreader als Beschreibung (#644) -->
+      <!-- Beitragen. Den Neu-Punkt erklaert der Tooltip, fuer Screenreader als Beschreibung (#644) -->
       <button
         *ngIf="showContributeButton"
         mat-icon-button
@@ -64,13 +67,5 @@
       <!-- Auf der Anmeldeseite selbst nicht: Dort fuehrte der Knopf nur auf sich selbst -->
       <button *ngIf="!aufAnmeldung" mat-button type="button" class="anmelden-knopf" (click)="login.emit()">Anmelden</button>
     </ng-template>
-
-    <button
-      mat-icon-button
-      (click)="openMobileMenu()"
-      class="menu-button"
-      aria-label="Menü öffnen">
-      <mat-icon>menu</mat-icon>
-    </button>
   </div>
 </div>
