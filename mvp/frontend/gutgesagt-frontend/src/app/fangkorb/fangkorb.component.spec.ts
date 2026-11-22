@@ -522,7 +522,20 @@ describe('FangkorbComponent', () => {
       const stil = () => getComputedStyle(fixture.nativeElement.querySelector('.karten'));
       expect(stil().backgroundColor).toBe('rgba(0, 0, 0, 0)');
       expect(stil().paddingLeft).toBe('0px');
-      expect(stil().borderTopStyle).toBe('none');
+    });
+
+    it('zeichnet die Kartenliste auch im Dunkelmodus ohne Grund und Rand (wie #750)', () => {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      try {
+        erstellen(jeTab());
+        breiteSetzen(390);
+        const stil = getComputedStyle(fixture.nativeElement.querySelector('.karten'));
+        expect(stil.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+        // Im Dunkeln hatte die Liste einen Rand (--kartenliste-rand), im Hellen nie.
+        expect(stil.borderTopStyle).toBe('none');
+      } finally {
+        document.documentElement.removeAttribute('data-theme');
+      }
     });
 
     it('stellt die Karten neben der Seitenleiste ohne grauen Grund ins Raster (wie #750)', () => {
@@ -532,7 +545,6 @@ describe('FangkorbComponent', () => {
       const stil = getComputedStyle(fixture.nativeElement.querySelector('.karten'));
       expect(stil.backgroundColor).toBe('rgba(0, 0, 0, 0)');
       expect(stil.paddingLeft).toBe('0px');
-      expect(stil.borderTopStyle).toBe('none');
       expect(stil.columnGap).toBe('16px');
     });
 
