@@ -1,6 +1,6 @@
 from abc import abstractmethod
 import uuid
-from typing import AbstractSet, Dict, Iterable, List, Set
+from typing import AbstractSet, Dict, Iterable, List, Optional, Set
 
 from repositories.interfaces.base_content_repository import (
     IBaseContentRepository,
@@ -82,10 +82,12 @@ class IStatementRepository(
         pass
 
     @abstractmethod
-    async def kuratierte(self) -> List[StatementDbEntry]:
+    async def kuratierte(
+        self, ids: Optional[Iterable[uuid.UUID]] = None
+    ) -> List[StatementDbEntry]:
         """
         Visible statements, leaving out search queries nobody has answered yet
-        (as count_curated).
+        (as count_curated); with ``ids`` only those among them.
         """
         pass
 

@@ -104,6 +104,13 @@ listens on 5432 inside the container.
   - Unified content storage with type filtering
   - Semantic similarity search using 768-dimensional E5 embeddings, stored as the named vector
     `e5_base` and queried with `query_points`, so that further models can sit next to it (#395)
+  - "Alles zum Thema" (#754): a search input of one to three words that matches a Stichwort or the
+    name of a Thema (`domain/themen.json`, normalised in `domain/themen_abgleich.py`, no model)
+    adds `passende_themen` to the search response, at most two, each with the most used Aussagen
+    of the Thema (`services/themen_aussagen_service.py`); `GET /api/v1/search/thema/{schluessel}`
+    lists all of them, open to visitors like the search. It runs after the hits and does not
+    change them or their order; the search text is matched in memory only, neither stored nor
+    logged.
   - Asynchronous data seeding
   - RESTful API with OpenAPI docs
 - **Architecture**:

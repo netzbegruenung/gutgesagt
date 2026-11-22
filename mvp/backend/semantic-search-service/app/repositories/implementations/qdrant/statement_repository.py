@@ -254,13 +254,25 @@ class StatementRepository(
             self._kuratiert_filter(ueber_der_schwelle), limit, offset
         )
 
-    async def kuratierte(self) -> List[StatementDbEntry]:
+    async def kuratierte(
+        self, ids: Optional[Iterable[uuid.UUID]] = None
+    ) -> List[StatementDbEntry]:
         """
         Alle sichtbaren Aussagen ohne die unbeantworteten Suchanfragen (Kriterium
         wie count_curated), fuer die nachtraegliche Zuordnung von Themen. Alle
         Treffer auf einmal, unsortiert; Qdrant scrollt in ID-Reihenfolge.
+
+        Mit ``ids`` nur die darunter, etwa die Aussagen eines Themas (#754); eine
+        leere Liste ergibt keine.
         """
         scroll_filter = self._kuratiert_filter()
+        if ids is not None:
+            from qdrant_client.models import HasIdCondition
+
+            ids = [str(i) for i in dict.fromkeys(ids)]
+            if not ids:
+                return []
+            scroll_filter.must.append(HasIdCondition(has_id=ids))
 
         aussagen: List[StatementDbEntry] = []
         offset = None
