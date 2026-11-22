@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
-import { SearchByTextRequest, SearchResponse } from './dtos/searchDtos';
+import { AussagenDesThemasResponse, SearchByTextRequest, SearchResponse } from './dtos/searchDtos';
 import { environment } from '../../environments/environment';
 import { LoggingService } from './logging.service';
 import { StateManagementService } from './state-management.service';
@@ -96,6 +96,16 @@ export class SearchService {
         this.logger.error('Search failed', error);
         return throwError(() => error);
       })
+    );
+  }
+
+  /**
+   * "Alle Aussagen zum Thema" (#754): die Aussagen eines Themas mit Antwort, meistgenutzte
+   * zuerst. Wie die Suche auch fuer Besucher offen; aendert den Suchzustand nicht.
+   */
+  aussagenDesThemas(schluessel: string): Observable<AussagenDesThemasResponse> {
+    return this.http.get<AussagenDesThemasResponse>(
+      `${environment.baseUrl}/api/v1/search/thema/${encodeURIComponent(schluessel)}`,
     );
   }
 }

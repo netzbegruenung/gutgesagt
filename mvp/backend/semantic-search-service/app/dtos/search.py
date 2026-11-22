@@ -103,6 +103,28 @@ class ImageSearchResult(BaseModel):
     original_score: Optional[float] = None
 
 
+# "Alles zum Thema" (#754): Passt eine kurze Sucheingabe zu einem Thema, die
+# meistgenutzten Aussagen des Themas (services/themen_aussagen_service.py).
+
+
+class AussageDesThemasDto(BaseModel):
+    statement_id: uuid.UUID
+    text: str
+    # Sichtbare Antworten auf die Aussage.
+    antworten: int
+
+
+class PassendesThemaDto(ThemaDto):
+    aussagen: List[AussageDesThemasDto]
+    # Alle Aussagen des Themas mit Antwort; mehr als in `aussagen`, dann gibt es
+    # "Alle Aussagen zum Thema" (GET /search/thema/{schluessel}).
+    anzahl_aussagen: int
+
+
+class AussagenDesThemasResponse(BaseModel):
+    thema: PassendesThemaDto
+
+
 ###   Responses   ###
 
 
@@ -120,6 +142,10 @@ class SearchResponse(BaseModel):
     post_search_results: List[PostSearchResult] = []
     image_search_results_count: int = 0
     image_search_results: List[ImageSearchResult] = []
+    # Nur bei Eingaben aus einem bis drei Woertern, die zu einem Thema passen
+    # (domain/themen_abgleich.py), hoechstens zwei; None sonst oder wenn das
+    # Nachschlagen scheitert. Die Treffer oben bleiben davon unberuehrt.
+    passende_themen: Optional[List[PassendesThemaDto]] = None
 
     # class Config:
     #     alias_generator = camelize
