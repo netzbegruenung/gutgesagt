@@ -32,8 +32,45 @@ describe('plattformAusUrl', () => {
     expect(plattformAusUrl('https://bsky.app/profile/a.bsky.social/post/1')).toBe('bluesky');
   });
 
-  it('laesst Mastodon und kurze Lookalikes beim Web', () => {
-    expect(plattformAusUrl('https://mastodon.social/@a/1')).toBe('web');
+  it('erkennt Mastodon an bekannten Instanzen, auch Profile und Subdomains', () => {
+    expect(plattformAusUrl('https://mastodon.social/@a/113456789012345678')).toBe('mastodon');
+    expect(plattformAusUrl('https://gruene.social/@a')).toBe('mastodon');
+    expect(plattformAusUrl('https://chaos.social/@a/1')).toBe('mastodon');
+    expect(plattformAusUrl('https://social.tchncs.de/@a/1')).toBe('mastodon');
+    expect(plattformAusUrl('https://www.troet.cafe/@a/1')).toBe('mastodon');
+  });
+
+  it('erkennt Mastodon-Posts auf anderen Instanzen am Pfad', () => {
+    expect(plattformAusUrl('https://norden.social/@a/113456789012345678')).toBe('mastodon');
+    expect(plattformAusUrl('https://social.example.org/@a/1/')).toBe('mastodon');
+    expect(plattformAusUrl('https://social.example.org/@a@gruene.social/1')).toBe('mastodon');
+    expect(plattformAusUrl('https://social.example.org/users/a/statuses/1')).toBe('mastodon');
+    expect(plattformAusUrl('https://social.example.org/@a/1?lang=de#antworten')).toBe('mastodon');
+  });
+
+  it('zaehlt auf fremden Hosts nur Mastodon-Posts, keine Profile oder aehnliche Pfade', () => {
+    expect(plattformAusUrl('https://social.example.org/@a')).toBe('web');
+    expect(plattformAusUrl('https://medium.com/@a/titel-1a2b3c')).toBe('web');
+    expect(plattformAusUrl('https://social.example.org/@a/1/reblogs')).toBe('web');
+    expect(plattformAusUrl('https://example.org/blog/@a/1')).toBe('web');
+  });
+
+  it('laesst bekannte Plattformen vor der Mastodon-Heuristik', () => {
+    expect(plattformAusUrl('https://www.threads.net/@a/post/1')).toBe('threads');
+    expect(plattformAusUrl('https://www.threads.com/@a/1')).toBe('threads');
+    expect(plattformAusUrl('https://www.tiktok.com/@a/1')).toBe('tiktok');
+    expect(plattformAusUrl('https://www.youtube.com/@a/1')).toBe('youtube');
+    expect(plattformAusUrl('https://x.com/a/status/1')).toBe('x');
+    expect(plattformAusUrl('https://bsky.app/profile/a.bsky.social/post/1')).toBe('bluesky');
+  });
+
+  it('laesst sich von Mastodon-aehnlichen Domains nicht taeuschen', () => {
+    expect(plattformAusUrl('https://notmastodon.social/a')).toBe('web');
+    expect(plattformAusUrl('https://mastodon.social.example.org/a')).toBe('web');
+    expect(plattformAusUrl('https://gruene.social.example.org/')).toBe('web');
+  });
+
+  it('laesst kurze Lookalikes beim Web', () => {
     expect(plattformAusUrl('https://box.com/s/1')).toBe('web');
     expect(plattformAusUrl('https://x.com.example.org/a')).toBe('web');
   });
@@ -66,6 +103,7 @@ describe('plattformName', () => {
     expect(plattformName('threads')).toBe('Threads');
     expect(plattformName('x')).toBe('X');
     expect(plattformName('bluesky')).toBe('Bluesky');
+    expect(plattformName('mastodon')).toBe('Mastodon');
     expect(plattformName('web')).toBe('Web');
   });
 });

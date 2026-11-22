@@ -215,7 +215,7 @@ describe('Filter im sessionStorage', () => {
       FILTER_SCHLUESSEL,
       JSON.stringify({
         plattformen: ['instagram', 'myspace'],
-        bekannte: ['instagram', 'youtube', 'tiktok', 'threads', 'x', 'bluesky', 'web', 'myspace'],
+        bekannte: ['instagram', 'youtube', 'tiktok', 'threads', 'x', 'bluesky', 'mastodon', 'web', 'myspace'],
         tab: 'einwerfen',
         verworfenSichtbar: 'ja',
       }),
@@ -231,7 +231,7 @@ describe('Filter im sessionStorage', () => {
     );
 
     expect(filterLaden()).toEqual(
-      filter({ plattformen: ['instagram', 'threads', 'x', 'bluesky', 'web'] }),
+      filter({ plattformen: ['instagram', 'threads', 'x', 'bluesky', 'mastodon', 'web'] }),
     );
   });
 
@@ -244,7 +244,7 @@ describe('Filter im sessionStorage', () => {
       }),
     );
 
-    expect(filterLaden().plattformen).toEqual(['youtube', 'bluesky']);
+    expect(filterLaden().plattformen).toEqual(['youtube', 'bluesky', 'mastodon']);
   });
 
   it('laesst abgewaehlte Plattformen abgewaehlt, die der Filter schon kannte', () => {

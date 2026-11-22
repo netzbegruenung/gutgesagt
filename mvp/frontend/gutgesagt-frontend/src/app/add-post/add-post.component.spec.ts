@@ -69,6 +69,14 @@ describe('AddPostComponent', () => {
     expect(component.postForm.value.platform).toBe('youtube');
   });
 
+  it('bietet Mastodon an und erkennt es am Link, auch auf unbekannten Instanzen', () => {
+    expect(component.plattformen.map((p) => p.name)).toContain('Mastodon');
+
+    component.postForm.patchValue({ url: 'https://norden.social/@a/113456789012345678' });
+
+    expect(component.postForm.value.platform).toBe('mastodon');
+  });
+
   it('uebernimmt aus dem Fangkorb Satz als Titel, Link und Plattform', () => {
     component.vorbefuellung = { einwurfId: 'e-1', titel: 'Der Satz zum Einwurf', url: WERTE.url };
     component.ngOnChanges({ vorbefuellung: {} as any });
