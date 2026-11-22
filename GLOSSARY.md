@@ -658,5 +658,5 @@ Eine Person, die Meldungen bearbeitet, Beiträge sperrt, Widersprüche prüft, E
 _Avoid_: Moderator, Redaktion
 
 **Schalter**:
-Eine Funktion, die sich ein- und ausschalten lässt, ohne den Code zu ändern. Bei Punkten, Abzeichen am Anzeigenamen und „Ja, gepostet“ hat ein Schalter zwei Teile: die **Obergrenze**, die der Server aus seiner Umgebung setzt, und den **Admin-Wert**, den ein Admin auf der Admin-Seite „Schalter“ setzt. Wirksam ist der Schalter nur, wenn beide an sind; ohne Admin-Wert ist er aus. Über die Obergrenze hinaus einschalten kann kein Admin, ausschalten jederzeit; jede Änderung steht mit Zeitpunkt und Kennung des Admins im Verlauf (#708). Abzeichen wirken nur zusammen mit den Punkten.
+Eine Funktion, die sich ein- und ausschalten lässt, ohne den Code zu ändern. Bei Punkten, Abzeichen am Anzeigenamen, „Ja, gepostet“ und „Herkunft prüfen“ (`herkunft_pruefen`, #759) hat ein Schalter zwei Teile: die **Obergrenze**, die der Server aus seiner Umgebung setzt, und den **Admin-Wert**, den ein Admin auf der Admin-Seite „Schalter“ setzt. Wirksam ist der Schalter nur, wenn beide an sind; ohne Admin-Wert ist er aus. Über die Obergrenze hinaus einschalten kann kein Admin, ausschalten jederzeit; jede Änderung steht mit Zeitpunkt und Kennung des Admins im Verlauf (#708). Abzeichen wirken nur zusammen mit den Punkten.
 _Avoid_: Feature-Flag, Toggle, Flag
