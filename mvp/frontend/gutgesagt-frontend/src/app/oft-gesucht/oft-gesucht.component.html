@@ -1,8 +1,8 @@
-<section class="oft-gesucht" [attr.aria-labelledby]="aussagen.length ? 'oft-gesucht-titel' : null">
-    <ng-container *ngIf="aussagen.length">
+<section class="oft-gesucht" [attr.aria-labelledby]="gezeigt.length ? 'oft-gesucht-titel' : null">
+    <ng-container *ngIf="gezeigt.length">
         <h2 id="oft-gesucht-titel" class="oft-gesucht-titel">{{ titel }}</h2>
         <ul class="oft-gesucht-liste">
-            <li *ngFor="let aussage of aussagen">
+            <li *ngFor="let aussage of gezeigt">
                 <a class="oft-gesucht-aussage" [routerLink]="ergebnisse" [queryParams]="sucheNach(aussage)">„{{ aussage.text }}“</a>
             </li>
         </ul>

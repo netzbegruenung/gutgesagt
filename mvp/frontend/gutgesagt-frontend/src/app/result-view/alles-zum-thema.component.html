@@ -1,0 +1,31 @@
+<!-- Je passendes Thema ein Kasten (#754): Motiv, Name, meistgenutzte Aussagen. -->
+<section class="alles-zum-thema" *ngFor="let thema of themen; trackBy: nachSchluessel"
+         [attr.aria-labelledby]="'alles-zum-thema-' + thema.schluessel">
+    <h2 class="kasten-titel" [id]="'alles-zum-thema-' + thema.schluessel">
+        <span class="kasten-vorsatz">Alles zum Thema</span>
+        <span class="kasten-thema">
+            <img *ngIf="thema.motiv" class="kasten-motiv" [src]="thema.motiv" alt="" aria-hidden="true" width="28" height="28">
+            {{ thema.name }}
+        </span>
+    </h2>
+    <ul class="kasten-liste">
+        <li *ngFor="let aussage of aussagenVon(thema); trackBy: nachAussage">
+            <a class="kasten-aussage" [routerLink]="ergebnisse" [queryParams]="sucheNach(aussage)">„{{ aussage.text }}“</a>
+            <span class="kasten-zahl">{{ antwortenText(aussage.antworten) }}</span>
+        </li>
+    </ul>
+    <div class="kasten-aktionen" *ngIf="mehr(thema) || istFilterbar(thema)">
+        <button *ngIf="mehr(thema)" type="button" class="kasten-alle"
+                [disabled]="laedt.has(thema.schluessel)" (click)="alleLaden(thema)">
+            {{ alleText(thema) }}
+        </button>
+        <button *ngIf="istFilterbar(thema)" type="button" class="chip thema-chip kasten-filter"
+                [class.gewaehlt]="aktiv === thema.schluessel"
+                [attr.aria-pressed]="aktiv === thema.schluessel"
+                (click)="filterUmschalten(thema)">Nur Treffer zum Thema</button>
+    </div>
+    <p class="kasten-fehler" *ngIf="fehler.has(thema.schluessel)" role="alert">
+        Die übrigen Aussagen ließen sich gerade nicht laden. Versuch es gleich noch einmal.
+    </p>
+</section>
+<p class="visually-hidden" aria-live="polite">{{ meldung }}</p>
