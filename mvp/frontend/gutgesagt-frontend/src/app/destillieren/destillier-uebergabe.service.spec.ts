@@ -56,6 +56,19 @@ describe('DestillierUebergabeService', () => {
     expect(ergebnis!.kopf!.einwurfAngaben!.kopfSatz).toBe('Waermepumpe lohnt sich auch im Altbau');
   });
 
+  it('reicht die Themen des Einwurfs als Schluessel weiter, ohne Themen leer', () => {
+    einwurfService.einwurfLaden.and.returnValues(
+      of({ id: 'id-1', url: null, themen: [{ schluessel: 'verkehr', name: 'Verkehr' }] } as Einwurf),
+      of({ id: 'id-2', url: null } as Einwurf),
+    );
+    const ergebnisse: Vorbefuellung[] = [];
+
+    service.vorbefuellungLaden('id-1').subscribe((v) => ergebnisse.push(v));
+    service.vorbefuellungLaden('id-2').subscribe((v) => ergebnisse.push(v));
+
+    expect(ergebnisse.map((v) => v.themen)).toEqual([['verkehr'], []]);
+  });
+
   it('verknuepft ohne Sprung und meldet, ob es geklappt hat', () => {
     einwurfService.updateStatus.and.returnValues(of({} as any), throwError(() => new Error('500')));
     const ergebnisse: boolean[] = [];

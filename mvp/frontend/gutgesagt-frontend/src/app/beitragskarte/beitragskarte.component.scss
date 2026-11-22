@@ -68,6 +68,30 @@
   }
 }
 
+/* Themen am Einwurf: Marken wie an der Aussage (AussageThemenComponent), auf dem Sand
+   des Bandes. Hellgruen auf Sand: Schrift --akzent-schrift auf --primaer-tint wie dort. */
+.einwurf-themen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: var(--spacing-xs, 4px) var(--spacing-md) var(--spacing-sm);
+  background: var(--einwurf-grund);
+  list-style: none;
+}
+
+.einwurf-themen .thema-marke {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.3;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--primaer-tint);
+  color: var(--akzent-schrift);
+}
+
 // Kopf aus einem Einwurf: der Satz unter der Link-Zeile, noch im Sandband
 .einwurf-kopfsatz {
   margin: 0;

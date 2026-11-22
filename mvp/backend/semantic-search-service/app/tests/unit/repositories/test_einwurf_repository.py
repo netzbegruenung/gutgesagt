@@ -110,6 +110,33 @@ class TestCreate:
         assert angelegt.submitted_by is None
         assert angelegt.url == "https://example.org/post"
 
+    def test_create_ohne_themen_legt_keine_themenzeilen_an(self, repository, session):
+        """Ohne Thema bleibt der Eingang so, wie er war: eine Zeile, kein flush."""
+        ergebnis = repository.create(content="ein Satz")
+
+        session.add_all.assert_not_called()
+        session.flush.assert_not_called()
+        assert ergebnis["themen"] == []
+
+    def test_create_speichert_themen_am_einwurf(self, repository, session):
+        """Die Themen kommen in derselben Session und Transaktion wie der Einwurf."""
+        einwurf_id = uuid.uuid4()
+
+        def id_vergeben():
+            session.add.call_args[0][0].id = einwurf_id
+
+        session.flush.side_effect = id_vergeben
+        ergebnis = repository.create(content="x", themen=["verkehr", "klima"])
+
+        zeilen = list(session.add_all.call_args[0][0])
+        assert [(z.raw_input_id, z.thema) for z in zeilen] == [
+            (einwurf_id, "verkehr"),
+            (einwurf_id, "klima"),
+        ]
+        session.commit.assert_called_once()
+        # Nach aussen in der Reihenfolge der Themenliste: Klima steht vor Verkehr.
+        assert ergebnis["themen"] == ["klima", "verkehr"]
+
     def test_create_gibt_dict_statt_orm_objekt_zurueck(self, repository, session):
         """Nach dem Schliessen der Session waere ein ORM-Objekt nicht mehr lesbar."""
         session.refresh.side_effect = lambda obj: None
@@ -317,6 +344,31 @@ class TestSaetzeUndAusformuliertIn:
 
         assert gruppiert == {einwurf: [zuerst, danach]}
         assert "created_at" in _sql(query.order_by.call_args.args[0])
+
+    def test_themen_werden_je_einwurf_gruppiert(self, session):
+        einwurf = uuid.uuid4()
+        anderer = uuid.uuid4()
+        query = MagicMock()
+        session.query.return_value = query
+        query.filter.return_value = query
+        query.all.return_value = [
+            SimpleNamespace(raw_input_id=einwurf, thema="verkehr"),
+            SimpleNamespace(raw_input_id=anderer, thema="klima"),
+            SimpleNamespace(raw_input_id=einwurf, thema="klima"),
+        ]
+
+        gruppiert = EinwurfRepository._themen(session, [einwurf, anderer])
+
+        assert gruppiert == {einwurf: ["verkehr", "klima"], anderer: ["klima"]}
+        bedingung = _sql(query.filter.call_args.args[0])
+        assert "einwurf_themen.raw_input_id IN" in bedingung
+
+    def test_to_dict_sortiert_themen_nach_der_liste(self):
+        eintrag = EinwurfRepository._to_dict(
+            _zeile(), themen=["europa", "weggefallen", "klima"]
+        )
+
+        assert eintrag["themen"] == ["klima", "europa", "weggefallen"]
 
     def test_saetze_aller_personen_werden_gelesen(self, session):
         einwurf = uuid.uuid4()

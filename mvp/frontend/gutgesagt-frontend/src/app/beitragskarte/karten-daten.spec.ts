@@ -371,7 +371,17 @@ describe('karten-daten', () => {
         beitraege: [],
         beitragZustand: null,
         verwerfbar: true,
+        themen: [],
       });
+    });
+
+    it('nimmt die beim Einwerfen gewaehlten Themen samt Motiv mit', () => {
+      const themen = [
+        { schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' },
+        { schluessel: 'europa', name: 'Europa', motiv: 'themen/europa.svg' },
+      ];
+
+      expect(ausEinwurf(einwurf({ themen })).einwurfAngaben!.themen).toEqual(themen);
     });
 
     it('uebernimmt das Kennzeichen eigener Einwurf vom Server (#385)', () => {

@@ -1280,6 +1280,34 @@ describe('BeitragskarteComponent', () => {
       auth.getUserInfo.and.returnValue({ isAuthenticated: true, userId: 'test-user', ...nutzer } as UserInfo);
     }
 
+    it('zeigt die beim Einwerfen gewaehlten Themen als Liste, ohne Themen keine', () => {
+      zeigen(
+        einwurfKarte({
+          themen: [
+            { schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' },
+            { schluessel: 'verkehr', name: 'Verkehr' },
+          ],
+        }),
+        { variante: 'einwurf' },
+      );
+      const liste = element('.einwurf-themen');
+      // Motiv dekorativ vor dem Namen, feste Groesse; ohne Motiv nur der Name
+      const bilder = Array.from(liste.querySelectorAll('img.thema-motiv')) as HTMLImageElement[];
+      expect(bilder.length).toBe(1);
+      expect(bilder[0].getAttribute('src')).toBe('themen/klima.svg');
+      expect(bilder[0].getAttribute('alt')).toBe('');
+      expect(bilder[0].getAttribute('aria-hidden')).toBe('true');
+      expect(bilder[0].getAttribute('width')).toBe('16');
+      expect(liste.getAttribute('aria-label')).toBe('Themen');
+      expect(Array.from(liste.querySelectorAll('li')).map((li) => (li as HTMLElement).textContent?.trim())).toEqual([
+        'Klima',
+        'Verkehr',
+      ]);
+
+      zeigen(einwurfKarte(), { variante: 'einwurf' });
+      expect(element('.einwurf-themen')).toBeNull();
+    });
+
     it('erlaubt Admins das Verwerfen fremder und einwerferloser Einwuerfe', () => {
       alsNutzer({ isAdmin: true });
 

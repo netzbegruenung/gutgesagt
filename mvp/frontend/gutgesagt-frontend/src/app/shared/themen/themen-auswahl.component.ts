@@ -3,10 +3,13 @@ import { CommonModule } from '@angular/common';
 import { Thema } from '../../services/dtos/themenDtos';
 import { HOECHSTENS_THEMEN_JE_AUSSAGE } from '../../services/themen.service';
 
+/** Die Grenze in Worten fuer den Hinweis; nur die, die vorkommen. */
+const ZAHLWORT: Record<number, string> = { 2: 'zwei', 3: 'drei' };
+
 /**
- * Ein bis drei Themen fuer eine Aussage waehlen, optional. Jedes Thema ist ein
- * Umschalter; sind drei gewaehlt, lassen sich weitere erst nach dem Abwaehlen
- * eines davon waehlen.
+ * Themen waehlen, optional: fuer eine Aussage bis zu drei, beim Einwerfen bis zu zwei
+ * (`hoechstens`). Jedes Thema ist ein Umschalter; ist die Grenze erreicht, lassen sich
+ * weitere erst nach dem Abwaehlen eines davon waehlen.
  */
 @Component({
   selector: 'app-themen-auswahl',
@@ -19,9 +22,9 @@ import { HOECHSTENS_THEMEN_JE_AUSSAGE } from '../../services/themen.service';
               [class.gewaehlt]="istGewaehlt(thema)"
               [attr.aria-pressed]="istGewaehlt(thema)"
               [disabled]="!istGewaehlt(thema) && voll"
-              (click)="umschalten(thema)">{{ thema.name }}</button>
+              (click)="umschalten(thema)"><img *ngIf="thema.motiv" class="thema-motiv" [src]="thema.motiv" alt="" aria-hidden="true" width="18" height="18">{{ thema.name }}</button>
     </div>
-    <p class="themen-hinweis">Bis zu drei Themen, optional.</p>
+    <p class="themen-hinweis">{{ hinweis }}</p>
   `,
   styleUrls: ['./themen.css'],
 })
@@ -30,10 +33,17 @@ export class ThemenAuswahlComponent {
   /** Die gewaehlten Schluessel. */
   @Input() gewaehlt: string[] = [];
   @Input() beschriftung = 'Themen';
+  /** Wie viele hoechstens; ohne Angabe die Grenze der Aussage. */
+  @Input() hoechstens = HOECHSTENS_THEMEN_JE_AUSSAGE;
   @Output() gewaehltChange = new EventEmitter<string[]>();
 
   get voll(): boolean {
-    return this.gewaehlt.length >= HOECHSTENS_THEMEN_JE_AUSSAGE;
+    return this.gewaehlt.length >= this.hoechstens;
+  }
+
+  get hinweis(): string {
+    const zahl = ZAHLWORT[this.hoechstens] ?? String(this.hoechstens);
+    return this.hoechstens === 1 ? 'Ein Thema, optional.' : `Bis zu ${zahl} Themen, optional.`;
   }
 
   istGewaehlt(thema: Thema): boolean {

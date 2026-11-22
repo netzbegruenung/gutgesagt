@@ -27,6 +27,8 @@ from core.fehler import Validierungsfehler
 
 # Glossar: "eine Aussage hat hoechstens drei".
 HOECHSTENS_JE_AUSSAGE = 3
+# Beim Einwerfen nur ein erster Fingerzeig (Glossar "Thema"): hoechstens zwei.
+HOECHSTENS_JE_EINWURF = 2
 
 _DATEI = Path(__file__).with_name("themen.json")
 
@@ -48,7 +50,7 @@ class Zuordnungsart(StrEnum):
 
 
 class ThemaUngueltig(Validierungsfehler):
-    """Ein Schluessel steht nicht in der Liste, oder es sind mehr als drei."""
+    """Ein Schluessel steht nicht in der Liste, doppelt, oder es sind zu viele."""
 
 
 def _laden() -> Tuple[Thema, ...]:
@@ -87,3 +89,33 @@ def themen_pruefen(schluessel: Iterable[str]) -> List[str]:
 # Die Themen einer Aussage in einer Anfrage, geprueft, bevor etwas gespeichert wird:
 # Sonst stuende der Beitrag oder die Aussage schon, ohne Themen.
 ThemenDerAussage = Annotated[List[str], AfterValidator(themen_pruefen)]
+
+
+def einwurf_themen_pruefen(schluessel: Iterable[str]) -> List[str]:
+    """
+    Die Themen eines Einwurfs, in der gegebenen Reihenfolge. Leer ist erlaubt: Einwerfen
+    bleibt ohne Thema so schnell wie vorher.
+
+    Strenger als bei der Aussage: Ein doppelter Schluessel wird abgewiesen statt
+    zusammengefasst, denn das Formular schickt nie einen; kommt einer, ist der Aufrufer
+    kaputt, und das soll er erfahren.
+
+    Raises:
+        ThemaUngueltig: ein Schluessel steht nicht in der Liste, steht doppelt da, oder
+            es sind mehr als HOECHSTENS_JE_EINWURF.
+    """
+    ergebnis: List[str] = []
+    for eintrag in schluessel:
+        if eintrag not in NACH_SCHLUESSEL:
+            raise ThemaUngueltig(f"Unbekanntes Thema: {eintrag!r}")
+        if eintrag in ergebnis:
+            raise ThemaUngueltig(f"Thema doppelt: {eintrag!r}")
+        ergebnis.append(eintrag)
+    if len(ergebnis) > HOECHSTENS_JE_EINWURF:
+        raise ThemaUngueltig(
+            f"Hoechstens {HOECHSTENS_JE_EINWURF} Themen je Einwurf, nicht {len(ergebnis)}"
+        )
+    return ergebnis
+
+
+ThemenDesEinwurfs = Annotated[List[str], AfterValidator(einwurf_themen_pruefen)]

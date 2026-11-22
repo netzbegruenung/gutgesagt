@@ -58,6 +58,18 @@ describe('AussageThemenComponent', () => {
     expect(umschalter(e)).toBeNull();
   });
 
+  it('zeigt das Motiv dekorativ vor dem Namen der Marke', () => {
+    const e = zeigen({ statement_id: 'a-1', themen: [{ ...KLIMA, motiv: 'themen/klima.svg' }, VERKEHR] }, false);
+
+    const bild = e.querySelector('.thema-marke img.thema-motiv') as HTMLImageElement;
+    expect(bild.getAttribute('src')).toBe('themen/klima.svg');
+    expect(bild.getAttribute('alt')).toBe('');
+    expect(bild.getAttribute('aria-hidden')).toBe('true');
+    expect(bild.getAttribute('width')).toBe('16');
+    expect(e.querySelectorAll('img.thema-motiv').length).toBe(1);
+    expect(marken(e)).toEqual(['Klima', 'Verkehr']);
+  });
+
   it('zeigt Abgemeldeten ohne Themen nichts', () => {
     const e = zeigen({ statement_id: 'a-1', themen: [] }, false);
 

@@ -7,6 +7,7 @@ import { KETTEN_ICONS } from '../shared/fangkorb-texte';
 import type { NutzungJeFassung } from '../shared/fassung';
 import { STIL_LABEL, Stil } from '../shared/zweck-stil';
 import type { BeitragAnsicht } from '../services/content.service';
+import type { Thema } from '../services/dtos/themenDtos';
 
 /**
  * Was eine Beitragskarte anzeigt, unabhaengig davon, woher die Daten kommen.
@@ -138,6 +139,8 @@ export interface EinwurfAngaben {
   kopfSatz?: string;
   /** Offen oder destilliert (`istVerwerfbar`); wer verwerfen darf, entscheidet die Karte. */
   verwerfbar: boolean;
+  /** Die beim Einwerfen gewaehlten Themen (Name und Motiv), in der Reihenfolge der Themenliste; leer oder fehlend ohne. */
+  themen?: Thema[];
 }
 
 export interface KartenDaten {
@@ -536,6 +539,7 @@ export function ausEinwurf(einwurf: Einwurf): KartenDaten {
       beitraege: beitraegeVonEinwurf(einwurf),
       beitragZustand: nichtSichtbar(einwurf),
       verwerfbar: istVerwerfbar(einwurf),
+      themen: einwurf.themen ?? [],
     },
   };
 }

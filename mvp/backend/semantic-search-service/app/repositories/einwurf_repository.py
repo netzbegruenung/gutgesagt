@@ -1,8 +1,8 @@
 """
 Repository fuer den Fangkorb (Einwuerfe).
 
-Datenzugriff auf ``raw_inputs``, ``raw_input_drafts`` und
-``raw_input_content_links``: anlegen, auflisten, einzeln lesen, Satz speichern,
+Datenzugriff auf ``raw_inputs``, ``raw_input_drafts``,
+``raw_input_content_links`` und ``einwurf_themen``: anlegen, auflisten, einzeln lesen, Satz speichern,
 Status setzen. Eine Zuweisung ("ich nehm das") gibt es bewusst nicht - mehrere
 Personen duerfen denselben Einwurf gleichzeitig destillieren, und ihre Saetze
 sind fuer alle Angemeldeten sichtbar.
@@ -29,9 +29,11 @@ from domain.models.einwurf import (
     status_ohne_saetze,
     uebergang_erlaubt,
 )
+from domain.themen import THEMEN
 from infrastructure.database.connection import AppDatabase, get_app_database
 from infrastructure.database.models import (
     Einwurf,
+    EinwurfThemaZeile,
     AusformuliertIn,
     Satz,
     User,
@@ -45,6 +47,15 @@ GLEICHER_LINK_TREFFER = 5
 # als die echten Treffer kommen fast nur bei einem nackten Host
 # ("https://example.org").
 GLEICHER_LINK_SEITE = 200
+
+# Die Themen eines Einwurfs stehen in der Reihenfolge der Themenliste, nicht der Wahl:
+# So steht dasselbe Thema auf allen Karten an derselben Stelle.
+_THEMEN_RANG = {thema.schluessel: rang for rang, thema in enumerate(THEMEN)}
+
+
+def _themen_sortiert(schluessel: Sequence[str]) -> List[str]:
+    """Nach der Themenliste; was dort nicht (mehr) steht, hinten."""
+    return sorted(schluessel, key=lambda s: _THEMEN_RANG.get(s, len(_THEMEN_RANG)))
 
 
 class EinwurfRepository:
@@ -60,12 +71,13 @@ class EinwurfRepository:
         saetze: Sequence[Satz] = (),
         ausformuliert_in: Sequence[AusformuliertIn] = (),
         current_user: Optional[str] = None,
+        themen: Sequence[str] = (),
     ) -> Dict[str, Any]:
         """
         In ein Dict uebersetzen, solange die Session noch offen ist.
 
         ``saetze`` und ``ausformuliert_in`` kommen aelteste zuerst; der erste Eintrag
-        liefert die processed-Felder.
+        liefert die processed-Felder. ``themen`` sind Schluessel.
         """
         eigener_satz = next(
             (
@@ -111,6 +123,7 @@ class EinwurfRepository:
                 }
                 for eintrag in ausformuliert_in
             ],
+            "themen": _themen_sortiert(themen),
         }
 
     def create(
@@ -121,9 +134,10 @@ class EinwurfRepository:
         submitted_by: Optional[str] = None,
         source_channel: str = EinwurfWeg.WEB.value,
         cc0_wortlaut: Optional[str] = None,
+        themen: Sequence[str] = (),
     ) -> Dict[str, Any]:
         """
-        Einen Einwurf anlegen.
+        Einen Einwurf anlegen, mit seinen Themen in derselben Transaktion.
 
         Args:
             content: Hinweis fuer andere, oder der Fund selbst als Text
@@ -132,6 +146,7 @@ class EinwurfRepository:
             submitted_by: Wer eingeworfen hat; None fuer Kanaele ohne Sitzung
             source_channel: Weg ("web", "share" oder "import")
             cc0_wortlaut: Kennung des CC0-Hinweises im Formular (domain/cc0_hinweis.py)
+            themen: Schluessel aus der Themenliste, schon geprueft (EinwerfenRequest)
 
         Returns:
             Dict[str, Any]: der angelegte Einwurf
@@ -148,10 +163,20 @@ class EinwurfRepository:
                     cc0_wortlaut=cc0_wortlaut,
                 )
                 session.add(einwurf)
+                if themen:
+                    # Die ID vergibt die Datenbank: erst einfuegen, dann die Themen daran.
+                    session.flush()
+                    session.add_all(
+                        EinwurfThemaZeile(raw_input_id=einwurf.id, thema=thema)
+                        for thema in themen
+                    )
                 session.commit()
                 session.refresh(einwurf)
-                logger.info(f"Einwurf {einwurf.id} angelegt (Kanal: {source_channel})")
-                return self._to_dict(einwurf)
+                logger.info(
+                    f"Einwurf {einwurf.id} angelegt (Kanal: {source_channel}, "
+                    f"Themen: {len(themen)})"
+                )
+                return self._to_dict(einwurf, themen=themen)
         except Exception as e:
             logger.error(
                 f"Fehler beim Anlegen eines Einwurfs: {type(e).__name__}",
@@ -645,15 +670,30 @@ class EinwurfRepository:
         ids = [row.id for row in rows]
         saetze = self._saetze(session, ids)
         ausformuliert_in = self._ausformuliert_in(session, ids)
+        themen = self._themen(session, ids)
         return [
             self._to_dict(
                 row,
                 saetze.get(row.id, []),
                 ausformuliert_in.get(row.id, []),
                 current_user,
+                themen.get(row.id, []),
             )
             for row in rows
         ]
+
+    @staticmethod
+    def _themen(session, ids: List[uuid.UUID]) -> Dict[uuid.UUID, List[str]]:
+        """Die Themen der Einwuerfe als Schluessel, eine Abfrage fuer die ganze Seite."""
+        zeilen = (
+            session.query(EinwurfThemaZeile)
+            .filter(EinwurfThemaZeile.raw_input_id.in_(ids))
+            .all()
+        )
+        gruppiert: Dict[uuid.UUID, List[str]] = defaultdict(list)
+        for zeile in zeilen:
+            gruppiert[zeile.raw_input_id].append(zeile.thema)
+        return gruppiert
 
     @staticmethod
     def _saetze(session, ids: List[uuid.UUID]) -> Dict[uuid.UUID, List[Satz]]:

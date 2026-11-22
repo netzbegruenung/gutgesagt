@@ -14,7 +14,12 @@ Spalte ergaenzt, braucht ein Migrationsskript in mvp/backend/postgres-app/migrat
 
 import pytest
 
-from infrastructure.database.models import Einwurf, AusformuliertIn, Satz
+from infrastructure.database.models import (
+    Einwurf,
+    EinwurfThemaZeile,
+    AusformuliertIn,
+    Satz,
+)
 
 
 @pytest.mark.unit
@@ -158,3 +163,20 @@ class TestSatztabelle:
         (fremdschluessel,) = list(Satz.__table__.columns["raw_input_id"].foreign_keys)
         assert fremdschluessel.column.table.name == "raw_inputs"
         assert fremdschluessel.ondelete == "CASCADE"
+
+
+@pytest.mark.unit
+class TestEinwurfThemenSchema:
+    def test_themen_gehen_mit_dem_einwurf(self):
+        """Loeschfrist und Loeschkommando loeschen raw_inputs; die Themen per CASCADE."""
+        (fremd,) = EinwurfThemaZeile.__table__.columns["raw_input_id"].foreign_keys
+        assert fremd.column.table.name == "raw_inputs"
+        assert fremd.ondelete == "CASCADE"
+
+    def test_je_einwurf_jedes_thema_einmal_und_ohne_person(self):
+        tabelle = EinwurfThemaZeile.__table__
+        assert {s.name for s in tabelle.primary_key.columns} == {
+            "raw_input_id",
+            "thema",
+        }
+        assert set(tabelle.columns.keys()) == {"raw_input_id", "thema"}

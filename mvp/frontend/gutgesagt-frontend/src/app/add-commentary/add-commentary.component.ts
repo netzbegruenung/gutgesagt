@@ -556,6 +556,8 @@ export class AddCommentaryComponent implements OnChanges, OnInit {
   // Titel = Satz aus dem Destillier-Ablauf, Herkunft = Link des Einwurfs. Beides
   // bleibt aenderbar; die Herkunft wird aufgeklappt, damit sie sichtbar ist.
   vorbefuellungAnwenden(vorbefuellung: Vorbefuellung): void {
+    // Die Themen des Einwurfs: Vorauswahl, sobald eine neue Aussage gewaehlt ist (ThemenWahl).
+    this.themenWahl.vorschlagen(vorbefuellung.themen ?? []);
     this.titelVorbelegung = vorbefuellung.titel ? null : this.titelVorbelegung;
     this.commentaryForm.patchValue({
       title: vorbefuellung.titel,
@@ -966,6 +968,7 @@ export class AddCommentaryComponent implements OnChanges, OnInit {
     this.commentaryForm.reset({ title: '', text: '', kurz: '', lang: '', ...OPTIONALE_ANGABEN_LEER, references: [] });
     this.antwortAuf?.leeren();
     this.aussage = OHNE_AUSSAGE;
+    this.themenWahl.zuruecksetzen();
     this.showReferences = false;
     this.zeigtFassungen = false;
     this.fehler = null;

@@ -13,12 +13,21 @@ describe('ThemenFilterComponent', () => {
   beforeEach(() => {
     fixture = TestBed.createComponent(ThemenFilterComponent);
     fixture.componentRef.setInput('themen', [
-      { schluessel: 'klima', name: 'Klima' },
+      { schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' },
       { schluessel: 'verkehr', name: 'Verkehr' },
     ]);
     gemeldet = [];
     fixture.componentInstance.aktivChange.subscribe((a) => gemeldet.push(a));
     fixture.detectChanges();
+  });
+
+  it('zeigt das Motiv dekorativ im Chip, "Alle Themen" ohne', () => {
+    const bild = knopf('Klima').querySelector('img.thema-motiv') as HTMLImageElement;
+
+    expect(bild.getAttribute('src')).toBe('themen/klima.svg');
+    expect(bild.getAttribute('alt')).toBe('');
+    expect(bild.getAttribute('aria-hidden')).toBe('true');
+    expect(knopf('Alle Themen').querySelector('img')).toBeNull();
   });
 
   it('steht ohne Wahl auf "Alle Themen"', () => {

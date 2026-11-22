@@ -3,7 +3,7 @@ import { ThemenAuswahlComponent } from './themen-auswahl.component';
 import { Thema } from '../../services/dtos/themenDtos';
 
 const THEMEN: Thema[] = [
-  { schluessel: 'klima', name: 'Klima' },
+  { schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg' },
   { schluessel: 'verkehr', name: 'Verkehr' },
   { schluessel: 'europa', name: 'Europa' },
   { schluessel: 'soziales', name: 'Soziales' },
@@ -65,5 +65,28 @@ describe('ThemenAuswahlComponent', () => {
 
   it('nennt die Grenze im Hinweis', () => {
     expect(fixture.nativeElement.querySelector('.themen-hinweis').textContent.trim()).toBe('Bis zu drei Themen, optional.');
+  });
+
+  it('laesst mit hoechstens 2 nur zwei Themen zu und sagt das', () => {
+    fixture.componentRef.setInput('hoechstens', 2);
+    setzen(['klima', 'verkehr']);
+
+    expect(knopf('Europa').disabled).toBeTrue();
+    expect(knopf('Verkehr').disabled).toBeFalse();
+    knopf('Europa').click();
+    expect(gemeldet).toEqual([]);
+    expect(fixture.nativeElement.querySelector('.themen-hinweis').textContent.trim()).toBe('Bis zu zwei Themen, optional.');
+  });
+
+  it('zeigt das Motiv dekorativ links im Chip, der Name bleibt der Zugaengliche Name', () => {
+    const bild = knopf('Klima').querySelector('img.thema-motiv') as HTMLImageElement;
+
+    expect(bild.getAttribute('src')).toBe('themen/klima.svg');
+    expect(bild.getAttribute('alt')).toBe('');
+    expect(bild.getAttribute('aria-hidden')).toBe('true');
+    expect(bild.getAttribute('width')).toBe('18');
+    expect(bild.getAttribute('height')).toBe('18');
+    expect(knopf('Klima').firstElementChild).toBe(bild);
+    expect(knopf('Verkehr').querySelector('img')).toBeNull();
   });
 });

@@ -132,6 +132,11 @@
             <mat-icon class="link-icon" aria-hidden="true">open_in_new</mat-icon>
         </a>
 
+        <!-- Die beim Einwerfen gewaehlten Themen als ruhige Marken, wie an der Aussage -->
+        <ul class="einwurf-themen" *ngIf="angaben.themen?.length" aria-label="Themen">
+            <li class="thema-marke" *ngFor="let thema of angaben.themen"><img *ngIf="thema.motiv" class="thema-motiv" [src]="thema.motiv" alt="" aria-hidden="true" width="16" height="16">{{ thema.name }}</li>
+        </ul>
+
         <!-- Im Kopf nur der eine Satz, aus dem der Beitrag entsteht -->
         <p class="einwurf-kopfsatz" *ngIf="istKopf && angaben.kopfSatz">„{{ angaben.kopfSatz }}“</p>
 

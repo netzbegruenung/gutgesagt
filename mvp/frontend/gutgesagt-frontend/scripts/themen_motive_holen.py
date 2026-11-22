@@ -35,7 +35,9 @@ HINWEIS = (
 # Datei unter public/themen -> Pfad im Repository von Fluent Emoji.
 MOTIVE = [
     ("klima.svg", "assets/Thermometer/Flat/thermometer_flat.svg"),
-    ("energie-heizen.svg", "assets/Sun/Flat/sun_flat.svg"),
+    # Blitz statt Sonne (Entscheidung Maintainer 22.11.2026): Die Sonne war bei 18 px kaum von
+    # der Muenze (Haushalt und Steuern) zu unterscheiden, eine Flamme laese man als Gas.
+    ("energie-heizen.svg", "assets/High voltage/Flat/high_voltage_flat.svg"),
     ("verkehr.svg", "assets/Bicycle/Flat/bicycle_flat.svg"),
     ("landwirtschaft-ernaehrung.svg", "assets/Sheaf of rice/Flat/sheaf_of_rice_flat.svg"),
     ("natur-umwelt.svg", "assets/Deciduous tree/Flat/deciduous_tree_flat.svg"),

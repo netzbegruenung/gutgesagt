@@ -394,6 +394,16 @@ body {
     cursor: pointer;
 }
 
+/*
+ * Motiv eines Themas (Glossar "Thema") vor dem Namen, in Chips und Marken: rein dekorativ
+ * (alt="", aria-hidden), der Name steht immer daneben. Breite und Hoehe stehen am img, damit
+ * nichts springt; hier nur, dass es im Flex-Verlauf nicht schrumpft.
+ */
+.thema-motiv {
+    display: block;
+    flex-shrink: 0;
+}
+
 .chip[aria-pressed='true'],
 .chip[aria-expanded='true'],
 .chip.gewaehlt {

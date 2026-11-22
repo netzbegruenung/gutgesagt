@@ -8,8 +8,10 @@ import pytest
 
 from domain.themen import (
     HOECHSTENS_JE_AUSSAGE,
+    HOECHSTENS_JE_EINWURF,
     THEMEN,
     ThemaUngueltig,
+    einwurf_themen_pruefen,
     themen_pruefen,
 )
 
@@ -61,3 +63,28 @@ def test_jedes_thema_hat_ein_motiv():
     # public/ liegt, prueft scripts/tests/test_themen_motive.py.
     for thema in THEMEN:
         assert thema.motiv == f"themen/{thema.schluessel}.svg", thema.schluessel
+
+
+def test_einwurf_laesst_keine_bis_zwei_themen_durch():
+    erstes, zweites = (t.schluessel for t in THEMEN[:2])
+
+    assert einwurf_themen_pruefen([]) == []
+    assert einwurf_themen_pruefen([zweites]) == [zweites]
+    assert einwurf_themen_pruefen([zweites, erstes]) == [zweites, erstes]
+    assert HOECHSTENS_JE_EINWURF == 2
+
+
+def test_einwurf_weist_drei_themen_ab():
+    with pytest.raises(ThemaUngueltig):
+        einwurf_themen_pruefen([t.schluessel for t in THEMEN[:3]])
+
+
+def test_einwurf_weist_doppelte_ab():
+    erstes = THEMEN[0].schluessel
+    with pytest.raises(ThemaUngueltig):
+        einwurf_themen_pruefen([erstes, erstes])
+
+
+def test_einwurf_weist_freie_schlagworte_ab():
+    with pytest.raises(ThemaUngueltig):
+        einwurf_themen_pruefen(["heizungsgesetz"])

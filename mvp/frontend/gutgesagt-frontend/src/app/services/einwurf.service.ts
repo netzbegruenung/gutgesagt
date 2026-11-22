@@ -5,6 +5,7 @@ import { map } from 'rxjs/operators';
 import { CONSENT_HINWEIS_SATZ, mitCc0Wortlaut } from '../shared/consent-hinweis';
 import { environment } from '../../environments/environment';
 import { LoggingService } from './logging.service';
+import { Thema } from './dtos/themenDtos';
 
 /** Spiegelt EinwurfWeg im Backend. Ohne Angabe zaehlt der Einwurf als 'web'. */
 export type EinwurfWeg = 'web' | 'share';
@@ -15,15 +16,20 @@ export type EinwurfWeg = 'web' | 'share';
  */
 export const SATZ_LIMIT = 120;
 
+/** Wie im Backend (domain/themen.py): beim Einwerfen hoechstens zwei Themen. */
+export const HOECHSTENS_THEMEN_JE_EINWURF = 2;
+
 /**
  * Ein Einwurf in den Fangkorb. Mindestens eines der drei Inhaltsfelder muss
  * gesetzt sein; alles Weitere ist schon Destillieren und passiert spaeter.
+ * Optional bis zu zwei Themen; ohne fehlt das Feld.
  */
 export interface EinwerfenRequest {
   content?: string;
   url?: string;
   image_url?: string;
   source_channel?: EinwurfWeg;
+  themen?: string[];
 }
 
 export interface EinwerfenResponse {
@@ -102,6 +108,8 @@ export interface Einwurf {
   drafts?: Satz[];
   /** Alle verknuepften Beitraege, aelteste zuerst. */
   links?: AusformuliertIn[];
+  /** Die beim Einwerfen gewaehlten Themen, in der Reihenfolge der Themenliste; fehlt bei aelteren Antworten. */
+  themen?: Thema[];
 }
 
 /** Eine Seite Einwuerfe, wie Fangkorb und Meine Einwuerfe sie bekommen. */

@@ -103,7 +103,7 @@ dann jede folgende Anfrage ab, nach dem Entfernen nicht mehr.
    auf `NULL` setzen statt löschen — die Zeilen gehören inhaltlich anderen;
    in `sperren` `autor` und `widerspruch` sowie `gesperrt_von` und `geprueft_von` auf
    `NULL` setzen — die Sperre bleibt, solange der Beitrag gesperrt ist (#448);
-   `raw_inputs` der Person löschen (CASCADE räumt deren Links und die Sätze daran mit
+   `raw_inputs` der Person löschen (CASCADE räumt deren Links, Themen und die Sätze daran mit
    ab); in **Sätzen an fremden Einwürfen** (`raw_input_drafts`) und in
    `raw_inputs.destilled_by` die Kennung ersetzen (unten); die Zeile in
    `users` (Anzeigename), die in `gesehene_nutzung` (Stände der Rückmeldung beim
@@ -238,7 +238,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Suchereignisse (`search_events`) samt Tagespseudonym | bis zum Ende ihres UTC-Tages | dann zum Tageszähler der Suchen verdichtet, ohne Pseudonym (#495, `SearchTrackingRepository.verdichten_vor`; Einzelheiten unter „Was nicht gelöscht wird“) |
 | Tagespseudonym an anonymen Meldungen (`reported_by_session_id`, `besucher:…`) | bis zum Abschluss der Meldung | Bearbeiten oder Abweisen ersetzt es durch einen Zufallswert (`anon:…`), angemeldete Meldungen verlieren den Wert (#446, `repositories/content_report_repository.py`) |
 | Meldungen, offen | keine | — sie sind Arbeit und bleiben, bis ein Admin sie bearbeitet oder ihr Beitrag endgültig entfernt wird (dann bearbeitet, Frist wie oben) |
-| Einwürfe (`raw_inputs`), die in keinem Beitrag ausformuliert sind, samt Sätzen | 365 Tage | letzte Arbeit daran: Einwerfen oder zuletzt gespeicherter Satz |
+| Einwürfe (`raw_inputs`), die in keinem Beitrag ausformuliert sind, samt Sätzen und Themen | 365 Tage | letzte Arbeit daran: Einwerfen oder zuletzt gespeicherter Satz |
 | Einwürfe, die in einem Beitrag ausformuliert sind | solange dieser Beitrag besteht | — danach wie die anderen |
 | Gelöschte Beiträge (Zustand „gelöscht“, Qdrant) | 30 Tage, dann endgültig entfernt | Tag im Payload-Feld `geloescht_am` |
 | Sperren (`sperren`), aufgehoben, samt Widerspruch | 180 Tage | Aufhebung (`aufgehoben_am`) |
@@ -526,6 +526,10 @@ und der Ablauf oben erfasst die Tabelle nicht.
   `fuers_testset`). Wer es herunterlädt, verwaltet die Kopie selbst; der Text einer
   vorab angelegten Aussage stammt von einer Person und kann, wie jeder Beitrag, Namen
   enthalten.
+- **`einwurf_themen`** trägt je beim Einwerfen gewähltem Thema nur Einwurf-ID und Thema,
+  weder Kennung noch Zeitpunkt; wer gewählt hat, steht schon am Einwurf. Keine eigene Frist:
+  Die Zeilen gehen per CASCADE mit dem Einwurf, durch die Löschfrist der Einwürfe wie durch das
+  Löschkommando (Schritt 2).
 - **`varianten`** (#356) trägt je Variante nur ihre ID und die ID des Originals, weder
   Kennung noch Zeitpunkt: nichts, was sich einer Person zuordnen ließe. Wer die Variante
   gespeichert hat, steht an ihr selbst. Löscht der Autor einen Beitrag oder entfernt ihn ein

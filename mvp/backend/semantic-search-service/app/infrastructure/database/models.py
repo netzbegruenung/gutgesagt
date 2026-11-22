@@ -592,6 +592,28 @@ class Einwurf(Base):
     )
 
 
+class EinwurfThemaZeile(Base):
+    """
+    Ein Thema an einem Einwurf, aus der festen Liste (domain/themen.py), gewaehlt beim
+    Einwerfen. Je Einwurf hoechstens zwei; das prueft das DTO (EinwerfenRequest), nicht
+    die Tabelle.
+
+    Eine eigene Tabelle wie bei den Aussagen (aussage_themen) statt einer Spalte an
+    raw_inputs: Die Zeilen gehen per CASCADE mit dem Einwurf (Loeschfrist,
+    Loeschkommando), und raw_inputs braucht keine Migration. Traegt weder Kennung noch
+    Zeitpunkt; wer gewaehlt hat, steht schon am Einwurf (submitted_by).
+    """
+
+    __tablename__ = "einwurf_themen"
+
+    raw_input_id = Column(
+        SQLUUID(as_uuid=True),
+        ForeignKey("raw_inputs.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    thema = Column(String(40), primary_key=True)
+
+
 class AusformuliertIn(Base):
     """
     Ausformuliert in (Glossar): die Verknuepfung zwischen einem Einwurf und dem Beitrag, mit dem er ausformuliert

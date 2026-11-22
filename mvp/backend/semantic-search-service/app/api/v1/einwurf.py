@@ -181,6 +181,7 @@ async def einwerfen(
             submitted_by=_einwerfende_person(aufrufer.kennung),
             source_channel=(request.source_channel or EinwurfWeg.WEB).value,
             cc0_wortlaut=request.cc0_wortlaut,
+            themen=request.themen,
         )
         return EinwerfenResponse(id=einwurf["id"])
     except Exception as e:

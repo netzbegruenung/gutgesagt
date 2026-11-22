@@ -319,6 +319,8 @@ export class AddGenerictextComponent implements OnChanges {
   // Titel = Satz aus dem Destillier-Ablauf, Herkunft = Link des Einwurfs. Beides
   // bleibt aenderbar.
   vorbefuellungAnwenden(vorbefuellung: Vorbefuellung): void {
+    // Die Themen des Einwurfs: Vorauswahl, sobald eine neue Aussage gewaehlt ist (ThemenWahl).
+    this.themenWahl.vorschlagen(vorbefuellung.themen ?? []);
     this.generictextForm.patchValue({
       title: vorbefuellung.titel,
       references: vorbefuellung.url ? [{ reference_string: vorbefuellung.url }] : [],
@@ -641,6 +643,7 @@ export class AddGenerictextComponent implements OnChanges {
     this.generictextForm.reset({ title: '', text: '', themen: [], references: [] });
     this.antwortAuf?.leeren();
     this.aussage = OHNE_AUSSAGE;
+    this.themenWahl.zuruecksetzen();
     this.fehler = null;
     // Wer zuruecksetzt, faengt neu an: kein "Variante von", kein beruht_auf (#356).
     this.vorlage = null;

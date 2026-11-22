@@ -2,8 +2,10 @@
 DTOs fuer den Fangkorb (Einwuerfe).
 
 Die einzige inhaltliche Pflicht beim Einwerfen ist, dass ueberhaupt etwas
-dasteht. Kein Titel, keine Kategorie, kein Zieltyp - all das ist Destillieren
-und passiert erst im Destillier-Ablauf (Satz, Status, Ausformuliert in).
+dasteht. Kein Titel, kein Zieltyp - das ist Destillieren und passiert erst im
+Destillier-Ablauf (Satz, Status, Ausformuliert in). Optional sind bis zu zwei
+Themen aus der festen Liste (domain/themen.py): ein Fingerzeig fuer andere und
+beim Ausformulieren die Vorauswahl fuer eine neue Aussage, keine Pflicht.
 """
 
 import datetime
@@ -16,6 +18,8 @@ from domain.cc0_hinweis import Cc0Wortlaut
 from domain.models.content_status import ZustandAmEinwurf
 from domain.models.content_type import ContentType
 from domain.models.einwurf import EinwurfWeg, EinwurfStatus
+from domain.themen import ThemenDesEinwurfs
+from dtos.statement import ThemaDto, themen_dtos
 from utils.url_validator import validate_url_security
 
 # Der Satz wird der Titel des Beitrags und hat deshalb dasselbe Limit
@@ -82,6 +86,12 @@ class EinwerfenRequest(BaseModel):
     # Kennung des CC0-Hinweises, den die Person beim Speichern gesehen hat (#431,
     # domain/cc0_hinweis.py).
     cc0_wortlaut: Cc0Wortlaut = None
+    # Bis zu zwei Themen aus der festen Liste; unbekannte, doppelte oder mehr als zwei
+    # weist die Pruefung mit 422 ab, bevor etwas gespeichert ist.
+    themen: ThemenDesEinwurfs = Field(
+        default_factory=list,
+        description="Schluessel aus der Themenliste, hoechstens zwei",
+    )
 
     @field_validator("content", "url", "image_url", mode="before")
     @classmethod
@@ -254,6 +264,17 @@ class EinwurfResponse(BaseModel):
     processed_at: Optional[datetime.datetime] = None
     drafts: List[SatzAmEinwurfResponse] = Field(default_factory=list)
     links: List[AusformuliertInResponse] = Field(default_factory=list)
+    # Die beim Einwerfen gewaehlten Themen in der Reihenfolge der Themenliste; leer
+    # ohne. Schluessel, die nicht mehr in der Liste stehen, fallen weg.
+    themen: List[ThemaDto] = Field(default_factory=list)
+
+    @field_validator("themen", mode="before")
+    @classmethod
+    def themen_aus_schluesseln(cls, value):
+        """Das Repository liefert Schluessel; nach aussen gehen Name und Motiv mit."""
+        if isinstance(value, list) and all(isinstance(v, str) for v in value):
+            return themen_dtos(value)
+        return value
 
 
 class EinwerfenResponse(BaseModel):

@@ -39,7 +39,7 @@
                                   [entfernbar]="istAdmin"
                                   (entfernen)="entfernen(aussage, liste)">
                     <div class="aussage-themen" *ngIf="themen.length">
-                        <span *ngFor="let thema of aussage.themen" class="thema-marke">{{ thema.name }}</span>
+                        <span *ngFor="let thema of aussage.themen" class="thema-marke"><img *ngIf="thema.motiv" class="thema-motiv" [src]="thema.motiv" alt="" aria-hidden="true" width="16" height="16">{{ thema.name }}</span>
                         <button type="button" class="themen-umschalter"
                                 [attr.aria-expanded]="themenBearbeiten === aussage.statement_id"
                                 (click)="themenUmschalten(aussage)">

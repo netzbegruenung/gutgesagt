@@ -41,7 +41,7 @@ let naechsteId = 0;
     <ng-container *ngIf="aussage as a">
       <div class="aussage-themen" *ngIf="a.themen.length || bearbeitbar">
         <span *ngIf="a.themen.length" class="marken" role="list" aria-label="Themen">
-          <span *ngFor="let thema of a.themen" class="thema-marke" role="listitem">{{ thema.name }}</span>
+          <span *ngFor="let thema of a.themen" class="thema-marke" role="listitem"><img *ngIf="thema.motiv" class="thema-motiv" [src]="thema.motiv" alt="" aria-hidden="true" width="16" height="16">{{ thema.name }}</span>
         </span>
         <button *ngIf="bearbeitbar" type="button" class="themen-umschalter"
                 [attr.aria-expanded]="offen" [attr.aria-controls]="offen ? id : null"
@@ -74,6 +74,9 @@ let naechsteId = 0;
 
       /* Wie in „Hier fehlt eine Antwort“: ruhig im Hellgruen der Auswahl, 8,2:1 hell, 11,8:1 dunkel */
       .thema-marke {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
         font-size: 13px;
         line-height: 1.3;
         padding: 3px 10px;
