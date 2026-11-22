@@ -25,7 +25,9 @@ let naechsteId = 0;
 
 /**
  * Die Themen einer Aussage als Marken, mit „Themen ändern“ bzw. „Themen zuordnen“ fuer
- * Angemeldete, auf der Ergebnisseite und unter einem Beitrag auf /beitrag/:id. Bedienung
+ * Angemeldete, auf der Ergebnisseite, unter einem Beitrag auf /beitrag/:id, im
+ * Beitragsformular bei einer vorhandenen Aussage, auf „Gespeichert“ und in „Beitrag
+ * ändern“. Bedienung
  * wie in „Hier fehlt eine Antwort“: Der Umschalter klappt die Themenauswahl auf, jeder
  * Klick speichert gleich (ThemenService.aendern), ein Spinner zeigt das Speichern.
  * Abgemeldete sehen nur die Marken; ohne Themen zeigt die Komponente ihnen nichts.
@@ -87,7 +89,7 @@ let naechsteId = 0;
 
       /* Nebenaktion: leise, aber als Link erkennbar (unterstrichen) */
       .themen-umschalter {
-        min-height: 24px; /* Zielgroesse nach WCAG 2.5.8 */
+        min-height: 44px; /* Tippziel 44 px (WCAG 2.5.5), auch im Formular und im Dialog */
         border: none;
         background: none;
         padding: 2px 0;

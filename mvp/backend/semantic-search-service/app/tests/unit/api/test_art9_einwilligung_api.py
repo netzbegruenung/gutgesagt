@@ -659,6 +659,7 @@ OFFEN = {
     ("POST", "/api/v1/usage/users/me/besuch"),
     ("POST", "/api/v1/statement/addReplysuggestionToStatement"),
     ("PUT", "/api/v1/statement/themen/zuordnen"),
+    ("PUT", "/api/v1/rawinput/{einwurf_id}/themen"),
     ("POST", "/api/v1/feedback/senden"),
     # Ausformulieren prueft selbst, Verwerfen bleibt offen (test_einwurf.py)
     ("PATCH", "/api/v1/rawinput/{einwurf_id}/status"),

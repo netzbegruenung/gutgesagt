@@ -29,6 +29,7 @@ export type EinwurfAktion =
   | 'ansehen'
   | 'weiterDestillieren'
   | 'linkKopieren'
+  | 'themenAendern'
   | 'verwerfen';
 
 export interface KartenQuelle {
@@ -45,6 +46,12 @@ export interface KartenStatement {
   aehnlichkeit: number;
   /** Prozent, 0-100. */
   antwortqualitaet: number;
+  /**
+   * ID und Themen der Aussage, nur wo sie bekannt sind (Album): „Beitrag ändern“ zeigt
+   * die Themen dann zum Aendern, denn ein Beitrag hat keine eigenen.
+   */
+  id?: string;
+  themen?: Thema[];
 }
 
 /** Was das Siegel einer Karte zeigt und erklaert (#427, GLOSSARY.md "Siegel", "Guete"). */

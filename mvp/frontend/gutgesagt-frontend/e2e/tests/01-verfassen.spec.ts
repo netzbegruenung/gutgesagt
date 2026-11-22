@@ -127,8 +127,8 @@ test('Verfassen: Aufbau und Bedienung des Kommentarformulars', async ({ page, bi
     await expect.soft(page.locator('textarea#title')).toHaveValue('');
     await expect.soft(page.locator('textarea#text')).toHaveValue('');
     await expect(dialog).toHaveCount(0);
-    // Die Seite darf nach dem Dialog nicht seitlich verschoben sein (mat-sidenav-container).
-    const verschoben = await page.evaluate(() => document.querySelector('mat-sidenav-container')!.scrollLeft);
+    // Die Seite darf nach dem Dialog nicht seitlich verschoben sein (frueher im mat-sidenav-container).
+    const verschoben = await page.evaluate(() => document.scrollingElement!.scrollLeft);
     expect.soft(verschoben, 'Seite nach dem Dialog seitlich verschoben').toBe(0);
     await bild('13-zurueckgesetzt');
   });

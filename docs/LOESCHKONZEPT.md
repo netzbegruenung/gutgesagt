@@ -529,8 +529,10 @@ und der Ablauf oben erfasst die Tabelle nicht.
   `fuers_testset`). Wer es herunterlädt, verwaltet die Kopie selbst; der Text einer
   vorab angelegten Aussage stammt von einer Person und kann, wie jeder Beitrag, Namen
   enthalten.
-- **`einwurf_themen`** trägt je beim Einwerfen gewähltem Thema nur Einwurf-ID und Thema,
-  weder Kennung noch Zeitpunkt; wer gewählt hat, steht schon am Einwurf. Keine eigene Frist:
+- **`einwurf_themen`** trägt je Thema eines Einwurfs nur Einwurf-ID und Thema, weder Kennung
+  noch Zeitpunkt. Gewählt beim Einwerfen, danach von jeder angemeldeten Person änderbar
+  (`PUT /api/v1/rawinput/{id}/themen`); wer gewählt oder geändert hat, wird nicht gespeichert,
+  nur der Einwerfer steht am Einwurf. Keine eigene Frist:
   Die Zeilen gehen per CASCADE mit dem Einwurf, durch die Löschfrist der Einwürfe wie durch das
   Löschkommando (Schritt 2).
 - **`varianten`** (#356) trägt je Variante nur ihre ID und die ID des Originals, weder

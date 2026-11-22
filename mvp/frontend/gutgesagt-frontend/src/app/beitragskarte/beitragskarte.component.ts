@@ -508,7 +508,8 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
    *
    * Ausformuliertes und Verworfenes laesst sich weiter destillieren - das Backend
    * erlaubt beides ausdruecklich, ein zweiter Beitrag aus demselben Einwurf ist
-   * kein Fehler.
+   * kein Fehler. „Themen ändern“ steht immer da: Die Themen aendern darf, wer
+   * destillieren darf.
    */
   get menueEintraege(): { aktion: EinwurfAktion; wort: string; icon: string }[] {
     const angaben = this.einwurfAngaben;
@@ -525,6 +526,8 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
     if (angaben.stufe === 'verworfen') {
       eintraege.push({ aktion: 'weiterDestillieren', wort: 'Trotzdem destillieren', icon: 'science' });
     }
+    // Wie das Destillieren fuer alle Angemeldeten und in jeder Stufe (PUT /rawinput/{id}/themen)
+    eintraege.push({ aktion: 'themenAendern', wort: 'Themen ändern', icon: 'sell' });
     if (this.darfVerwerfen) {
       eintraege.push({ aktion: 'verwerfen', wort: 'Verwerfen', icon: 'delete_outline' });
     }

@@ -1841,6 +1841,21 @@ describe('AddCommentaryComponent', () => {
       expect(component.commentaryForm.value.themen).toEqual([]);
     });
 
+    it('zeigt bei einer vorhandenen Aussage deren Themen zum Aendern statt der Themenwahl', () => {
+      themenListe(LISTE);
+      component.aussageSetzen({ id: 'a-1', text: 'Vorhandene Aussage' });
+      TestBed.inject(HttpTestingController)
+        .expectOne((r) => r.url === `${environment.baseUrl}/api/v1/statement/themen/von` && r.params.get('statement_id') === 'a-1')
+        .flush({ statement_id: 'a-1', themen: [{ schluessel: 'klima', name: 'Klima' }] });
+      fixture.detectChanges();
+
+      const block = seite().querySelector('.themen-der-aussage')!;
+      expect(block.textContent).toContain('Themen der Aussage');
+      expect(block.querySelector('app-aussage-themen .thema-marke')!.textContent!.trim()).toBe('Klima');
+      expect(block.textContent).toContain('Gelten für alle Beiträge zu dieser Aussage.');
+      expect(seite().textContent).not.toContain('Themen der neuen Aussage');
+    });
+
     it('setzt die Vorauswahl gleich, wenn die neue Aussage schon gewaehlt ist', () => {
       themenListe(LISTE);
       component.aussageSetzen({ id: '', text: 'Eine neue Aussage mit Text', neuGewaehlt: true });

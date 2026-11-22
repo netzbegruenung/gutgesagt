@@ -231,6 +231,8 @@ class TestStaende:
 NB_NUR = {
     # Die Zuordnung sehen alle im Themenfilter.
     ("PUT", "/api/v1/statement/themen/zuordnen"),
+    # Die Themen eines Einwurfs: Fingerzeig fuer alle im Fangkorb, Vorauswahl der Aussage.
+    ("PUT", "/api/v1/rawinput/{einwurf_id}/themen"),
     # Haengt einen Beitrag als Antwort an eine Aussage, sichtbar fuer alle.
     ("POST", "/api/v1/statement/addReplysuggestionToStatement"),
 }
