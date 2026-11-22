@@ -5,7 +5,7 @@ import { ROUTES } from '../shared/constants/app.constants';
 import { Subscription, Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SearchService } from '../services/search.service';
-import { SearchResponse } from '../services/dtos/searchDtos';
+import { PassendesThema, SearchResponse } from '../services/dtos/searchDtos';
 import { KartenlisteComponent } from '../beitragskarte/kartenliste.component';
 import { SearchComponent } from '../search/search.component';
 import { MatButtonModule } from '@angular/material/button';
@@ -23,6 +23,7 @@ import { AussageThemenComponent } from '../shared/themen/aussage-themen.componen
 import { AussageMitThemenFeld } from '../services/themen.service';
 import { NichtDabeiComponent } from '../nicht-dabei/nicht-dabei.component';
 import { OftGesuchtComponent } from '../oft-gesucht/oft-gesucht.component';
+import { AllesZumThemaComponent } from './alles-zum-thema.component';
 import { KartenDaten, KartenKennzahlen, ausSuchergebnis } from '../beitragskarte/karten-daten';
 import { StatementSearchResult } from '../services/dtos/statementDtos';
 import { TeilenService, sucheLink, suchtextKuerzen } from '../shared/teilen.service';
@@ -71,6 +72,15 @@ export function themenDerTreffer(antwort: SearchResponse, nurAussage: string | n
     }
   }
   return [...gesehen.values()];
+}
+
+/**
+ * "Alles zum Thema" (#754): das Thema, auf dem der Themenfilter beim Laden steht: das
+ * erste passende, das der Filter anbietet. Sonst null; ein Thema ohne Treffer liesse die
+ * Seite leer.
+ */
+export function vorgewaehltesThema(passend: readonly PassendesThema[], filter: readonly Thema[]): string | null {
+  return passend.find((t) => filter.some((f) => f.schluessel === t.schluessel))?.schluessel ?? null;
 }
 
 /** Die Aussage, als die die Suche verstanden wurde: ID (falls bekannt) und Text. */
@@ -189,7 +199,8 @@ export function nachThemaGefiltert(antwort: SearchResponse, thema: string | null
     ThemenFilterComponent,
     AussageThemenComponent,
     NichtDabeiComponent,
-    OftGesuchtComponent
+    OftGesuchtComponent,
+    AllesZumThemaComponent
   ],
   templateUrl: './result-view.component.html',
   styleUrls: ['./result-view.component.css'],
@@ -211,7 +222,13 @@ export class ResultViewComponent implements OnInit, OnDestroy {
   private antwort: SearchResponse | null = null;
   angezeigt: SearchResponse | null = null;
   themenDerTreffer: Thema[] = [];
+  /** Die Schluessel aus themenDerTreffer, fuer den Kasten "Alles zum Thema". */
+  themenImFilter: string[] = [];
   aktivesThema: string | null = null;
+  /** "Alles zum Thema" (#754): Themen, zu denen die kurze Eingabe passt, mit ihren Aussagen. */
+  passendeThemen: PassendesThema[] = [];
+  /** Die Aussagen im Kasten; "Nicht dabei?" und "Oft gesucht" zeigen sie nicht noch einmal. */
+  aussagenImKasten: string[] = [];
   bekannteAussagen: string[] = [];
   /** In der Zeile "Erkannt als" (#642, V3); aus allen Treffern, nicht nur denen zum Thema. */
   erkannt: ErkannteAussage | null = null;
@@ -329,6 +346,11 @@ export class ResultViewComponent implements OnInit, OnDestroy {
         this.erkannt = response ? erkannteAussage(response) : null;
         this.erkannteThemen = response ? erkannteMitThemen(response, this.erkannt) : null;
         this.themenDerTreffer = response ? themenDerTreffer(response, erkannterSchluessel(this.erkannt)) : [];
+        this.themenImFilter = this.themenDerTreffer.map((t) => t.schluessel);
+        this.passendeThemen = response?.passende_themen ?? [];
+        this.aussagenImKasten = this.passendeThemen.flatMap((t) => t.aussagen.map((a) => a.statement_id));
+        // Der Themenfilter steht schon auf dem passenden Thema; die Treffer selbst bleiben.
+        this.aktivesThema = vorgewaehltesThema(this.passendeThemen, this.themenDerTreffer);
         this.anzeigen();
       });
 
@@ -357,6 +379,7 @@ export class ResultViewComponent implements OnInit, OnDestroy {
       }
     }
     this.themenDerTreffer = themenDerTreffer(this.antwort, erkannterSchluessel(this.erkannt));
+    this.themenImFilter = this.themenDerTreffer.map((t) => t.schluessel);
     if (this.aktivesThema && !this.themenDerTreffer.some((t) => t.schluessel === this.aktivesThema)) {
       this.aktivesThema = null;
     }
@@ -413,7 +436,9 @@ export class ResultViewComponent implements OnInit, OnDestroy {
     const ids = this.gruppen
       .filter((g) => !istWeniger(g, this.gruppen) && g.art !== 'ohne' && !g.schluessel.startsWith('text:'))
       .map((g) => g.schluessel);
-    const neu = [...new Set([this.antwort?.statement_id, ...ids].filter((id): id is string => !!id))];
+    const neu = [
+      ...new Set([this.antwort?.statement_id, ...ids, ...this.aussagenImKasten].filter((id): id is string => !!id)),
+    ];
     if (neu.join('|') !== this.bekannteAussagen.join('|')) {
       this.bekannteAussagen = neu;
     }

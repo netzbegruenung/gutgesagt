@@ -337,6 +337,7 @@ def aussage_themen_ohne_datenbank(monkeypatch):
     repository = MagicMock(spec=modul.AussageThemenRepository)
     repository.themen_von.return_value = {}
     repository.zuordnungen.return_value = {}
+    repository.aussagen_mit_thema.return_value = []
     monkeypatch.setattr(modul, "_repository", repository)
     yield repository
 
