@@ -1,43 +1,36 @@
-import { Component, DestroyRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import { Component, DestroyRef, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
-import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { NavigationService } from './services/navigation.service';
 import { LoggingService } from './services/logging.service';
 import { AuthService, UserInfo } from './auth/auth.service';
 import { RueckmeldungService } from './services/rueckmeldung.service';
-import { Art9EinwilligungService, EINWILLIGUNG_PFAD } from './services/art9-einwilligung.service';
+import { Art9EinwilligungService } from './services/art9-einwilligung.service';
 import { ProfilbildService } from './services/profilbild.service';
 import { rueckkehrzielLesen, rueckkehrzielLoeschen } from './login/rueckkehrziel';
-import { MatDialog } from '@angular/material/dialog';
-import { hilfeNachAnmeldung, hilfeOeffnen } from './help-dialog/help-dialog.component';
+import { hilfeNachAnmeldung } from './help-dialog/help-dialog.component';
 import { hinweisNachAnmeldung } from './auth/nach-anmeldung';
-import { feedbackDialogOeffnen } from './shared/feedback/feedback-dialog.component';
-import { profilbildDialogOeffnen } from './shared/profilbild/profilbild-dialog.component';
 import { FooterComponent } from "./footer/footer.component";
-import { MobileMenuComponent } from './shared/components/mobile-menu/mobile-menu';
-import { OffeneMeldungenZahlComponent } from './shared/components/offene-meldungen-zahl/offene-meldungen-zahl.component';
-import { FarbschemaKnopfComponent } from './shared/components/farbschema-knopf/farbschema-knopf.component';
+import { HauptnavigationComponent } from './shared/components/hauptnavigation/hauptnavigation.component';
+import { KontoMenueComponent } from './shared/components/konto-menue/konto-menue.component';
 import { MobileHeaderComponent } from './shared/components/mobile-header/mobile-header.component';
 import { RouteConfigService } from './shared/services/route-config.service';
 import { Subject } from 'rxjs';
 import { takeUntil, filter } from 'rxjs/operators';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
-import { DATENSCHUTZ_EINSTELLUNGEN, MENUE_ICONS } from './shared/fangkorb-texte';
 import { ROUTES } from './shared/constants/app.constants';
 import { RundgangComponent } from './rundgang/rundgang.component';
 import { RundgangBandComponent } from './rundgang/rundgang-band.component';
 import { RundgangService } from './rundgang/rundgang.service';
-import { NEU_HINWEIS, RundgangId } from './rundgang/rundgang-daten';
+import { NEU_HINWEIS } from './rundgang/rundgang-daten';
 
 @Component({
   selector: 'app-root',
@@ -49,32 +42,22 @@ import { NEU_HINWEIS, RundgangId } from './rundgang/rundgang-daten';
     MatCardModule,
     MatIconModule,
     MatTooltipModule,
-    MatSidenavModule,
-    MatDividerModule,
     MatMenuModule,
     FormsModule,
     RouterOutlet,
-    RouterLink,
-    RouterLinkActive,
     FooterComponent,
-    OffeneMeldungenZahlComponent,
-    MobileMenuComponent,
     MobileHeaderComponent,
     RundgangComponent,
     RundgangBandComponent,
-    FarbschemaKnopfComponent,
+    HauptnavigationComponent,
+    KontoMenueComponent,
 ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
 })
 export class AppComponent implements OnInit, OnDestroy {
-  @ViewChild('sidenav') sidenav!: MatSidenav;
-
   title = 'Gut gesagt';
-  readonly menueIcons = MENUE_ICONS;
-  readonly datenschutzEinstellungen = DATENSCHUTZ_EINSTELLUNGEN;
   readonly neuHinweis = NEU_HINWEIS;
-  readonly hierFehltEineAntwortPfad = ROUTES.HIER_FEHLT_EINE_ANTWORT;
   pageTitle: string = 'Gut gesagt';
   showBackButton: boolean = false;
   /** Auf dem Start steht der Skip-Link „Zur Suche“ (#644). */
@@ -92,9 +75,6 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.pageTitle.length > AppComponent.LANGER_TITEL;
   }
 
-  /** Unter 1200 px zeigt der Kopf die Textlinks als Icons; dann helfen Tooltips. */
-  kopfSchmal = false;
-
   /** Kommt aus dem ProfilbildService: abgeleitet oder selbst gewaehlt (#437). */
   get selectedProfilePictureUrl(): string {
     return this.profilbild.bild();
@@ -111,7 +91,6 @@ export class AppComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private navigationService: NavigationService,
     private logger: LoggingService,
-    private dialog: MatDialog,
     private breakpointObserver: BreakpointObserver,
     private routeConfigService: RouteConfigService,
     private rueckmeldung: RueckmeldungService,
@@ -128,11 +107,9 @@ export class AppComponent implements OnInit, OnDestroy {
     // Set up responsive breakpoint detection
     this.breakpointObserver.observe([
       '(max-width: 599px)',
-      '(min-width: 600px) and (max-width: 959px)',
-      '(max-width: 1199px)'
+      '(min-width: 600px) and (max-width: 959px)'
     ]).pipe(takeUntil(this.destroy$))
       .subscribe(result => {
-        this.kopfSchmal = !!result.breakpoints['(max-width: 1199px)'];
         this.isMobile = result.breakpoints['(max-width: 599px)'];
         this.isTablet = result.breakpoints['(min-width: 600px) and (max-width: 959px)'];
         this.logger.debug(`Device type - Mobile: ${this.isMobile}, Tablet: ${this.isTablet}`);
@@ -201,41 +178,8 @@ export class AppComponent implements OnInit, OnDestroy {
       });
   }
 
-  openHelpDialog() {
-    hilfeOeffnen(this.dialog);
-  }
-
-  /** Aus dem mobilen Menue; aus der Hilfe startet der Dialog selbst. */
-  rundgangStarten(id: RundgangId): void {
-    void this.rundgang.starten(id);
-  }
-
-  openProfilbildDialog(): void {
-    profilbildDialogOeffnen(this.dialog);
-  }
-
-  openFeedbackDialog(): void {
-    feedbackDialogOeffnen(this.dialog);
-  }
-
   navigateToContributeView(): void {
     this.navigationService.navigateToContribute();
-  }
-
-  navigateToEinwilligung(): void {
-    this.router.navigate([EINWILLIGUNG_PFAD]);
-  }
-
-  navigateToMeineBeitraege(): void {
-    this.navigationService.navigateToMeineBeitraege();
-  }
-
-  navigateToEinwerfenView(): void {
-    this.navigationService.navigateToEinwerfen();
-  }
-
-  navigateToFangkorbView(): void {
-    this.navigationService.navigateToFangkorb();
   }
 
   /**
@@ -245,11 +189,6 @@ export class AppComponent implements OnInit, OnDestroy {
    */
   zurueck(): void {
     this.navigationService.goBack();
-  }
-
-  /** Erster Eintrag im mobilen Menue. */
-  navigateToHome(): void {
-    this.navigationService.navigateHome();
   }
 
   /**
@@ -266,25 +205,6 @@ export class AppComponent implements OnInit, OnDestroy {
     // Don't set login pages as return URL
     const returnUrl = currentUrl.startsWith('/login') ? '/' : currentUrl;
     this.router.navigate(['/login'], { queryParams: { returnUrl } });
-  }
-
-  // Explicit method for login with a specific return URL
-  loginWithReturnUrl(returnUrl: string) {
-    // If already on login page, don't navigate again (preserves existing returnUrl)
-    if (this.router.url.startsWith('/login')) {
-      return;
-    }
-    this.router.navigate(['/login'], { queryParams: { returnUrl } });
-  }
-
-  logout() {
-    this.authService.logout();
-  }
-
-  toggleMobileMenu(): void {
-    if (this.sidenav) {
-      this.sidenav.toggle();
-    }
   }
 
   /** Skip-Link: Fokus ins Suchfeld, ohne die Adresse um #suche zu ergaenzen. */
