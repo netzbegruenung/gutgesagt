@@ -76,6 +76,16 @@ describe('AllesZumThemaComponent', () => {
     expect(aussagen(seite)[2]).toBe('„Windräder töten Vögel“');
     expect(seite.querySelector('.kasten-alle')).toBeNull();
     expect(seite.querySelector('[aria-live="polite"]')!.textContent).toContain('3 Aussagen zum Thema Energie und Heizen');
+    // Der Knopf ist weg; der Fokus steht auf der ersten neuen Aussage.
+    expect(document.activeElement).toBe(seite.querySelectorAll('.kasten-aussage')[2]);
+  });
+
+  it('verspricht bei mehr als 50 Aussagen nur die 50 meistgenutzten', () => {
+    const seite = oeffnen([{ ...THEMA, anzahl_aussagen: 73 }]);
+
+    expect(seite.querySelector('.kasten-alle')!.textContent!.trim()).toBe(
+      'Die 50 meistgenutzten von 73 Aussagen zeigen',
+    );
   });
 
   it('meldet einen Fehler beim Nachladen und laesst die Liste stehen', () => {

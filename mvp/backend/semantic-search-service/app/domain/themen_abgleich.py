@@ -9,13 +9,19 @@ dieses Themas. Die Treffer der Suche bleiben davon unberuehrt.
 Abgeglichen wird ohne Modell, nur normalisiert:
 - Kleinschreibung; ae/oe/ue/ss statt Umlaut und Eszett, damit "Waermepumpe" und
   "Wärmepumpe" gleich sind; Bindestriche fallen weg ("E-Auto" = "EAuto"), andere
-  Satzzeichen trennen Woerter.
+  Satzzeichen trennen Woerter. Ein Stichwort mit Bindestrich trifft auch getrennt
+  geschrieben ("AfD Verbot" wie "AfD-Verbot").
 - Einfache Wortformen: Endungen wie -en, -er, -e, -n, -s fallen weg, solange vier
   Buchstaben bleiben ("Heizungen" = "Heizung", "Flüchtling" = "Flüchtlinge").
 - Ein Stichwort trifft, wenn seine Woerter zusammenhaengend in der Eingabe stehen
-  ("neue Heizung"). Ein Wort der Eingabe, das mit einem Stichwort ab sechs Buchstaben
-  beginnt, trifft schwaecher ("Heizungskosten" ueber "Heizung"): Kuerzere Stichwoerter
-  wie "Auto" oder "trans" stuenden sonst am Anfang fremder Woerter ("Autor", "Transport").
+  ("neue Heizung"). Ein Wort der Eingabe, das mit einem Begriff beginnt, trifft
+  schwaecher, und zwar
+  - mit einem Begriff ab sechs Buchstaben, auch dem Namen ("Heizungskosten" ueber
+    "Heizung"),
+  - mit einem kuerzeren Stichwort ab vier Buchstaben, wenn danach noch mindestens vier
+    folgen ("Rentenreform", "Asylbewerber", "Strompreis"). Nicht fuer Namensteile
+    ("Landtag" ist nicht "Stadt und Land") und nicht fuer die Stichwoerter in
+    _NICHT_ALS_ANFANG ("Autoritaet", "Transport").
 
 Der Name eines Themas zaehlt wie ein Stichwort, ebenso jeder Teil vor und nach "und"
 ("Ernährung" aus "Landwirtschaft und Ernährung").
@@ -36,7 +42,13 @@ HOECHSTENS_THEMEN = 2
 """Mehrere Treffer: hoechstens zwei Themen, sonst wird der Kasten zur Themenliste."""
 
 PRAEFIX_AB = 6
-"""Ab so vielen Buchstaben trifft ein Stichwort auch am Anfang eines laengeren Worts."""
+"""Ab so vielen Buchstaben trifft ein Begriff auch am Anfang eines laengeren Worts."""
+
+KURZ_AB = 4
+"""Kuerzere Stichwoerter ab so vielen Buchstaben, wenn danach noch so viele folgen."""
+
+_NICHT_ALS_ANFANG = frozenset({"auto", "trans"})
+"""Stuenden am Anfang fremder Woerter: autoritaer, Autor(itaet); Transport, Transparenz."""
 
 _ENDUNGEN = ("innen", "en", "er", "es", "e", "n", "s")
 _STAMM_MINDESTENS = 4
@@ -47,9 +59,11 @@ _GENAU = 2
 _ANFANG = 1
 
 
-def _woerter(text: str) -> List[str]:
-    """Kleingeschrieben, ohne Umlaute und Bindestriche, an Satzzeichen getrennt."""
-    flach = text.casefold().translate(_UMLAUTE).replace("-", "").replace("‑", "")
+def _woerter(text: str, bindestrich_trennt: bool = False) -> List[str]:
+    """Kleingeschrieben, ohne Umlaute, an Satzzeichen getrennt; Bindestriche fallen weg."""
+    flach = text.casefold().translate(_UMLAUTE)
+    if not bindestrich_trennt:
+        flach = flach.replace("-", "").replace("‑", "")
     return [w for w in re.split(r"[^0-9a-z]+", flach) if w]
 
 
@@ -71,6 +85,8 @@ class _Begriff:
     staemme: Tuple[str, ...]
     # Normalisiert, ungestemmt: fuer den Abgleich am Wortanfang (nur einteilige).
     flach: str
+    # Darf auch kurz (ab KURZ_AB) am Wortanfang treffen: Stichwort, kein Namensteil.
+    kurz_als_anfang: bool = False
 
 
 def begriffe(thema: Thema) -> List[str]:
@@ -88,13 +104,22 @@ def _verzeichnis(themen: Sequence[Thema]) -> List[Tuple[Thema, List[_Begriff]]]:
     ergebnis = []
     for thema in themen:
         liste = []
+        stichwoerter = set(thema.stichwoerter)
         for begriff in begriffe(thema):
-            woerter = _woerter(begriff)
-            if woerter:
+            varianten = [_woerter(begriff)]
+            if "-" in begriff:
+                varianten.append(_woerter(begriff, bindestrich_trennt=True))
+            for woerter in varianten:
+                if not woerter:
+                    continue
+                einteilig = woerter[0] if len(woerter) == 1 else ""
                 liste.append(
                     _Begriff(
                         tuple(_stamm(w) for w in woerter),
-                        woerter[0] if len(woerter) == 1 else "",
+                        einteilig,
+                        begriff in stichwoerter
+                        and len(einteilig) >= KURZ_AB
+                        and einteilig not in _NICHT_ALS_ANFANG,
                     )
                 )
         ergebnis.append((thema, liste))
@@ -102,6 +127,14 @@ def _verzeichnis(themen: Sequence[Thema]) -> List[Tuple[Thema, List[_Begriff]]]:
 
 
 _VERZEICHNIS = _verzeichnis(THEMEN)
+
+
+def _am_anfang(begriff: _Begriff, wort: str) -> bool:
+    if not begriff.flach or not wort.startswith(begriff.flach):
+        return False
+    if len(begriff.flach) >= PRAEFIX_AB:
+        return True
+    return begriff.kurz_als_anfang and len(wort) - len(begriff.flach) >= KURZ_AB
 
 
 def _enthaelt(folge: Tuple[str, ...], teil: Tuple[str, ...]) -> bool:
@@ -114,18 +147,16 @@ def passende_themen(
 ) -> List[Thema]:
     """
     Die Themen, zu denen eine kurze Eingabe passt, bestes zuerst, hoechstens
-    HOECHSTENS_THEMEN. Leer bei mehr als HOECHSTENS_WOERTER Woertern (gezaehlt an
-    Leerraum) oder ohne Treffer.
+    HOECHSTENS_THEMEN. Leer bei mehr als HOECHSTENS_WOERTER Woertern (gezaehlt wie
+    abgeglichen, auch an Satzzeichen) oder ohne Treffer.
 
     Reihenfolge: genaue Treffer vor Treffern am Wortanfang, dann mehr getroffene
     Woerter, dann die Reihenfolge der Themenliste.
     """
     if verzeichnis is None:
         verzeichnis = _VERZEICHNIS
-    if len(eingabe.split()) > HOECHSTENS_WOERTER:
-        return []
     woerter = _woerter(eingabe)
-    if not woerter:
+    if not woerter or len(woerter) > HOECHSTENS_WOERTER:
         return []
     staemme = tuple(_stamm(w) for w in woerter)
 
@@ -135,9 +166,7 @@ def passende_themen(
         for begriff in liste:
             if _enthaelt(staemme, begriff.staemme):
                 guete = (_GENAU, len(begriff.staemme))
-            elif len(begriff.flach) >= PRAEFIX_AB and any(
-                w.startswith(begriff.flach) for w in woerter
-            ):
+            elif any(_am_anfang(begriff, w) for w in woerter):
                 guete = (_ANFANG, 1)
             else:
                 continue

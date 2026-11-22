@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  ElementRef,
   EventEmitter,
   Input,
   OnChanges,
@@ -14,6 +15,9 @@ import { AussageDesThemas, PassendesThema } from '../services/dtos/searchDtos';
 import { SearchService } from '../services/search.service';
 import { ROUTES } from '../shared/constants/app.constants';
 import { SUCHTEXT_PARAM } from '../shared/formular-adresse';
+
+/** So viele Aussagen liefert "Alle Aussagen zum Thema" hoechstens (ALLE_HOECHSTENS im Backend). */
+export const ALLE_HOECHSTENS = 50;
 
 /**
  * "Alles zum Thema" (#754): Passt eine kurze Sucheingabe ("Heizung") zu einem Thema,
@@ -52,6 +56,7 @@ export class AllesZumThemaComponent implements OnChanges {
   constructor(
     private searchService: SearchService,
     private cdr: ChangeDetectorRef,
+    private element: ElementRef<HTMLElement>,
   ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -70,6 +75,13 @@ export class AllesZumThemaComponent implements OnChanges {
   /** Gibt es mehr Aussagen, als der Kasten zeigt? */
   mehr(thema: PassendesThema): boolean {
     return !this.alle.has(thema.schluessel) && thema.anzahl_aussagen > thema.aussagen.length;
+  }
+
+  /** Der Knopf verspricht nicht mehr, als die Abfrage liefert. */
+  alleText(thema: PassendesThema): string {
+    return thema.anzahl_aussagen > ALLE_HOECHSTENS
+      ? `Die ${ALLE_HOECHSTENS} meistgenutzten von ${thema.anzahl_aussagen} Aussagen zeigen`
+      : `Alle ${thema.anzahl_aussagen} Aussagen zum Thema`;
   }
 
   antwortenText(anzahl: number): string {
@@ -102,10 +114,17 @@ export class AllesZumThemaComponent implements OnChanges {
         if (!this.themen.some((t) => t.schluessel === schluessel)) {
           return;
         }
+        const bisher = this.aussagenVon(thema).length;
         const aussagen = antwort.thema.aussagen;
         this.alle.set(schluessel, aussagen);
         this.meldung = `${aussagen.length} Aussagen zum Thema ${thema.name}`;
-        this.cdr.markForCheck();
+        // Der Knopf verschwindet: Der Fokus geht auf die erste neue Aussage, sonst auf die
+        // letzte (wie "Alle N … zeigen" bei den Treffern), nicht verloren an die Seite.
+        this.cdr.detectChanges();
+        const links = this.element.nativeElement.querySelectorAll<HTMLElement>(
+          `#alles-zum-thema-${CSS.escape(schluessel)} ~ .kasten-liste .kasten-aussage`,
+        );
+        (links[bisher] ?? links[links.length - 1])?.focus();
       },
       error: () => {
         this.laedt.delete(schluessel);

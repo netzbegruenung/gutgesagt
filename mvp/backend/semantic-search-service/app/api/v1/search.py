@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import replace
 from datetime import datetime, timezone
 
@@ -310,7 +311,9 @@ async def themen_zum_suchtext(
     if not themen:
         return None
     try:
-        passend = [await _passendes_thema(service, t, IM_KASTEN) for t in themen]
+        passend = await asyncio.gather(
+            *(_passendes_thema(service, t, IM_KASTEN) for t in themen)
+        )
     except Exception as e:
         # Nur der Fehlertyp, nie der Suchtext (#239, #275).
         logger.warning(f"Failed to look up Themen for search: {type(e).__name__}")

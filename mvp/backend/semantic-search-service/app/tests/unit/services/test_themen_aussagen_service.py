@@ -10,9 +10,21 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from domain.models.statement import AntwortKurz
-from services.themen_aussagen_service import IM_KASTEN, ThemenAussagenService
+from services import themen_aussagen_service
+from services.themen_aussagen_service import (
+    IM_KASTEN,
+    ThemenAussagenService,
+    zwischenspeicher_leeren,
+)
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
+
+
+@pytest.fixture(autouse=True)
+def leerer_zwischenspeicher():
+    zwischenspeicher_leeren()
+    yield
+    zwischenspeicher_leeren()
 
 
 def _aussage(text, antworten):
@@ -108,3 +120,26 @@ async def test_unbekanntes_thema_oder_ohne_aussagen():
     assert await service.meistgenutzte("klima") == ([], 0)
     quelle.kuratierte.assert_not_awaited()
     zaehler.assert_not_called()
+
+
+async def test_rangliste_je_thema_zwischengespeichert(monkeypatch):
+    a = uuid.uuid4()
+    aussage = _aussage("Eine", [a])
+    service, themen, quelle, _ = _service(
+        [aussage.id], [aussage], sichtbar=[a], nutzung={}
+    )
+
+    await service.meistgenutzte("klima")
+    await service.meistgenutzte("klima", hoechstens=50)
+    assert themen.aussagen_mit_thema.call_count == 1
+    assert quelle.kuratierte.await_count == 1
+
+    # Abgelaufen: neu nachschlagen.
+    jetzt = themen_aussagen_service._uhr()
+    monkeypatch.setattr(
+        themen_aussagen_service,
+        "_uhr",
+        lambda: jetzt + themen_aussagen_service.ZWISCHENSPEICHER_SEKUNDEN + 1,
+    )
+    await service.meistgenutzte("klima")
+    assert themen.aussagen_mit_thema.call_count == 2

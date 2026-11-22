@@ -1,6 +1,6 @@
 [
   { "schluessel": "klima", "name": "Klima", "motiv": "themen/klima.svg", "stichwoerter": ["Klimawandel", "Klimaschutz", "Klimakrise", "Erderwärmung", "CO2", "Emissionen", "Klimaziele", "Klimakleber", "Letzte Generation", "Hitzewelle"] },
-  { "schluessel": "energie-heizen", "name": "Energie und Heizen", "motiv": "themen/energie-heizen.svg", "stichwoerter": ["Heizung", "Heizungsgesetz", "Wärmepumpe", "Strompreis", "Windrad", "Windkraft", "Solar", "Photovoltaik", "Atomkraft", "Kernkraft", "Gasheizung", "Energiewende"] },
+  { "schluessel": "energie-heizen", "name": "Energie und Heizen", "motiv": "themen/energie-heizen.svg", "stichwoerter": ["Heizung", "Heizungsgesetz", "Heizkosten", "Wärmepumpe", "Strom", "Windrad", "Windkraft", "Solar", "Photovoltaik", "Atomkraft", "Kernkraft", "Energiewende"] },
   { "schluessel": "verkehr", "name": "Verkehr", "motiv": "themen/verkehr.svg", "stichwoerter": ["Auto", "Tempolimit", "Verbrenner", "Verbrennerverbot", "E-Auto", "Deutschlandticket", "Bahn", "Fahrrad", "Radweg", "Autobahn", "ÖPNV", "Diesel"] },
   { "schluessel": "landwirtschaft-ernaehrung", "name": "Landwirtschaft und Ernährung", "motiv": "themen/landwirtschaft-ernaehrung.svg", "stichwoerter": ["Bauern", "Landwirte", "Bauernproteste", "Agrardiesel", "Fleisch", "Veggieday", "vegan", "Tierwohl", "Lebensmittel", "Glyphosat"] },
   { "schluessel": "natur-umwelt", "name": "Natur und Umwelt", "motiv": "themen/natur-umwelt.svg", "stichwoerter": ["Umweltschutz", "Naturschutz", "Artenschutz", "Artensterben", "Insekten", "Bienen", "Wolf", "Wald", "Plastik", "Müll"] },

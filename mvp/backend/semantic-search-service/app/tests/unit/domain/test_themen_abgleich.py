@@ -5,7 +5,12 @@ nur bei einem bis drei Woertern, hoechstens zwei Themen.
 
 import pytest
 
-from domain.themen_abgleich import HOECHSTENS_THEMEN, passende_themen
+from domain.themen_abgleich import (
+    _VERZEICHNIS,
+    HOECHSTENS_THEMEN,
+    _am_anfang,
+    passende_themen,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -80,3 +85,50 @@ def test_mehrere_themen_hoechstens_zwei_genaue_zuerst():
     assert HOECHSTENS_THEMEN == 2
     # Genau vor Wortanfang, unabhaengig von der Reihenfolge in der Liste.
     assert _schluessel("Heizungskosten Wohnung") == ["wohnen", "energie-heizen"]
+
+
+def test_stichwort_mit_bindestrich_auch_getrennt():
+    # Getrennt geschrieben zaehlt es als zwei Woerter und schlaegt "Verbote" allein.
+    assert _schluessel("AfD Verbot") == ["extremismus", "demokratie-freiheit"]
+    assert _schluessel("AfD-Verbot") == ["extremismus"]
+    assert _schluessel("E Auto") == ["verkehr"]
+
+
+@pytest.mark.parametrize(
+    "eingabe, thema",
+    [
+        ("Rentenreform", "soziales"),
+        ("Asylbewerber", "migration"),
+        ("Solaranlage", "energie-heizen"),
+        ("Strompreis", "energie-heizen"),
+        ("Mieterhöhung", "wohnen"),
+        ("Kriegsgefahr", "frieden-sicherheit"),
+        ("Kitaplätze", "bildung"),
+    ],
+)
+def test_zusammensetzungen_kurzer_stichwoerter(eingabe, thema):
+    assert _schluessel(eingabe) == [thema]
+
+
+@pytest.mark.parametrize("eingabe", ["autoritär", "Transparenz", "Landtag"])
+def test_keine_falschen_wortanfaenge(eingabe):
+    # Sie beginnen nur zufaellig wie "Auto", "trans" oder der Namensteil "Land".
+    assert _schluessel(eingabe) == []
+
+
+def test_woerter_zaehlen_wie_abgeglichen():
+    assert _schluessel("Heizung,Miete,Schule,Rente") == []
+
+
+def test_kein_begriff_beginnt_mit_dem_eines_anderen_themas():
+    # Sonst traefe ein Stichwort des einen Themas am Wortanfang immer das andere mit.
+    for thema, liste in _VERZEICHNIS:
+        for begriff in liste:
+            for anderes, andere in _VERZEICHNIS:
+                if anderes is thema:
+                    continue
+                for fremd in andere:
+                    assert not (fremd.flach and _am_anfang(begriff, fremd.flach)), (
+                        f"{begriff.flach} ({thema.schluessel}) am Anfang von "
+                        f"{fremd.flach} ({anderes.schluessel})"
+                    )

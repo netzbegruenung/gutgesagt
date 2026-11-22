@@ -339,6 +339,10 @@ def aussage_themen_ohne_datenbank(monkeypatch):
     repository.zuordnungen.return_value = {}
     repository.aussagen_mit_thema.return_value = []
     monkeypatch.setattr(modul, "_repository", repository)
+    # "Alles zum Thema" (#754) haelt Ranglisten je Thema; jeder Test beginnt ohne.
+    from services.themen_aussagen_service import zwischenspeicher_leeren
+
+    zwischenspeicher_leeren()
     yield repository
 
 

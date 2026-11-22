@@ -336,8 +336,7 @@ export class ResultViewComponent implements OnInit, OnDestroy {
       .subscribe(response => {
         this.antwort = response;
         this.karten = new WeakMap();
-        // Eine neue Suche beginnt ohne Themenfilter und zugeklappt.
-        this.aktivesThema = null;
+        // Eine neue Suche beginnt zugeklappt; den Themenfilter setzt "Alles zum Thema" weiter unten.
         this.aufgeklappt.clear();
         this.alternativenOffen = false;
         this.weitereOffen = false;

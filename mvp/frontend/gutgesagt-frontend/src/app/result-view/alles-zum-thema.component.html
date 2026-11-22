@@ -17,7 +17,7 @@
     <div class="kasten-aktionen" *ngIf="mehr(thema) || istFilterbar(thema)">
         <button *ngIf="mehr(thema)" type="button" class="kasten-alle"
                 [disabled]="laedt.has(thema.schluessel)" (click)="alleLaden(thema)">
-            Alle {{ thema.anzahl_aussagen }} Aussagen zum Thema
+            {{ alleText(thema) }}
         </button>
         <button *ngIf="istFilterbar(thema)" type="button" class="chip thema-chip kasten-filter"
                 [class.gewaehlt]="aktiv === thema.schluessel"
