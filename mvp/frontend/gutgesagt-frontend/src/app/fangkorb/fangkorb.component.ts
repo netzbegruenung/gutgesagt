@@ -51,8 +51,8 @@ export const LADE_GROESSE = 100;
 
 /**
  * Ab dieser Breite steht der Fangkorb in zwei Spalten: links die Seitenleiste mit
- * Einwerfen, Arbeitslisten (senkrecht) und Filtern, rechts die Liste mit queren
- * Karten. Darunter bleibt alles wie am Handy. Eine Quelle fuer Layout und
+ * Einwerfen, Arbeitslisten (senkrecht) und Filtern, rechts die Karten im
+ * Raster. Darunter bleibt alles wie am Handy. Eine Quelle fuer Layout und
  * Tastatur: Das CSS haengt an der Klasse, die dieser Wert setzt.
  */
 export const SEITENLEISTE_MEDIEN = '(min-width: 1024px)';

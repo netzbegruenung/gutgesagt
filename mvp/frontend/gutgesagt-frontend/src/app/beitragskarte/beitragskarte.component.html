@@ -103,46 +103,52 @@
         </div>
     </header>
 
-    <!-- Einwurf-Karte: dieselbe Anatomie wie die volle Karte - Band, Koerper, Aktion, Meta -->
+    <!--
+        Einwurf-Karte: dieselbe Anatomie wie die volle Karte. Der Kopf ordnet ein
+        (Zeichen und Wort der Stufe, Einwerfer, Alter, Themen), der weisse Koerper
+        traegt den Inhalt (Hinweis, Quelle, Saetze), der Fuss die Aktionen.
+    -->
     <ng-container *ngIf="einwurfAngaben as angaben">
-        <header class="karte-kopf einwurf-band" [class.einwurf-band--ohne-hinweis]="!daten.titel">
-            <span class="karte-icon" role="img" [attr.aria-label]="stufenName"
-                  [matTooltip]="stufenName" matTooltipPosition="below">{{ stufenEmoji }}</span>
+        <header class="karte-kopf einwurf-band">
+            <!-- Das Wort steht daneben: Zeichen nur zur Ansicht -->
+            <span class="karte-icon" aria-hidden="true">{{ stufenEmoji }}</span>
 
-            <h3 class="karte-titel einwurf-titel" *ngIf="daten.titel">{{ daten.titel }}</h3>
-            <span class="einwurf-titel-platz" *ngIf="!daten.titel" aria-hidden="true"></span>
+            <p class="einwurf-stand">
+                <span class="einwurf-stufe">{{ stufenName }}</span>
+                <span class="einwurf-herkunftszeile"><ng-container *ngIf="zeigtEinwerfer"><span class="einwurf-einwerfer">Von: {{ autorAnzeige }}</span> · </ng-container><span class="einwurf-alter">{{ daten.erstellt | relativeTime }}</span></span>
+            </p>
 
-            <!-- Mit stufeZeigen steht "Verworfen" schon in der Meta-Zeile -->
-            <span class="einwurf-verworfen" *ngIf="angaben.stufe === 'verworfen' && !stufeZeigen">verworfen</span>
+            <!-- Die beim Einwerfen gewaehlten Themen als ruhige Marken, wie an der Aussage -->
+            <ul class="einwurf-themen" *ngIf="angaben.themen?.length" aria-label="Themen">
+                <li class="thema-marke" *ngFor="let thema of angaben.themen"><img *ngIf="thema.motiv" class="thema-motiv" [src]="thema.motiv" alt="" aria-hidden="true" width="16" height="16">{{ thema.name }}</li>
+            </ul>
         </header>
 
-        <!--
-            Eigener Block ueber die ganze Bandbreite, als Ganzes ein Tipp-Ziel:
-            oben die Plattform, darunter die Adresse. Ohne Hinweis ist er die
-            Aufschrift der Karte - dann steht die Plattform in Titelgroesse.
-        -->
-        <a *ngIf="angaben.link" class="einwurf-linkzeile" [href]="angaben.link"
-           [class.einwurf-linkzeile--titel]="!daten.titel"
-           target="_blank" rel="noopener noreferrer"
-           [attr.aria-label]="'Original öffnen: ' + (angaben.linkText || angaben.link)">
-            <span class="einwurf-linktexte">
-                <span class="einwurf-herkunft" *ngIf="angaben.herkunft">{{ angaben.herkunft }}</span>
-                <span class="einwurf-adresse">{{ angaben.linkText }}</span>
-            </span>
-            <mat-icon class="link-icon" aria-hidden="true">open_in_new</mat-icon>
-        </a>
+        <div class="einwurf-koerper">
+            <h3 class="karte-titel einwurf-titel" *ngIf="daten.titel">{{ daten.titel }}</h3>
 
-        <!-- Die beim Einwerfen gewaehlten Themen als ruhige Marken, wie an der Aussage -->
-        <ul class="einwurf-themen" *ngIf="angaben.themen?.length" aria-label="Themen">
-            <li class="thema-marke" *ngFor="let thema of angaben.themen"><img *ngIf="thema.motiv" class="thema-motiv" [src]="thema.motiv" alt="" aria-hidden="true" width="16" height="16">{{ thema.name }}</li>
-        </ul>
+            <!--
+                Die Quelle als Ganzes ein Tipp-Ziel: Symbol der Plattform, ihr Name,
+                darunter die Adresse. Ohne Hinweis ist sie die Aufschrift der Karte -
+                dann steht der Name in Titelgroesse.
+            -->
+            <a *ngIf="angaben.link" class="einwurf-linkzeile" [href]="angaben.link"
+               [class.einwurf-linkzeile--titel]="!daten.titel"
+               target="_blank" rel="noopener noreferrer"
+               [attr.aria-label]="'Original öffnen: ' + (angaben.herkunft ? angaben.herkunft + ', ' : '') + (angaben.linkText || angaben.link)">
+                <mat-icon class="quelle-symbol" aria-hidden="true">{{ quellenSymbol }}</mat-icon>
+                <span class="einwurf-linktexte">
+                    <span class="einwurf-herkunft" *ngIf="angaben.herkunft">{{ angaben.herkunft }}</span>
+                    <span class="einwurf-adresse">{{ angaben.linkText }}</span>
+                </span>
+                <mat-icon class="link-icon" aria-hidden="true">open_in_new</mat-icon>
+            </a>
 
-        <!-- Im Kopf nur der eine Satz, aus dem der Beitrag entsteht -->
-        <p class="einwurf-kopfsatz" *ngIf="istKopf && angaben.kopfSatz">„{{ angaben.kopfSatz }}“</p>
+            <!-- Im Kopf nur der eine Satz, aus dem der Beitrag entsteht -->
+            <p class="einwurf-kopfsatz" *ngIf="istKopf && angaben.kopfSatz">„{{ angaben.kopfSatz }}“</p>
 
-        <!-- Koerper weiss: die Saetze am gruenen Balken, je Satz rechts der Stand -->
-        <div class="einwurf-koerper" *ngIf="!istKopf && sichtbareSaetze.length">
-            <ul class="einwurf-saetze">
+            <!-- Die Saetze am gruenen Balken, je Satz rechts der Stand -->
+            <ul class="einwurf-saetze" *ngIf="!istKopf && sichtbareSaetze.length">
                 <li class="einwurf-satz" *ngFor="let satz of sichtbareSaetze">
                     <span class="satz-text">{{ satz.text }}</span>
                     <span class="satz-status" [class.satz-status--fertig]="satz.beitraege > 0"
@@ -152,11 +158,9 @@
             </ul>
         </div>
 
-        <!-- Fuss aus Aktion und Meta. Hochkant ohne eigene Box (display: contents);
-             quer eine Zeile: Meta links, Griff und ⋮ rechts (Input quer). -->
-        <div class="einwurf-fuss" *ngIf="!istKopf">
-            <!-- Aktionszeile wie bei der vollen Karte: Griff in der Mitte, ⋮ rechts -->
-            <div class="einwurf-aktion" *ngIf="(primaerAktion || menueEintraege.length)">
+        <!-- Fuss: der Griff, ⋮ am Rand; feste Spalten, damit ⋮ auch ohne Griff (verworfen) rechts steht -->
+        <footer class="einwurf-fuss" *ngIf="!istKopf && (primaerAktion || menueEintraege.length)">
+            <div class="einwurf-aktion">
                 <button *ngIf="primaerAktion as primaer" type="button" mat-raised-button
                         class="gutgesagt-primary-dark einwurf-primaer"
                         (click)="aktionAusloesen(primaer.aktion, $event)">
@@ -180,19 +184,7 @@
                     </button>
                 </mat-menu>
             </div>
-
-            <p class="karte-meta einwurf-meta">
-                <ng-container *ngIf="stufeZeigen">
-                    <span class="einwurf-stufe">{{ stufenName }}</span>
-                    ·
-                </ng-container>
-                <ng-container *ngIf="zeigtEinwerfer">
-                    <span class="einwurf-einwerfer">Von: {{ autorAnzeige }}</span>
-                    ·
-                </ng-container>
-                <span class="einwurf-alter">{{ daten.erstellt | relativeTime }}</span>
-            </p>
-        </div>
+        </footer>
     </ng-container>
 
     <!-- Der Koerper: Ziel des Aufklapp-Knopfs; eingeklappt leer und verborgen -->

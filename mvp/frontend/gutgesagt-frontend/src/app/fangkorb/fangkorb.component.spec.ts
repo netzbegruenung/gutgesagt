@@ -485,7 +485,7 @@ describe('FangkorbComponent', () => {
       expect(beobachteteMedien).toContain(SEITENLEISTE_MEDIEN);
     });
 
-    it('stellt am Handy die Steuerung ueber die Liste, mit schwebendem Knopf und hochkanten Karten', () => {
+    it('stellt am Handy die Steuerung ueber die Liste, mit schwebendem Knopf und Karten untereinander', () => {
       erstellen(jeTab());
       breiteSetzen(390);
 
@@ -493,10 +493,9 @@ describe('FangkorbComponent', () => {
       expect(rechteck('.steuerung').bottom).toBeLessThanOrEqual(rechteck('.liste').top);
       expect(fixture.nativeElement.querySelector('button.einwerfen-fab')).toBeTruthy();
       expect(fixture.nativeElement.querySelector('button.einwerfen-knopf')).toBeNull();
-      expect(kartenKomponenten().map((karte) => karte.quer)).toEqual([false]);
     });
 
-    it('stellt ab 1024 px die Seitenleiste links neben die Liste, mit queren Karten', () => {
+    it('stellt ab 1024 px die Seitenleiste links neben die Liste, mit den Karten im Raster', () => {
       breit$.next(true);
       erstellen(jeTab());
       breiteSetzen(1280);
@@ -514,8 +513,7 @@ describe('FangkorbComponent', () => {
       );
       expect(zweiter.top).toBeGreaterThanOrEqual(erster.bottom);
       expect(rechteck('.filterleiste').top).toBeGreaterThanOrEqual(zweiter.bottom);
-      expect(kartenKomponenten().map((karte) => karte.quer)).toEqual([true]);
-      expect(karten()[0].classList).toContain('karte--quer');
+      expect(getComputedStyle(fixture.nativeElement.querySelector('.karten')).display).toBe('grid');
     });
 
     it('zeigt am Desktop die Erklaerung immer, ohne ?-Knopf, und die Kettensymbole an den Tabs', () => {
@@ -981,7 +979,7 @@ describe('FangkorbComponent', () => {
       klicken(filterKnopf('verworfen'));
       const verworfen = karten().find((karte) => karte.classList.contains('stufe-verworfen'))!;
       expect(verworfen.querySelector('.einwurf-primaer')).toBeNull();
-      expect(verworfen.querySelector('.einwurf-verworfen')!.textContent!.trim()).toBe('verworfen');
+      expect(verworfen.querySelector('.einwurf-stufe')!.textContent!.trim()).toBe('Verworfen');
     });
   });
 

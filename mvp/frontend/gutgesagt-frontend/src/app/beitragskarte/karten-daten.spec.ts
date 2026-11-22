@@ -365,6 +365,7 @@ describe('karten-daten', () => {
         einwurfId: 'e-1',
         stufe: 'offen',
         herkunft: 'Instagram',
+        plattform: 'instagram',
         link: 'https://www.instagram.com/reel/ABC/',
         linkText: 'instagram.com/reel/ABC',
         saetze: [],
