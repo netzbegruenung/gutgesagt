@@ -197,6 +197,7 @@ export class AddPostComponent implements OnChanges {
     this.postForm.get('platform')!.markAsPristine();
     this.antwortAuf?.leeren();
     this.aussage = OHNE_AUSSAGE;
+    this.themenWahl.zuruecksetzen();
     this.fehler = null;
     this.validierung = null;
   }

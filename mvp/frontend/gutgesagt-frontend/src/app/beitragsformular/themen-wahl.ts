@@ -27,7 +27,16 @@ export class ThemenWahl {
     inject(ThemenService)
       .liste()
       .pipe(takeUntilDestroyed())
-      .subscribe({ next: (liste) => (this.liste = liste), error: () => (this.liste = []) });
+      .subscribe({
+        next: (liste) => {
+          this.liste = liste;
+          // Kommt die Liste erst, waehrend die Wahl schon zu sehen ist: jetzt vorschlagen.
+          if (this.warWaehlbar) {
+            this.vorschlagEinsetzen();
+          }
+        },
+        error: () => (this.liste = []),
+      });
   }
 
   /** Zu sehen fuer eine neue Aussage per Text (themenWaehlbar), wenn die Liste da ist. */
@@ -64,9 +73,23 @@ export class ThemenWahl {
     }
   }
 
+  /**
+   * Nach "Zuruecksetzen": Die Seite leert den Antwort-auf-Block ohne aussageSetzen. Wie
+   * vor der ersten Wahl kommt der Vorschlag mit der naechsten neuen Aussage wieder.
+   */
+  zuruecksetzen(): void {
+    this.warWaehlbar = false;
+    this.themen.setValue([]);
+  }
+
+  /**
+   * Nur mit geladener Liste und nur Schluessel daraus: Ohne Liste ist die Wahl unsichtbar
+   * (zeigtFuer), und ungesehene Themen kaemen mit der Aussage in die Datenbank.
+   */
   private vorschlagEinsetzen(): void {
-    if (this.vorschlag.length && !this.themen.value?.length) {
-      this.themen.setValue([...this.vorschlag]);
+    const bekannt = this.vorschlag.filter((s) => this.liste.some((t) => t.schluessel === s));
+    if (bekannt.length && !this.themen.value?.length) {
+      this.themen.setValue(bekannt);
     }
   }
 

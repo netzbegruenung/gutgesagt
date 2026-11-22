@@ -68,7 +68,6 @@
   }
 }
 
-// Kopf aus einem Einwurf: der Satz unter der Link-Zeile, noch im Sandband
 /* Themen am Einwurf: Marken wie an der Aussage (AussageThemenComponent), auf dem Sand
    des Bandes. Hellgruen auf Sand: Schrift --akzent-schrift auf --primaer-tint wie dort. */
 .einwurf-themen {
@@ -90,6 +89,7 @@
   color: var(--akzent-schrift);
 }
 
+// Kopf aus einem Einwurf: der Satz unter der Link-Zeile, noch im Sandband
 .einwurf-kopfsatz {
   margin: 0;
   padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);

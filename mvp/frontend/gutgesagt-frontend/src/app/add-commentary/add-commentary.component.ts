@@ -968,6 +968,7 @@ export class AddCommentaryComponent implements OnChanges, OnInit {
     this.commentaryForm.reset({ title: '', text: '', kurz: '', lang: '', ...OPTIONALE_ANGABEN_LEER, references: [] });
     this.antwortAuf?.leeren();
     this.aussage = OHNE_AUSSAGE;
+    this.themenWahl.zuruecksetzen();
     this.showReferences = false;
     this.zeigtFassungen = false;
     this.fehler = null;

@@ -643,6 +643,7 @@ export class AddGenerictextComponent implements OnChanges {
     this.generictextForm.reset({ title: '', text: '', themen: [], references: [] });
     this.antwortAuf?.leeren();
     this.aussage = OHNE_AUSSAGE;
+    this.themenWahl.zuruecksetzen();
     this.fehler = null;
     // Wer zuruecksetzt, faengt neu an: kein "Variante von", kein beruht_auf (#356).
     this.vorlage = null;

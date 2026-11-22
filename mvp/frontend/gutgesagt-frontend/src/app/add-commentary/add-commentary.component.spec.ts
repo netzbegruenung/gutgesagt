@@ -1797,7 +1797,25 @@ describe('AddCommentaryComponent', () => {
       expect(seite().querySelector('.einwurf-kopf')!.textContent).toContain('Notiz');
     });
 
+    function themenListe(antwort: { themen: { schluessel: string; name: string }[] } | null): void {
+      const anfrage = TestBed.inject(HttpTestingController).expectOne(`${environment.baseUrl}/api/v1/statement/themen`);
+      if (antwort) {
+        anfrage.flush(antwort);
+      } else {
+        anfrage.flush('kaputt', { status: 500, statusText: 'Server Error' });
+      }
+    }
+
+    const LISTE = {
+      themen: [
+        { schluessel: 'klima', name: 'Klima' },
+        { schluessel: 'verkehr', name: 'Verkehr' },
+        { schluessel: 'europa', name: 'Europa' },
+      ],
+    };
+
     it('setzt die Themen des Einwurfs als Vorauswahl, sobald eine neue Aussage gewaehlt ist', () => {
+      themenListe(LISTE);
       component.vorbefuellung = {
         einwurfId: 'id-1',
         titel: 'Satz',
@@ -1824,11 +1842,45 @@ describe('AddCommentaryComponent', () => {
     });
 
     it('setzt die Vorauswahl gleich, wenn die neue Aussage schon gewaehlt ist', () => {
+      themenListe(LISTE);
       component.aussageSetzen({ id: '', text: 'Eine neue Aussage mit Text', neuGewaehlt: true });
       component.vorbefuellung = { einwurfId: 'id-1', titel: 'Satz', url: null, kopf: {} as any, themen: ['europa'] };
       component.ngOnChanges({ vorbefuellung: new SimpleChange(null, component.vorbefuellung, true) });
 
       expect(component.commentaryForm.value.themen).toEqual(['europa']);
+    });
+
+    it('setzt ohne ladbare Themenliste nichts vor: ungesehen kaemen die Themen sonst mit der Aussage', () => {
+      themenListe(null);
+      component.vorbefuellung = { einwurfId: 'id-1', titel: 'Satz', url: null, kopf: {} as any, themen: ['klima'] };
+      component.ngOnChanges({ vorbefuellung: new SimpleChange(null, component.vorbefuellung, true) });
+      component.aussageSetzen({ id: '', text: 'Eine neue Aussage mit Text', neuGewaehlt: true });
+
+      expect(component.commentaryForm.value.themen).toEqual([]);
+    });
+
+    it('setzt vor, sobald die Liste kommt, waehrend die neue Aussage schon gewaehlt ist', () => {
+      component.vorbefuellung = { einwurfId: 'id-1', titel: 'Satz', url: null, kopf: {} as any, themen: ['europa', 'weggefallen'] };
+      component.ngOnChanges({ vorbefuellung: new SimpleChange(null, component.vorbefuellung, true) });
+      component.aussageSetzen({ id: '', text: 'Eine neue Aussage mit Text', neuGewaehlt: true });
+      expect(component.commentaryForm.value.themen).toEqual([]);
+
+      themenListe(LISTE);
+
+      expect(component.commentaryForm.value.themen).toEqual(['europa']);
+    });
+
+    it('schlaegt nach dem Zuruecksetzen mit der naechsten neuen Aussage wieder vor', () => {
+      themenListe(LISTE);
+      component.vorbefuellung = { einwurfId: 'id-1', titel: 'Satz', url: null, kopf: {} as any, themen: ['klima'] };
+      component.ngOnChanges({ vorbefuellung: new SimpleChange(null, component.vorbefuellung, true) });
+      component.aussageSetzen({ id: '', text: 'Eine neue Aussage mit Text', neuGewaehlt: true });
+
+      component.leeren();
+      expect(component.commentaryForm.value.themen).toEqual([]);
+      component.aussageSetzen({ id: '', text: 'Wieder eine neue Aussage', neuGewaehlt: true });
+
+      expect(component.commentaryForm.value.themen).toEqual(['klima']);
     });
 
     it('zeigt die Herkunft kompakt', () => {
