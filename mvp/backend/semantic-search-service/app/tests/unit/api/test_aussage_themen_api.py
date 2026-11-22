@@ -202,3 +202,63 @@ class TestAussagenZumZuordnen:
         resp = TestClient(app).get(AUSSAGEN_URL, headers=ANGEMELDET)
 
         assert resp.status_code == 403
+
+
+VON_URL = "/api/v1/statement/themen/von"
+
+
+@pytest.mark.api
+class TestThemenVon:
+    """Die Themen einer Aussage nachsehen (Beitragsformular, Gespeichert)."""
+
+    def test_liefert_die_themen_der_aussage(self, themen_service):
+        aussage = uuid.uuid4()
+        themen_service.themen_von = MagicMock(return_value={aussage: ["klima"]})
+
+        resp = TestClient(app).get(
+            VON_URL, params={"statement_id": str(aussage)}, headers=ANGEMELDET
+        )
+
+        assert resp.status_code == 200
+        assert resp.json() == {
+            "statement_id": str(aussage),
+            "themen": [
+                {"schluessel": "klima", "name": "Klima", "motiv": "themen/klima.svg"}
+            ],
+        }
+        themen_service.themen_von.assert_called_once_with([aussage])
+
+    def test_ohne_themen_leer(self, themen_service):
+        themen_service.themen_von = MagicMock(return_value={})
+
+        resp = TestClient(app).get(
+            VON_URL, params={"statement_id": str(uuid.uuid4())}, headers=ANGEMELDET
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["themen"] == []
+
+    @pytest.mark.parametrize("kopf", [{}, {"X-User": "anonymous"}])
+    def test_nur_fuer_angemeldete(self, themen_service, kopf):
+        resp = TestClient(app).get(
+            VON_URL, params={"statement_id": str(uuid.uuid4())}, headers=kopf
+        )
+
+        assert resp.status_code == 401
+
+    def test_keine_uuid_ist_422(self, themen_service):
+        resp = TestClient(app).get(
+            VON_URL, params={"statement_id": "kein"}, headers=ANGEMELDET
+        )
+
+        assert resp.status_code == 422
+
+    def test_fehler_ist_500_ohne_details(self, themen_service):
+        themen_service.themen_von = MagicMock(side_effect=RuntimeError("geheim"))
+
+        resp = TestClient(app).get(
+            VON_URL, params={"statement_id": str(uuid.uuid4())}, headers=ANGEMELDET
+        )
+
+        assert resp.status_code == 500
+        assert "geheim" not in resp.text
