@@ -2,6 +2,7 @@
 
 import { BaseContentResult, BaseSearchResult, ContentReference } from "./commonDtos";
 import type { Stil, Zweck } from "../../shared/zweck-stil";
+import type { Thema } from "./themenDtos";
 
 // Request DTOs
 
@@ -28,6 +29,31 @@ export interface SearchResponse {
     image_search_results?: ImageSearchResult[];
     /** Ohne Treffer: so viele Personen (Tagespseudonyme) suchten in vier Wochen ohne Treffer danach, die eigene Suche eingerechnet; erst ab 2 und nur zu einer sichtbaren Aussage (#362). */
     personen_ohne_treffer?: number | null;
+    /**
+     * "Alles zum Thema" (#754): bei Eingaben aus einem bis drei Woertern, die zu einem
+     * Thema passen, hoechstens zwei; sonst null oder fehlend.
+     */
+    passende_themen?: PassendesThema[] | null;
+}
+
+/** Eine Aussage eines Themas, meistgenutzte zuerst (#754). */
+export interface AussageDesThemas {
+    statement_id: string;
+    text: string;
+    /** Sichtbare Antworten auf die Aussage. */
+    antworten: number;
+}
+
+/** Ein Thema mit seinen meistgenutzten Aussagen (#754). */
+export interface PassendesThema extends Thema {
+    aussagen: AussageDesThemas[];
+    /** Alle Aussagen des Themas mit Antwort; mehr als `aussagen`: "Alle … zeigen". */
+    anzahl_aussagen: number;
+}
+
+/** GET /api/v1/search/thema/{schluessel}: alle Aussagen eines Themas. */
+export interface AussagenDesThemasResponse {
+    thema: PassendesThema;
 }
 
 export interface CommentarySearchResult extends BaseSearchResult {

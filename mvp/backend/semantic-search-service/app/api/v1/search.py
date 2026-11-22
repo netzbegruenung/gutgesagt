@@ -1,8 +1,9 @@
+import asyncio
 from dataclasses import replace
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Depends, Request
-from typing import List
+from typing import List, Optional
 
 from core.config import settings
 from core.logging import get_logger
@@ -29,6 +30,7 @@ from dependencies import (
     get_statement_service,
     get_reference_service,
     get_suchen_ohne_treffer_service,
+    get_themen_aussagen_service,
     get_voting_service,
 )
 from services.usage_tracking_service import get_usage_service
@@ -37,6 +39,13 @@ from services.beitrag_fuer_aufrufer import Aufrufer
 from services.guete_service import guete_ergaenzen
 from services.voting_service import VotingService
 from services.aussage_themen_service import AussageThemenService
+from services.themen_aussagen_service import (
+    ALLE_HOECHSTENS,
+    IM_KASTEN,
+    ThemenAussagenService,
+)
+from domain.themen import NACH_SCHLUESSEL, Thema
+from domain.themen_abgleich import passende_themen as themen_zur_eingabe
 from services.search_tracking_service import (
     get_search_tracking_service,
     tagespseudonym,
@@ -58,6 +67,9 @@ from services.search.inhaltstor import inhaltstor_fuer
 from services.search.polaritaet_nli import get_nli_polaritaet
 from services.keyword_overlap_service import get_keyword_overlap_service
 from dtos.search import (
+    AussageDesThemasDto,
+    AussagenDesThemasResponse,
+    PassendesThemaDto,
     CommentarySearchResult,
     GenericTextSearchResult,
     ImageSearchResult,
@@ -267,6 +279,48 @@ async def _aussage_fuer_aufrufer(
     return None, query_text
 
 
+async def _passendes_thema(
+    service: ThemenAussagenService, thema: Thema, hoechstens: int
+) -> PassendesThemaDto:
+    aussagen, anzahl = await service.meistgenutzte(thema.schluessel, hoechstens)
+    return PassendesThemaDto(
+        schluessel=thema.schluessel,
+        name=thema.name,
+        motiv=thema.motiv,
+        aussagen=[
+            AussageDesThemasDto(
+                statement_id=a.statement_id, text=a.text, antworten=a.antworten
+            )
+            for a in aussagen
+        ],
+        anzahl_aussagen=anzahl,
+    )
+
+
+async def themen_zum_suchtext(
+    service: ThemenAussagenService, query_text: str
+) -> Optional[List[PassendesThemaDto]]:
+    """
+    "Alles zum Thema" (#754): die Themen, zu denen eine kurze Eingabe passt
+    (domain/themen_abgleich.py), je mit ihren meistgenutzten Aussagen. Ein Thema
+    ohne Aussage mit Antwort faellt weg; der Kasten zeigte sonst nur eine Ueberschrift.
+    None, wenn nichts passt oder das Nachschlagen scheitert: Die Suche bleibt dann,
+    wie sie ist. Laeuft nach den Treffern und aendert sie nicht.
+    """
+    themen = themen_zur_eingabe(query_text)
+    if not themen:
+        return None
+    try:
+        passend = await asyncio.gather(
+            *(_passendes_thema(service, t, IM_KASTEN) for t in themen)
+        )
+    except Exception as e:
+        # Nur der Fehlertyp, nie der Suchtext (#239, #275).
+        logger.warning(f"Failed to look up Themen for search: {type(e).__name__}")
+        return None
+    return [t for t in passend if t.aussagen] or None
+
+
 # Searches for content in various indexes using similarity search
 # later to probably be split up in specific seach operations
 # returns analysis of input content (=identified statement), topics (TBD), commentaries & generictext snippets
@@ -293,6 +347,7 @@ async def search_by_text(
     aufrufer: Aufrufer = Depends(get_aufrufer),
     themen_service: AussageThemenService = Depends(get_aussage_themen_service),
     varianten: VariantenRepository = Depends(get_varianten_repository),
+    themen_aussagen: ThemenAussagenService = Depends(get_themen_aussagen_service),
 ) -> SearchResponse:
     try:
         # Keine Logzeile je Suche: Der Suchtext ist der sensibelste Einzelwert der
@@ -417,6 +472,9 @@ async def search_by_text(
             post_search_results=post_search_results,
             image_search_results_count=len(image_search_results),
             image_search_results=image_search_results,
+            passende_themen=await themen_zum_suchtext(
+                themen_aussagen, request.query_text
+            ),
         )
 
         total_results = (
@@ -508,4 +566,21 @@ async def search_by_text(
         raise HTTPException(status_code=500, detail=INTERNER_FEHLER)
 
 
-# searchByTopic(topic)
+# "Alle Aussagen zum Thema" (#754): die Aussagen eines Themas mit Antwort,
+# meistgenutzte zuerst, fuer den Kasten "Alles zum Thema" auf der Ergebnisseite. Unter
+# /search, damit es wie die Suche auch fuer Besucher offen ist (BFF EndpointPolicy).
+@router.get("/thema/{schluessel}", response_model=AussagenDesThemasResponse)
+async def aussagen_des_themas(
+    schluessel: str,
+    themen_aussagen: ThemenAussagenService = Depends(get_themen_aussagen_service),
+) -> AussagenDesThemasResponse:
+    thema = NACH_SCHLUESSEL.get(schluessel)
+    if thema is None:
+        raise HTTPException(status_code=404, detail="Unknown Thema")
+    try:
+        return AussagenDesThemasResponse(
+            thema=await _passendes_thema(themen_aussagen, thema, ALLE_HOECHSTENS)
+        )
+    except Exception as e:
+        logger.error(f"Error in /thema: {type(e).__name__}", exc_info=True)
+        raise HTTPException(status_code=500, detail=INTERNER_FEHLER)

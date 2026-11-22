@@ -495,6 +495,130 @@ describe('ResultViewComponent: ohne Treffer', () => {
   }
 });
 
+/**
+ * "Alles zum Thema" (#754): Passt die kurze Eingabe zu einem Thema, steht ueber den
+ * Treffern ein Kasten mit dessen Aussagen, auch ohne Treffer; der Themenfilter steht
+ * schon auf dem Thema, die Treffer selbst bleiben dieselben.
+ */
+describe('ResultViewComponent: Alles zum Thema', () => {
+  const ENERGIE = { schluessel: 'energie-heizen', name: 'Energie und Heizen', motiv: 'themen/energie-heizen.svg' };
+  const KLIMA = { schluessel: 'klima', name: 'Klima' };
+  const PASSEND = {
+    ...ENERGIE,
+    aussagen: [
+      { statement_id: 'a-1', text: 'Die Wärmepumpe funktioniert im Altbau nicht', antworten: 3 },
+      { statement_id: 'a-2', text: 'Das Heizungsgesetz ist Enteignung', antworten: 1 },
+    ],
+    anzahl_aussagen: 2,
+  };
+
+  let fixture: ComponentFixture<ResultViewComponent>;
+
+  function kommentar(id: string, themen: Array<{ schluessel: string; name: string }>) {
+    return {
+      score: 0.9,
+      statement_text: 'Heizen wird teuer',
+      statement_similarity_score: 0.9,
+      reply_relevance: 0.9,
+      statement_id: `aussage-${id}`,
+      themen,
+      commentary_result: { id, content_type: 'commentary', title: `Titel ${id}`, text: 'Text', references: [] },
+    } as any;
+  }
+
+  function oeffnen(mobil: boolean, kommentare: any[], passend: any[] | null | undefined): HTMLElement {
+    TestBed.configureTestingModule({
+      imports: [ResultViewComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter(ohneWaechter(routes)),
+        {
+          provide: BreakpointObserver,
+          useValue: { observe: (query: string[]) => of({ matches: mobil && query[0] === '(max-width: 599px)', breakpoints: {} }) },
+        },
+      ],
+    });
+    TestBed.inject(StateManagementService).setSearchResults({
+      query_was_newly_added_as_statement: false,
+      statement_id: null,
+      statement_text: 'Heizung',
+      commentary_search_results_count: kommentare.length,
+      commentary_search_results: kommentare,
+      generictext_search_results_count: 0,
+      generictext_search_results: [],
+      passende_themen: passend,
+    });
+    fixture = TestBed.createComponent(ResultViewComponent);
+    fixture.componentInstance.searchQuery = 'Heizung';
+    fixture.detectChanges();
+    return fixture.nativeElement;
+  }
+
+  for (const mobil of [false, true]) {
+    const wo = mobil ? 'Handy' : 'Desktop';
+
+    it(`zeigt den Kasten ueber den Treffern und waehlt den Filter vor (${wo})`, () => {
+      const seite = oeffnen(mobil, [kommentar('k-1', [ENERGIE]), kommentar('k-2', [KLIMA])], [PASSEND]);
+
+      const kasten = seite.querySelector('app-alles-zum-thema')!;
+      expect(kasten.querySelector('h2')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Alles zum Thema Energie und Heizen');
+      expect(kasten.querySelector('img.kasten-motiv')?.getAttribute('src')).toBe('themen/energie-heizen.svg');
+      expect(Array.from(kasten.querySelectorAll('.kasten-aussage')).map((a) => a.textContent?.trim())).toEqual([
+        '„Die Wärmepumpe funktioniert im Altbau nicht“',
+        '„Das Heizungsgesetz ist Enteignung“',
+      ]);
+      // Vor den Treffern im DOM, also in der Lesereihenfolge oben.
+      expect(kasten.compareDocumentPosition(seite.querySelector('.ergebnisse')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(fixture.componentInstance.aktivesThema).toBe('energie-heizen');
+      expect(kartenIds(fixture.componentInstance)).toEqual(['k-1']);
+    });
+
+    it(`zeigt den Kasten auch ohne Treffer, ohne Aussagen doppelt (${wo})`, () => {
+      const seite = oeffnen(mobil, [], [PASSEND]);
+
+      expect(seite.querySelector('app-alles-zum-thema .kasten-aussage')).toBeTruthy();
+      expect(seite.querySelector('.unified-empty-state .search-query-info')?.textContent).toContain('Oben stehen Aussagen zum Thema');
+      expect(fixture.componentInstance.bekannteAussagen).toEqual(jasmine.arrayContaining(['a-1', 'a-2']));
+      expect(fixture.componentInstance.aussagenImKasten).toEqual(['a-1', 'a-2']);
+      // Ohne Treffer kein Filter: nichts zum Vorwaehlen.
+      expect(fixture.componentInstance.aktivesThema).toBeNull();
+      expect(seite.querySelector('app-alles-zum-thema .kasten-filter')).toBeNull();
+    });
+  }
+
+  it('laesst die Treffer unberuehrt, wenn das Thema nicht im Filter steht', () => {
+    oeffnen(false, [kommentar('k-1', [KLIMA]), kommentar('k-2', [])], [PASSEND]);
+
+    expect(fixture.componentInstance.aktivesThema).toBeNull();
+    expect(kartenIds(fixture.componentInstance)).toEqual(['k-1', 'k-2']);
+  });
+
+  it('ohne passendes Thema kein Kasten und kein vorgewaehlter Filter', () => {
+    const seite = oeffnen(false, [kommentar('k-1', [ENERGIE])], null);
+
+    expect(seite.querySelector('app-alles-zum-thema')).toBeNull();
+    expect(fixture.componentInstance.aktivesThema).toBeNull();
+    expect(seite.querySelector('.unified-empty-state')).toBeNull();
+  });
+
+  it('"Nur Treffer zum Thema" schaltet den Filter aus und wieder an', () => {
+    const seite = oeffnen(false, [kommentar('k-1', [ENERGIE]), kommentar('k-2', [KLIMA])], [PASSEND]);
+    const knopf = () => seite.querySelector<HTMLButtonElement>('app-alles-zum-thema .kasten-filter')!;
+
+    expect(knopf().getAttribute('aria-pressed')).toBe('true');
+    knopf().click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.aktivesThema).toBeNull();
+    expect(kartenIds(fixture.componentInstance)).toEqual(['k-1', 'k-2']);
+    expect(knopf().getAttribute('aria-pressed')).toBe('false');
+
+    knopf().click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.aktivesThema).toBe('energie-heizen');
+  });
+});
+
 describe('erkannteAussage', () => {
   const treffer = (statement_id: string | null, statement_text: string, score: number) =>
     ({ score, statement_text, statement_id }) as any;

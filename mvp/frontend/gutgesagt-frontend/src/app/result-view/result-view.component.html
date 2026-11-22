@@ -44,16 +44,24 @@
 
 <!-- Ohne Treffer: beliebte Aussagen und "Hier fehlt eine Antwort", keine Sackgasse (#642, R51) -->
 <ng-template #oftGesucht>
-    <app-oft-gesucht [suchtext]="searchQuery"></app-oft-gesucht>
+    <app-oft-gesucht [suchtext]="searchQuery" [ohneAussagen]="aussagenImKasten"></app-oft-gesucht>
 </ng-template>
 
 <!-- Eine Darstellung fuer Handy und Desktop: Zeile "Erkannt als", beste Antwort, Rest eingeklappt -->
 <ng-container *ngIf="!ohneSuche && !(loading$ | async) && (searchResponse$ | async) && angezeigt">
 
+    <!-- Kurze Eingabe wie "Heizung", die zu einem Thema passt: oben dessen Aussagen, mit und
+         ohne Treffer (#754). Die Treffer darunter bleiben, wie die Suche sie liefert. -->
+    <app-alles-zum-thema *ngIf="passendeThemen.length" [themen]="passendeThemen" [aktiv]="aktivesThema"
+                         [filterbar]="themenImFilter" (filtern)="nachThemaFiltern($event)"></app-alles-zum-thema>
+
     <!-- Ohne Treffer: kein leerer Kasten, sondern Antworten, aehnliche Aussagen und "Oft gesucht" -->
     <section class="content-section" *ngIf="!hatTreffer">
         <div class="unified-empty-state">
-            <p class="search-query-info">Zu „{{searchQuery}}“ ist noch nichts drin. Die Sammlung wächst mit jedem Beitrag.</p>
+            <p class="search-query-info" *ngIf="!passendeThemen.length; else zumThemaOben">Zu „{{searchQuery}}“ ist noch nichts drin. Die Sammlung wächst mit jedem Beitrag.</p>
+            <ng-template #zumThemaOben>
+                <p class="search-query-info">Direkt zu „{{searchQuery}}“ ist noch nichts drin. Oben stehen Aussagen zum Thema.</p>
+            </ng-template>
             <!-- Nur die Zahl, erst ab zwei Personen, auch fuer Besucher (#362) -->
             <p class="schon-gesucht" *ngIf="personenOhneTreffer as personen">Danach haben in den letzten vier Wochen schon {{ personen }} Personen gesucht.</p>
 
