@@ -28,22 +28,60 @@
 /* Aussehen der Chips: global .chip (styles.css), gleich im Fangkorb und im Album */
 
 /*
- * Themenvorschlag (#401): Rand in Primaer, zarter Grund und der Hinweis „vorgeschlagen“ als
- * Text im Chip, damit er auch ohne Farbe lesbar ist. Gewaehlt sieht er aus wie jeder
- * gewaehlte Chip (dann ist er kein Vorschlag mehr).
+ * Themenvorschlaege (#401): eigene Zeile ueber der Liste (Sebastian 23.11., „Eigene Zeile
+ * mit +“). Gestrichelt und mit „+“ sieht ein Vorschlag nach Angebot aus, nicht nach schon
+ * gewaehlt; die Liste darunter hebt nichts hervor. Strich in Akzentschrift: 9:1 auf Weiss,
+ * 14,5:1 auf der dunklen Flaeche (mindestens 3:1). Touch-Ziele mindestens 44 px.
  */
-.thema-chip.vorgeschlagen {
-  border: 2px solid var(--primaer);
-  /* Gleich hoch und breit wie mit 1px-Rand */
+.themen-vorschlag {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.vorschlag-titel {
+  font-size: 14px;
+  color: var(--text-leise);
+}
+
+.chip.vorschlag-chip {
+  min-height: 44px;
+  border: 2px dashed var(--akzent-schrift);
+  /* Gleich breit wie mit 1px-Rand */
   padding: 3px 13px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.chip.vorschlag-chip:hover {
   background: var(--primaer-tint);
 }
 
-.vorschlag-marke {
-  margin-left: 2px;
-  font-size: 12px;
-  font-style: italic;
-  /* Schrift des Chips (akzent-schrift auf primaer-tint, wie a.chip:hover), nicht leiser */
+.vorschlag-plus {
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.vorschlag-alle {
+  min-height: 44px;
+  padding: 0 8px;
+  border: none;
+  background: none;
+  color: var(--primaer-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.vorschlag-alle:focus-visible {
+  outline: 2px solid var(--akzent-tanne);
+  outline-offset: 2px;
 }
 
 .themen-hinweis {

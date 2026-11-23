@@ -340,7 +340,8 @@ describe('EinwerfenComponent', () => {
       fixture.detectChanges();
 
       expect(vorschlaegeSpy).toHaveBeenCalledOnceWith('Das Tempolimit bringt nichts', 2);
-      expect(chip('Verkehr, vorgeschlagen').classList).toContain('vorgeschlagen');
+      const vorschlag = fixture.nativeElement.querySelector('.themen-vorschlag .vorschlag-chip') as HTMLButtonElement;
+      expect(vorschlag.getAttribute('aria-label')).toBe('Verkehr übernehmen');
       expect(component.themen).toEqual([]);
     });
 

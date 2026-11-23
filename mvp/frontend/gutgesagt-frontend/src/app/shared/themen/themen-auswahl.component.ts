@@ -6,19 +6,17 @@ import { HOECHSTENS_THEMEN_JE_AUSSAGE } from '../../services/themen.service';
 /** Die Grenze in Worten fuer den Hinweis; nur die, die vorkommen. */
 const ZAHLWORT: Record<number, string> = { 2: 'zwei', 3: 'drei' };
 
-/** „A“, „A und B“, „A, B und C“. */
-function undListe(namen: string[]): string {
-  return namen.length < 2 ? namen.join('') : `${namen.slice(0, -1).join(', ')} und ${namen[namen.length - 1]}`;
-}
-
 /**
  * Themen waehlen, optional: fuer eine Aussage bis zu drei, beim Einwerfen bis zu zwei
  * (`hoechstens`). Jedes Thema ist ein Umschalter; ist die Grenze erreicht, lassen sich
  * weitere erst nach dem Abwaehlen eines davon waehlen.
  *
- * Themenvorschlaege (#401, `vorschlaege`): Noch nicht gewaehlte Vorschlaege tragen den
- * Hinweis „vorgeschlagen“ im Chip und stehen im Hinweis darunter; ein Tipp waehlt sie wie
- * jedes andere Thema. Gewaehlt wird nie von selbst.
+ * Themenvorschlaege (#401, `vorschlaege`): eine eigene Zeile „Vorschlag:“ ueber der Liste,
+ * je noch nicht gewaehltem Vorschlag ein gestrichelter Chip „+ Thema“, dazu „Übernehmen“.
+ * Ein Tipp auf einen Vorschlag waehlt ihn (dann ist er aus der Zeile weg), „Übernehmen“
+ * waehlt alle, soweit die Grenze reicht. In der Liste selbst ist nichts hervorgehoben: Ein
+ * hervorgehobener Chip sah aus wie schon gewaehlt (Sebastian 23.11.). Gewaehlt wird nie von
+ * selbst. Ist die Grenze erreicht oder alles gewaehlt, fehlt die Zeile.
  */
 @Component({
   selector: 'app-themen-auswahl',
@@ -26,13 +24,21 @@ function undListe(namen: string[]): string {
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <ng-container *ngIf="offeneVorschlaege as offen">
+    <div *ngIf="offen.length" class="themen-vorschlag" role="group" aria-label="Vorgeschlagene Themen">
+      <span class="vorschlag-titel" aria-hidden="true">Vorschlag:</span>
+      <button *ngFor="let thema of offen" type="button" class="chip vorschlag-chip"
+              [attr.aria-label]="thema.name + ' übernehmen'"
+              (click)="uebernehmen([thema])"><span class="vorschlag-plus" aria-hidden="true">+</span><img *ngIf="thema.motiv" class="thema-motiv" [src]="thema.motiv" alt="" aria-hidden="true" width="18" height="18">{{ thema.name }}</button>
+      <button type="button" class="vorschlag-alle" (click)="uebernehmen(offen)">{{ alleUebernehmenText(offen.length) }}</button>
+    </div>
+    </ng-container>
     <div class="themen-auswahl" role="group" [attr.aria-label]="beschriftung">
       <button *ngFor="let thema of themen" type="button" class="chip thema-chip"
               [class.gewaehlt]="istGewaehlt(thema)"
-              [class.vorgeschlagen]="istVorgeschlagen(thema)"
               [attr.aria-pressed]="istGewaehlt(thema)"
               [disabled]="!istGewaehlt(thema) && voll"
-              (click)="umschalten(thema)"><img *ngIf="thema.motiv" class="thema-motiv" [src]="thema.motiv" alt="" aria-hidden="true" width="18" height="18">{{ thema.name }}<span *ngIf="istVorgeschlagen(thema)" class="vorschlag-marke"><span class="visually-hidden">, </span>vorgeschlagen</span></button>
+              (click)="umschalten(thema)"><img *ngIf="thema.motiv" class="thema-motiv" [src]="thema.motiv" alt="" aria-hidden="true" width="18" height="18">{{ thema.name }}</button>
     </div>
     <p class="themen-hinweis">{{ hinweis }}</p>
   `,
@@ -55,13 +61,11 @@ export class ThemenAuswahlComponent {
 
   get hinweis(): string {
     const zahl = ZAHLWORT[this.hoechstens] ?? String(this.hoechstens);
-    const grenze = this.hoechstens === 1 ? 'Ein Thema, optional.' : `Bis zu ${zahl} Themen, optional.`;
-    const offen = this.offeneVorschlaege;
-    return offen.length ? `${grenze} Vorgeschlagen: ${undListe(offen.map((t) => t.name))}.` : grenze;
+    return this.hoechstens === 1 ? 'Ein Thema, optional.' : `Bis zu ${zahl} Themen, optional.`;
   }
 
-  /** Die Vorschlaege, die noch nicht gewaehlt sind und waehlbar waeren. */
-  private get offeneVorschlaege(): Thema[] {
+  /** Die Vorschlaege, die noch nicht gewaehlt sind und waehlbar waeren; leer: keine Zeile. */
+  get offeneVorschlaege(): Thema[] {
     if (this.voll) {
       return [];
     }
@@ -70,8 +74,21 @@ export class ThemenAuswahlComponent {
       .filter((t): t is Thema => t !== undefined && !this.istGewaehlt(t));
   }
 
-  istVorgeschlagen(thema: Thema): boolean {
-    return !this.voll && !this.istGewaehlt(thema) && this.vorschlaege.includes(thema.schluessel);
+  /** „Übernehmen“, bei zweien „Beide übernehmen“, ab drei „Alle übernehmen“. */
+  alleUebernehmenText(anzahl: number): string {
+    return anzahl >= 3 ? 'Alle übernehmen' : anzahl === 2 ? 'Beide übernehmen' : 'Übernehmen';
+  }
+
+  /** Vorschlaege waehlen, der Reihe nach, soweit die Grenze reicht. */
+  uebernehmen(vorschlaege: Thema[]): void {
+    const frei = this.hoechstens - this.gewaehlt.length;
+    const neu = vorschlaege
+      .map((t) => t.schluessel)
+      .filter((s) => !this.gewaehlt.includes(s))
+      .slice(0, Math.max(0, frei));
+    if (neu.length) {
+      this.gewaehltChange.emit([...this.gewaehlt, ...neu]);
+    }
   }
 
   istGewaehlt(thema: Thema): boolean {

@@ -100,55 +100,92 @@ describe('ThemenAuswahlComponent', () => {
       fixture.detectChanges();
     }
 
-    it('markiert Vorschlaege sichtbar mit Text, nicht nur mit Farbe', () => {
-      vorschlagen(['verkehr']);
+    function zeile(): HTMLElement | null {
+      return fixture.nativeElement.querySelector('.themen-vorschlag');
+    }
 
-      const chip = knopf('Verkehr, vorgeschlagen');
-      expect(chip.classList).toContain('vorgeschlagen');
-      expect(chip.querySelector('.vorschlag-marke')?.textContent).toBe(', vorgeschlagen');
-      expect(chip.querySelector('.vorschlag-marke .visually-hidden')?.textContent).toBe(', ');
-      expect(chip.getAttribute('aria-pressed')).toBe('false');
-      expect(knopf('Klima').classList).not.toContain('vorgeschlagen');
+    function vorschlagChips(): HTMLButtonElement[] {
+      return Array.from(fixture.nativeElement.querySelectorAll('.vorschlag-chip')) as HTMLButtonElement[];
+    }
+
+    function alleKnopf(): HTMLButtonElement | null {
+      return fixture.nativeElement.querySelector('.vorschlag-alle');
+    }
+
+    it('zeigt Vorschlaege in einer eigenen Zeile mit +, Motiv und zugaenglichem Namen', () => {
+      vorschlagen(['klima']);
+
+      expect(zeile()!.getAttribute('role')).toBe('group');
+      expect(zeile()!.getAttribute('aria-label')).toBe('Vorgeschlagene Themen');
+      expect(zeile()!.querySelector('.vorschlag-titel')!.textContent).toBe('Vorschlag:');
+      const [chip] = vorschlagChips();
+      expect(chip.getAttribute('aria-label')).toBe('Klima übernehmen');
+      expect(chip.querySelector('.vorschlag-plus')!.textContent).toBe('+');
+      expect(chip.querySelector('img.thema-motiv')!.getAttribute('src')).toBe('themen/klima.svg');
+      expect(alleKnopf()!.textContent!.trim()).toBe('Übernehmen');
     });
 
-    it('nennt die Vorschlaege auch im Hinweis darunter', () => {
+    it('hebt in der Liste nichts hervor und nennt die Vorschlaege nicht im Hinweis', () => {
       vorschlagen(['verkehr', 'klima']);
 
-      expect(hinweis()).toBe('Bis zu drei Themen, optional. Vorgeschlagen: Verkehr und Klima.');
+      expect(knopf('Verkehr').getAttribute('aria-pressed')).toBe('false');
+      expect(knopf('Verkehr').className).toBe(knopf('Europa').className);
+      expect(hinweis()).toBe('Bis zu drei Themen, optional.');
     });
 
-    it('waehlt nichts von selbst; ein Tipp uebernimmt den Vorschlag', () => {
-      vorschlagen(['verkehr']);
-      expect(gemeldet).toEqual([]);
+    it('ein Tipp auf einen Vorschlag waehlt ihn; danach ist er aus der Zeile weg', () => {
+      vorschlagen(['verkehr', 'klima']);
+      expect(alleKnopf()!.textContent!.trim()).toBe('Beide übernehmen');
 
-      knopf('Verkehr, vorgeschlagen').click();
-
+      vorschlagChips()[0].click();
       expect(gemeldet).toEqual([['verkehr']]);
-    });
 
-    it('ein gewaehlter Vorschlag ist kein Vorschlag mehr', () => {
-      vorschlagen(['verkehr', 'europa']);
       setzen(['verkehr']);
-
-      expect(knopf('Verkehr').classList).not.toContain('vorgeschlagen');
-      expect(knopf('Verkehr').getAttribute('aria-pressed')).toBe('true');
-      expect(hinweis()).toBe('Bis zu drei Themen, optional. Vorgeschlagen: Europa.');
+      expect(vorschlagChips().map((c) => c.getAttribute('aria-label'))).toEqual(['Klima übernehmen']);
+      expect(alleKnopf()!.textContent!.trim()).toBe('Übernehmen');
     });
 
-    it('ist die Grenze erreicht, zeigt es keine Vorschlaege mehr', () => {
+    it('waehlt nichts von selbst', () => {
+      vorschlagen(['verkehr']);
+
+      expect(gemeldet).toEqual([]);
+    });
+
+    it('Alle uebernehmen waehlt der Reihe nach, soweit die Grenze reicht', () => {
+      setzen(['soziales']);
+      vorschlagen(['verkehr', 'klima', 'europa']);
+      expect(alleKnopf()!.textContent!.trim()).toBe('Alle übernehmen');
+
+      alleKnopf()!.click();
+
+      expect(gemeldet).toEqual([['soziales', 'verkehr', 'klima']]);
+    });
+
+    it('beim Einwerfen (hoechstens 2) nur bis zur Grenze', () => {
+      fixture.componentRef.setInput('hoechstens', 2);
+      vorschlagen(['verkehr', 'klima']);
+
+      setzen(['europa']);
+      alleKnopf()!.click();
+
+      expect(gemeldet).toEqual([['europa', 'verkehr']]);
+    });
+
+    it('sind alle gewaehlt oder ist die Grenze erreicht, fehlt die Zeile', () => {
+      vorschlagen(['verkehr', 'klima']);
+      setzen(['verkehr', 'klima']);
+      expect(zeile()).toBeNull();
+
       fixture.componentRef.setInput('hoechstens', 2);
       vorschlagen(['europa']);
-      setzen(['klima', 'verkehr']);
-
-      expect(knopf('Europa').classList).not.toContain('vorgeschlagen');
-      expect(hinweis()).toBe('Bis zu zwei Themen, optional.');
+      expect(zeile()).toBeNull();
     });
 
     it('uebergeht unbekannte Schluessel', () => {
       vorschlagen(['gibt-es-nicht']);
 
+      expect(zeile()).toBeNull();
       expect(hinweis()).toBe('Bis zu drei Themen, optional.');
-      expect(fixture.nativeElement.querySelectorAll('.vorgeschlagen').length).toBe(0);
     });
   });
 });

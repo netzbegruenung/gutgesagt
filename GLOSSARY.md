@@ -336,7 +336,7 @@ Die Zuordnungen von Hand mit dem Text ihrer Aussage, als Datei für Admins. Dami
 _Avoid_: Eval-Set, Trainingsdaten, Goldstandard
 
 **Themenvorschlag**:
-Ein Thema, das die Themenwahl beim Anlegen einer Aussage oder beim Einwerfen hervorhebt („vorgeschlagen“), weil der getippte Text den Aussagen mit diesem Thema und seinem Namen nahekommt; höchstens drei, beim Einwerfen zwei. Ein Tipp übernimmt es wie jede andere Wahl; von selbst gesetzt wird nichts, die Zuordnung bleibt von Hand. Beim nachträglichen Zuordnen (Ergebnis- und Detailseite, Admin-Seite) gibt es keine Vorschläge, damit das Testset möglichst unbeeinflusst bleibt. Vorerst aus, bis es etwa 200 Zuordnungen von Hand gibt. Messung in `tests/regression/THEMEN.md` des Semantic-Search-Service.
+Ein Thema, das die Themenwahl beim Anlegen einer Aussage oder beim Einwerfen in einer eigenen Zeile „Vorschlag:“ über der Liste anbietet (gestrichelter Chip „+ Thema“, dazu „Übernehmen“), weil der getippte Text den Aussagen mit diesem Thema und seinem Namen nahekommt; höchstens drei, beim Einwerfen zwei. Die Liste selbst hebt nichts hervor. Ein Tipp übernimmt es; von selbst gesetzt wird nichts, die Zuordnung bleibt von Hand. Beim nachträglichen Zuordnen (Ergebnis- und Detailseite, Admin-Seite) gibt es keine Vorschläge, damit das Testset möglichst unbeeinflusst bleibt. Vorerst aus, bis es etwa 200 Zuordnungen von Hand gibt. Messung in `tests/regression/THEMEN.md` des Semantic-Search-Service.
 _Avoid_: Auto-Tagging, Klassifikation, automatische Zuordnung
 
 ## Nutzung und Bewertung

@@ -404,7 +404,7 @@ describe('HierFehltEineAntwortComponent', () => {
       expect((element().querySelector('button.aussage-anlegen') as HTMLButtonElement).disabled).toBeFalse();
     }));
 
-    it('hebt Themenvorschlaege zum Text hervor, ohne sie zu waehlen (#401)', fakeAsync(() => {
+    it('schlaegt Themen zum Text vor, ohne sie zu waehlen; ein Tipp uebernimmt (#401)', fakeAsync(() => {
       eingeben('Das Tempolimit bringt nichts');
       tick(1000);
       const anfrage = http.expectOne(VORSCHLAG_URL);
@@ -412,12 +412,16 @@ describe('HierFehltEineAntwortComponent', () => {
       anfrage.flush({ themen: ['verkehr'] });
       fixture.detectChanges();
 
-      const chip = element().querySelector('.vorab-themen .thema-chip.vorgeschlagen') as HTMLButtonElement;
-      expect(chip.textContent).toContain('Verkehr');
-      expect(chip.getAttribute('aria-pressed')).toBe('false');
-      chip.click();
+      const vorschlag = element().querySelector('.vorab-themen .vorschlag-chip') as HTMLButtonElement;
+      expect(vorschlag.getAttribute('aria-label')).toBe('Verkehr übernehmen');
+      const verkehr = Array.from(element().querySelectorAll('.vorab-themen .thema-chip')).find(
+        (c) => c.textContent?.trim() === 'Verkehr',
+      ) as HTMLButtonElement;
+      expect(verkehr.getAttribute('aria-pressed')).toBe('false');
+      vorschlag.click();
       fixture.detectChanges();
-      expect(chip.getAttribute('aria-pressed')).toBe('true');
+      expect(verkehr.getAttribute('aria-pressed')).toBe('true');
+      expect(element().querySelector('.vorab-themen .themen-vorschlag')).toBeNull();
     }));
 
     it('schickt zu kurze Aussagen nicht ab', () => {
