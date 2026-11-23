@@ -14,6 +14,7 @@ const TITEL: Record<string, string> = {
   gepostet: 'Rückfrage „Ja, gepostet“',
   herkunft_pruefen: 'Links unter „Herkunft“ prüfen',
   abkuerzungen: 'App-Abkürzungen',
+  antworten_hinweis: 'Neue Antworten auf eigene Aussagen',
   sharepic: 'Teilen als Bild',
 };
 

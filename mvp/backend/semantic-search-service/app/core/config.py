@@ -299,6 +299,11 @@ class Settings(BaseSettings):
     # der Zielroute /abkuerzung/<name> (aus: Startseite). Obergrenze an, weil nichts
     # uebertragen wird; Standard aus ist der Admin-Wert (ohne Eintrag aus).
     abkuerzungen_aktiv: bool = True
+    # Antworten auf eigene Aussagen (#760): Kachel auf der Startseite und Reiter "Meine
+    # Aussagen" (services/antworten_hinweis.py). Nichts wird gespeichert, aber die
+    # Datenschutzerklaerung nennt bisher nur zwei 7-Tage-Zahlen: Standard aus wie bei
+    # gepostet_aktiv, bis der Satz dort steht.
+    antworten_hinweis_aktiv: bool = False
     # Teilen als Bild (#756): Die Karte malt im Browser ein Bild (Sharepic) und gibt es
     # ans Teilen-Menue des Geraets; der Server sieht davon nichts. Obergrenze an, weil
     # nichts uebertragen oder gespeichert wird; Standard aus ist der Admin-Wert
@@ -405,6 +410,20 @@ class Settings(BaseSettings):
     suche_inhaltstor_ab: float = Field(default=0.82, ge=0.0, le=1.0)
     suche_inhaltstor_aussage_bis: float = Field(default=0.92, ge=0.0, le=1.01)
     suche_inhaltstor_direkt_bis: float = Field(default=0.90, ge=0.0, le=1.01)
+    # Themenvorschlaege (#401, services/themen_vorschlag.py): ein Thema wird
+    # vorgeschlagen ab dieser Aehnlichkeit zu seinem Prototyp (um die Mitte verschoben,
+    # daher Werte um 0 bis 0,5) und hoechstens so weit hinter dem naechsten Thema. Mit
+    # themen_vorschlag_nli streicht das NLI-Modell Kandidaten unter
+    # themen_vorschlag_folgerung_ab; aus, weil es in der Messung mehr Treffer strich
+    # als Fehler. Standard aus, bis es etwa 200 Zuordnungen von Hand gibt (Maintainer,
+    # 22.11.2026): Dann meldet /themen vorschlaege = false, das Frontend fragt nicht,
+    # und der Endpunkt liefert eine leere Liste. Einschalten mit
+    # SEMANTIC_SEARCH_THEMEN_VORSCHLAEGE=true. Gemessen in tests/regression/THEMEN.md.
+    themen_vorschlaege: bool = False
+    themen_vorschlag_ab: float = Field(default=0.10, ge=-1.0, le=1.0)
+    themen_vorschlag_abstand_hoechstens: float = Field(default=0.05, ge=0.0, le=2.0)
+    themen_vorschlag_nli: bool = False
+    themen_vorschlag_folgerung_ab: float = Field(default=0.5, ge=0.0, le=1.0)
 
     # Keyword overlap boosting configuration
     enable_keyword_overlap_boost: bool = (

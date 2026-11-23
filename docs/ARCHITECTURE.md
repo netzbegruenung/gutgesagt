@@ -335,6 +335,13 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   semantic service to arbitrary hosts; only http/https, every resolved address must be global,
   also after redirects, IPv4 embedded in IPv6 included (`utils/sicherer_abruf.py`). No proxy
   from the environment is used. Switched off, the hourly task empties the table once.
+- `SEMANTIC_SEARCH_ANTWORTEN_HINWEIS_AKTIV` - upper bound of the Schalter `antworten_hinweis`
+  (#760, default `false` until the privacy policy names it; nothing is stored); takes effect
+  only when an admin switches it on too.
+  Then the Besuch (`POST /api/v1/usage/users/me/besuch`) also returns
+  `antworten_auf_eigene_aussagen` (answers by others to one's own Aussagen, linked in the last
+  7 days; `null` while off) and `GET /api/v1/usage/users/me/aussagen` lists one's own Aussagen
+  with their answers (404 while off), `services/antworten_hinweis.py`.
 - `DOCKER_CONTAINER` - set to `true` inside containers to enforce strict path validation
 
 ## Startup Scripts

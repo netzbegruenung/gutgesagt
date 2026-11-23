@@ -177,6 +177,15 @@ def test_herkunft_pruefen_obergrenze_an_admin_wert_aus():
     assert dienst.wirksam("herkunft_pruefen", Settings()) is False
 
 
+def test_antworten_hinweis_obergrenze_aus_admin_wert_aus():
+    """#760: Standard aus, bis die Datenschutzerklaerung den Satz hat."""
+    dienst, _, _ = _dienst()
+    stand = {s.name: s for s in dienst.stand(Settings())}["antworten_hinweis"]
+
+    assert (stand.obergrenze, stand.admin_wert, stand.wirksam) == (False, False, False)
+    assert stand.dsfa_hinweis is None
+
+
 def test_sharepic_standard_aus_ohne_admin_wert():
     """Obergrenze standardmaessig an, ohne Admin-Wert trotzdem aus (#756)."""
     dienst, _, _ = _dienst()

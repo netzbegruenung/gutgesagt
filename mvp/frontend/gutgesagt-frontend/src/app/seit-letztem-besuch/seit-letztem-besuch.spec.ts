@@ -38,6 +38,23 @@ describe('Seit deinem letzten Besuch (Nutzerfuehrung 13.11.)', () => {
       expect(liste.map((e) => e.art)).toEqual(['nutzung', 'ausformuliert', 'einwuerfe', 'aussagen', 'beitraege']);
     });
 
+    it('nennt neue Antworten auf eigene Aussagen zuerst und fuehrt auf „Meine Aussagen“ (#760)', () => {
+      const liste = neuesListe({ nutzung_seit_letztem_besuch: 3, antworten_auf_eigene_aussagen: 2 });
+      expect(liste.map((e) => e.art)).toEqual(['antworten', 'nutzung']);
+      const [antworten] = liste;
+      expect([antworten.zahl, antworten.wort, antworten.zeitraum]).toEqual(['2', 'neue Antworten auf deine Aussagen', ZEITRAUM]);
+      expect([antworten.ziel, antworten.queryParams]).toEqual(['/contributions', { tab: 'aussagen' }]);
+      expect(antworten.satz).toBe('2 neue Antworten auf deine Aussagen, letzte 7 Tage');
+      expect(neuesListe({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: 1 })[0].wort).toBe(
+        'neue Antwort auf deine Aussagen',
+      );
+    });
+
+    it('zeigt ohne Schalter (null) und ohne neue Antworten keine Kachel dafuer (#760)', () => {
+      expect(neuesListe({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: null })).toEqual([]);
+      expect(neuesListe({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: 0 })).toEqual([]);
+    });
+
     it('fuehrt ausformulierte Einwuerfe auf „Meine Einwürfe“, neue Beitraege auf „Frisch aus der Community“', () => {
       const [ausformuliert, beitraege] = neuesListe({ nutzung_seit_letztem_besuch: 0, ausformulierte_einwuerfe: 2, neue_beitraege: 5 });
       expect([ausformuliert.ziel, ausformuliert.queryParams, ausformuliert.fragment]).toEqual(['/contributions', { tab: 'einwuerfe' }, undefined]);

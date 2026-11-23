@@ -197,6 +197,33 @@ for (const modus of ['light', 'dark'] as const) {
   });
 }
 
+// Einzeiliger Kopf (23.11.2026): Bei 1280 und 1440 px rutschten die Ziele je nach Seitentitel
+// in eine zweite Zeile. Marke, Ziele und Konto stehen in einer Zeile, der Titel darunter.
+for (const breite of [1280, 1440]) {
+  test.describe(`Kopf in einer Zeile, ${breite} px`, () => {
+    test.use({ ...DESKTOP, viewport: { width: breite, height: 900 } });
+
+    for (const pfad of ['/', '/contributions', '/fangkorb', '/workflow/add-commentary']) {
+      test(`${pfad}: Marke, Ziele und Konto auf einer Hoehe`, async ({ page }) => {
+        await page.goto(pfad);
+        const kopf = page.locator('.header');
+        await expect(kopf.locator('.ziel').first()).toBeVisible();
+        const { hoehe, soll, mitten } = await kopf.evaluate((k) => ({
+          hoehe: Math.round(k.getBoundingClientRect().height),
+          soll: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-height-desktop')),
+          mitten: [...k.querySelectorAll('.logo-link, .ziel, .beitragen-knopf, .konto-knopf')]
+            .map((e) => e.getBoundingClientRect())
+            .filter((r) => r.width > 0)
+            .map((r) => r.top + r.height / 2),
+        }));
+        expect(hoehe).toBe(soll);
+        expect(Math.max(...mitten) - Math.min(...mitten)).toBeLessThanOrEqual(2);
+        await expect(kopf.locator('h1')).toHaveCount(0);
+      });
+    }
+  });
+}
+
 test.describe('Umschalter hell/dunkel', () => {
   // Ohne Service Worker: Er koennte eine alte index.html ohne das Farbschema-Skript ausliefern
   test.use({ ...DESKTOP, colorScheme: 'light', serviceWorkers: 'block' });

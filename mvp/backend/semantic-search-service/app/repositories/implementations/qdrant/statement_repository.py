@@ -1,4 +1,13 @@
-from typing import TYPE_CHECKING, AbstractSet, Dict, Iterable, List, Optional, Set
+from typing import (
+    TYPE_CHECKING,
+    AbstractSet,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+)
 import asyncio
 import logging
 import uuid
@@ -548,6 +557,35 @@ class StatementRepository(
                 id=uuid.UUID(str(punkt.id)), content_type=typ, titel=titel
             )
         return [gefunden[i] for i in ids if i in gefunden]
+
+    async def antworten_mit_autor(
+        self, ids: List[uuid.UUID]
+    ) -> Dict[uuid.UUID, Tuple[AntwortKurz, str]]:
+        """
+        Die sichtbaren Beitraege unter den IDs (weder gesperrt noch geloescht) mit Typ,
+        Titel und original_author (#760), in Paketen von _IDS_JE_ABRUF IDs. Die Autorin
+        verlaesst den Dienst nicht: Der Aufrufer macht daraus nur "von dir" oder nicht.
+        """
+        if not ids:
+            return {}
+        punkte = await self._abrufen(
+            ids, ["content_type", "status", "title", "text", "original_author"]
+        )
+        ergebnis: Dict[uuid.UUID, Tuple[AntwortKurz, str]] = {}
+        for punkt in punkte:
+            payload = punkt.payload or {}
+            typ = payload.get("content_type")
+            if typ not in _BEITRAGSTYPEN or payload.get("status") in AUSGEBLENDET_WERTE:
+                continue
+            titel = (payload.get("title") or "").strip() or (
+                (payload.get("text") or "").strip()[:_TITEL_OHNE_TITEL_HOECHSTENS]
+            )
+            kennung = uuid.UUID(str(punkt.id))
+            ergebnis[kennung] = (
+                AntwortKurz(id=kennung, content_type=typ, titel=titel),
+                str(payload.get("original_author") or ""),
+            )
+        return ergebnis
 
     async def _abrufen(
         self, ids: Iterable[uuid.UUID], felder: List[str]

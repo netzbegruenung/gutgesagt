@@ -651,6 +651,7 @@ OFFEN = {
     ("POST", "/api/v1/gegenlesen"),
     ("POST", "/api/v1/kuerzungsvorschlag"),
     ("POST", "/api/v1/spracherkennung"),
+    ("POST", "/api/v1/statement/themen/vorschlaege"),  # nur Vorschlag (#401)
     ("POST", "/api/v1/usage/content/{content_id}/usage"),
     ("POST", "/api/v1/usage/users/me/besuch"),
     ("POST", "/api/v1/statement/addReplysuggestionToStatement"),

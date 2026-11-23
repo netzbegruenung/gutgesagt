@@ -134,6 +134,10 @@ kuerzungsvorschlag_rate_limiter = RateLimiter(max_requests=60, window_minutes=10
 # jeder Aufruf kostet Modellaufrufe (Widerspruchspruefung).
 aehnliche_aussagen_rate_limiter = RateLimiter(max_requests=60, window_minutes=10)
 
+# Themenvorschlaege (#401) je angemeldeter Person: Das Formular fragt nach einer Pause
+# beim Tippen, jeder Aufruf kostet eine Einbettung (rund 30 ms CPU).
+themen_vorschlag_rate_limiter = RateLimiter(max_requests=120, window_minutes=10)
+
 # So oft raeumt der Hintergrund-Task abgelaufene Schluessel weg. Ein Schluessel
 # verschwindet damit spaetestens ein Fenster plus dieser Takt nach seinem letzten
 # Aufruf - fuer die Suchaussage zehn plus eine Minute, fuer Einladungen fuenfzehn

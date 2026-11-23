@@ -10,6 +10,8 @@ import {
   Thema,
   ThemenResponse,
   ThemenTestsetResponse,
+  ThemenVorschlagRequest,
+  ThemenVorschlagResponse,
   ThemenZuordnenRequest,
   ThemenZuordnenResponse,
 } from './dtos/themenDtos';
@@ -36,7 +38,7 @@ export function schluesselVon(themen: Thema[]): string[] {
 @Injectable({ providedIn: 'root' })
 export class ThemenService {
   private readonly basis = `${environment.baseUrl}/api/v1/statement/themen`;
-  private liste$?: Observable<Thema[]>;
+  private antwort$?: Observable<ThemenResponse>;
   /** Je angezeigter Aussage die Warteschlange ihrer Aenderungen (aendern). */
   private readonly warteschlangen = new WeakMap<AussageMitThemenFeld, Subject<string[]>>();
 
@@ -44,12 +46,26 @@ export class ThemenService {
 
   /** Die feste Liste, einmal je Sitzung geladen; sie aendert sich nur mit einem Release. */
   liste(): Observable<Thema[]> {
-    // Still: Ein 401 (Sitzung abgelaufen) laesst die Auswahl leer, statt auf /login umzuleiten.
-    this.liste$ ??= this.http.get<ThemenResponse>(this.basis, { context: stillerKontext() }).pipe(
-      map((antwort) => antwort.themen),
-      shareReplay({ bufferSize: 1, refCount: false }),
+    return this.antwort().pipe(map((antwort) => antwort.themen));
+  }
+
+  /**
+   * Ob Themenvorschlaege (#401) an sind; aus derselben Antwort wie die Liste. Aus (Standard,
+   * bis es etwa 200 Zuordnungen von Hand gibt) fragt niemand nach ihnen.
+   */
+  vorschlaegeAn(): Observable<boolean> {
+    return this.antwort().pipe(
+      map((antwort) => antwort.vorschlaege === true),
+      catchError(() => of(false)),
     );
-    return this.liste$;
+  }
+
+  private antwort(): Observable<ThemenResponse> {
+    // Still: Ein 401 (Sitzung abgelaufen) laesst die Auswahl leer, statt auf /login umzuleiten.
+    this.antwort$ ??= this.http
+      .get<ThemenResponse>(this.basis, { context: stillerKontext() })
+      .pipe(shareReplay({ bufferSize: 1, refCount: false }));
+    return this.antwort$;
   }
 
   /**
@@ -142,5 +158,19 @@ export class ThemenService {
   /** Admin: die Zuordnungen von Hand als Testset. */
   testset(): Observable<ThemenTestsetResponse> {
     return this.http.get<ThemenTestsetResponse>(`${this.basis}/testset`);
+  }
+
+  /**
+   * Themenvorschlaege zu einem Text (#401): Schluessel, das naechste zuerst. Nur ein
+   * Vorschlag, gespeichert wird nichts. Still: Scheitert es, gibt es keinen Vorschlag.
+   */
+  vorschlaege(text: string, hoechstens: number): Observable<string[]> {
+    const request: ThemenVorschlagRequest = { text, hoechstens };
+    return this.http
+      .post<ThemenVorschlagResponse>(`${this.basis}/vorschlaege`, request, { context: stillerKontext() })
+      .pipe(
+        map((antwort) => antwort.themen),
+        catchError(() => of([])),
+      );
   }
 }

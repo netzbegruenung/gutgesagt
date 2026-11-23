@@ -3,42 +3,36 @@
     @if (aufStart) {
         <a class="skip-to-main" href="#suche" (click)="zurSuche($event)" data-testid="skip-link">Zur Suche</a>
     }
-    <main id="hauptinhalt" class="main mat-elevation-z8" [class.mit-unterleiste]="isMobile || isTablet">
-        <!-- Kopf am Handy: Pfeil bzw. Logo, Titel, Profilbild (Konto) und (+) -->
-        <app-mobile-header
-            *ngIf="isMobile || isTablet"
-            [userInfo]="userInfo"
-            [selectedProfilePictureUrl]="selectedProfilePictureUrl"
-            (login)="login()"
-            [beitragenNeu]="rundgang.beitragenNeu()"
-            (contribute)="navigateToContributeView()">
-        </app-mobile-header>
+    <!--
+        Kopf am Handy: Pfeil bzw. Logo, Titel, Profilbild (Konto) und (+). Er steht vor main,
+        nicht darin: main schneidet mit overflow: hidden ab, und daran klebte position: sticky
+        nicht. Der Kopf scrollte weg, und die Seite lief unter die Statusleiste (viewport-fit=cover).
+    -->
+    <app-mobile-header
+        *ngIf="isMobile || isTablet"
+        [userInfo]="userInfo"
+        [selectedProfilePictureUrl]="selectedProfilePictureUrl"
+        (login)="login()"
+        [beitragenNeu]="rundgang.beitragenNeu()"
+        (contribute)="navigateToContributeView()">
+    </app-mobile-header>
 
-        <!-- Kopf am Desktop -->
-        <div class="component-box" *ngIf="!isMobile && !isTablet">
-            <div class="header" [class.header--titel-lang]="titelLang">
+    <main id="hauptinhalt" class="main mat-elevation-z8" [class.mit-unterleiste]="isMobile || isTablet">
+        <!-- Kopf am Desktop: eine Zeile mit Marke, Zielen und Konto; der Seitentitel steht darunter -->
+        <div class="component-box kopf-box" *ngIf="!isMobile && !isTablet">
+            <div class="header">
                 <div class="left-header-box">
-                    <button mat-icon-button
-                            *ngIf="showBackButton"
-                            (click)="zurueck()"
-                            class="mat-elevation-z1 back-button-header"
-                            aria-label="Zurück">
-                        <mat-icon>arrow_back</mat-icon>
-                    </button>
                     <!--
                         Das Logo ist der Weg zur Startseite (#620); zugaenglicher Name
-                        "Startseite". Es steht vor der Ueberschrift, nicht darin, damit sie
-                        weiter nur die Seite nennt ("Fangkorb"). Ueber den NavigationService
-                        statt per routerLink: Die Destillier-Ansicht soll erst ihren Satz
-                        speichern duerfen.
+                        "Startseite". Ueber den NavigationService statt per routerLink: Die
+                        Destillier-Ansicht soll erst ihren Satz speichern duerfen.
                     -->
-                    <a class="logo-link" href="/" aria-label="Startseite" data-testid="logo-startseite"
+                    <!-- Der Name beginnt mit dem sichtbaren Text, fuer Sprachsteuerung (WCAG 2.5.3) -->
+                    <a class="logo-link" href="/" aria-label="Gut gesagt, Startseite" data-testid="logo-startseite"
                        (click)="$event.preventDefault(); zurStartseite()">
                         <img class="kopf-logo" src="marke/logo-v2.svg" alt="" width="44" height="44">
+                        <span class="marke-text" aria-hidden="true">Gut gesagt</span>
                     </a>
-                    <h1 class="desktop-header-title" [class.desktop-header-title--lang]="titelLang">
-                        {{ pageTitle }}
-                    </h1>
                 </div>
 
                 <!--
@@ -80,6 +74,24 @@
                 </div>
             </div>
         </div>
+
+        <!--
+            Seitentitel am Desktop unter dem Kopf (23.11.2026): Neben den sichtbaren Zielen war
+            fuer ihn kein Platz, und die Ziele rutschten je nach Titel in eine zweite Zeile.
+            Auf dem Start und Seiten ohne eigenen Titel nennt ihn nur der Screenreader.
+        -->
+        @if (!isMobile && !isTablet) {
+            <div class="seitenkopf" [class.seitenkopf--leer]="!showBackButton && titelNurVorgelesen">
+                @if (showBackButton) {
+                    <button mat-icon-button (click)="zurueck()" class="mat-elevation-z1 back-button-header"
+                            aria-label="Zurück">
+                        <mat-icon>arrow_back</mat-icon>
+                    </button>
+                }
+                <h1 class="desktop-header-title" [class.desktop-header-title--lang]="titelLang"
+                    [class.visually-hidden]="titelNurVorgelesen">{{ pageTitle }}</h1>
+            </div>
+        }
 
         <div class="main-content">
             <!-- Angebot eines Rundgangs als Band statt Fenster (#587) -->
