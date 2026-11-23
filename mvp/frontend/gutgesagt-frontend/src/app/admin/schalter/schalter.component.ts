@@ -14,6 +14,7 @@ const TITEL: Record<string, string> = {
   gepostet: 'Rückfrage „Ja, gepostet“',
   herkunft_pruefen: 'Links unter „Herkunft“ prüfen',
   merkliste: 'Merkliste',
+  sharepic: 'Teilen als Bild',
 };
 
 /**

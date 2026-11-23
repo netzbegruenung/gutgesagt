@@ -24,6 +24,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+import api.v1.funktionen as funktionen_module
 import api.v1.merkliste as merkliste_module
 import api.v1.metrics as metrics_module
 import api.v1.usage as usage_module
@@ -53,6 +54,7 @@ ALLE_OBERGRENZEN_AN = dict(
     abzeichen_sichtbar_aktiv=True,
     gepostet_aktiv=True,
     merkliste_aktiv=True,
+    sharepic_aktiv=True,
 )
 
 
@@ -96,6 +98,7 @@ def client(muster, abzeichen, art9_einwilligung_ohne_datenbank):
     app.include_router(usage_module.router, prefix="/api/v1/usage")
     app.include_router(metrics_module.router, prefix="/api/v1/metrics")
     app.include_router(merkliste_module.router, prefix="/api/v1/merkliste")
+    app.include_router(funktionen_module.router, prefix="/api/v1/funktionen")
     app.dependency_overrides[get_settings] = lambda: Settings(**ALLE_OBERGRENZEN_AN)
     app.dependency_overrides[get_punkte_service] = lambda: Mock(
         punkte=AsyncMock(side_effect=RuntimeError("nur bis hierher"))
@@ -155,6 +158,16 @@ def _admin_aktiv_aus(pfad):
     return pruefen
 
 
+def _funktion_aus(name):
+    def pruefen(client, muster, abzeichen):
+        antwort = client.get("/api/v1/funktionen")
+        return (
+            antwort.status_code == 200 and antwort.json()["funktionen"][name] is False
+        )
+
+    return pruefen
+
+
 def _kein_muster_hinweis(client, muster, abzeichen):
     client.post(f"/api/v1/usage/content/{BEITRAG_ID}/usage", json={}, headers=PERSON)
     return not muster.nutzung_melden.called
@@ -196,6 +209,7 @@ STELLEN = {
     "gepostet_rueckfrage": (_404("/api/v1/usage/users/me/gepostet"), ("gepostet",)),
     "gepostet_admin": (_admin_aktiv_aus("/api/v1/metrics/gepostet"), ("gepostet",)),
     "merkliste": (_404("/api/v1/merkliste"), ("merkliste",)),
+    "sharepic": (_funktion_aus("sharepic"), ("sharepic",)),
 }
 
 FAELLE = [

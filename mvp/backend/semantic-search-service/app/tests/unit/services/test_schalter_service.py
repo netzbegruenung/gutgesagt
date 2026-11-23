@@ -163,6 +163,7 @@ def test_stand_nennt_obergrenze_admin_wert_wirksam_und_dsfa_hinweis():
     assert "DSFA" in stand["abzeichen_sichtbar"].dsfa_hinweis
     assert stand["gepostet"].dsfa_hinweis is None
     assert "Datenschutzerklärung" in stand["merkliste"].dsfa_hinweis
+    assert stand["sharepic"].dsfa_hinweis is None
     assert all(s.erklaerung for s in stand.values())
 
 
@@ -174,6 +175,15 @@ def test_herkunft_pruefen_obergrenze_an_admin_wert_aus():
     assert (stand.obergrenze, stand.admin_wert, stand.wirksam) == (True, False, False)
     assert stand.dsfa_hinweis is None
     assert dienst.wirksam("herkunft_pruefen", Settings()) is False
+
+
+def test_sharepic_standard_aus_ohne_admin_wert():
+    """Obergrenze standardmaessig an, ohne Admin-Wert trotzdem aus (#756)."""
+    dienst, _, _ = _dienst()
+
+    assert dienst.wirksam("sharepic", Settings()) is False
+    dienst, _, _ = _dienst({"sharepic": True})
+    assert dienst.wirksam("sharepic", Settings()) is True
 
 
 def test_schalter_wirksam_nimmt_den_globalen_dienst():
