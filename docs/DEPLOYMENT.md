@@ -82,7 +82,7 @@ uses the same spaCy model and needs no further memory. Since #405 Lingua adds ab
 the Sprachhinweis (11 languages, measured in the service image), also preloaded at start. Its
 models make the image about 300 MB larger on disk (the wheel ships all languages). Since #387
 the NLI-Stufe loads an NLI model (mDeBERTa-v3-base-xnli, fp32) in the background at start
-(`SEMANTIC_SEARCH_DIESELBE_AUSSAGE_NLI`, default `schatten`): about 1.2 GB more RAM in use and
+(`SEMANTIC_SEARCH_DIESELBE_AUSSAGE_NLI`, default `an` since #575, as set on test and production): about 1.2 GB more RAM in use and
 up to about 2 GB at the peak while loading (measured on the dev VM, `python -m
 tests.regression.nli_messen --zeit`), and the image grows by about 0.55 GB. If the container has
 a memory limit, raise it accordingly; `SEMANTIC_SEARCH_DIESELBE_AUSSAGE_NLI=aus` together with

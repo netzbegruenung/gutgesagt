@@ -145,7 +145,9 @@ class Settings(BaseSettings):
     # StatementService fuer alle Wege (Formular, Suche, Seeding). Ohne verfuegbares
     # Modell gilt die Schwelle oben. Gemessen am Messset (tests/regression/MESSSET.md,
     # Abschnitt NLI-Stufe): tau und kappa am Train-Teil, Ergebnis am Test-Teil.
-    dieselbe_aussage_nli: NliModus = "schatten"
+    # Standard an wie auf Test und Produktion seit 09.11.2026 (#575); der naechtliche
+    # Lauf misst damit (tests/regression/SUCHTESTSET.md).
+    dieselbe_aussage_nli: NliModus = "an"
     # Kandidaten: Vektortreffer ab dieser query/query-Aehnlichkeit, hoechstens so viele.
     # Das niedrigste gleich-Paar der Aussagen liegt bei 0,887.
     nli_kandidaten_ab: float = Field(default=0.85, ge=0.0, le=1.0)

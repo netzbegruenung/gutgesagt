@@ -64,6 +64,15 @@ Die Kontrollmessungen auf Produktion vom 09.11.2026 (15/41) und 10.11.2026 (26/4
 passen zu den Zeilen „an, an“ und „an, aus“; welcher Weg es war, stand damals nicht in
 der Ausgabe.
 
+Voreinstellung seit #575: NLI-Stufe `an` wie auf Test und Produktion, Bestätiger aus. Der
+nächtliche Lauf misst damit. Am Seed (23.11.2026, Abschnitt „Ergebnis am Testbestand“):
+
+| NLI-Stufe | Bestätiger | Zerfaserung am Seed |
+|---|---|---|
+| schatten | – (wirkt nicht) | 18/20 (Soll bis #575) |
+| an | aus | 14/20 (Soll des nächtlichen Laufs) |
+| an | an | 8/20 |
+
 **Rückfälle:** Ist das NLI-Modell nicht innerhalb von `DIESELBE_WARTET_HOECHSTENS`
 (3 s) frei, etwa weil die Polarität es gerade nutzt, entscheidet `vorhandene_finden`
 still nach der Schwelle; ist der Bestätiger nicht rechtzeitig frei, allein das erste
@@ -150,7 +159,7 @@ geschrieben, um gefunden zu werden. Die Bewertung der Schwelle steht unter „Er
 Startbestand“; die Zeile der Schwelle von heute ist hier das Soll des nächtlichen Laufs.
 Die Zeile 0,82 ist am 18.11.2026 mit dem nächtlichen Lauf nachgemessen, mit den fünf
 Hot Takes des Starts (S107 bis S111, 47 Fälle, 38 mit Erwartung; alle fünf Treffer, vier
-davon zerfasern); die übrigen Zeilen sind die Messung vom 05.11. mit 42 Fällen. Am 19.11.2026 mit dem Bezug (Abschnitt „Bezug“) nachgemessen: Treffer, Fehltreffer, keine und Recall gleich; S42 („Das Deutschlandticket ist zu teuer“, ohne Erwartung) zeigt nichts mehr (Präzision 0,52 statt 0,49). Nochmals am 19.11.2026 mit der Grenze des direkten Wegs (Abschnitt „Direkter Weg“): S02 und S29 ohne Treffer, S30 jetzt Treffer, Recall@10 0,84, Präzision 0,61. Mit dem Inhaltstor (Abschnitt „Inhaltstor“): S09 jetzt Treffer statt Fehltreffer, Präzision 0,66.
+davon zerfasern); die übrigen Zeilen sind die Messung vom 05.11. mit 42 Fällen. Am 19.11.2026 mit dem Bezug (Abschnitt „Bezug“) nachgemessen: Treffer, Fehltreffer, keine und Recall gleich; S42 („Das Deutschlandticket ist zu teuer“, ohne Erwartung) zeigt nichts mehr (Präzision 0,52 statt 0,49). Nochmals am 19.11.2026 mit der Grenze des direkten Wegs (Abschnitt „Direkter Weg“): S02 und S29 ohne Treffer, S30 jetzt Treffer, Recall@10 0,84, Präzision 0,61. Mit dem Inhaltstor (Abschnitt „Inhaltstor“): S09 jetzt Treffer statt Fehltreffer, Präzision 0,66. Am 23.11.2026 mit der NLI-Stufe `an` als Voreinstellung (#575) nachgemessen: alle Zahlen der Zeile 0,82 gleich, nur die Zerfaserung sinkt (14 statt 18 von 20, unten).
 
 | Schwelle | Treffer | Fehltreffer | keine | ohne Erwartung: keine / Fehltreffer | Präzision | Recall@5 | Recall@10 | Recall (Seite) | direkt: passend / angezeigt |
 |---|---|---|---|---|---|---|---|---|---|
@@ -196,7 +205,17 @@ davon zerfasern); die übrigen Zeilen sind die Messung vom 05.11. mit 42 Fällen
   „Hier fehlt eine Antwort“. Unter den 4 Suchen ohne Treffer am Seed ist keine dieselbe
   Behauptung wie eine vorhandene Aussage (siehe Grenze oben). Wie groß der Anteil im
   Bestand ist, misst erst der Startbestand; die Trennung gleicher Behauptungen ist
-  Aufgabe der NLI-Stufe (#387).
+  Aufgabe der NLI-Stufe (#387). Die Zahlen bis hier sind im Schattenbetrieb gemessen.
+  **Mit der NLI-Stufe `an`** (Voreinstellung seit #575, gemessen am 23.11.2026) landen
+  vier weitere Suchanfragen auf ihrer Aussage: S32 (Tippfehler „sin … nich“), S36
+  („Verbrennerverbot zerstört die deutsche Autoindustrie“), S109 und S111 (Hot Takes);
+  **14 der 20 bleiben** (Soll des nächtlichen Laufs). Treffer, Fehltreffer, keine,
+  Präzision, Recall und ähnliche Aussagen sind gleich: Die NLI-Stufe ändert nur, ob eine
+  Suchanfrage auf einer Aussage landet, nicht, was die Suche zeigt. Mit dem **Bestätiger**
+  dazu (`SEMANTIC_SEARCH_NLI_BESTAETIGER=true`) landen weitere sechs (S04, S06, S09, S14,
+  S24, S27; Tippfehler und Umformulierungen), 8 der 20 bleiben. Die Messung zählt nur, ob
+  eine Suchanfrage auf ihrer erwarteten Aussage landet; ob eine auf einer falschen landet
+  (Fehlzusammenführung), zählt sie nicht, das wertet #575 aus.
 - **Ähnliche Aussagen** (gemessen am 06.11.2026, #391; am 18.11. mit S107 bis S111: 30 von 38): Bei 25 von 33 Fällen mit
   Erwartung ist eine erwartete Aussage unter den ähnlichen Aussagen; 6 von 9 Fällen ohne
   Erwartung zeigen trotzdem eine, darunter alle 4 Verneinungen. Die untere Grenze 0,885
@@ -207,7 +226,7 @@ davon zerfasern); die übrigen Zeilen sind die Messung vom 05.11. mit 42 Fällen
 Gemessen am 07.11.2026 am **Entwurf des Startbestands** (#288: 30 Aussagen, je zwei
 Kommentare, 60 insgesamt), eingespielt mit `mvp/scripts/manual/beitraege_importieren.py`
 in einen eigenen, leeren lokalen Stack ohne Seed; nicht auf Test oder Produktion.
-Modell `intfloat/multilingual-e5-base`, NLI-Stufe im Schattenbetrieb (Standard),
+Modell `intfloat/multilingual-e5-base`, NLI-Stufe im Schattenbetrieb (damals Standard),
 106 Fälle, davon 99 gemessen (86 mit Erwartung, 13 ohne); nicht gemessen S06 bis S09
 (Seed-Aussagen, die dem Startbestand fehlen) und S38, S39, S42 (nicht fremd). Weicht der
 importierte Startbestand auf Produktion vom Entwurf ab, ändern sich einzelne Fälle; dort
@@ -269,8 +288,8 @@ Ersatz mit (Regeln, „Ersatz“; Messung unten).
   nicht. Die 15 sind vor allem Umgangssprache, Bilder und Umschreibungen (S02 „Windkraftanlagen
   bringen Vögel um“) und einseitige Folgerungen (S45). `vorhandene_finden` braucht im Median
   283 statt 257 ms, im 95. Perzentil 890 statt 690 ms: Der Bestätiger urteilt bei 12 der
-  99 Suchen über je einen Kandidaten. Das Soll des nächtlichen Laufs bleibt, er misst mit der
-  Voreinstellung (Schattenbetrieb, Bestätiger aus).
+  99 Suchen über je einen Kandidaten. Der nächtliche Lauf misst mit der Voreinstellung, seit
+  #575 NLI-Stufe an, Bestätiger aus (am Seed 14 von 20, Abschnitt „Ergebnis am Testbestand“).
   Nachmessen: `SEMANTIC_SEARCH_DIESELBE_AUSSAGE_NLI=an SEMANTIC_SEARCH_NLI_BESTAETIGER=true`
   vor den Befehl oben (`suche_messen --faelle`).
   Zu Deutschlandticket und Insektensterben gibt es nur den wörtlichen Fall; Fälle mit
@@ -543,7 +562,9 @@ export SEMANTIC_SEARCH_QDRANT_COLLECTION=nachtlauf   # eine leere Sammlung
 
 Geprüft wird bei der Schwelle von heute (Werte in `nachtlauf.py`):
 
-- **Soll:** die Zahlen der Zeile „(heute)“ oben, dazu Zerfaserung und ähnliche Aussagen.
+- **Soll:** die Zahlen der Zeile „(heute)“ oben, dazu Zerfaserung und ähnliche Aussagen,
+  gemessen mit der Voreinstellung der Prüfung auf dieselbe Aussage (seit #575 NLI-Stufe
+  an, Bestätiger aus; Tabelle unter „Weg der Zuordnung“).
   Weicht eine um mehr als einen Fall ab, ist der Lauf rot, auch bei einer Verbesserung:
   Wer Modell, Schwelle, Stemmer, Normalisierung oder das Set ändert, zieht `SOLL` und
   diese Seite im selben PR nach (ein Unit-Test vergleicht beide).
