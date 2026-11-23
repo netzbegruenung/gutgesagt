@@ -26,6 +26,7 @@ GEZAEHLT = [
     "/api/v1/commentary/addCommentary",
     "/api/v1/generic_text/addGenericText",
     "/api/v1/post/addPost",
+    "/api/v1/image/addImage",
     "/api/v1/rawinput/addRawInput",
     "/api/v1/statement/vorab",
     "/api/v1/statement/addStatement",

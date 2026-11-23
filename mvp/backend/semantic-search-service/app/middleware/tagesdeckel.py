@@ -4,8 +4,8 @@ Tagesdeckel an den Anlege-Routen (utils/tagesdeckel.py, GLOSSARY.md "Tagesdeckel
 Gezaehlt wird, was einen Beitrag, eine Aussage oder einen Einwurf anlegt, je Anlage
 einmal:
 
-- /addCommentary, /addGenericText, /addPost: je ein Beitrag. Die Herkuenfte, die ein
-  Beitrag mitbringt, legt der Suchdienst in derselben Anfrage an; sie zaehlen nicht
+- /addCommentary, /addGenericText, /addPost, /image/addImage: je ein Beitrag. Die
+  Herkuenfte, die ein Beitrag mitbringt, legt der Suchdienst in derselben Anfrage an; sie zaehlen nicht
   eigens.
 - /addRawInput: ein Einwurf in den Fangkorb.
 - /statement/vorab und /addStatement: eine Aussage ohne Beitrag.
@@ -39,6 +39,7 @@ GEZAEHLTE_ROUTEN = (
     "/addCommentary",
     "/addGenericText",
     "/addPost",
+    "/addImage",
     "/addRawInput",
     "/statement/vorab",
     "/addStatement",
@@ -90,7 +91,8 @@ class TagesdeckelMiddleware(BaseHTTPMiddleware):
         if not kennung or kennung == "anonymous" or self._ausgenommen(request, kennung):
             return await call_next(request)
 
-        if not self._deckel.reservieren(kennung):
+        tag = self._deckel.reservieren(kennung)
+        if tag is None:
             logger.warning(
                 f"Tagesdeckel erreicht: {log_pseudonym(kennung)} "
                 f"({self._deckel.je_tag} je Tag)"
@@ -106,10 +108,10 @@ class TagesdeckelMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
         except BaseException:
-            self._deckel.freigeben(kennung)
+            self._deckel.freigeben(kennung, tag)
             raise
         if response.status_code >= 400 or getattr(
             request.state, _NICHTS_ANGELEGT, False
         ):
-            self._deckel.freigeben(kennung)
+            self._deckel.freigeben(kennung, tag)
         return response
