@@ -299,6 +299,11 @@ class Settings(BaseSettings):
     # der Zielroute /abkuerzung/<name> (aus: Startseite). Obergrenze an, weil nichts
     # uebertragen wird; Standard aus ist der Admin-Wert (ohne Eintrag aus).
     abkuerzungen_aktiv: bool = True
+    # Teilen als Bild (#756): Die Karte malt im Browser ein Bild (Sharepic) und gibt es
+    # ans Teilen-Menue des Geraets; der Server sieht davon nichts. Obergrenze an, weil
+    # nichts uebertragen oder gespeichert wird; Standard aus ist der Admin-Wert
+    # (services/schalter_service.py, ohne Eintrag aus).
+    sharepic_aktiv: bool = True
     # Gewichte und Deckel der drei Stufen (domain/punkte.py): Tun klein und je Tag
     # gedeckelt, Quests mehr, Wirkung bei anderen am meisten.
     punkte_nutzung: int = Field(default=10, ge=0)

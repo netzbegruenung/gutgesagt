@@ -53,6 +53,7 @@ ALLE_OBERGRENZEN_AN = dict(
     abzeichen_sichtbar_aktiv=True,
     gepostet_aktiv=True,
     abkuerzungen_aktiv=True,
+    sharepic_aktiv=True,
 )
 
 
@@ -202,6 +203,7 @@ STELLEN = {
     "gepostet_rueckfrage": (_404("/api/v1/usage/users/me/gepostet"), ("gepostet",)),
     "gepostet_admin": (_admin_aktiv_aus("/api/v1/metrics/gepostet"), ("gepostet",)),
     "abkuerzungen": (_funktion_aus("abkuerzungen"), ("abkuerzungen",)),
+    "sharepic": (_funktion_aus("sharepic"), ("sharepic",)),
 }
 
 FAELLE = [

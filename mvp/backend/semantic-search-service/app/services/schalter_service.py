@@ -97,6 +97,16 @@ SCHALTER: Dict[str, Schalterart] = {
             ),
             oeffentlich=True,
         ),
+        Schalterart(
+            name="sharepic",
+            feld="sharepic_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_SHAREPIC_AKTIV",
+            erklaerung=(
+                "„Als Bild teilen“ im Menü der Beitragskarte: Das Bild entsteht im "
+                "Browser und verlässt das Gerät nur über dessen Teilen-Menü."
+            ),
+            oeffentlich=True,
+        ),
     )
 }
 

@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { FunktionenService } from '../services/funktionen.service';
 import { By } from '@angular/platform-browser';
 import { BehaviorSubject, Subject, of } from 'rxjs';
 import {
@@ -233,7 +235,9 @@ describe('AddCommentaryWorkflowComponent mit Aussage aus der Adresse', () => {
       ],
       providers: [
         provideRouter([]),
-        { provide: ActivatedRoute, useValue: { queryParamMap: adresse.asObservable() } }
+        { provide: ActivatedRoute, useValue: { queryParamMap: adresse.asObservable() } },
+        // Die Vorschau-Karte fragt die Schalter der Funktionen (#756); hier ohne Backend aus
+        { provide: FunktionenService, useValue: { an: () => signal(false) } }
       ]
     })
     .compileComponents();
