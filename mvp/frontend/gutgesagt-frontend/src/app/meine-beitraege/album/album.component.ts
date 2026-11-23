@@ -145,9 +145,12 @@ export class AlbumComponent implements OnChanges, AfterViewInit, OnDestroy {
       return;
     }
     // Ausserhalb der Zone: Scrollen soll keine Pruefung der ganzen Seite ausloesen.
+    // Am Handy klebt die Suche unter dem klebenden Kopf: Sie klebt, sobald die Marke unter ihm
+    // verschwindet, nicht erst am oberen Rand.
+    const oben = Math.round(document.querySelector('app-mobile-header')?.getBoundingClientRect().height ?? 0);
     this.zone.runOutsideAngular(() => {
       this.beobachter = new IntersectionObserver(([eintrag]) => {
-        const klebt = !eintrag.isIntersecting && eintrag.boundingClientRect.top < 0;
+        const klebt = !eintrag.isIntersecting && eintrag.boundingClientRect.top < oben;
         if (klebt !== this.klebt) {
           this.zone.run(() => {
             this.klebt = klebt;
@@ -157,7 +160,7 @@ export class AlbumComponent implements OnChanges, AfterViewInit, OnDestroy {
             this.cdr.markForCheck();
           });
         }
-      });
+      }, { rootMargin: `-${oben}px 0px 0px 0px` });
       if (this.marke) {
         this.beobachter.observe(this.marke.nativeElement);
       }

@@ -176,7 +176,8 @@
 // Suche: klebt oben, solange das Album im Bild ist
 .suche {
   position: sticky;
-  top: 0;
+  /* Am Handy unter dem klebenden Kopf (styles.css), am Desktop oben */
+  top: var(--kopf-klebt, 0px);
   z-index: var(--z-index-sticky);
   margin: var(--spacing-md) calc(-1 * var(--page-margin)) 0;
   padding: 12px var(--page-margin) 4px;

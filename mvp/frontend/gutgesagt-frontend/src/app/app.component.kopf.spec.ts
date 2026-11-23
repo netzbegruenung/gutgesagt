@@ -207,7 +207,7 @@ describe('AppComponent - Desktop-Kopf', () => {
     it('blendet den Kopfknopf "Anmelden" auf /login und /login/managed aus', () => {
       aufSeite('/login/managed?returnUrl=%2Fcontribute');
       expect(anmeldenKnopf()).toBeUndefined();
-      expect(kopf().querySelector('h1')!.textContent!.trim()).toBe('Anmelden');
+      expect(fixture.nativeElement.querySelector('.seitenkopf h1')!.textContent!.trim()).toBe('Anmelden');
     });
 
     it('zeigt ihn auf anderen Seiten weiter', () => {
@@ -355,16 +355,58 @@ describe('AppComponent - Desktop-Kopf', () => {
       expect(kopf().querySelector('.farbschema-knopf')).toBeNull();
     });
 
+    function seitentitel(): HTMLElement {
+      return fixture.nativeElement.querySelector('.seitenkopf h1') as HTMLElement;
+    }
+
     it('setzt lange Titel kleiner, kurze nicht', () => {
       const komponente = fixture.componentInstance;
       komponente.pageTitle = 'Hintergrundinfo verfassen';
       fixture.detectChanges();
-      expect(kopf().classList).toContain('header--titel-lang');
-      expect(kopf().querySelector('.desktop-header-title')!.classList).toContain('desktop-header-title--lang');
+      expect(seitentitel().classList).toContain('desktop-header-title--lang');
 
       komponente.pageTitle = 'Fangkorb';
       fixture.detectChanges();
-      expect(kopf().classList).not.toContain('header--titel-lang');
+      expect(seitentitel().classList).not.toContain('desktop-header-title--lang');
+    });
+
+    // Einzeiliger Kopf (23.11.2026): Im Kopf steht die Marke, der Seitentitel darunter, mit
+    // Zurueck davor. So rutschen die Ziele nie je nach Titel in eine zweite Zeile.
+    it('hat im Kopf die Marke und keinen Seitentitel, der Titel steht darunter', () => {
+      const komponente = fixture.componentInstance;
+      komponente.pageTitle = 'Meine Beiträge';
+      komponente.showBackButton = true;
+      fixture.detectChanges();
+
+      expect(kopf().querySelector('h1')).toBeNull();
+      expect(kopf().querySelector('.marke-text')!.textContent!.trim()).toBe('Gut gesagt');
+      expect(kopf().querySelector('.back-button-header')).toBeNull();
+      expect(seitentitel().textContent!.trim()).toBe('Meine Beiträge');
+      expect(seitentitel().classList).not.toContain('visually-hidden');
+      expect(fixture.nativeElement.querySelector('.seitenkopf .back-button-header')).not.toBeNull();
+    });
+
+    it('nennt den Titel „Gut gesagt“ nur dem Screenreader, statt die Marke zu wiederholen', () => {
+      const komponente = fixture.componentInstance;
+      komponente.pageTitle = 'Gut gesagt';
+      komponente.showBackButton = false;
+      fixture.detectChanges();
+
+      expect(seitentitel().textContent!.trim()).toBe('Gut gesagt');
+      expect(seitentitel().classList).toContain('visually-hidden');
+      expect(fixture.nativeElement.querySelector('.seitenkopf')!.classList).toContain('seitenkopf--leer');
+    });
+
+    // Am Handy klebt der Kopf nur ausserhalb von main: main ist mit overflow: hidden ein
+    // Scroll-Container, daran wirkte position: sticky nicht, und der Kopf scrollte unter die
+    // Statusleiste.
+    it('stellt den Handy-Kopf vor main, nicht hinein', () => {
+      fixture.componentInstance.isMobile = true;
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('#app-container > app-mobile-header')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('main app-mobile-header')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.seitenkopf')).toBeNull();
     });
   });
 

@@ -26,7 +26,7 @@ import { RouteConfigService } from './shared/services/route-config.service';
 import { Subject } from 'rxjs';
 import { takeUntil, filter } from 'rxjs/operators';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
-import { ROUTES } from './shared/constants/app.constants';
+import { PAGE_TITLES, ROUTES } from './shared/constants/app.constants';
 import { RundgangComponent } from './rundgang/rundgang.component';
 import { RundgangBandComponent } from './rundgang/rundgang-band.component';
 import { RundgangService } from './rundgang/rundgang.service';
@@ -73,6 +73,15 @@ export class AppComponent implements OnInit, OnDestroy {
 
   get titelLang(): boolean {
     return this.pageTitle.length > AppComponent.LANGER_TITEL;
+  }
+
+  /**
+   * Am Desktop steht die Marke „Gut gesagt“ im Kopf. Seiten ohne eigenen Titel (Start,
+   * Ergebnis, Admin) tragen denselben Namen: Dort nennt die Ueberschrift ihn nur dem
+   * Screenreader, statt ihn sichtbar zu wiederholen.
+   */
+  get titelNurVorgelesen(): boolean {
+    return this.pageTitle === PAGE_TITLES.HOME;
   }
 
   /** Kommt aus dem ProfilbildService: abgeleitet oder selbst gewaehlt (#437). */

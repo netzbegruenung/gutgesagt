@@ -939,9 +939,18 @@ main:has(app-album .suche) {
     overflow: clip;
 }
 
+/*
+ * Klebender Kopf am Handy: Hoehe 56 px plus Rand unten plus Statusleiste. Darunter kleben
+ * die Suche im Album, und was per Tastatur in den Blick scrollt, bleibt sichtbar (WCAG 2.4.11).
+ */
+html:has(app-mobile-header) {
+    --kopf-klebt: calc(57px + env(safe-area-inset-top));
+    scroll-padding-top: calc(var(--kopf-klebt) + var(--spacing-sm, 8px));
+}
+
 /* Fokus nicht verdeckt (WCAG 2.4.11): Was per Tastatur in den Blick scrollt, bleibt unter der klebenden Suche sichtbar. */
 html:has(app-album .suche) {
-    scroll-padding-top: 180px;
+    scroll-padding-top: calc(180px + var(--kopf-klebt, 0px));
 }
 
 /*
