@@ -1147,6 +1147,15 @@ describe('AddGenerictextComponent', () => {
       ausfuellen();
       expect(component.vorschauKarte).toBe(component.vorschauKarte);
     });
+
+    it('zeigt Aufzaehlungen mit Punkten wie nach dem Speichern, mit Hinweis am Feld', () => {
+      ausfuellen();
+      component.generictextForm.patchValue({ text: 'Zwei Gründe:\n- billiger\n* sauberer' });
+      fixture.detectChanges();
+
+      expect(component.vorschauKarte.text).toBe('Zwei Gründe:\n• billiger\n• sauberer');
+      expect(fixture.nativeElement.querySelector('.aufzaehlung-hinweis')?.textContent).toContain('Aufzählung: Zeile mit „-“ beginnen');
+    });
   });
 
   describe('Zuruecksetzen', () => {

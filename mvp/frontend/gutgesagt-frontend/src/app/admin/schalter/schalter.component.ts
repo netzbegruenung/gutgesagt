@@ -12,6 +12,8 @@ const TITEL: Record<string, string> = {
   punkte: 'Punkte und Meilensteine',
   abzeichen_sichtbar: 'Abzeichen am Anzeigenamen',
   gepostet: 'Rückfrage „Ja, gepostet“',
+  herkunft_pruefen: 'Links unter „Herkunft“ prüfen',
+  sharepic: 'Teilen als Bild',
 };
 
 /**

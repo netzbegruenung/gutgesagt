@@ -42,6 +42,7 @@ from api.v1.moderation import router as moderation_router
 from api.v1.vormoderation import router as vormoderation_router
 from api.v1.loeschauftraege import router as loeschauftraege_router
 from api.v1.schalter import router as schalter_router
+from api.v1.funktionen import router as funktionen_router
 from api.v1.sperren import router as sperren_router
 from api.v1.health import router as health_router
 from api.v1.feedback import router as feedback_router
@@ -53,6 +54,7 @@ from api.v1.linkvorschau import router as linkvorschau_router
 from api.v1.kuerzungsvorschlag import router as kuerzungsvorschlag_router
 from api.v1.art9_einwilligung import router as art9_einwilligung_router
 from api.v1.nutzungsbedingungen import router as nutzungsbedingungen_router
+from api.v1.herkunft_pruefen import router as herkunft_pruefen_router
 from services.cleanup.bereinigungsjob import bereinigungsjob_starten
 from services.suchen_ohne_treffer_service import (
     get_personen_des_tages,
@@ -74,6 +76,11 @@ from repositories.usage_tracking_repository import get_usage_repository
 from services.entdoppelung import pruefwerte_verwerfen_im_takt
 from repositories.gepostet_repository import get_gepostet_repository
 from services.abzeichen_service import abzeichen_im_takt, abzeichen_service_setzen
+from services.herkunft_pruefen import (
+    get_herkunft_pruefen_service,
+    herkunft_pruefen_bauen,
+    pruefen_im_takt,
+)
 from services.muster_hinweise_service import (
     loeschen_im_takt as muster_hinweise_loeschen_im_takt,
 )
@@ -234,6 +241,12 @@ async def lifespan(app: FastAPI):
             )
             logger.info("✅ Milestone badge task started")
 
+        # Herkunft pruefen (#759): Der Takt sieht stuendlich nach; ohne wirksamen
+        # Schalter ruft er nichts ab und liest nichts (services/herkunft_pruefen.py).
+        app.state.herkunft_pruefen = asyncio.create_task(
+            pruefen_im_takt(herkunft_pruefen_bauen())
+        )
+
         logger.info(
             "✅ Application startup complete - server ready to accept connections"
         )
@@ -255,10 +268,15 @@ async def lifespan(app: FastAPI):
                 "pruefwerte_verwerfen",
                 "muster_hinweise_loeschen",
                 "abzeichen_rechnen",
+                "herkunft_pruefen",
             ):
                 task = getattr(app.state, name, None)
                 if task is not None:
                     task.cancel()
+            # Ein laufender Lauf "Herkunft pruefen" haengt nicht am Takt (#759)
+            herkunft = get_herkunft_pruefen_service()
+            if herkunft is not None:
+                herkunft.abbrechen()
             manager = get_embeddings_manager()
             await manager.shutdown()
             close_app_database()
@@ -357,6 +375,8 @@ app.include_router(
 app.include_router(
     schalter_router, prefix="/api/v1/moderation/schalter", tags=["moderation"]
 )
+# Welche Funktionen hinter einem Schalter an sind (#756), ohne Anmeldung
+app.include_router(funktionen_router, prefix="/api/v1/funktionen", tags=["schalter"])
 app.include_router(sperren_router, prefix="/api/v1/sperren", tags=["moderation"])
 app.include_router(health_router, prefix="/api/v1", tags=["monitoring"])
 app.include_router(feedback_router, prefix="/api/v1/feedback", tags=["feedback"])
@@ -386,6 +406,11 @@ app.include_router(
     nutzungsbedingungen_router,
     prefix="/api/v1/nutzungsbedingungen",
     tags=["nutzungsbedingungen"],
+)
+app.include_router(
+    herkunft_pruefen_router,
+    prefix="/api/v1/herkunft-pruefen",
+    tags=["herkunft-pruefen"],
 )
 
 # Betriebskennzahlen unter /metrics (#420). Zuletzt hinzugefuegt, also aussen: Die

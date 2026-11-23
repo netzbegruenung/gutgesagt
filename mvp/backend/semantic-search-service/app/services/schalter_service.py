@@ -39,6 +39,10 @@ class Schalterart:
     umgebungsvariable: str
     erklaerung: str
     dsfa_hinweis: bool = False
+    # Ob GET /api/v1/funktionen den wirksamen Wert ohne Anmeldung meldet (api/v1/
+    # funktionen.py): fuer Funktionen, die nur im Browser laufen und deshalb keinen
+    # eigenen Endpunkt haben, der mit 404 antworten koennte (etwa Teilen als Bild).
+    oeffentlich: bool = False
 
 
 SCHALTER: Dict[str, Schalterart] = {
@@ -72,6 +76,25 @@ SCHALTER: Dict[str, Schalterart] = {
                 "Rückfrage „Ja, gepostet“ nach dem Kopieren und die Zahl je Woche "
                 "in der Übersicht."
             ),
+        ),
+        Schalterart(
+            name="herkunft_pruefen",
+            feld="herkunft_pruefen_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_HERKUNFT_PRUEFEN_AKTIV",
+            erklaerung=(
+                "Prüft nachts die Links unter „Herkunft“ und listet tote oder "
+                "umgezogene in der Übersicht. Ruft dafür fremde Server ab."
+            ),
+        ),
+        Schalterart(
+            name="sharepic",
+            feld="sharepic_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_SHAREPIC_AKTIV",
+            erklaerung=(
+                "„Als Bild teilen“ im Menü der Beitragskarte: Das Bild entsteht im "
+                "Browser und verlässt das Gerät nur über dessen Teilen-Menü."
+            ),
+            oeffentlich=True,
         ),
     )
 }
@@ -181,6 +204,11 @@ def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool
         # Ohne Punkte keine sichtbaren Abzeichen (wie Settings.abzeichen_sichtbar)
         return an and _wirksam("punkte", einstellungen, werte)
     return an
+
+
+def oeffentliche_schalter() -> List[str]:
+    """Namen der Schalter, deren wirksamen Wert GET /api/v1/funktionen meldet."""
+    return [art.name for art in SCHALTER.values() if art.oeffentlich]
 
 
 def _art(name: str) -> Schalterart:

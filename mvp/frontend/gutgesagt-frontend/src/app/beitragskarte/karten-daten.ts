@@ -47,8 +47,9 @@ export interface KartenStatement {
   /** Prozent, 0-100. */
   antwortqualitaet: number;
   /**
-   * ID und Themen der Aussage, nur wo sie bekannt sind (Album): „Beitrag ändern“ zeigt
-   * die Themen dann zum Aendern, denn ein Beitrag hat keine eigenen.
+   * ID und Themen der Aussage, nur wo sie bekannt sind (Album, Suche): „Beitrag ändern“ zeigt
+   * die Themen dann zum Aendern, denn ein Beitrag hat keine eigenen; Teilen als Bild (#756)
+   * nimmt das erste Thema mit Motiv.
    */
   id?: string;
   themen?: Thema[];
@@ -279,6 +280,7 @@ function statement(paket: Suchpaket): KartenStatement | undefined {
     text,
     aehnlichkeit: Math.round((paket.statement_similarity_score ?? 0) * 100),
     antwortqualitaet: Math.round((paket.reply_relevance ?? 0) * 100),
+    ...(paket.themen?.length ? { themen: paket.themen } : {}),
   };
 }
 

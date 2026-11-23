@@ -410,6 +410,8 @@ h4.karte-titel {
   font-size: 15px;
   line-height: 1.45;
   overflow-wrap: anywhere;
+  // Zeilenumbrueche wie im kopierten Text, etwa fuer Aufzaehlungen mit "•"
+  white-space: pre-line;
 
   &:not(.aufgeklappt) {
     display: -webkit-box;
@@ -802,6 +804,9 @@ h4.karte-titel {
 
 .karte--einwurf {
   width: 100%;
+  // Rand nur in Listen ohne Grund (Fangkorb, Meine Einwuerfe), die ihn setzen; der
+  // Schatten ist der aller Karten (.karte)
+  border: var(--einwurf-liste-rand, none);
 
   &:focus-visible {
     outline: 2px solid var(--akzent-tanne);

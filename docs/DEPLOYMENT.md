@@ -187,6 +187,16 @@ Behaviour change on rollout: a system where a variable is already `true` (for ex
 `SEMANTIC_SEARCH_PUNKTE_AKTIV=true` on test) has that function **off** after the update until an
 admin switches it on. Before switching on Punkte or Abzeichen on production: DSFA decided
 (`docs/DSFA.md`, section 7).
+`SEMANTIC_SEARCH_HERKUNFT_PRUEFEN_AKTIV` (#759) defaults to `true`, since checking links involves
+no personal data; the Schalter is still off until an admin switches it on. Once on, the semantic
+service makes outbound HTTP(S) requests to the hosts of the Herkünfte; where egress is
+restricted, the list shows them as „nicht erreichbar“.
+
+Schalter marked `oeffentlich` in `SCHALTER` (`services/schalter_service.py`) are readable without
+sign-in at `GET /api/v1/funktionen` (#756): the app shows those functions only when they are on.
+Their upper bound is **on** by default (see `.env.example`), so an admin can switch them on without a
+rollout; they are still off until an admin does. Set the variable to `false` to rule one out on a
+server.
 
 ### 🚧 Updating Production
 

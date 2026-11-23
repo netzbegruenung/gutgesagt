@@ -7,6 +7,7 @@ from domain.themen import ThemenDerAussage
 from dtos.beitrag import VorhandenDto
 from dtos.statement import ThemaDto
 from domain.models.commentary import Commentary
+from utils.aufzaehlung import beitrag_mit_punkten
 
 
 ### AddCommentary ###
@@ -106,6 +107,12 @@ class AddCommentaryRequest(BaseModel):
                 f"Die Langfassung darf hoechstens {LANGFASSUNG_MAX} Zeichen lang sein"
             )
         return commentary.model_copy(update={"short_text": kurz, "long_text": lang})
+
+    # Aufzaehlung: "* " und "- " am Zeilenanfang werden zu "• " (utils/aufzaehlung.py).
+    @field_validator("commentary")
+    @classmethod
+    def aufzaehlung_mit_punkten(cls, beitrag):
+        return beitrag_mit_punkten(beitrag)
 
 
 class AddCommentaryResponse(BaseModel):
