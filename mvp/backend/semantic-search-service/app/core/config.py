@@ -294,6 +294,11 @@ class Settings(BaseSettings):
     # weil dabei nichts zur Person entsteht: kein Name, keine Kennung, nur Adresse und
     # Ergebnis. Wirksam erst, wenn ein Admin den Schalter einschaltet (Standard aus).
     herkunft_pruefen_aktiv: bool = True
+    # App-Abkuerzungen im Manifest (#757): Langes Druecken aufs App-Symbol bietet
+    # Einwerfen, Suchen und Fangkorb an. Das Manifest ist statisch, der Schalter wirkt an
+    # der Zielroute /abkuerzung/<name> (aus: Startseite). Obergrenze an, weil nichts
+    # uebertragen wird; Standard aus ist der Admin-Wert (ohne Eintrag aus).
+    abkuerzungen_aktiv: bool = True
     # Antworten auf eigene Aussagen (#760): Kachel auf der Startseite und Reiter "Meine
     # Aussagen" (services/antworten_hinweis.py). Nichts wird gespeichert, aber die
     # Datenschutzerklaerung nennt bisher nur zwei 7-Tage-Zahlen: Standard aus wie bei

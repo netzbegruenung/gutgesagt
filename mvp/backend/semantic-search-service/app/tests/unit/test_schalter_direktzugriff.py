@@ -52,6 +52,7 @@ ALLE_OBERGRENZEN_AN = dict(
     punkte_aktiv=True,
     abzeichen_sichtbar_aktiv=True,
     gepostet_aktiv=True,
+    abkuerzungen_aktiv=True,
     sharepic_aktiv=True,
 )
 
@@ -201,6 +202,7 @@ STELLEN = {
     "abzeichen_takt": (_takt_rechnet_nicht, ("abzeichen_sichtbar", "punkte")),
     "gepostet_rueckfrage": (_404("/api/v1/usage/users/me/gepostet"), ("gepostet",)),
     "gepostet_admin": (_admin_aktiv_aus("/api/v1/metrics/gepostet"), ("gepostet",)),
+    "abkuerzungen": (_funktion_aus("abkuerzungen"), ("abkuerzungen",)),
     "sharepic": (_funktion_aus("sharepic"), ("sharepic",)),
 }
 

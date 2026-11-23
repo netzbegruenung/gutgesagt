@@ -4,6 +4,7 @@ import { mitKontoVorschauGuard } from './mit-konto/mit-konto.guard';
 import { AdminGuard } from './auth/admin.guard';
 import { PublicGuard } from './auth/public.guard';
 import { ShareTargetGuard } from './share-target/share-target.guard';
+import { abkuerzungGuard } from './abkuerzung/abkuerzung.guard';
 import {
     gespeichertEltern,
     vonHierFehltEineAntwort,
@@ -203,6 +204,13 @@ export const routes: Routes = [
         canActivate: [ShareTargetGuard],
         loadComponent: () => import('./share-target-debug/share-target-debug.component').then(m => m.ShareTargetDebugComponent),
         data: { parent: '/einwerfen' }
+    },
+    {
+        // App-Abkuerzungen (shortcuts im Manifest, #757): Der Guard leitet immer weiter,
+        // bei ausgeschaltetem Schalter auf die Startseite. Keine Komponente.
+        path: 'abkuerzung/:name',
+        canActivate: [abkuerzungGuard],
+        children: []
     },
     {
         // Was ein Konto bringt, fuer Besucher vor der Anmeldung (Entscheidung 17.11.): Ziel des

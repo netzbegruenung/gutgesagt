@@ -90,3 +90,16 @@ def test_symbolgrund_ist_das_app_gelb():
 
 def test_manifest_startet_ohne_browserleiste():
     assert json.loads(MANIFEST.read_text(encoding="utf-8"))["display"] == "standalone"
+
+
+def test_app_abkuerzungen_mit_symbol_und_zielroute():
+    # App-Abkuerzungen (#757): je ein vorhandenes PNG-Symbol, Ziel immer /abkuerzung/<name>,
+    # damit der Schalter an der Zielroute wirkt (abkuerzung.guard.ts)
+    abkuerzungen = json.loads(MANIFEST.read_text(encoding="utf-8"))["shortcuts"]
+    assert [a["name"] for a in abkuerzungen] == ["Einwerfen", "Suchen", "Fangkorb"]
+    for a in abkuerzungen:
+        assert a["url"].startswith("/abkuerzung/"), a
+        assert a["icons"], a
+        for symbol in a["icons"]:
+            assert (PUBLIC / symbol["src"]).is_file(), symbol
+            assert symbol["type"] == "image/png"

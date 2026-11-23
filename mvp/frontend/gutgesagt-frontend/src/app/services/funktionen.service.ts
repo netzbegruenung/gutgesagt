@@ -1,5 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
+import { Observable, of } from 'rxjs';
+import { catchError, map, tap, timeout } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
 
@@ -10,6 +12,9 @@ import { environment } from '../../environments/environment';
 export interface FunktionenAntwort {
   funktionen: Record<string, boolean>;
 }
+
+/** So lange wartet frisch() auf den Server, dann gilt aus. */
+export const FUNKTIONEN_FRISCH_WARTEN_MS = 3000;
 
 /** So alt darf der Stand werden; danach fragt die nächste Karte, die ihn braucht, neu. */
 export const FUNKTIONEN_NACHLADEN_MS = 5 * 60 * 1000;
@@ -35,6 +40,26 @@ export class FunktionenService {
   an(name: string): Signal<boolean> {
     this.auffrischen();
     return computed(() => this.stand()[name] === true);
+  }
+
+  /**
+   * Der Stand dieser Funktion direkt vom Server, für Entscheidungen beim Laden einer
+   * Adresse (App-Abkürzungen, #757). Antwortet der Server nicht binnen
+   * FUNKTIONEN_FRISCH_WARTEN_MS oder mit Fehler, gilt aus.
+   */
+  frisch(name: string): Observable<boolean> {
+    if (!this.http) {
+      return of(false);
+    }
+    return this.http.get<FunktionenAntwort>(`${environment.baseUrl}/api/v1/funktionen`).pipe(
+      timeout(FUNKTIONEN_FRISCH_WARTEN_MS),
+      tap((antwort) => {
+        this.gefragtUm = Date.now();
+        this.stand.set(antwort?.funktionen ?? {});
+      }),
+      map((antwort) => antwort?.funktionen?.[name] === true),
+      catchError(() => of(false)),
+    );
   }
 
   private auffrischen(): void {

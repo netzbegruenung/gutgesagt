@@ -87,6 +87,17 @@ SCHALTER: Dict[str, Schalterart] = {
             ),
         ),
         Schalterart(
+            name="abkuerzungen",
+            feld="abkuerzungen_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_ABKUERZUNGEN_AKTIV",
+            erklaerung=(
+                "App-Abkürzungen Einwerfen, Suchen und Fangkorb beim langen Drücken "
+                "aufs App-Symbol. Aus: Sie öffnen die Startseite. Das Gerät zeigt sie "
+                "trotzdem an, weil das Manifest fest ist."
+            ),
+            oeffentlich=True,
+        ),
+        Schalterart(
             name="antworten_hinweis",
             feld="antworten_hinweis_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_ANTWORTEN_HINWEIS_AKTIV",
