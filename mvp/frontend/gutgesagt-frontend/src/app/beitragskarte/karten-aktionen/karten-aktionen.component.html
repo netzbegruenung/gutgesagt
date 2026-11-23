@@ -76,6 +76,11 @@
             <mat-icon>share</mat-icon>
             <span>Teilen</span>
         </button>
+        <!-- Teilen als Bild (#756), nur mit eingeschaltetem Schalter -->
+        <button mat-menu-item type="button" class="sharepic-eintrag" *ngIf="sharepicSichtbar" (click)="alsBildTeilen()">
+            <mat-icon>image</mat-icon>
+            <span>Als Bild teilen</span>
+        </button>
         <!-- "Link kopieren" (#640, R48) ist im Knopf "Teilen" aufgegangen: Ohne Teilen-Menue kopiert er den Link -->
         <button mat-menu-item type="button" class="zweite-kopie" *ngIf="zweiteKopie as zweite" (click)="zweiteKopieren()">
             <mat-icon>content_copy</mat-icon>
@@ -132,6 +137,10 @@
     </div>
 
     <mat-menu #albumMenue="matMenu">
+        <button mat-menu-item type="button" class="sharepic-eintrag" *ngIf="sharepicSichtbar" (click)="alsBildTeilen()">
+            <mat-icon>image</mat-icon>
+            <span>Als Bild teilen</span>
+        </button>
         <button mat-menu-item type="button" class="kopieren-eintrag" (click)="kopieren()">
             <mat-icon>content_copy</mat-icon>
             <span>{{ kopierBeschriftung }}</span>

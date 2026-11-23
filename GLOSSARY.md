@@ -662,5 +662,9 @@ Eine Person, die Meldungen bearbeitet, Beiträge sperrt, Widersprüche prüft, E
 _Avoid_: Moderator, Redaktion
 
 **Schalter**:
-Eine Funktion, die sich ein- und ausschalten lässt, ohne den Code zu ändern. Bei Punkten, Abzeichen am Anzeigenamen, „Ja, gepostet“, „Herkunft prüfen“ (`herkunft_pruefen`, #759) und den Aufrufen (`aufrufe_zaehlen`, #761) hat ein Schalter zwei Teile: die **Obergrenze**, die der Server aus seiner Umgebung setzt, und den **Admin-Wert**, den ein Admin auf der Admin-Seite „Schalter“ setzt. Wirksam ist der Schalter nur, wenn beide an sind; ohne Admin-Wert ist er aus. Über die Obergrenze hinaus einschalten kann kein Admin, ausschalten jederzeit; jede Änderung steht mit Zeitpunkt und Kennung des Admins im Verlauf (#708). Abzeichen wirken nur zusammen mit den Punkten.
+Eine Funktion, die sich ein- und ausschalten lässt, ohne den Code zu ändern. Bei Punkten, Abzeichen am Anzeigenamen, „Ja, gepostet“, „Herkunft prüfen“ (`herkunft_pruefen`, #759) und den Aufrufen (`aufrufe_zaehlen`, #761) hat ein Schalter zwei Teile: die **Obergrenze**, die der Server aus seiner Umgebung setzt, und den **Admin-Wert**, den ein Admin auf der Admin-Seite „Schalter“ setzt. Wirksam ist der Schalter nur, wenn beide an sind; ohne Admin-Wert ist er aus. Über die Obergrenze hinaus einschalten kann kein Admin, ausschalten jederzeit; jede Änderung steht mit Zeitpunkt und Kennung des Admins im Verlauf (#708). Abzeichen wirken nur zusammen mit den Punkten. Schalter, deren Stand die App ohne Anmeldung abfragt, um eine Funktion ein- oder auszublenden, haben eine Obergrenze, die von Haus aus an ist; aus sind sie trotzdem, bis ein Admin sie einschaltet (#756).
 _Avoid_: Feature-Flag, Toggle, Flag
+
+**Teilen als Bild**:
+Eine Beitragskarte als Bild im Stil der App teilen: Thema mit Motiv, „Antwort auf“ mit der Aussage, Titel und Text der gewählten Fassung, die Marke „Gut gesagt“ und die Adresse des Beitrags. Das Bild entsteht im Browser, als Quadrat oder als Story (9:16), und geht über das Teilen-Menü des Geräts oder als Datei zum Herunterladen; der Server sieht es nicht. Hinter einem Schalter (#756).
+_Avoid_: Sharepic (nur im Code), Screenshot, Kachel
