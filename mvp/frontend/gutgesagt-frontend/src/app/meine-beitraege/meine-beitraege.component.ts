@@ -23,18 +23,20 @@ import { UnbeantworteteAussage } from '../services/dtos/statementDtos';
 import { beantwortenParamsJeAussage } from '../hier-fehlt-eine-antwort/hier-fehlt-eine-antwort.component';
 import { FORMULAR_PFAD } from '../shared/formular-adresse';
 import { AussagekarteComponent } from '../shared/aussagekarte/aussagekarte.component';
+import { MeineAussagenComponent } from './meine-aussagen.component';
 import { AlbumComponent } from './album/album.component';
 import { AlbumEintrag, albumEintrag, naechsterMeilenstein } from './album/album';
 
 /** So viele unbeantwortete Aussagen zeigt der leere Zustand als ersten Schritt (#645). */
 export const ERSTE_SCHRITTE = 3;
 
-/** Die beiden Tabs: eigene Beitraege und "Meine Einwuerfe". */
-export type MeineTab = 'beitraege' | 'einwuerfe';
+/** Die Tabs: eigene Beitraege, "Meine Einwuerfe" und, mit Schalter, "Meine Aussagen" (#760). */
+export type MeineTab = 'beitraege' | 'einwuerfe' | 'aussagen';
 
 const TABS: ReadonlyArray<{ wert: MeineTab; name: string }> = [
   { wert: 'beitraege', name: 'Meine Beiträge' },
   { wert: 'einwuerfe', name: 'Meine Einwürfe' },
+  { wert: 'aussagen', name: 'Meine Aussagen' },
 ];
 
 /**
@@ -57,6 +59,7 @@ const TABS: ReadonlyArray<{ wert: MeineTab; name: string }> = [
     RouterLink,
     AlbumComponent,
     MeineEinwuerfeComponent,
+    MeineAussagenComponent,
     SperrnachrichtenComponent,
     MeilensteineComponent,
     PunkteComponent,
@@ -67,10 +70,22 @@ const TABS: ReadonlyArray<{ wert: MeineTab; name: string }> = [
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MeineBeitraegeComponent implements OnInit, OnDestroy {
-  readonly tabs = TABS;
   tab: MeineTab = 'beitraege';
   /** Ab dem ersten Oeffnen bleibt der Einwurf-Tab stehen, damit Wechseln nicht neu laedt. */
   einwuerfeGeoeffnet = false;
+  aussagenGeoeffnet = false;
+  /**
+   * "Meine Aussagen" gibt es nur mit dem Schalter antworten_hinweis (#760): Der Besuch beim
+   * App-Start sagt es (antworten_auf_eigene_aussagen ist dann eine Zahl), ohne eigenen Abruf.
+   */
+  aussagenAn = false;
+
+  /** "Meine Aussagen" aus der Adresse (Kachel): erst gewaehlt, wenn der Besuch den Schalter bestaetigt. */
+  private aussagenGewuenscht = false;
+
+  get tabs(): ReadonlyArray<{ wert: MeineTab; name: string }> {
+    return TABS.filter((eintrag) => eintrag.wert !== 'aussagen' || this.aussagenAn);
+  }
   eintraege: AlbumEintrag[] = [];
   private destroy$ = new Subject<void>();
   /** Nur beim ersten Laden; danach laedt die Liste still nach und bleibt stehen. */
@@ -99,7 +114,11 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
     // Ein Tab in der Adresse, etwa nach dem Ausformulieren "Meine Einwuerfe" (#508).
     const tab = TABS.find((eintrag) => eintrag.wert === this.route.snapshot.queryParamMap.get(MEINE_TAB_PARAM));
     if (tab) {
-      this.tabWaehlen(tab.wert);
+      if (tab.wert === 'aussagen') {
+        this.aussagenGewuenscht = true;
+      } else {
+        this.tabWaehlen(tab.wert);
+      }
       // Der Tab gilt nur fuer diesen Sprung: Bliebe er in der Adresse, oeffnete ein
       // Neuladen nach dem Wechsel zu "Meine Beitraege" wieder "Meine Einwuerfe".
       this.router.navigate([], {
@@ -109,6 +128,22 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
         replaceUrl: true,
       });
     }
+    this.usageTrackingService.besuchStand$.pipe(takeUntil(this.destroy$)).subscribe((stand) => {
+      // Scheitert der Besuch, bleibt der Reiter fuer diesen App-Start weg (kein eigener Abruf).
+      const an = typeof stand?.antworten_auf_eigene_aussagen === 'number';
+      if (an !== this.aussagenAn) {
+        this.aussagenAn = an;
+        if (!an && this.tab === 'aussagen') {
+          this.tabWaehlen('beitraege');
+        }
+        this.cdr.markForCheck();
+      }
+      if (an && this.aussagenGewuenscht) {
+        this.aussagenGewuenscht = false;
+        this.tabWaehlen('aussagen');
+        this.cdr.markForCheck();
+      }
+    });
     this.ladenAbonnieren();
     this.laden();
     this.meilensteinLaden();
@@ -192,6 +227,7 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
   tabWaehlen(tab: MeineTab): void {
     this.tab = tab;
     this.einwuerfeGeoeffnet ||= tab === 'einwuerfe';
+    this.aussagenGeoeffnet ||= tab === 'aussagen';
   }
 
   /** Pfeiltasten, Pos1 und Ende waehlen den Tab und setzen den Fokus mit. */

@@ -87,6 +87,15 @@ SCHALTER: Dict[str, Schalterart] = {
             ),
         ),
         Schalterart(
+            name="antworten_hinweis",
+            feld="antworten_hinweis_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_ANTWORTEN_HINWEIS_AKTIV",
+            erklaerung=(
+                "Kachel „neue Antworten auf deine Aussagen“ auf der Startseite und "
+                "der Reiter „Meine Aussagen“; speichert nichts Neues."
+            ),
+        ),
+        Schalterart(
             name="sharepic",
             feld="sharepic_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_SHAREPIC_AKTIV",

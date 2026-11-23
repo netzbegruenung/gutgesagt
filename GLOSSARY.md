@@ -543,6 +543,10 @@ _Avoid_: Opt-in, Freigabe, Sichtbarkeitseinstellung
 Der Tab in „Meine Beiträge“, in dem eine Person ihre eigenen Einwürfe mit ihrer Stufe sieht: Ausformulierte führen zu ihren Beiträgen, verworfene sind als solche erkennbar. Ist keiner der Beiträge eines ausformulierten Einwurfs mehr sichtbar, steht statt „Ausformuliert“ „Beitrag gesperrt“ oder „Beitrag gelöscht“, und es gibt nichts anzusehen; so auch beim Einwerfen. Im Fangkorb steht Ausformuliertes nicht. Nach dem Ausformulieren des eigenen Einwurfs führt „Zu meinen Einwürfen“ hierher; nach einem fremden geht es mit „Zum Fangkorb“ in den Fangkorb. Hier erfährt der Einwerfer, was aus seinen Fundstücken geworden ist. Die Karten bieten dieselben Griffe wie im Fangkorb; ein offener Einwurf lässt sich von hier aus gleich destillieren.
 _Avoid_: Meine Funde, Mein Fangkorb, Eingereichtes
 
+**Meine Aussagen**:
+Der dritte Tab in „Meine Beiträge“, nur mit dem Schalter `antworten_hinweis`: die Aussagen, die eine Person selbst angelegt hat, je mit den Beiträgen, die darauf antworten. Antworten anderer aus den letzten sieben Tagen tragen „Neu“; ihre Zahl steht als Kachel unter „Seit deinem letzten Besuch“, und ein Punkt am Ziel „Meine“ der Hauptnavigation zeigt sie an, bis „Meine Beiträge“ offen war. Wer geantwortet hat, steht nicht da, nur ob es die Person selbst war (#760).
+_Avoid_: Meine Behauptungen, Meine Fragen
+
 **Nutzungsstatistik**:
 Wie oft die Beiträge einer Person genutzt wurden, insgesamt und je Beitrag; unter Meine Beiträge steht die Gesamtzahl. Jede Person sieht nur die eigene; wessen Statistik gemeint ist, ergibt sich aus der Anmeldung, nie aus einer Kennung in der Adresse.
 _Avoid_: Usage Stats, Nutzerstatistik
@@ -658,7 +662,7 @@ Eine Person, die Meldungen bearbeitet, Beiträge sperrt, Widersprüche prüft, E
 _Avoid_: Moderator, Redaktion
 
 **Schalter**:
-Eine Funktion, die sich ein- und ausschalten lässt, ohne den Code zu ändern. Bei Punkten, Abzeichen am Anzeigenamen, „Ja, gepostet“ und „Herkunft prüfen“ (`herkunft_pruefen`, #759) hat ein Schalter zwei Teile: die **Obergrenze**, die der Server aus seiner Umgebung setzt, und den **Admin-Wert**, den ein Admin auf der Admin-Seite „Schalter“ setzt. Wirksam ist der Schalter nur, wenn beide an sind; ohne Admin-Wert ist er aus. Über die Obergrenze hinaus einschalten kann kein Admin, ausschalten jederzeit; jede Änderung steht mit Zeitpunkt und Kennung des Admins im Verlauf (#708). Abzeichen wirken nur zusammen mit den Punkten. Schalter, deren Stand die App ohne Anmeldung abfragt, um eine Funktion ein- oder auszublenden, haben eine Obergrenze, die von Haus aus an ist; aus sind sie trotzdem, bis ein Admin sie einschaltet (#756).
+Eine Funktion, die sich ein- und ausschalten lässt, ohne den Code zu ändern. Bei Punkten, Abzeichen am Anzeigenamen, „Ja, gepostet“, „Herkunft prüfen“ (`herkunft_pruefen`, #759) und dem Hinweis auf neue Antworten zu eigenen Aussagen (`antworten_hinweis`, #760) hat ein Schalter zwei Teile: die **Obergrenze**, die der Server aus seiner Umgebung setzt, und den **Admin-Wert**, den ein Admin auf der Admin-Seite „Schalter“ setzt. Wirksam ist der Schalter nur, wenn beide an sind; ohne Admin-Wert ist er aus. Über die Obergrenze hinaus einschalten kann kein Admin, ausschalten jederzeit; jede Änderung steht mit Zeitpunkt und Kennung des Admins im Verlauf (#708). Abzeichen wirken nur zusammen mit den Punkten. Schalter, deren Stand die App ohne Anmeldung abfragt, um eine Funktion ein- oder auszublenden, haben eine Obergrenze, die von Haus aus an ist; aus sind sie trotzdem, bis ein Admin sie einschaltet (#756).
 _Avoid_: Feature-Flag, Toggle, Flag
 
 **Teilen als Bild**:

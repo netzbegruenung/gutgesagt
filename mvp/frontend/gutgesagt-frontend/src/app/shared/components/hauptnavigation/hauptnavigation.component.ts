@@ -30,6 +30,7 @@ import { OffeneMeldungenZahlComponent } from '../offene-meldungen-zahl/offene-me
 import { MENUE_ICONS } from '../../fangkorb-texte';
 import { PAGE_TITLES, ROUTES } from '../../constants/app.constants';
 import { FangkorbNeuService, fangkorbZusatz } from './fangkorb-neu.service';
+import { ANTWORTEN_ZUSATZ, AntwortenNeuService } from './antworten-neu.service';
 
 /** Kopf: sichtbare Links am Desktop. Leiste: feste untere Leiste am Handy. */
 export type NavModus = 'kopf' | 'leiste';
@@ -133,6 +134,9 @@ export class HauptnavigationComponent implements OnInit, AfterViewInit {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly farbschema = inject(FarbschemaService);
   protected readonly fangkorbNeu$ = inject(FangkorbNeuService).anzahl$;
+  /** Punkt an „Meine“: neue Antworten auf eigene Aussagen (#760, Schalter antworten_hinweis). */
+  protected readonly antwortenNeu$ = inject(AntwortenNeuService).neu$;
+  protected readonly antwortenZusatz = ANTWORTEN_ZUSATZ;
   protected readonly person = toSignal(inject(AuthService).userInfo$, { initialValue: null });
 
   protected readonly ziele = NAV_ZIELE;

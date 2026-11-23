@@ -1,6 +1,6 @@
 <div class="component-box">
     <!-- Tab-Muster nach WAI-ARIA: ein Tab-Stopp, Pfeiltasten wechseln den Tab -->
-    <div class="tabs" role="tablist" aria-label="Meine Beiträge und Einwürfe" (keydown)="tabTaste($event)">
+    <div class="tabs" role="tablist" [attr.aria-label]="aussagenAn ? 'Meine Beiträge, Einwürfe und Aussagen' : 'Meine Beiträge und Einwürfe'" (keydown)="tabTaste($event)">
         <button *ngFor="let eintrag of tabs" type="button" role="tab" class="tab"
                 [id]="'meine-tab-' + eintrag.wert"
                 [attr.aria-controls]="'meine-bereich-' + eintrag.wert"
@@ -69,5 +69,11 @@
     <div id="meine-bereich-einwuerfe" role="tabpanel" aria-labelledby="meine-tab-einwuerfe"
          [hidden]="tab !== 'einwuerfe'">
         <app-meine-einwuerfe *ngIf="einwuerfeGeoeffnet"></app-meine-einwuerfe>
+    </div>
+
+    <!-- Meine Aussagen (#760): nur mit dem Schalter antworten_hinweis, laedt beim ersten Oeffnen -->
+    <div id="meine-bereich-aussagen" role="tabpanel" aria-labelledby="meine-tab-aussagen"
+         [hidden]="tab !== 'aussagen'">
+        <app-meine-aussagen *ngIf="aussagenGeoeffnet"></app-meine-aussagen>
     </div>
 </div>
