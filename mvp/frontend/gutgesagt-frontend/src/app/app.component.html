@@ -27,7 +27,8 @@
                         "Startseite". Ueber den NavigationService statt per routerLink: Die
                         Destillier-Ansicht soll erst ihren Satz speichern duerfen.
                     -->
-                    <a class="logo-link" href="/" aria-label="Startseite" data-testid="logo-startseite"
+                    <!-- Der Name beginnt mit dem sichtbaren Text, fuer Sprachsteuerung (WCAG 2.5.3) -->
+                    <a class="logo-link" href="/" aria-label="Gut gesagt, Startseite" data-testid="logo-startseite"
                        (click)="$event.preventDefault(); zurStartseite()">
                         <img class="kopf-logo" src="marke/logo-v2.svg" alt="" width="44" height="44">
                         <span class="marke-text" aria-hidden="true">Gut gesagt</span>

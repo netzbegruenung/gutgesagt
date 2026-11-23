@@ -158,9 +158,9 @@ describe('AppComponent - Desktop-Kopf', () => {
     });
 
     // #620: Das Logo ist der Weg zur Startseite, "Start" im Kopf entfaellt
-    it('fuehrt mit dem Logo "Startseite" zur Startseite; die Ueberschrift nennt nur die Seite', () => {
+    it('fuehrt mit dem Logo "Gut gesagt, Startseite" zur Startseite; der Kopf hat keine Ueberschrift', () => {
       const link = kopf().querySelector('a.logo-link') as HTMLAnchorElement;
-      expect(link.getAttribute('aria-label')).toBe('Startseite');
+      expect(link.getAttribute('aria-label')).toBe('Gut gesagt, Startseite');
       expect(link.querySelector('img')!.getAttribute('alt')).toBe('');
       expect(kopf().querySelector('h1 a')).toBeNull();
       expect(kopf().querySelector('[data-testid="start-knopf"]')).toBeNull();
@@ -395,6 +395,18 @@ describe('AppComponent - Desktop-Kopf', () => {
       expect(seitentitel().textContent!.trim()).toBe('Gut gesagt');
       expect(seitentitel().classList).toContain('visually-hidden');
       expect(fixture.nativeElement.querySelector('.seitenkopf')!.classList).toContain('seitenkopf--leer');
+    });
+
+    it('zeigt auf der Ergebnisseite Zurueck, den Titel „Gut gesagt“ aber nur dem Screenreader', () => {
+      const komponente = fixture.componentInstance;
+      komponente.pageTitle = 'Gut gesagt';
+      komponente.showBackButton = true;
+      fixture.detectChanges();
+
+      const seitenkopf = fixture.nativeElement.querySelector('.seitenkopf') as HTMLElement;
+      expect(seitenkopf.classList).not.toContain('seitenkopf--leer');
+      expect(seitenkopf.querySelector('.back-button-header')).not.toBeNull();
+      expect(seitentitel().classList).toContain('visually-hidden');
     });
 
     // Am Handy klebt der Kopf nur ausserhalb von main: main ist mit overflow: hidden ein
