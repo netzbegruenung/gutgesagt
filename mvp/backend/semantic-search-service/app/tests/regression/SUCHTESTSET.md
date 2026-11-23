@@ -195,7 +195,7 @@ davon zerfasern); die übrigen Zeilen sind die Messung vom 05.11. mit 42 Fällen
   wollen uns das Fleisch verbieten“ verloren.
 - **Fremde Themen:** 3 von 5 zeigen etwas (Rente, Mülltrennung, Deutschlandticket),
   zwei davon nur über den direkten Weg.
-- **Zerfaserung:** 14 der 15 Suchanfragen (mit den Hot Takes S107 bis S111 am 18.11.: 18 der 20 Suchanfragen), die dieselbe Behauptung wie eine vorhandene
+- **Zerfaserung** (im Schattenbetrieb, mit `an` am Ende dieses Punkts): 14 der 15 Suchanfragen (mit den Hot Takes S107 bis S111 am 18.11.: 18 der 20 Suchanfragen), die dieselbe Behauptung wie eine vorhandene
   Aussage sind, landen nicht auf ihr, sondern ergäben eine neue Aussage; nur der
   wörtliche Fall landet, schon ein Tippfehler („Vögle“) nicht. Die Dublettenprüfung
   (query/query-Ähnlichkeit ab 0,98) fängt also fast nur wörtliche Wiederholungen. Weil
