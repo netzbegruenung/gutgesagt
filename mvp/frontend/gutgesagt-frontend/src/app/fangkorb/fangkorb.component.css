@@ -131,16 +131,16 @@
   white-space: nowrap;
 }
 
-/* Ein Einwurf, eine Karte: die Saetze liegen in der Karte, nicht darunter */
+/* Ein Einwurf, eine Karte: die Saetze liegen in der Karte, nicht darunter. Ohne grauen
+   Grund wie in "Meine Einwuerfe" (#750): Der Schatten der Karten trennt sie. */
 .karten {
   display: flex;
   flex-direction: column;
   gap: 16px;
   margin: 0;
-  padding: 16px;
+  padding: 0;
   list-style: none;
-  background: var(--mulde);
-  border: var(--kartenliste-rand);
+  --einwurf-liste-rand: var(--einwurf-karten-rand);
 }
 
 .fangkorb-laedt {
@@ -313,14 +313,11 @@
   height: 1px;
 }
 
-/* Neben der Seitenleiste ein Raster (Spaltenbreite wie in "Meine Einwuerfe"), auf dem
-   Kartengrund des Fangkorbs: zwei Spalten, die Karten einer Reihe gleich hoch, der Fuss
-   unten buendig */
+/* Neben der Seitenleiste ein Raster (Spaltenbreite und Abstand wie in "Meine
+   Einwuerfe"): zwei Spalten, die Karten einer Reihe gleich hoch, der Fuss unten buendig */
 .fangkorb--seitenleiste .karten {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 12px;
-  border-radius: var(--border-radius-medium);
 }
 
 .fangkorb--seitenleiste .karten > li {

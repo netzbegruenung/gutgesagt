@@ -518,6 +518,46 @@ describe('FangkorbComponent', () => {
       expect(getComputedStyle(fixture.nativeElement.querySelector('.karten')).display).toBe('grid');
     });
 
+    it('stellt die Karten ohne grauen Grund dar, am Handy wie am Desktop (wie #750)', () => {
+      erstellen(jeTab());
+      breiteSetzen(390);
+      const stil = () => getComputedStyle(fixture.nativeElement.querySelector('.karten'));
+      expect(stil().backgroundColor).toBe('rgba(0, 0, 0, 0)');
+      expect(stil().paddingLeft).toBe('0px');
+      // Im Hellen hebt ein feiner Rand die weisse Karte von der weissen Seite ab
+      const karte = getComputedStyle(fixture.nativeElement.querySelector('article.karte--einwurf'));
+      expect(karte.borderTopWidth).toBe('1px');
+      expect(karte.borderTopStyle).toBe('solid');
+      expect(karte.borderTopColor).toBe('rgb(224, 224, 224)'); // --linie
+      expect(karte.boxShadow).not.toBe('none');
+    });
+
+    it('zeichnet die Kartenliste auch im Dunkelmodus ohne Grund und Rand (wie #750)', () => {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      try {
+        erstellen(jeTab());
+        breiteSetzen(390);
+        const stil = getComputedStyle(fixture.nativeElement.querySelector('.karten'));
+        expect(stil.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+        // Im Dunkeln hatte die Liste einen Rand (--kartenliste-rand), im Hellen nie.
+        expect(stil.borderTopStyle).toBe('none');
+        // Die Karten selbst: im Dunkeln traegt die Flaeche, kein Rand
+        expect(getComputedStyle(fixture.nativeElement.querySelector('article.karte--einwurf')).borderTopStyle).toBe('none');
+      } finally {
+        document.documentElement.removeAttribute('data-theme');
+      }
+    });
+
+    it('stellt die Karten neben der Seitenleiste ohne grauen Grund ins Raster (wie #750)', () => {
+      breit$.next(true);
+      erstellen(jeTab());
+      breiteSetzen(1280);
+      const stil = getComputedStyle(fixture.nativeElement.querySelector('.karten'));
+      expect(stil.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+      expect(stil.paddingLeft).toBe('0px');
+      expect(stil.columnGap).toBe('16px');
+    });
+
     it('zeigt am Desktop die Erklaerung immer, ohne ?-Knopf, und die Kettensymbole an den Tabs', () => {
       breit$.next(true);
       erstellen([]);
