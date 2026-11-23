@@ -18,7 +18,7 @@ services:
       options:
         max-size: "20m"
         max-file: "3"
-    image: qdrant/qdrant:v1.18.2
+    image: qdrant/qdrant:v1.20.2
     container_name: gutgesagt-qdrant
     restart: unless-stopped
     ports:
