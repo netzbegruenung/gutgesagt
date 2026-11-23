@@ -359,15 +359,19 @@ describe('AppComponent - Desktop-Kopf', () => {
       return fixture.nativeElement.querySelector('.seitenkopf h1') as HTMLElement;
     }
 
-    it('setzt lange Titel kleiner, kurze nicht', () => {
+    // Einheitliche Titelgroesse (23.11.2026): Lange Titel brechen um, statt kleiner zu werden.
+    it('setzt lange und kurze Titel in derselben Klasse und Groesse', () => {
       const komponente = fixture.componentInstance;
       komponente.pageTitle = 'Hintergrundinfo verfassen';
       fixture.detectChanges();
-      expect(seitentitel().classList).toContain('desktop-header-title--lang');
+      const langKlassen = Array.from(seitentitel().classList).sort();
+      const langGroesse = getComputedStyle(seitentitel()).fontSize;
 
       komponente.pageTitle = 'Fangkorb';
       fixture.detectChanges();
-      expect(seitentitel().classList).not.toContain('desktop-header-title--lang');
+      expect(Array.from(seitentitel().classList).sort()).toEqual(langKlassen);
+      expect(getComputedStyle(seitentitel()).fontSize).toBe(langGroesse);
+      expect(langGroesse).toBe('40px');
     });
 
     // Einzeiliger Kopf (23.11.2026): Im Kopf steht die Marke, der Seitentitel darunter, mit

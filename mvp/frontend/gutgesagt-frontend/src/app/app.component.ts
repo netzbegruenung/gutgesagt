@@ -68,13 +68,6 @@ export class AppComponent implements OnInit, OnDestroy {
   isMobile: boolean = false;
   isTablet: boolean = false;
 
-  /** Laengere Titel setzt der Desktop-Kopf kleiner, damit sie in eine Zeile passen. */
-  static readonly LANGER_TITEL = 16;
-
-  get titelLang(): boolean {
-    return this.pageTitle.length > AppComponent.LANGER_TITEL;
-  }
-
   /**
    * Am Desktop steht die Marke „Gut gesagt“ im Kopf. Seiten ohne eigenen Titel (Start,
    * Ergebnis, Admin) tragen denselben Namen: Dort nennt die Ueberschrift ihn nur dem

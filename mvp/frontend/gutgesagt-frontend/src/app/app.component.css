@@ -60,15 +60,15 @@ main * {
     margin-bottom: 0;
 }
 
+/* Jeder Seitentitel in derselben Groesse wie h2, egal wie lang. Passt er nicht in eine
+   Zeile (etwa bei 200 % Schrift), bricht er ausgewogen um, statt kleiner zu werden. */
 .desktop-header-title {
     min-width: 0;
     margin: 0;
-    font-size: var(--font-size-h2-desktop); /* Match h2 size: 40px */
+    font-size: var(--font-size-h2-desktop);
     font-weight: 400; /* Match h2 weight */
     color: var(--akzent-schrift);
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
+    text-wrap: balance;
 }
 
 /* Logo mit dem Namen „Gut gesagt“; Bild ohne Namen, der Link heisst „Startseite“ (#416, #620) */
@@ -118,11 +118,6 @@ main * {
 
 .right-header-box > * {
     flex-shrink: 0;
-}
-
-/* Lange Titel ("Hintergrundinfo verfassen") eine Stufe kleiner */
-.desktop-header-title--lang {
-    font-size: var(--font-size-h2-tablet);
 }
 
 
