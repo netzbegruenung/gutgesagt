@@ -19,6 +19,20 @@ describe('SharepicDialogComponent (#756)', () => {
   let dialogRef: jasmine.SpyObj<MatDialogRef<SharepicDialogComponent>>;
   let nav: TeilenNavigator;
 
+  /**
+   * Malen laeuft ueber Bild- und Schriftladen und toBlob; auf einem ausgelasteten CI-Runner
+   * dauert das laenger als eine Sekunde. Deshalb nach Uhrzeit warten statt nach Durchlaeufen,
+   * mit Luft unter der Zeitgrenze der Tests (ZEITGRENZE_MS).
+   */
+  const MALEN_WARTEN_MS = 8000;
+  const ZEITGRENZE_MS = 15000;
+  async function warten(bis: () => boolean): Promise<void> {
+    const ende = Date.now() + MALEN_WARTEN_MS;
+    while (!bis() && Date.now() < ende) {
+      await new Promise((r) => setTimeout(r, 20));
+    }
+  }
+
   async function erzeugen(navigator: TeilenNavigator): Promise<void> {
     nav = navigator;
     dialogRef = jasmine.createSpyObj('MatDialogRef', ['close']);
@@ -34,10 +48,8 @@ describe('SharepicDialogComponent (#756)', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
     await fixture.whenStable();
-    // Malen laeuft ueber Bild- und Schriftladen; warten, bis die Datei steht.
-    for (let i = 0; i < 50 && !component.datei; i++) {
-      await new Promise((r) => setTimeout(r, 20));
-    }
+    // Warten, bis die Datei steht.
+    await warten(() => !!component.datei);
     fixture.detectChanges();
   }
 
@@ -55,7 +67,7 @@ describe('SharepicDialogComponent (#756)', () => {
     expect(formate.join(' ')).toContain('Story');
     expect(knopf('sharepic-herunterladen')?.textContent).toContain('Bild herunterladen');
     expect(knopf('sharepic-teilen')).toBeNull();
-  });
+  }, ZEITGRENZE_MS);
 
   it('teilt die Datei ueber das Teilen-Menue und meldet geteilt', async () => {
     const share = jasmine.createSpy('share').and.resolveTo();
@@ -68,7 +80,7 @@ describe('SharepicDialogComponent (#756)', () => {
     expect(daten.files?.[0].type).toBe('image/png');
     expect(daten.text).toBe(DATEN.link);
     expect(dialogRef.close).toHaveBeenCalledWith('geteilt');
-  });
+  }, ZEITGRENZE_MS);
 
   it('schliesst nach einem Abbruch im Teilen-Menue nicht', async () => {
     const abbruch = Object.assign(new Error('abgebrochen'), { name: 'AbortError' });
@@ -77,17 +89,15 @@ describe('SharepicDialogComponent (#756)', () => {
     await component.teilen();
 
     expect(dialogRef.close).not.toHaveBeenCalled();
-  });
+  }, ZEITGRENZE_MS);
 
   it('malt beim Formatwechsel neu', async () => {
     await erzeugen({});
     const vorher = component.datei;
 
     component.formatWaehlen('story');
-    for (let i = 0; i < 50 && (!component.datei || component.datei === vorher); i++) {
-      await new Promise((r) => setTimeout(r, 20));
-    }
+    await warten(() => !!component.datei && component.datei !== vorher);
 
     expect(component.datei?.name).toBe('gut-gesagt-story.png');
-  });
+  }, ZEITGRENZE_MS);
 });

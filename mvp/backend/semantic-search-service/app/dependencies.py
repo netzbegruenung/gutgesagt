@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     # under TYPE_CHECKING to avoid pulling the registry/service graph at module load.
     from services.content.base_content_service import BaseContentService
     from services.abzeichen_service import AbzeichenService
+    from services.themen_vorschlag import ThemenVorschlagService
 from core.config import settings, Settings
 from utils.rate_limiter import RateLimiter
 from services.orchestration.content_orchestrator import ContentOrchestrator
@@ -199,6 +200,59 @@ def get_aussage_themen_service(
     statement_service: StatementService = Depends(get_statement_service),
 ) -> AussageThemenService:
     return AussageThemenService(get_aussage_themen_repository(), statement_service)
+
+
+_themen_vorschlag_service: Optional["ThemenVorschlagService"] = None
+
+
+class _EinbetterDesDienstes:
+    """Der Embeddings-Manager erst beim Einbetten geholt: Ist er noch nicht gestartet,
+    scheitert der Vorschlag im Service (leere Liste), nicht schon die Dependency."""
+
+    def encode_query(self, query: str):
+        from services.embeddings.qdrant_embeddings_manager import (
+            get_embeddings_manager,
+        )
+
+        return get_embeddings_manager().encode_query(query)
+
+
+def get_themen_vorschlag_service() -> "ThemenVorschlagService":
+    """
+    Der eine ThemenVorschlagService des Prozesses (#401): Er haelt die Prototypen und die
+    Vektoren der Zuordnungen von Hand im Speicher; die Beispiele kommen aus dem Testset
+    (AussageThemenService.testset). Wirft nicht: Fehlt der Statement-Service oder das
+    Modell noch, scheitert erst der Bau bzw. die Einbettung, und der Vorschlag ist leer.
+    Die Schwellen liest er einmal beim ersten Aufruf; geaendert wirken sie nach einem
+    Neustart.
+    """
+    global _themen_vorschlag_service
+    if _themen_vorschlag_service is None:
+        from core.config import NLI_MODELL
+        from services.dieselbe_behauptung.nli_modell import nli_modell
+        from services.themen_vorschlag import Schwellen, ThemenVorschlagService
+
+        einstellungen = get_settings()
+
+        async def beispiele_laden():
+            themen_service = AussageThemenService(
+                get_aussage_themen_repository(), get_statement_service()
+            )
+            return [(z.text, list(z.themen)) for z in await themen_service.testset()]
+
+        _themen_vorschlag_service = ThemenVorschlagService(
+            einbetter=_EinbetterDesDienstes(),
+            beispiele_laden=beispiele_laden,
+            schwellen=Schwellen(
+                einstellungen.themen_vorschlag_ab,
+                einstellungen.themen_vorschlag_abstand_hoechstens,
+                einstellungen.themen_vorschlag_folgerung_ab,
+            ),
+            folgerer=(
+                nli_modell(NLI_MODELL) if einstellungen.themen_vorschlag_nli else None
+            ),
+        )
+    return _themen_vorschlag_service
 
 
 def get_themen_aussagen_service(

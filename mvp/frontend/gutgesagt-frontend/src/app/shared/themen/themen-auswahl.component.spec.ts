@@ -89,4 +89,103 @@ describe('ThemenAuswahlComponent', () => {
     expect(knopf('Klima').firstElementChild).toBe(bild);
     expect(knopf('Verkehr').querySelector('img')).toBeNull();
   });
+
+  describe('Themenvorschlaege (#401)', () => {
+    function hinweis(): string {
+      return fixture.nativeElement.querySelector('.themen-hinweis').textContent.trim();
+    }
+
+    function vorschlagen(vorschlaege: string[]): void {
+      fixture.componentRef.setInput('vorschlaege', vorschlaege);
+      fixture.detectChanges();
+    }
+
+    function zeile(): HTMLElement | null {
+      return fixture.nativeElement.querySelector('.themen-vorschlag');
+    }
+
+    function vorschlagChips(): HTMLButtonElement[] {
+      return Array.from(fixture.nativeElement.querySelectorAll('.vorschlag-chip')) as HTMLButtonElement[];
+    }
+
+    function alleKnopf(): HTMLButtonElement | null {
+      return fixture.nativeElement.querySelector('.vorschlag-alle');
+    }
+
+    it('zeigt Vorschlaege in einer eigenen Zeile mit +, Motiv und zugaenglichem Namen', () => {
+      vorschlagen(['klima']);
+
+      expect(zeile()!.getAttribute('role')).toBe('group');
+      expect(zeile()!.getAttribute('aria-label')).toBe('Vorgeschlagene Themen');
+      expect(zeile()!.querySelector('.vorschlag-titel')!.textContent).toBe('Vorschlag:');
+      const [chip] = vorschlagChips();
+      expect(chip.getAttribute('aria-label')).toBe('Klima übernehmen');
+      expect(chip.querySelector('.vorschlag-plus')!.textContent).toBe('+');
+      expect(chip.querySelector('img.thema-motiv')!.getAttribute('src')).toBe('themen/klima.svg');
+      expect(alleKnopf()!.textContent!.trim()).toBe('Übernehmen');
+    });
+
+    it('hebt in der Liste nichts hervor und nennt die Vorschlaege nicht im Hinweis', () => {
+      vorschlagen(['verkehr', 'klima']);
+
+      expect(knopf('Verkehr').getAttribute('aria-pressed')).toBe('false');
+      expect(knopf('Verkehr').className).toBe(knopf('Europa').className);
+      expect(hinweis()).toBe('Bis zu drei Themen, optional.');
+    });
+
+    it('ein Tipp auf einen Vorschlag waehlt ihn; danach ist er aus der Zeile weg', () => {
+      vorschlagen(['verkehr', 'klima']);
+      expect(alleKnopf()!.textContent!.trim()).toBe('Beide übernehmen');
+
+      vorschlagChips()[0].click();
+      expect(gemeldet).toEqual([['verkehr']]);
+
+      setzen(['verkehr']);
+      expect(vorschlagChips().map((c) => c.getAttribute('aria-label'))).toEqual(['Klima übernehmen']);
+      expect(alleKnopf()!.textContent!.trim()).toBe('Übernehmen');
+    });
+
+    it('waehlt nichts von selbst', () => {
+      vorschlagen(['verkehr']);
+
+      expect(gemeldet).toEqual([]);
+    });
+
+    it('Alle uebernehmen waehlt der Reihe nach, soweit die Grenze reicht', () => {
+      setzen(['soziales']);
+      vorschlagen(['verkehr', 'klima', 'europa']);
+      expect(alleKnopf()!.textContent!.trim()).toBe('Alle übernehmen');
+
+      alleKnopf()!.click();
+
+      expect(gemeldet).toEqual([['soziales', 'verkehr', 'klima']]);
+    });
+
+    it('beim Einwerfen (hoechstens 2) nur bis zur Grenze', () => {
+      fixture.componentRef.setInput('hoechstens', 2);
+      vorschlagen(['verkehr', 'klima']);
+
+      setzen(['europa']);
+      alleKnopf()!.click();
+
+      expect(gemeldet).toEqual([['europa', 'verkehr']]);
+    });
+
+    it('sind alle gewaehlt oder ist die Grenze erreicht, fehlt die Zeile', () => {
+      vorschlagen(['verkehr', 'klima']);
+      setzen(['verkehr', 'klima']);
+      expect(zeile()).toBeNull();
+
+      fixture.componentRef.setInput('hoechstens', 2);
+      vorschlagen(['europa']);
+      expect(zeile()).toBeNull();
+    });
+
+    it('uebergeht unbekannte Schluessel', () => {
+      vorschlagen(['gibt-es-nicht']);
+
+      expect(zeile()).toBeNull();
+      expect(hinweis()).toBe('Bis zu drei Themen, optional.');
+    });
+  });
 });

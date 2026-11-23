@@ -16,6 +16,7 @@ import { Thema } from '../services/dtos/themenDtos';
 import { ThemenService, schluesselVon } from '../services/themen.service';
 import { ThemenAuswahlComponent } from '../shared/themen/themen-auswahl.component';
 import { ThemenFilterComponent } from '../shared/themen/themen-filter.component';
+import { ThemenVorschlaege } from '../shared/themen/themen-vorschlaege';
 import { AUSSAGE_GIBT_ES_SCHON, THEMEN_NICHT_GESPEICHERT, themenDerAussage } from '../shared/themen/themen-meldung';
 import { AUSSAGE_PARAM, FORMULAR_PFAD } from '../shared/formular-adresse';
 import {
@@ -141,6 +142,8 @@ export class HierFehltEineAntwortComponent implements OnInit, OnDestroy {
 
   neueAussage = '';
   neueThemen: string[] = [];
+  /** Themenvorschlaege (#401) zum Text der neuen Aussage. */
+  readonly themenVorschlaege = new ThemenVorschlaege();
   /** Die laufende Abfrage der Liste; ein neuer Filter bricht sie ab. */
   private ladend?: Subscription;
   private readonly destroy$ = new Subject<void>();
@@ -269,6 +272,7 @@ export class HierFehltEineAntwortComponent implements OnInit, OnDestroy {
   eingabe(wert: string): void {
     this.neueAussage = wert;
     this.meldung = '';
+    this.themenVorschlaege.text(wert);
   }
 
   anlegen(): void {
@@ -283,6 +287,7 @@ export class HierFehltEineAntwortComponent implements OnInit, OnDestroy {
         this.speichert = false;
         this.neueAussage = '';
         this.neueThemen = [];
+        this.themenVorschlaege.text('');
         this.meldung = vorabMeldung(antwort, mitThemen);
         this.laden();
       },
