@@ -119,6 +119,19 @@ describe('MeineEinwuerfeComponent', () => {
     }
   });
 
+  it('gibt den Karten im Hellen einen feinen Rand, im Dunkeln keinen (wie im Fangkorb)', () => {
+    anzeigen();
+    const karte = () => getComputedStyle(fixture.nativeElement.querySelector('article.karte--einwurf'));
+    expect(karte().borderTopStyle).toBe('solid');
+    expect(karte().borderTopColor).toBe('rgb(224, 224, 224)'); // --linie
+    document.documentElement.setAttribute('data-theme', 'dark');
+    try {
+      expect(karte().borderTopStyle).toBe('none');
+    } finally {
+      document.documentElement.removeAttribute('data-theme');
+    }
+  });
+
   it('stellt die Zahl als Kopfzeile ueber die Liste', () => {
     anzeigen();
 
