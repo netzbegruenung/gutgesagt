@@ -355,6 +355,7 @@ Verzeichnis der Verarbeitungstätigkeiten).
 | Zugriffsprotokolle des vorgelagerten Webservers | 14 Tage | Betrieb am Host; Datenschutzerklärung „Protokolldateien“ |
 | Zugriffsprotokolle des Webservers der Anwendung, Protokolle der Anwendung | **keine**; Ziel 14 Tage, noch nicht ausgerollt | Betrieb am Host; unter „Was nicht gelöscht wird“ (#485, #336) |
 | Zähler der Rate-Limits | höchstens etwa 16 Minuten, nur im Arbeitsspeicher | Anwendung; Datenschutzerklärung zu Suche, Meldungen, Feedback, Einladungen, Gegenlesen |
+| Zähler des Tagesdeckels (Kennung und Zahl der Anlagen des laufenden UTC-Tages) | bis zum Ende des UTC-Tages plus ein Aufräumtakt (eine Minute), nur im Arbeitsspeicher; ein Neustart verwirft sie | Anwendung (`utils/tagesdeckel.py`); Datenschutzerklärung noch ohne eigenen Satz (Fachfrage im PR) |
 | Sicherungskopien | bis zu 28 Tage (7 Tages-, 4 Wochenstände) | `mvp/scripts/backup/backup.sh`; unter „Was nicht gelöscht wird“ |
 | Beta-Zugänge (`managed-users.json`) | auf Test und Produktion seit dem Realm-Umzug (20.11.2026) entfernt, die Zugänge sind Konten im Realm (#488); in der Entwicklung nur Beispielkonten | Schritt 4 im „Ablauf“ |
 

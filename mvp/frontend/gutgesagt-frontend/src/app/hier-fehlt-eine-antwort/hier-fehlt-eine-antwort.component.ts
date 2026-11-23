@@ -33,6 +33,7 @@ import { AuthService } from '../auth/auth.service';
 import { ModerationService } from '../services/moderation.service';
 import { BestaetigungsDialogComponent } from '../shared/components/bestaetigungs-dialog/bestaetigungs-dialog.component';
 import { AUSSAGE_NICHT_ENTFERNT, entfernenFrage } from '../shared/aussagekarte/aussage-entfernen';
+import { TAGESDECKEL_MELDUNG, tagesdeckelErreicht } from '../beitragsformular/speicherfehler';
 
 /**
  * "Hier fehlt eine Antwort": Mitwirkende sehen die unbeantworteten Aussagen (ohne
@@ -291,9 +292,11 @@ export class HierFehltEineAntwortComponent implements OnInit, OnDestroy {
         this.meldung = vorabMeldung(antwort, mitThemen);
         this.laden();
       },
-      error: () => {
+      error: (fehler: unknown) => {
         this.speichert = false;
-        this.meldung = 'Die Aussage konnte nicht angelegt werden. Bitte versuche es erneut.';
+        this.meldung = tagesdeckelErreicht(fehler)
+          ? TAGESDECKEL_MELDUNG
+          : 'Die Aussage konnte nicht angelegt werden. Bitte versuche es erneut.';
       },
     });
   }

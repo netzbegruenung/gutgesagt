@@ -4,6 +4,7 @@ from typing import FrozenSet, Optional
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from pydantic import ValidationError
 
+from middleware.tagesdeckel import nichts_angelegt
 from dependencies import (
     require_art9_einwilligung,
     require_nutzungsbedingungen,
@@ -247,6 +248,7 @@ async def unbeantwortet(
 )
 async def vorab_anlegen(
     request: AussageVorabRequest,
+    http_request: Request,
     user_id: str = Depends(require_user),
     statement_service: StatementService = Depends(get_statement_service),
     themen_service: AussageThemenService = Depends(get_aussage_themen_service),
@@ -258,6 +260,9 @@ async def vorab_anlegen(
     except Exception as e:
         logger.error(f"Error in /vorab: {type(e).__name__}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to add statement")
+    if not statement_was_new:
+        # Eine schon bekannte Aussage: nichts angelegt, zaehlt nicht zum Tagesdeckel.
+        nichts_angelegt(http_request)
     themen = await themen_beim_anlegen(themen_service, statement_id, request.themen)
     return AussageVorabResponse(
         statement_was_new=statement_was_new,
@@ -519,6 +524,7 @@ async def aehnliche_aussagen(
 )
 async def add_statement(
     request: AddStatementRequest,
+    http_request: Request,
     statement_service: StatementService = Depends(get_statement_service),
     x_user: str = Header(...),
 ) -> AddStatementResponse:
@@ -549,6 +555,10 @@ async def add_statement(
                 request.source.to_content_origin(),
             )
         )
+
+        if not statement_was_new:
+            # Eine schon bekannte Aussage: nichts angelegt, zaehlt nicht zum Tagesdeckel.
+            nichts_angelegt(http_request)
 
         # Create response object
         response = AddStatementResponse(

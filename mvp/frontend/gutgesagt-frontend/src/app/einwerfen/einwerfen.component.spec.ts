@@ -1,3 +1,4 @@
+import { TAGESDECKEL_MELDUNG } from '../beitragsformular/speicherfehler';
 import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
@@ -273,6 +274,19 @@ describe('EinwerfenComponent', () => {
 
       expect(component.fehler).toContain('Link');
       expect(component.wirdGespeichert).toBeFalse();
+    });
+
+    it('sagt am Tagesdeckel freundlich, dass morgen wieder geht, und behaelt die Eingabe', () => {
+      einwurfService.einwerfen.and.returnValue(
+        throwError(() => ({ status: 429, error: { error: 'TAGESDECKEL' } })),
+      );
+      eingeben('https://example.org/a', 'nicht verlieren');
+
+      component.einwerfen();
+
+      expect(component.fehler).toBe(TAGESDECKEL_MELDUNG);
+      expect(component.wirdGespeichert).toBeFalse();
+      expect(component.einwurfForm.value.hinweis).toBe('nicht verlieren');
     });
 
     // UX-Review B4: Ohne Einwilligung kein "versuche es erneut", sondern der Hinweiskasten

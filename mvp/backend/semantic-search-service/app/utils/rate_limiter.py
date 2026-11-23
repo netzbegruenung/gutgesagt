@@ -8,6 +8,8 @@ from collections import defaultdict
 import asyncio
 import logging
 
+from core.config import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -95,29 +97,42 @@ class RateLimiter:
                     del self._requests[identifier]
 
 
-# Global rate limiters
+# Global rate limiters. Die Zahl der Anfragen der Limiter ohne Anmeldung kommt aus
+# der Konfiguration (core/config.py, *_RATE_LIMIT_ANFRAGEN, fuer das Saal-WLAN eines
+# Parteitags); die Fenster bleiben fest, die Datenschutzerklaerung nennt ihre Fristen.
+# Die Zahlen in den Kommentaren sind die Standardwerte.
 # 5 reports per user/session per 15 minutes
-report_rate_limiter = RateLimiter(max_requests=5, window_minutes=15)
+report_rate_limiter = RateLimiter(
+    max_requests=settings.meldung_rate_limit_anfragen, window_minutes=15
+)
 
 # Aussagen aus Suchanfragen: 60 je Adresse in 10 Minuten. Gezaehlt wird jeder
 # Versuch, auch wenn die Aussage schon existiert. Hinter einem gemeinsamen NAT
 # (Geschaeftsstelle, Parteitag) teilen sich viele eine Adresse - deshalb deutlich
 # ueber dem, was eine Person sucht. Ist die Grenze erreicht, sucht man weiter,
 # nur ohne neue Aussage.
-search_query_statement_rate_limiter = RateLimiter(max_requests=60, window_minutes=10)
+search_query_statement_rate_limiter = RateLimiter(
+    max_requests=settings.suchaussage_rate_limit_anfragen, window_minutes=10
+)
 
 
 # Feedback: 5 je Adresse in 15 Minuten, wie Meldungen. Die Route ist ohne Anmeldung
 # erreichbar; mehr schreibt niemand in einer Viertelstunde an das Team.
-feedback_rate_limiter = RateLimiter(max_requests=5, window_minutes=15)
+feedback_rate_limiter = RateLimiter(
+    max_requests=settings.feedback_rate_limit_anfragen, window_minutes=15
+)
 
 # Einladungen (#429), beide Routen ohne Anmeldung. Ein Gruppenlink wird oft in einem
 # Raum hinter einer gemeinsamen Adresse (NAT) eingeloest; die Zahl der Einloesungen
 # begrenzt schon die Einladung selbst. Einloesen: 30 je Adresse in 15 Minuten, jeder
 # Aufruf kann eine Mail ausloesen. Pruefen: 60, die Seite fragt einmal beim Oeffnen;
 # mehr braucht nur, wer Codes durchprobiert (22 Zeichen Zufall, aussichtslos).
-einladung_rate_limiter = RateLimiter(max_requests=30, window_minutes=15)
-einladung_pruefen_rate_limiter = RateLimiter(max_requests=60, window_minutes=15)
+einladung_rate_limiter = RateLimiter(
+    max_requests=settings.einladung_rate_limit_anfragen, window_minutes=15
+)
+einladung_pruefen_rate_limiter = RateLimiter(
+    max_requests=settings.einladung_pruefen_rate_limit_anfragen, window_minutes=15
+)
 
 # Gegenlesen beim Schreiben (#358): 300 je Person in 10 Minuten. Das Formular fragt
 # etwa eine Sekunde nach jeder Eingabepause nach; das sind beim zuegigen Schreiben
@@ -132,7 +147,9 @@ kuerzungsvorschlag_rate_limiter = RateLimiter(max_requests=60, window_minutes=10
 # Aehnliche Aussagen unter "Nicht dabei?" (#642), auch ohne Anmeldung: wie die
 # Suchaussage 60 je Adresse in 10 Minuten. Die Ergebnisseite fragt einmal je Suche;
 # jeder Aufruf kostet Modellaufrufe (Widerspruchspruefung).
-aehnliche_aussagen_rate_limiter = RateLimiter(max_requests=60, window_minutes=10)
+aehnliche_aussagen_rate_limiter = RateLimiter(
+    max_requests=settings.aehnliche_aussagen_rate_limit_anfragen, window_minutes=10
+)
 
 # Themenvorschlaege (#401) je angemeldeter Person: Das Formular fragt nach einer Pause
 # beim Tippen, jeder Aufruf kostet eine Einbettung (rund 30 ms CPU).

@@ -1,9 +1,10 @@
 from typing import List
 from domain.models.zeit import utc_jetzt
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Header, Request
 import logging
 from uuid import UUID
 
+from middleware.tagesdeckel import nichts_angelegt
 from dependencies import (
     require_art9_einwilligung,
     get_aussage_themen_service,
@@ -139,6 +140,7 @@ async def get_by_id(
 )
 async def add_generic_text(
     request: AddGenericTextRequest,
+    http_request: Request,
     generic_text_service: GenericTextService = Depends(get_generic_text_service),
     reference_service: ReferenceService = Depends(get_reference_service),
     statement_service: StatementService = Depends(get_statement_service),
@@ -192,6 +194,9 @@ async def add_generic_text(
         # Verknuepft wird sie nur, wenn sie von derselben Person ist und sie sie mit
         # vorhanden_nehmen gewaehlt hat - eine fremde nie (Glossar "Dublette"; zur
         # Begruendung siehe api/v1/commentary.py).
+        if pruefung.vorhanden is not None:
+            # Nichts angelegt: zaehlt nicht zum Tagesdeckel.
+            nichts_angelegt(http_request)
         dublette = Dublette.aus(pruefung.vorhanden, x_user, request.vorhanden_nehmen)
         if dublette:
             generic_text_id = dublette.vorhanden.id

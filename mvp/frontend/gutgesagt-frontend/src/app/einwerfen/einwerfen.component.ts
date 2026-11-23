@@ -41,6 +41,7 @@ import { einwilligungFehlt } from '../services/art9-einwilligung.service';
 import { Art9EinwilligungZustand } from '../services/art9-einwilligung-zustand';
 import { Subject, of, timer } from 'rxjs';
 import { catchError, map, switchMap, takeUntil, tap } from 'rxjs/operators';
+import { TAGESDECKEL_MELDUNG, tagesdeckelErreicht } from '../beitragsformular/speicherfehler';
 
 export const HINWEIS_LIMIT = 5000;
 
@@ -404,6 +405,10 @@ export class EinwerfenComponent implements OnInit, OnDestroy {
         if (einwilligungFehlt(error)) {
           this.fehler = null;
           this.einwilligungZustand.hinweisZeigen();
+          return;
+        }
+        if (tagesdeckelErreicht(error)) {
+          this.fehler = TAGESDECKEL_MELDUNG;
           return;
         }
         this.fehler =

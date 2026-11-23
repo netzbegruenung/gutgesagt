@@ -168,6 +168,10 @@ _Avoid_: Entwurf, KI-Entwurf, Draft, generierte Antwort
 
 ## Schreiben
 
+**Tagesdeckel**:
+Die Obergrenze, wie viele Beiträge, Aussagen und Einwürfe eine Person an einem UTC-Tag anlegen darf, gegen Spam (Entscheidung Maintainer 23.11.2026; Standard 20, `SEMANTIC_SEARCH_TAGESDECKEL_BEITRAEGE`). Gezählt wird jede Anlage einmal: ein Kommentar, eine Hintergrundinfo, ein Post, ein Bild, ein Einwurf, eine Aussage vorab oder über die Schnittstelle. Herkünfte, die ein Beitrag mitbringt, zählen nicht eigens, ebenso wenig eine Dublette, bei der nichts angelegt wird, oder ein gescheitertes Speichern. Admins und Startkonten sind ausgenommen (Redaktion, Import). Darüber antwortet der Suchdienst mit 429 und der Kennung `TAGESDECKEL`, die App sagt „Für heute ist Schluss mit neuen Beiträgen, morgen geht’s weiter.“ Die Zähler liegen nur im Arbeitsspeicher und fallen am Tageswechsel (UTC) oder bei einem Neustart weg. Nicht zu verwechseln mit dem Rate-Limit, das je Minute und Stunde bremst, und mit den Deckeln der Punkte.
+_Avoid_: Tageslimit, Quota, Kontingent
+
 **Formularhilfe**:
 Die Erklärung oben in einem Beitragsformular: eine Zeile, worauf es beim Beitragstyp ankommt, und hinter dem ? die Regeln dazu, bei Kommentar und Post auch die Schreibregeln und Schreibhilfen. Sie lenkt sanft und sperrt kein Speichern.
 _Avoid_: Tooltip, Anleitung, Hilfetext

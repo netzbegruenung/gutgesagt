@@ -1,3 +1,4 @@
+import { TAGESDECKEL_MELDUNG } from '../beitragsformular/speicherfehler';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -440,6 +441,20 @@ describe('HierFehltEineAntwortComponent', () => {
       expect(text()).toContain('konnte nicht angelegt werden');
       expect((element().querySelector('textarea[name="aussage"]') as HTMLTextAreaElement).value)
         .toBe('Das Heizungsgesetz enteignet uns');
+    });
+
+    it('sagt am Tagesdeckel freundlich, dass morgen wieder geht', () => {
+      eingeben('Das Heizungsgesetz enteignet uns');
+      anlegen();
+
+      http.expectOne(VORAB_URL).flush(
+        { detail: 'x', error: 'TAGESDECKEL' },
+        { status: 429, statusText: 'Too Many Requests' },
+      );
+      fixture.detectChanges();
+
+      expect(text()).toContain(TAGESDECKEL_MELDUNG);
+      expect(text()).not.toContain('versuche es erneut');
     });
   });
   describe('Melden und Entfernen', () => {

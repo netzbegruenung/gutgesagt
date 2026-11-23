@@ -342,6 +342,23 @@ class Settings(BaseSettings):
     nutzung_rate_limit_anfragen: int = Field(default=60, ge=1)
     nutzung_rate_limit_minuten: int = Field(default=10, ge=1)
 
+    # Tagesdeckel (GLOSSARY.md, middleware/tagesdeckel.py): so viele Beitraege,
+    # Aussagen und Einwuerfe darf eine Person je UTC-Tag anlegen. Admins und
+    # Startkonten sind ausgenommen (Redaktion, Import).
+    tagesdeckel_beitraege: int = Field(default=20, ge=1)
+
+    # Anfragen je Fenster der Rate-Limiter ohne Anmeldung (utils/rate_limiter.py).
+    # Sie zaehlen je Anschluss; im Saal-WLAN eines Parteitags teilen sich alle eine
+    # Adresse, dort hebt der Betrieb die Zahl an. Einstellbar ist nur die Zahl, nicht
+    # das Fenster: Die Datenschutzerklaerung nennt die Fristen, die aus den Fenstern
+    # folgen (test_rate_limiter_cleanup.py).
+    aehnliche_aussagen_rate_limit_anfragen: int = Field(default=60, ge=1)
+    suchaussage_rate_limit_anfragen: int = Field(default=60, ge=1)
+    feedback_rate_limit_anfragen: int = Field(default=5, ge=1)
+    meldung_rate_limit_anfragen: int = Field(default=5, ge=1)
+    einladung_rate_limit_anfragen: int = Field(default=30, ge=1)
+    einladung_pruefen_rate_limit_anfragen: int = Field(default=60, ge=1)
+
     # Secret key for the daily search-actor pseudonym (see SearchTrackingService).
     # Set SEMANTIC_SEARCH_ACTOR_HASH_SECRET in production so the daily-active-user
     # count stays correct across service restarts. If it is left unset a random

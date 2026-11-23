@@ -286,6 +286,14 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
 - `SEMANTIC_SEARCH_DATA_PATH` - Seed data path
 - `SEMANTIC_SEARCH_METADATA_PATH` - Persistent metadata storage path
 - `SEMANTIC_SEARCH_LOG_LEVEL` - DEBUG/INFO
+- `SEMANTIC_SEARCH_TAGESDECKEL_BEITRAEGE` - Tagesdeckel (GLOSSARY.md): Beiträge, Aussagen and
+  Einwürfe a person may create per UTC day (default 20; admins and Startkonten exempt). Above it
+  the creating routes answer 429 with `"error": "TAGESDECKEL"` (`middleware/tagesdeckel.py`).
+- `SEMANTIC_SEARCH_<LIMIT>_RATE_LIMIT_ANFRAGEN` - requests per window of the rate limits without
+  login, counted per Anschluss (`utils/rate_limiter.py`). In a venue WLAN all visitors share one
+  address, so operations raise them there. `<LIMIT>` and default: `AEHNLICHE_AUSSAGEN` 60 and
+  `SUCHAUSSAGE` 60 (10 min), `FEEDBACK` 5, `MELDUNG` 5, `EINLADUNG` 30, `EINLADUNG_PRUEFEN` 60
+  (15 min each). The windows are fixed: the privacy policy names the periods that follow from them.
 - `SEMANTIC_SEARCH_DIESELBE_AUSSAGE_NLI` - NLI-Stufe (#387): `aus`, `schatten` (for the
   same-Aussage check the similarity threshold decides and the NLI model only counts along) or
   `an` (default since #575, as on test and production: the NLI model decides whether a new text

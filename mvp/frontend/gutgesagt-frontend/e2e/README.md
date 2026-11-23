@@ -50,6 +50,8 @@ Einzelne Specs: `npx playwright test tests/04-fangkorb.spec.ts`, ein Projekt:
   warten die Helfer in `tests/fixtures.ts` eine Minute und versuchen es erneut (im Report als
   „Rate-Limit“ vermerkt). Nach drei, vier Läufen in einer Stunde hilft das nicht mehr;
   `mvp/run-local.sh reset` setzt den Zähler zurück (er liegt nur im Speicher).
+  Den Tagesdeckel (20 Anlagen je Person und Tag) hebt `docker-compose.dev.yml` für den
+  Dev-Stack auf 1000 an.
 - **Dubletten:** Ab dem zweiten Lauf gleicht ein neuer Kommentar dem aus dem Vorlauf. Die
   Specs wählen dann „Trotzdem speichern“ (`aufErgebnisWarten`) und vermerken das im Report.
 - **Nächster Einwurf:** Die Reihenfolge kommt vom Server (eigene zuerst, dann die neuesten).

@@ -250,6 +250,29 @@ class TestAddCommentaryAntwort:
             "themen": [],
         }
 
+    def test_dublette_zaehlt_nicht_zum_tagesdeckel(self, dienste):
+        """Der Handler kennzeichnet "nichts angelegt"; die Middleware gibt den Platz frei."""
+        from datetime import date
+
+        from middleware.tagesdeckel import TagesdeckelMiddleware
+        from utils.tagesdeckel import Tagesdeckel
+
+        deckel = Tagesdeckel(5, lambda: date(2026, 12, 4))
+        mit_deckel = FastAPI()
+        mit_deckel.include_router(commentary_router, prefix="/api/v1/commentary")
+        mit_deckel.dependency_overrides = app.dependency_overrides
+        mit_deckel.add_middleware(TagesdeckelMiddleware, deckel=deckel)
+        client = TestClient(mit_deckel)
+
+        assert client.post(ADD_URL, json=_anfrage(), headers=HEADERS).status_code == 200
+        assert deckel._zaehler["person-1"][1] == 1
+
+        self._dublette(uuid.uuid4())
+        resp = client.post(ADD_URL, json=_anfrage(), headers=HEADERS)
+
+        assert resp.json()["vorhanden"] is not None
+        assert deckel._zaehler["person-1"][1] == 1
+
     @staticmethod
     def _dublette(vorhanden, autor="person-1"):
         commentary_service = app.dependency_overrides[get_commentary_service]()
