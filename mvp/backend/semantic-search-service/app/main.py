@@ -101,6 +101,7 @@ from utils.rate_limiter import (
     search_query_statement_rate_limiter,
     themen_vorschlag_rate_limiter,
 )
+from utils.tagesdeckel import tagesdeckel
 import asyncio
 
 # This is a workaround for a dependency issue: "OMP: Error #15: Initializing libomp140.x86_64.dll, but found libomp140.x86_64.dll already initialized.""
@@ -173,6 +174,8 @@ async def lifespan(app: FastAPI):
                     spracherkennung_rate_limiter,
                     kuerzungsvorschlag_rate_limiter,
                     themen_vorschlag_rate_limiter,
+                    # Kein RateLimiter, raeumt aber genauso auf (Zaehler von gestern).
+                    tagesdeckel,
                 ]
             )
         )
@@ -342,6 +345,12 @@ app.add_middleware(
     requests_per_minute=10,  # Max 10 requests per minute per user
     requests_per_hour=100,  # Max 100 requests per hour per user
 )
+
+# Tagesdeckel (middleware/tagesdeckel.py): nach dem Rate-Limit eingetragen und damit
+# aussen; lehnt das Rate-Limit ab, gibt der Tagesdeckel den Platz wieder frei.
+from middleware.tagesdeckel import TagesdeckelMiddleware
+
+app.add_middleware(TagesdeckelMiddleware)
 
 app.include_router(commentary_router, prefix="/api/v1/commentary", tags=["commentary"])
 app.include_router(content_router, prefix="/api/v1/content", tags=["content"])
