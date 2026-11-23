@@ -60,8 +60,8 @@ main * {
     margin-bottom: 0;
 }
 
-/* Jeder Seitentitel in derselben Groesse wie h2 (40px), egal wie lang. Passt er nicht in
-   eine Zeile (etwa bei 200 % Schrift), bricht er ausgewogen um, statt kleiner zu werden. */
+/* Jeder Seitentitel in derselben Groesse wie h2, egal wie lang. Passt er nicht in eine
+   Zeile (etwa bei 200 % Schrift), bricht er ausgewogen um, statt kleiner zu werden. */
 .desktop-header-title {
     min-width: 0;
     margin: 0;
@@ -69,7 +69,6 @@ main * {
     font-weight: 400; /* Match h2 weight */
     color: var(--akzent-schrift);
     text-wrap: balance;
-    overflow-wrap: break-word;
 }
 
 /* Logo mit dem Namen „Gut gesagt“; Bild ohne Namen, der Link heisst „Startseite“ (#416, #620) */
