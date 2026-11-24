@@ -27,6 +27,21 @@ test('Besucher: Suche ohne Anmeldung', async ({ page, bild }) => {
   await bild('90-besucher-suche');
 });
 
+// Startseite und eine geschuetzte Seite: AppComponent, PublicGuard und AuthGuard fragen die
+// Anmelde-Pruefungen und erzeugen dabei keine 401 (fail2ban am Gateway, Saal-WLAN).
+test('Besucher: Startseite und geschuetzte Seite ohne 401', async ({ page }) => {
+  const abgewiesen: string[] = [];
+  page.on('response', (r) => {
+    if (r.status() === 401) abgewiesen.push(new URL(r.url()).pathname);
+  });
+  await page.goto('/search');
+  await page.waitForLoadState('networkidle');
+  await page.goto('/contributions');
+  await page.waitForURL(/\/login\?/);
+  await page.waitForLoadState('networkidle');
+  expect(abgewiesen).toEqual([]);
+});
+
 test('Besucher: von der Startseite suchen und zurueck', async ({ page }) => {
   await page.goto('/search');
   await expect(page).toHaveURL(/\/search$/);

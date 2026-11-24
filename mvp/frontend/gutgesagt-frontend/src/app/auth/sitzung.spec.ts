@@ -3,7 +3,7 @@ import { HttpClient, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { meldetAnmeldung, sitzungPruefen } from './sitzung';
+import { meldetAnmeldung, sitzungPruefen, sitzungsstand } from './sitzung';
 
 describe('Sitzung (Anmelde-Pruefungen ohne 401 für Besucher)', () => {
   let http: HttpTestingController;
@@ -35,6 +35,31 @@ describe('Sitzung (Anmelde-Pruefungen ohne 401 für Besucher)', () => {
     const besucher = pruefen();
     http.expectOne(`${environment.baseUrl}/api/check-session`).flush({ isAuthenticated: false });
     expect(await besucher).toBeFalse();
+  });
+
+  it('unterscheidet Besucher (200 false, 401) von unbekannt (Netz, 5xx)', async () => {
+    const stand = () => firstValueFrom(sitzungsstand(TestBed.inject(HttpClient)));
+    const url = `${environment.baseUrl}/api/check-session`;
+
+    const besucher = stand();
+    http.expectOne(url).flush({ isAuthenticated: false });
+    expect(await besucher).toBe('besucher');
+
+    const alt = stand();
+    http.expectOne(url).flush(null, { status: 401, statusText: 'Unauthorized' });
+    expect(await alt).toBe('besucher');
+
+    const kaputt = stand();
+    http.expectOne(url).flush('x', { status: 502, statusText: 'Bad Gateway' });
+    expect(await kaputt).toBe('unbekannt');
+
+    const netz = stand();
+    http.expectOne(url).error(new ProgressEvent('Netzfehler'));
+    expect(await netz).toBe('unbekannt');
+
+    const angemeldet = stand();
+    http.expectOne(url).flush({ isAuthenticated: true });
+    expect(await angemeldet).toBe('angemeldet');
   });
 
   it('wertet Fehler (401 eines älteren BFF, 5xx) als Besucher', async () => {

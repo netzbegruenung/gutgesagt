@@ -78,6 +78,17 @@ describe('AuthGuard', () => {
     expect(auth.getUserInfo()?.userId).toBeNull();
   });
 
+  it('lässt die Kopfzeile bei einem Fehler (502 beim Deploy) angemeldet, führt aber zur Anmeldung', async () => {
+    const auth = TestBed.inject(AuthService);
+    auth.setUserInfo({ isAuthenticated: true, userId: 'u1', userName: 'Jo', claims: null });
+    const ergebnis = firstValueFrom(
+      guard.canActivate({ data: {} } as unknown as ActivatedRouteSnapshot, { url: '/contributions' } as RouterStateSnapshot) as Observable<boolean | UrlTree>,
+    );
+    http.expectOne((r) => r.url.endsWith('/api/check-session')).flush('x', { status: 502, statusText: 'Bad Gateway' });
+    expect(router.serializeUrl((await ergebnis) as UrlTree)).toBe('/login?returnUrl=%2Fcontributions');
+    expect(auth.getUserInfo()?.isAuthenticated).toBeTrue();
+  });
+
   it('markiert genau Einwerfen, Beitragen und Fangkorb als Einstiege mit Vorschau', () => {
     const markiert = routes.filter((r) => r.data?.[MIT_KONTO_VORSCHAU]).map((r) => r.path);
     expect(markiert.sort()).toEqual(['contribute', 'einwerfen', 'fangkorb']);

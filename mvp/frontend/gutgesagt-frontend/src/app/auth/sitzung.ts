@@ -14,18 +14,30 @@ export interface Sitzungsantwort {
   isAuthenticated?: boolean;
 }
 
+/**
+ * Was /api/check-session sagt: angemeldet, sicher Besucher (200 mit isAuthenticated = false,
+ * oder 401 eines aelteren BFF), oder unbekannt (Netz, 5xx beim Deploy). Unbekannt heisst nicht,
+ * dass die Sitzung zu Ende ist; eine angemeldete Kopfzeile bleibt dann stehen.
+ */
+export type Sitzungsstand = 'angemeldet' | 'besucher' | 'unbekannt';
+
 /** Ob eine Antwort der Anmelde-Pruefungen eine Anmeldung meldet; alles andere gilt als Besucher. */
 export function meldetAnmeldung(antwort: Sitzungsantwort | null | undefined): boolean {
   return antwort?.isAuthenticated === true;
 }
 
+/** Fragt /api/check-session nach dem Stand der Sitzung (siehe Sitzungsstand). */
+export function sitzungsstand(http: HttpClient): Observable<Sitzungsstand> {
+  return http.get<Sitzungsantwort | null>(`${environment.baseUrl}/api/check-session`).pipe(
+    map((antwort): Sitzungsstand => (meldetAnmeldung(antwort) ? 'angemeldet' : 'besucher')),
+    catchError((fehler: { status?: number }) => of<Sitzungsstand>(fehler?.status === 401 ? 'besucher' : 'unbekannt')),
+  );
+}
+
 /**
  * Fragt /api/check-session, ob das Anmelde-Cookie gilt. Ein Fehler (Netz, 5xx, ein 401 von
- * einem aelteren BFF) gilt wie bisher als Besucher.
+ * einem aelteren BFF) gilt wie bisher als nicht angemeldet.
  */
 export function sitzungPruefen(http: HttpClient): Observable<boolean> {
-  return http.get<Sitzungsantwort | null>(`${environment.baseUrl}/api/check-session`).pipe(
-    map((antwort) => meldetAnmeldung(antwort)),
-    catchError(() => of(false)),
-  );
+  return sitzungsstand(http).pipe(map((stand) => stand === 'angemeldet'));
 }

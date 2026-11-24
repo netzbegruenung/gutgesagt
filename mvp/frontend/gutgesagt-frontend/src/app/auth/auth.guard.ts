@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { MIT_KONTO_PFAD, ZIEL_PARAM } from '../mit-konto/vorschau-schritte';
 import { AuthService } from './auth.service';
-import { sitzungPruefen } from './sitzung';
+import { sitzungsstand } from './sitzung';
 
 /**
  * Routendaten-Schlüssel: Besucher sehen vor der Anmeldung erst „Das erwartet dich mit Konto“
@@ -26,15 +26,16 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean | UrlTree> {
-    return sitzungPruefen(this.http).pipe(
-      map((angemeldet) => {
-        if (angemeldet) {
+    return sitzungsstand(this.http).pipe(
+      map((stand) => {
+        if (stand === 'angemeldet') {
           return true;
         }
         // Die Sitzung ist zu Ende (abgelaufen, Konto geloescht), die Kopfzeile zeigt aber
         // noch die Person: Frueher setzte der Auth-Interceptor bei der 401 von check-session
-        // den Besucher, die Antwort ist jetzt 200 mit isAuthenticated = false.
-        if (this.authService.getUserInfo()?.isAuthenticated) {
+        // den Besucher, die Antwort ist jetzt 200 mit isAuthenticated = false. Nur dann,
+        // nicht bei einem Netzfehler oder 5xx: Die Sitzung kann dabei weiter gelten.
+        if (stand === 'besucher' && this.authService.getUserInfo()?.isAuthenticated) {
           this.authService.setUserInfo({ isAuthenticated: false, userId: null, userName: null, claims: null });
         }
         // Nicht angemeldet: zur Vorschau oder zur Anmeldung, das Ziel geht jeweils mit
