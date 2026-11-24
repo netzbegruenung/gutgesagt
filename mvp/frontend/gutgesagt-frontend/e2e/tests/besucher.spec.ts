@@ -6,12 +6,13 @@ import { KONTO } from './konto';
  * ist, fuehrt zur Anmeldung. Laeuft ohne gespeicherte Sitzung.
  */
 test('Besucher: Suche ohne Anmeldung', async ({ page, bild }) => {
-  // Kein 401 ausser den Anmelde-Pruefungen: Ein 401 einer Nebenabfrage leitete auf /login um
-  // (Themenliste unter der erkannten Aussage, Befund auf Test, v0.9.9).
+  // Kein 401, auch nicht von den Anmelde-Pruefungen: Ein 401 einer Nebenabfrage leitete auf
+  // /login um (Themenliste unter der erkannten Aussage, Befund auf Test, v0.9.9), und am
+  // Gateway sperrt fail2ban eine IP nach 20 Antworten 401 in 5 Minuten (Saal-WLAN, BDK).
   const abgewiesen: string[] = [];
   page.on('response', (r) => {
     const pfad = new URL(r.url()).pathname;
-    if (r.status() === 401 && !['/api/check-session', '/api/user-info'].includes(pfad)) abgewiesen.push(pfad);
+    if (r.status() === 401) abgewiesen.push(pfad);
   });
   const suche = page.waitForResponse((r) => r.url().includes('/api/v1/search/searchByText'));
   await page.goto(`/result?searchQuery=${encodeURIComponent('Windräder töten Vögel')}`);

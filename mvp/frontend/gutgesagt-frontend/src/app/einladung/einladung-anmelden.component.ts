@@ -4,9 +4,10 @@ import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { Observable, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { keycloakAnmelden } from '../login/keycloak-anmeldung';
+import { sitzungPruefen } from '../auth/sitzung';
 
 /** Pfad der Seite; das Backend setzt ihn als Ziel des Links in der Mail (ANMELDEN_PFAD in keycloak_konten.py). */
 export const EINLADUNG_ANMELDEN_PFAD = 'einladung/anmelden';
@@ -78,14 +79,15 @@ export class EinladungAnmeldenComponent implements OnInit {
   }
 
   private weiter(): Observable<Weiter> {
-    return this.http.get(`${environment.baseUrl}/api/check-session`).pipe(
-      map((): Weiter => 'angemeldet'),
-      catchError(() =>
-        // Wie auf „Das erwartet dich mit Konto“: im Zweifel die Keycloak-Anmeldung.
-        this.http.get<{ keycloakEnabled: boolean }>(`${environment.baseUrl}/api/auth/modes`).pipe(
-          map((m): Weiter => (m?.keycloakEnabled === false ? 'auswahl' : 'keycloak')),
-          catchError(() => of<Weiter>('keycloak')),
-        ),
+    return sitzungPruefen(this.http).pipe(
+      switchMap((angemeldet) =>
+        angemeldet
+          ? of<Weiter>('angemeldet')
+          : // Wie auf „Das erwartet dich mit Konto“: im Zweifel die Keycloak-Anmeldung.
+            this.http.get<{ keycloakEnabled: boolean }>(`${environment.baseUrl}/api/auth/modes`).pipe(
+              map((m): Weiter => (m?.keycloakEnabled === false ? 'auswahl' : 'keycloak')),
+              catchError(() => of<Weiter>('keycloak')),
+            ),
       ),
     );
   }

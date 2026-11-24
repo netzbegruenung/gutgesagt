@@ -155,9 +155,14 @@ export class AppComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (userInfo) => {
-          // User is authenticated
           this.userInfo = userInfo;
           this.profilbild.setzePerson(userInfo);
+
+          // Besucher bekommen hier 200 mit isAuthenticated = false (keine 401, sitzung.ts).
+          // Das Rueckkehrziel gehoert zur Anmeldung und bleibt fuer sie liegen.
+          if (!userInfo.isAuthenticated) {
+            return;
+          }
 
           // Check if we have a stored return URL from login (including Keycloak)
           const returnUrl = rueckkehrzielLesen();

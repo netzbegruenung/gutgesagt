@@ -102,7 +102,7 @@ public class SitzungAusAltemRealmTests : IDisposable
 
         using var response = await CheckSessionAsync(authority, cookie);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(await SitzungsAntwort.AngemeldetAsync(response));
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public class SitzungAusAltemRealmTests : IDisposable
 
         using var response = await CheckSessionAsync(NeuerRealm, cookie);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.False(await SitzungsAntwort.AngemeldetAsync(response));
         var geloescht = KeycloakLoginCookieTests.AuthCookie(response);
         Assert.True(geloescht.Expires < DateTimeOffset.UtcNow, "the auth cookie is not expired");
     }
@@ -161,6 +161,6 @@ public class SitzungAusAltemRealmTests : IDisposable
 
         using var response = await CheckSessionAsync(NeuerRealm, cookie);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(await SitzungsAntwort.AngemeldetAsync(response));
     }
 }

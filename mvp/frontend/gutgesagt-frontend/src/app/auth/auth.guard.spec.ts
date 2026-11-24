@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree, provideRouter } from '@angular/router';
 import { firstValueFrom, Observable } from 'rxjs';
 import { AuthGuard, MIT_KONTO_VORSCHAU } from './auth.guard';
+import { AuthService } from './auth.service';
 import { routes } from '../app.routes';
 
 describe('AuthGuard', () => {
@@ -27,8 +28,7 @@ describe('AuthGuard', () => {
       guard.canActivate({ data } as unknown as ActivatedRouteSnapshot, { url } as RouterStateSnapshot) as Observable<boolean | UrlTree>,
     );
     const anfrage = http.expectOne((r) => r.url.endsWith('/api/check-session'));
-    if (angemeldet) anfrage.flush({});
-    else anfrage.flush(null, { status: 401, statusText: 'Unauthorized' });
+    anfrage.flush({ isAuthenticated: angemeldet });
     return ergebnis;
   }
 
@@ -44,6 +44,38 @@ describe('AuthGuard', () => {
   it('führt Besucher auf anderen geschützten Seiten weiter direkt zur Anmeldung', async () => {
     const baum = (await pruefen({}, '/contributions', false)) as UrlTree;
     expect(router.serializeUrl(baum)).toBe('/login?returnUrl=%2Fcontributions');
+  });
+
+  it('wertet das Feld, nicht den Status: 200 mit isAuthenticated = false führt zur Anmeldung', async () => {
+    const ergebnis = firstValueFrom(
+      guard.canActivate({ data: {} } as unknown as ActivatedRouteSnapshot, { url: '/contributions' } as RouterStateSnapshot) as Observable<boolean | UrlTree>,
+    );
+    const anfrage = http.expectOne((r) => r.url.endsWith('/api/check-session'));
+    expect(anfrage.request.method).toBe('GET');
+    anfrage.flush({ isAuthenticated: false });
+    expect(router.serializeUrl((await ergebnis) as UrlTree)).toBe('/login?returnUrl=%2Fcontributions');
+  });
+
+  it('wertet eine 401 (älteres BFF) und einen Netzfehler weiter als Besucher', async () => {
+    const ergebnis = firstValueFrom(
+      guard.canActivate({ data: {} } as unknown as ActivatedRouteSnapshot, { url: '/contributions' } as RouterStateSnapshot) as Observable<boolean | UrlTree>,
+    );
+    http.expectOne((r) => r.url.endsWith('/api/check-session')).flush(null, { status: 401, statusText: 'Unauthorized' });
+    expect(router.serializeUrl((await ergebnis) as UrlTree)).toBe('/login?returnUrl=%2Fcontributions');
+
+    const nochmal = firstValueFrom(
+      guard.canActivate({ data: {} } as unknown as ActivatedRouteSnapshot, { url: '/contributions' } as RouterStateSnapshot) as Observable<boolean | UrlTree>,
+    );
+    http.expectOne((r) => r.url.endsWith('/api/check-session')).error(new ProgressEvent('Netzfehler'));
+    expect(router.serializeUrl((await nochmal) as UrlTree)).toBe('/login?returnUrl=%2Fcontributions');
+  });
+
+  it('setzt eine beendete Sitzung in der Kopfzeile auf Besucher', async () => {
+    const auth = TestBed.inject(AuthService);
+    auth.setUserInfo({ isAuthenticated: true, userId: 'u1', userName: 'Jo', claims: null });
+    await pruefen({}, '/contributions', false);
+    expect(auth.getUserInfo()?.isAuthenticated).toBeFalse();
+    expect(auth.getUserInfo()?.userId).toBeNull();
   });
 
   it('markiert genau Einwerfen, Beitragen und Fangkorb als Einstiege mit Vorschau', () => {

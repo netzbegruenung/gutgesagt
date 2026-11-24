@@ -492,8 +492,20 @@ app.MapGet("/api/user-info", (HttpContext context, ILogger<Program> logger) =>
             Claims = claims
         });
     }
-    logger.LogDebug("/api/user-info   User is not authenticated, return unauthorized");
-    return Results.Unauthorized();
+    // Besucher bekommen 200 mit IsAuthenticated = false, keine 401: Das Frontend fragt hier
+    // bei jedem Seitenaufruf. Am IPv4-Gateway sperrt fail2ban eine IP nach 20 Antworten 401
+    // in 5 Minuten, und im Saal-WLAN teilen sich hunderte Besucher eine IP (BDK). Eine
+    // Sitzung, die das Cookie-Handling eben verworfen hat (Konto geloescht, alter Realm),
+    // landet ebenfalls hier; das geloeschte Cookie geht mit derselben Antwort raus.
+    logger.LogDebug("/api/user-info   User is not authenticated, return ok with IsAuthenticated = false");
+    return Results.Ok(new
+    {
+        IsAuthenticated = false,
+        UserId = (string?)null,
+        UserName = (string?)null,
+        IsAdmin = false,
+        Claims = (Dictionary<string, string>?)null
+    });
 });
 
 
@@ -504,9 +516,9 @@ app.MapGet("/api/check-session", (HttpContext context, ILogger<Program> logger) 
 
     logger.LogDebug("/api/check-session called, returning IsAuthenticated: {IsAuthenticated}", isAuthenticated);
 
-    return isAuthenticated
-        ? Results.Ok()
-        : Results.Unauthorized();
+    // Immer 200, die Antwort steht im Feld: aus demselben Grund wie bei /api/user-info.
+    // Die echten 401 bleiben dort, wo eine Anmeldung fehlt, die gebraucht wird (Auth-Gate).
+    return Results.Ok(new { IsAuthenticated = isAuthenticated });
 });
 
 // Der Auth-Gate stand bisher in einem if (useKeycloak); der else-Zweig mappte den Proxy
