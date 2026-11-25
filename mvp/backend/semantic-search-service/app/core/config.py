@@ -391,6 +391,12 @@ class Settings(BaseSettings):
     # Startkonten sind ausgenommen (Redaktion, Import).
     tagesdeckel_beitraege: int = Field(default=20, ge=1)
 
+    # Rate-Limit an den Anlege-Routen (middleware/rate_limit.py): so viele Anfragen
+    # je Person und Minute bzw. Stunde. Startkonten sind ausgenommen (Import des
+    # Startbestands), Admins nicht.
+    anlege_rate_limit_je_minute: int = Field(default=10, ge=1)
+    anlege_rate_limit_je_stunde: int = Field(default=100, ge=1)
+
     # Anfragen je Fenster der Rate-Limiter ohne Anmeldung (utils/rate_limiter.py).
     # Sie zaehlen je Anschluss; im Saal-WLAN eines Parteitags teilen sich alle eine
     # Adresse, dort hebt der Betrieb die Zahl an. Einstellbar ist nur die Zahl, nicht
