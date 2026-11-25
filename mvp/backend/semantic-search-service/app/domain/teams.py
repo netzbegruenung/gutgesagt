@@ -35,12 +35,9 @@ MOTIVE: Dict[str, str] = {
 # schriftlich und widerruflich zugestimmt hat; das Datum dieser Zustimmung steht an
 # der Einladung, nur als Nachweis fuer Admins. Die Gruppe bekommt nie Namen, Listen
 # oder eigene Zahlen und steuert nichts (GLOSSARY.md "Team", Bedingungen).
+# Beschriftungen im Admin-Formular: TEAM_ARTEN in frontend shared/teams/teams.ts.
 TEAM_ART_ANLASS = "anlass"
 TEAM_ART_GRUPPE = "gruppe"
-TEAM_ARTEN: Dict[str, str] = {
-    TEAM_ART_ANLASS: "Team nach Anlass, Ort oder Saison",
-    TEAM_ART_GRUPPE: "Team nach Gruppe",
-}
 
 # Hinweis fuer das Admin-Formular (Teamname).
 TEAMNAME_HINWEIS = (

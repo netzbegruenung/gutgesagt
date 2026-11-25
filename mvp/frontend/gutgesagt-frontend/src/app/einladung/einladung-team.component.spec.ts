@@ -96,7 +96,12 @@ describe('EinladungComponent mit Team', () => {
   describe('Team nach Gruppe', () => {
     const SATZ =
       'Dieses Team ist mit Zustimmung von Netzfeuerwehr nach ihr benannt. Verantwortlich für Gut gesagt ist allein die Netzbegrünung; Netzfeuerwehr bekommt keine Daten über dich.';
-    const NACH_GRUPPE = { name: 'Netzfeuerwehr', art: 'gruppe' as const };
+    const NACH_GRUPPE = {
+      name: 'Netzfeuerwehr',
+      art: 'gruppe' as const,
+      knopf_ja: 'Ja, speichert, dass ich im Team Netzfeuerwehr bin',
+      einwilligung_text: 'Ich willige ausdrücklich ein, dass Gut gesagt an meinem Konto speichert, dass ich im Team Netzfeuerwehr bin …',
+    };
 
     function satzDirektUeberDerFrage() {
       const satz = el().querySelector('[data-testid="team-gruppe"]')!;
@@ -113,6 +118,7 @@ describe('EinladungComponent mit Team', () => {
       starten('Code123');
       pruefen({ einloesbar: true, team: team(NACH_GRUPPE) });
 
+      expect(el().querySelector('[data-testid="team-schon-konto"]')).not.toBeNull();
       satzDirektUeberDerFrage();
     });
 
@@ -120,10 +126,13 @@ describe('EinladungComponent mit Team', () => {
       starten('Code123');
       pruefen({ einloesbar: true, team: team(NACH_GRUPPE) }, true);
 
+      // wirklich der angemeldete Weg: kein Hinweis „Hast du schon ein Konto?“, kein Formular
+      expect(el().querySelector('[data-testid="team-schon-konto"]')).toBeNull();
+      expect(el().querySelector('input[type="email"]')).toBeNull();
       satzDirektUeberDerFrage();
     });
 
-    it('Team nach Anlass, Ort oder Saison und ohne Art (älterer Server): kein Satz', () => {
+    it('Team nach Anlass, Ort oder Saison: kein Satz', () => {
       starten('Code123');
       pruefen({ einloesbar: true, team: team({ art: 'anlass' }) });
 
@@ -134,10 +143,17 @@ describe('EinladungComponent mit Team', () => {
       );
     });
 
+    it('ohne Art (älterer Server), neues Konto: kein Satz', () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team() });
+      expect(el().querySelector('[data-testid="team-gruppe"]')).toBeNull();
+    });
+
     it('angemeldet ohne Art: kein Satz', () => {
       starten('Code123');
       pruefen({ einloesbar: true, team: team() }, true);
 
+      expect(el().querySelector('[data-testid="team-schon-konto"]')).toBeNull();
       expect(el().querySelector('[data-testid="team-gruppe"]')).toBeNull();
     });
   });

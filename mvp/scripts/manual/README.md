@@ -165,6 +165,14 @@ Kennung an Saetzen in fremden Einwuerfen durch einen Platzhalter mit dem Anzeige
 „ehemalige Person“. Ablauf, Reihenfolge und Fallen stehen in `docs/LOESCHKONZEPT.md`;
 dort steht auch der Aufruf. Getestet in `tests/integration/test_loeschkommando.py`.
 
+## Team umbenennen (im PostgreSQL-Container)
+
+`team_umbenennen.sql` – **schreibend.** Benennt ein Team in allen Saisons um, an
+Einladungen, Mitgliedschaften und Nummernzaehler zugleich, etwa wenn eine Gruppe ihre
+Zustimmung zu einem Team nach Gruppe widerruft (GLOSSARY „Team“). Die Einladungen werden
+dabei zu einem Team nach Anlass, Ort oder Saison, das Datum der Zustimmung geleert.
+Aufruf im Kopf des Skripts. Getestet in `tests/integration/test_teams.py`.
+
 ## Kennungen auf den Realm umstellen (im semantic-search-Container)
 
 `kennungen_umstellen.py [--ausfuehren] [--konten-anlegen DATEI] [--beta-zugaenge DATEI] [--liste NAME=K1,K2] [--loeschliste K1,K2]` –

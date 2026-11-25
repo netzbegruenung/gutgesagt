@@ -1,8 +1,9 @@
 """
 Teams ueber Einladungen (GLOSSARY.md "Team").
 
-Ein Admin gibt einer Einladung einen Teamnamen (nur Anlass, Ort oder Saison), ein
-Motiv und eine Saison. Wer den Link oeffnet, sieht das Team und die voraussichtliche
+Ein Admin gibt einer Einladung einen Teamnamen (nach Anlass, Ort oder Saison oder, als
+Team nach Gruppe, nach einer Gruppe mit schriftlicher Zustimmung), ein Motiv und eine
+Saison. Wer den Link oeffnet, sieht das Team und die voraussichtliche
 Nummer. Gespeichert wird die Mitgliedschaft erst nach dem Knopf "Ja, speichert, dass
 ich im Team X bin" (Einwilligung, domain/teams.py), mit Kennung des Wortlauts und
 Zeitpunkt; bei Nein bleibt es beim Zaehlen an der Einladung wie bisher:

@@ -314,9 +314,10 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   `teams_oeffentlich` (eigene Obergrenze `SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV`, nicht an die
   Abzeichen gekoppelt), beide Standard aus; die Anzeige am Namen bleibt aus, bis der
   Datenschutzbeauftragte geraten hat. Teamnamen nach Anlass, Ort oder Saison oder, als Team
-  nach Gruppe, nach einer öffentlich auftretenden Gruppe mit vorheriger schriftlicher,
-  widerruflicher Zustimmung der Gruppenleitung (Tag der Zustimmung an der Einladung, nur für
-  Admins; nach Widerruf wird das Team umbenannt); die Gruppe bekommt nie Namen, Listen oder
+  nach Gruppe, nach einer Gruppe, die öffentlich unter diesem Namen auftritt, mit vorheriger
+  schriftlicher, widerruflicher Zustimmung der Gruppenleitung (Tag der Zustimmung an der
+  Einladung, nur für Admins; nach Widerruf wird das Team umbenannt,
+  `mvp/scripts/manual/team_umbenennen.sql`); die Gruppe bekommt nie Namen, Listen oder
   eigene Zahlen und steuert nichts; keine Namen, die eine weitere besondere Kategorie erkennen
   lassen (Hinweis im Admin-Formular, GLOSSARY „Team“). Keine Nummer am Namen.
 

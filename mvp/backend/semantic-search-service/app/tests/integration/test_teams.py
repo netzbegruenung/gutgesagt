@@ -45,6 +45,7 @@ LOESCHSKRIPT = (
     postgres.REPO_WURZEL / "mvp" / "scripts" / "manual" / "person_loeschen.sql"
 )
 MIGRATION = postgres.MIGRATIONEN / "2026-11-25-teams.sql"
+UMBENENNEN = postgres.REPO_WURZEL / "mvp" / "scripts" / "manual" / "team_umbenennen.sql"
 MIGRATION_NACH_GRUPPE = postgres.MIGRATIONEN / "2026-11-26-teams-nach-gruppe.sql"
 GRUPPE = Team(
     "Netzfeuerwehr",
@@ -430,3 +431,50 @@ def test_migration_nach_gruppe_setzt_vorhandene_teams_auf_anlass(postgres_url):
                 ).all()
             )
         assert zeilen == {"mit-team": "anlass", "ohne-team": None}
+
+
+def _umbenennen(db, alt: str, neu: str) -> None:
+    """Das Skript Anweisung fuer Anweisung, wie psql mit -v alt=... -v neu=..."""
+    skript = UMBENENNEN.read_text(encoding="utf-8")
+    with db.engine.connect().execution_options(isolation_level="AUTOCOMMIT") as c:
+        for anweisung in postgres.anweisungen(skript):
+            anweisung = anweisung.replace(":'alt'", ":alt").replace(":'neu'", ":neu")
+            assert ":'" not in anweisung and "\\" not in anweisung, anweisung
+            c.execute(text(anweisung), {"alt": alt, "neu": neu})
+
+
+def test_umbenennen_nach_widerruf_an_allen_drei_stellen(db):
+    einladungen, teams = _dienste(db)
+    gruppe = _teamlink(einladungen, team=GRUPPE)
+    andere = _teamlink(einladungen)
+    einladungen.beitreten(gruppe, "konto-a", heute=HEUTE)
+    einladungen.beitreten(gruppe, "konto-b", heute=HEUTE)
+    einladungen.beitreten(andere, "konto-a", heute=HEUTE)
+
+    _umbenennen(db, "Netzfeuerwehr", "Team Herbst 2026")
+    _umbenennen(db, "Netzfeuerwehr", "Team Herbst 2026")
+
+    e = einladungen.nach_code(gruppe)
+    assert (e.team_name, e.team_art, e.team_zustimmung_am) == (
+        "Team Herbst 2026",
+        "anlass",
+        None,
+    )
+    namen = sorted(m.team_name for m in teams.meine("konto-a"))
+    assert namen == ["BDK 26 Berlin", "Team Herbst 2026"]
+    [b] = teams.meine("konto-b")
+    assert (b.team_name, b.nummer) == ("Team Herbst 2026", 2)
+    # Der Zaehler zieht mit: die naechste Nummer setzt fort, nichts wird neu vergeben
+    _, c, _ = einladungen.beitreten(gruppe, "konto-c", heute=HEUTE)
+    assert c.nummer == 3
+    # Das andere Team bleibt unberuehrt
+    assert einladungen.nach_code(andere).team_name == "BDK 26 Berlin"
+    with db.engine.connect() as c:
+        assert (
+            c.execute(
+                text(
+                    "SELECT count(*) FROM team_nummern WHERE team_name = 'Netzfeuerwehr'"
+                )
+            ).scalar()
+            == 0
+        )

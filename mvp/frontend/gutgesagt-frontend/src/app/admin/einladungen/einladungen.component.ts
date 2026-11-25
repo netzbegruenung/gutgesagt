@@ -93,8 +93,10 @@ export class EinladungenComponent implements OnInit {
   teamArt: TeamArt = 'anlass';
   /** Bei „Team nach Gruppe“ Pflicht: Tag der schriftlichen Zustimmung (JJJJ-MM-TT), nicht in der Zukunft. */
   teamZustimmungAm = '';
-  /** Höchstes erlaubtes Datum der Zustimmung: heute. */
-  readonly heute = inTagen(0);
+  /** Höchstes erlaubtes Datum der Zustimmung: heute nach UTC, wie der Server prüft (heute_utc). */
+  get heute(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
   /** Vorschlag aus der Admin-Einstellung „aktuelle Saison“, bis jemand selbst etwas einträgt. */
   teamSaison = '';
   private saisonVorschlag = '';
