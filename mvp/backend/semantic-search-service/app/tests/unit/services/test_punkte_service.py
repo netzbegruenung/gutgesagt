@@ -311,6 +311,32 @@ async def test_punkte_im_zeitraum_zaehlen_nur_tage_der_saison():
     assert quellen.ausgenommen == {KIM, START}
 
 
+async def test_quest_punkte_im_zeitraum_nur_nach_ihrem_tag():
+    """Saisonpunkte (#793) mit Team-Quests (#792): nur Quest-Tage in der Saison."""
+    heute = JETZT.date()
+    von, bis = heute - timedelta(days=10), heute
+    quellen = _QuellenImZeitraum([], nutzung={})
+    quest_tage = lambda user_id, erstellt, grenze: {  # noqa: E731
+        heute - timedelta(days=3): 1,
+        heute - timedelta(days=20): 1,
+    }
+    settings = Settings(
+        startkonten=START, punkte_quest=4, punkte_deckel_quests_je_tag=8
+    )
+    dienst = PunkteService(
+        quellen.sichtbare_beitraege,
+        quellen,
+        quellen,
+        settings,
+        jetzt=lambda: JETZT,
+        eingewilligt=lambda user_id: True,
+        quest_tage=quest_tage,
+    )
+
+    assert (await dienst.punkte(KIM, (von, bis))).quests == 4
+    assert (await dienst.punkte(KIM)).quests == 8
+
+
 async def test_punkte_ohne_zeitraum_fragen_die_gesamtzahlen():
     beitrag = _beitrag(10)
     quellen = _QuellenImZeitraum([beitrag], nutzung={beitrag.id: 1}, zustimmungen=1)
