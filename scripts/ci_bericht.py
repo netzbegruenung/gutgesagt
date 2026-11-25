@@ -152,11 +152,15 @@ def fehlerzeilen(ausgabe: str) -> list[str]:
         elif _KARMA_FEHLER.match(zeile):
             treffer.append(zeile)
             grund = []
-            for weiter in zeilen[i + 1 :]:
-                if not weiter.startswith("\t") or len(grund) == KARMA_GRUNDZEILEN:
+            j = i + 1
+            while j < len(zeilen) and len(grund) < KARMA_GRUNDZEILEN:
+                weiter = zeilen[j]
+                if not weiter.startswith("\t"):
                     break
-                if not weiter.strip().startswith("at "):
+                # Karma rueckt den Stack mit Tab und vier Leerzeichen ein ("\t    at …")
+                if not weiter.lstrip("\t").startswith("    at "):
                     grund.append(weiter)
+                j += 1
             treffer.extend(grund)
     return treffer
 
@@ -232,7 +236,7 @@ def bericht_erstellen(
         teile = [kopf]
         for s in rot:
             ausgabe = bereinigt[s.name]
-            # Ohne FAILED/ERROR-Zeilen die Zusammenfassung von Karma, dotnet, Ruff ...
+            # Ohne Fehlerzeilen die Zusammenfassung von Karma (kein roter Spec), dotnet, Ruff ...
             fehler = fehlerzeilen(ausgabe) or _nicht_leer(ausgabe)[-1:]
             sichtbar = min(FEHLERZEILEN_JE_SCHRITT, zeilen)
             weitere = len(fehler) - sichtbar

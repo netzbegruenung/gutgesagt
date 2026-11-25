@@ -198,6 +198,36 @@ def test_fehlerzeilen_karma_grund_hoechstens_zwei_zeilen_und_nur_eingerueckt():
     ]
 
 
+def test_fehlerzeilen_karma_behaelt_einen_grund_der_mit_at_beginnt():
+    ausgabe = (
+        "Chrome Headless 156.0.0.0 (Linux x86_64) A b FAILED\n"
+        "\tat least one item expected\n"
+        "\t    at <Jasmine>\n"
+    )
+
+    assert ci_bericht.fehlerzeilen(ausgabe)[1:] == ["\tat least one item expected"]
+
+
+def _karma_rot(spec, ms, sekunden):
+    browser = "Chrome Headless 156.0.0.0 (Linux x86_64)"
+    return (
+        f"{browser}: Executed 1 of 9 SUCCESS (0 secs / {sekunden} secs)\n"
+        f"{browser} {spec} FAILED\n"
+        f"\tError: Timeout - Async function did not complete within {ms}ms\n"
+        f"{browser}: Executed 9 of 9 (1 FAILED) (0 secs / {sekunden + 7} secs)\n"
+        "TOTAL: 1 FAILED, 8 SUCCESS\n"
+    )
+
+
+def test_fingerabdruck_karma_gleicher_spec_gleich_anderer_spec_anders():
+    def abdruck(ausgabe):
+        return ci_bericht.fingerabdruck([schritt("frontend", 1, ausgabe)], [])
+
+    erster = abdruck(_karma_rot("Sharepic malt ein PNG", 5000, 24))
+    assert erster == abdruck(_karma_rot("Sharepic malt ein PNG", 5000, 31))
+    assert erster != abdruck(_karma_rot("Feier spielt den Ton", 5000, 24))
+
+
 def test_bericht_erstellen_zeigt_failed_zeilen_vor_captured_log():
     ausgabe = (
         "---- Captured log call ----\n"
