@@ -438,7 +438,8 @@ ART9_EINWILLIGUNG_FEHLT = "art9_einwilligung_fehlt"
 # Dasselbe ohne Zustimmung zu den Nutzungsbedingungen in der App (dependencies.py).
 NUTZUNGSBEDINGUNGEN_FEHLEN = "nutzungsbedingungen_fehlen"
 # Rate-Limit des Dienstes fuer addCommentary: 10 je Minute, 100 je Stunde
-# (main.py, middleware/rate_limit.py). Nach einer Ablehnung eine Minute warten.
+# (main.py, middleware/rate_limit.py); Startkonten sind ausgenommen. Nach einer
+# Ablehnung eine Minute warten.
 WARTEN_NACH_LIMIT = 61
 VERSUCHE_BEI_LIMIT = 3
 

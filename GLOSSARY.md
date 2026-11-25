@@ -690,7 +690,7 @@ Die Kommentare zu häufigen Aussagen, die das Gründungsteam vor dem Start schre
 _Avoid_: Seed, Grundbestand, Demo-Inhalt
 
 **Startkonto**:
-Ein Beta-Zugang, unter dem das Gründungsteam den Startbestand schreibt, damit er nicht von einer einzigen Person zu kommen scheint. Admins kennen die Person dahinter. Ein Startkonto vergibt keine Stimmen und keine Nutzung und sammelt keine Punkte: Seine Nutzung wird gar nicht gezählt, seine Stimmen stehen in keinem Zähler und bringen keine Punkte. Ein Startkonto ist ein Funktionskonto, keine Person: Sein Anzeigename ist der volle Name aus der Anmeldung, nicht Vorname und Initial. Welche Beta-Zugänge Startkonten sind, steht in der Konfiguration.
+Ein Beta-Zugang, unter dem das Gründungsteam den Startbestand schreibt, damit er nicht von einer einzigen Person zu kommen scheint. Admins kennen die Person dahinter. Ein Startkonto vergibt keine Stimmen und keine Nutzung und sammelt keine Punkte: Seine Nutzung wird gar nicht gezählt, seine Stimmen stehen in keinem Zähler und bringen keine Punkte. Vom Tagesdeckel und vom Rate-Limit beim Anlegen ist es ausgenommen, damit der Startbestand per Import in einem Zug hineinkommt. Ein Startkonto ist ein Funktionskonto, keine Person: Sein Anzeigename ist der volle Name aus der Anmeldung, nicht Vorname und Initial. Welche Beta-Zugänge Startkonten sind, steht in der Konfiguration.
 _Avoid_: Persona, Sammelkonto, Redaktionskonto, Bot
 
 **Art.-9-Einwilligung**:

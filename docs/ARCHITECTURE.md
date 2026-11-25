@@ -334,6 +334,9 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
 - `SEMANTIC_SEARCH_TAGESDECKEL_BEITRAEGE` - Tagesdeckel (GLOSSARY.md): Beiträge, Aussagen and
   Einwürfe a person may create per UTC day (default 20; admins and Startkonten exempt). Above it
   the creating routes answer 429 with `"error": "TAGESDECKEL"` (`middleware/tagesdeckel.py`).
+- `SEMANTIC_SEARCH_ANLEGE_RATE_LIMIT_JE_MINUTE` / `_JE_STUNDE` - rate limit per person on the
+  creating routes (`middleware/rate_limit.py`, default 10 / 100). Startkonten are exempt (import
+  of the Startbestand), admins are not. Above it: 429 `"error": "TOO_MANY_REQUESTS"`.
 - `SEMANTIC_SEARCH_<LIMIT>_RATE_LIMIT_ANFRAGEN` - requests per window of the rate limits without
   login, counted per Anschluss (`utils/rate_limiter.py`). In a venue WLAN all visitors share one
   address, so operations raise them there. `<LIMIT>` and default: `AEHNLICHE_AUSSAGEN` 60 and

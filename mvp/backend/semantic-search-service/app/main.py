@@ -353,8 +353,9 @@ from middleware.rate_limit import RateLimitMiddleware
 
 app.add_middleware(
     RateLimitMiddleware,
-    requests_per_minute=10,  # Max 10 requests per minute per user
-    requests_per_hour=100,  # Max 100 requests per hour per user
+    # Je Person, aus der Umgebung (core/config.py); Startkonten sind ausgenommen.
+    requests_per_minute=settings.anlege_rate_limit_je_minute,
+    requests_per_hour=settings.anlege_rate_limit_je_stunde,
 )
 
 # Tagesdeckel (middleware/tagesdeckel.py): nach dem Rate-Limit eingetragen und damit
