@@ -132,7 +132,7 @@ SPIEL_SCHALTER = (
             "nur als Summe und nie, von wem."
         ),
         einschalt_hinweis=(
-            "Vor dem Einschalten auf Prod: DSFA-Nachtrag V31 beschlossen (docs/DSFA.md)"
+            "Vor dem Einschalten auf Prod: DSFA-Nachtrag V31 beschlossen"
         ),
     ),
     Schalterart(
@@ -144,7 +144,7 @@ SPIEL_SCHALTER = (
             "Autorin sieht nur die Summe je Beitrag. Bringt keine Punkte."
         ),
         einschalt_hinweis=(
-            "Vor dem Einschalten auf Prod: DSFA-Nachtrag V31 beschlossen (docs/DSFA.md)"
+            "Vor dem Einschalten auf Prod: DSFA-Nachtrag V31 beschlossen"
         ),
         oeffentlich=True,
     ),

@@ -58,12 +58,14 @@ def test_kein_schalter_fuer_team_fortschritt_und_team_quests():
 
 @pytest.mark.parametrize("name", list(ERWARTET))
 def test_obergrenze_von_haus_aus_aus(name):
+    """Der Standard im Code, unabhaengig von der Umgebung der Entwicklerin."""
     dienst = _dienst({name: True, "danke_knopf": True, "punkte": True})
+    aus = Settings(**{SCHALTER[name].feld: False})
 
-    assert getattr(Settings(), SCHALTER[name].feld) is False
-    assert dienst.wirksam(name, Settings()) is False
+    assert Settings.model_fields[SCHALTER[name].feld].default is False
+    assert dienst.wirksam(name, aus) is False
     with pytest.raises(ObergrenzeAus):
-        dienst.setzen(name, True, "admin-1", Settings())
+        dienst.setzen(name, True, "admin-1", aus)
 
 
 @pytest.mark.parametrize("name", list(ERWARTET))
@@ -89,7 +91,7 @@ def test_rangliste_nur_mit_punkten():
 
 
 def test_einschalt_hinweise_laut_issue():
-    stand = {s.name: s for s in _dienst({}).stand(Settings())}
+    stand = {s.name: s for s in _dienst({}).stand(ALLE_AN)}
 
     assert "V31" in stand["wirkungs_echo"].dsfa_hinweis
     assert "V31" in stand["danke_knopf"].dsfa_hinweis
