@@ -287,6 +287,11 @@ describe('DatenschutzComponent', () => {
 
       expect(text).toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
       expect(text).toContain('nichts ist vorausgewählt');
+      // Mit Schalter einwilligung_im_gewinn auch als Frage mit zwei Knöpfen (#788, Jura 25.11.)
+      expect(text).toContain(
+        'Du gibst sie selbst unter „Meine Beiträge“ (Häkchen oder Frage mit zwei gleichwertigen Knöpfen) ' +
+          'oder mit einem eigenen Häkchen in den „Datenschutz-Einstellungen“',
+      );
       expect(text).toContain('Ohne sie kannst du genauso beitragen und bewerten');
       expect(text).toContain('jederzeit in den „Datenschutz-Einstellungen“ widerrufen; danach wird nichts mehr berechnet');
       expect(text).not.toContain('Bevor wir Punkte einschalten');
@@ -544,6 +549,15 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('sehen je Team nur, wie viele dabei sind, keine Namen und keine Liste');
     });
 
+    it('Teams: auch nach einer Gruppe, die zugestimmt hat; die Gruppe bekommt keine Daten', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Manche Einladungen gehören zu einem Team, etwa einem Treffen, einem Ort oder einer Gruppe, die zugestimmt hat. Die Gruppe bekommt keine Daten über dich.'
+      );
+      expect(text).not.toContain('etwa einem Treffen oder einem Ort.');
+    });
+
     it('Teams: eigene Einwilligung nach Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a, getrennt von den anderen', () => {
       const text = abschnitt('Teams');
 
@@ -570,12 +584,12 @@ describe('DatenschutzComponent', () => {
       );
     });
 
-    it('Teams: die Team-Summe mit derselben Einwilligung, noch nicht eingeschaltet (25.11.2026)', () => {
+    it('Teams: die Team-Summe mit derselben Einwilligung, mit Kommentaren und „Ja, gepostet“, noch nicht eingeschaltet (26.11.2026)', () => {
       const text = abschnitt('Teams').replace(/\s+/g, ' ');
 
       expect(text).toContain(
         'Diese Anzeige am Namen ist noch nicht eingeschaltet. ' +
-          'Mit derselben Einwilligung darf die Zahl deiner Beiträge und Bewertungen in eine Summe deines Teams eingehen. ' +
+          'Mit derselben Einwilligung darf die Zahl deiner Beiträge, Bewertungen und Kommentare und deiner Meldungen „Ja, gepostet“ in eine Summe deines Teams eingehen. ' +
           'Diese Summe sehen nur Mitglieder des Teams, nur für abgeschlossene Wochen, erst wenn mindestens fünf ' +
           'Mitglieder eingewilligt haben, gerundet und nie mit einzelnen Namen. Die Team-Summe ist noch nicht eingeschaltet.'
       );

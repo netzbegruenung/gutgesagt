@@ -29,6 +29,8 @@ from services.antwort_auf import als_antwort_verknuepfen
 from services.aussage_themen_service import AussageThemenService
 from services.content.statement_service import StatementService
 from core.fehler import INTERNER_FEHLER, UNGUELTIGE_ANFRAGE, Validierungsfehler
+from domain.team_fortschritt import Art as TeamArt
+from services.team_fortschritt_service import team_zaehlen_async
 
 router = APIRouter()
 
@@ -117,6 +119,8 @@ async def add_image(
         )
 
         image_id = await image_service.add(entry)
+        # Zaehlt fuer die Teams der Person (Team-Fortschritt, #784).
+        await team_zaehlen_async(x_user, TeamArt.BEITRAG, str(image_id))
         antwort_auf = await als_antwort_verknuepfen(
             request,
             image_id,

@@ -9,6 +9,7 @@ import { STIL_LABEL, Stil } from '../shared/zweck-stil';
 import type { BeitragAnsicht } from '../services/content.service';
 import type { Thema } from '../services/dtos/themenDtos';
 import type { TeamAmNamen } from '../shared/teams/teams';
+import type { AndereTonlage } from './karten-aktionen/kopiert-erfolg';
 
 /**
  * Was eine Beitragskarte anzeigt, unabhaengig davon, woher die Daten kommen.
@@ -196,6 +197,11 @@ export interface KartenDaten {
   guete?: KartenGuete;
   extra?: KartenExtra;
   einwurfAngaben?: EinwurfAngaben;
+  /**
+   * Eine Antwort zur selben Aussage in anderem Stil, fuer den Hinweis nach dem Kopieren
+   * (#785); nur auf der Ergebnisseite gesetzt (result-view/andere-tonlage.ts), fehlt = keiner.
+   */
+  andereTonlage?: AndereTonlage | null;
 }
 
 // Suchergebnis und /recent

@@ -372,20 +372,35 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   answers 404. `GET /api/v1/teams/meine` answers 404 only when the person has no Mitgliedschaft;
   existing ones are still listed (`teams_aktiv: false`, no public toggle) so that leaving a team
   stays as easy as joining (Art. 7(3) GDPR). While on:
-  - Admin: `GET /api/v1/einladungen` adds `team` `{name, motiv, saison, mitglieder}` per
-    invitation (`mitglieder` is only a count; no member list, export or API on other people's
-    memberships exists, admins included), plus `teams_aktiv`, `aktuelle_saison`, `motive` and
-    `teamname_hinweis`; `POST` and `PATCH /api/v1/einladungen` accept `team_name` (at most 40
-    characters, requires `team_motiv`), `team_motiv` (one of the Meilenstein motifs) and
-    `team_saison` (at most 20, default the current Saison).
+  - Admin: `GET /api/v1/einladungen` adds `team` `{name, motiv, saison, art, zustimmung_am,
+    mitglieder}` per invitation (`mitglieder` is only a count; no member list, export or API on
+    other people's memberships exists, admins included), plus `teams_aktiv`, `aktuelle_saison`,
+    `motive` and `teamname_hinweis`; `POST` and `PATCH /api/v1/einladungen` accept `team_name`
+    (at most 40 characters, requires `team_motiv`), `team_motiv` (one of the Meilenstein motifs),
+    `team_saison` (at most 20, default the current Saison), `team_art` (`anlass`, the default,
+    or `gruppe`, GLOSSARY.md "Team") and `team_zustimmung_am` (date the written consent of the
+    group's leadership was given; required with `gruppe`, not in the future, rejected with
+    `anlass`). Stored at the invitation (`einladungen.team_art`, `team_zustimmung_am`,
+    migration `2026-11-26-teams-nach-gruppe.sql`) as evidence for admins only, no names; the
+    Mitgliedschaft carries neither. A `PATCH` with `team_name` replaces the whole team: without
+    `team_art` it becomes `anlass` and the date is cleared, like a missing `team_motiv` is
+    rejected. With `gruppe` the team name is exactly the group's public name (no place or
+    year, the Saison is separate); the greeting uses it as {gruppe}. Renaming a team
+    everywhere (invitations, memberships, number counter) after a group withdraws its
+    consent: `mvp/scripts/manual/team_umbenennen.sql`, only into a neutral name (requires
+    `-v art=anlass`, aborts otherwise; renaming into another group needs new consent of the
+    members).
   - Redeeming: `POST /api/v1/einladungen/pruefen` returns `team` with the greeting, the next
-    number and the consent wording `team-2026-11-25` plus both button texts. For a logged-in
+    number, `art` (with `gruppe` the greeting shows the sentence that the team is named after the
+    group with its consent; `zustimmung_am` is never sent here) and the consent wording
+    `team-2026-11-26` plus both button texts. For a logged-in
     member it returns `team` with `eigene_nummer` even when the invitation is no longer
     redeemable ("schon dabei"); everyone else gets no team then.
     `POST /api/v1/einladungen/einloesen` stores a Mitgliedschaft only with
-    `team_einwilligung: true` plus `team_einwilligung_kennung` (the wording id shown; unknown or
-    missing: 422) and only when Keycloak creates a new account. The stored id is the one shown,
-    not the current one.
+    `team_einwilligung: true` plus `team_einwilligung_kennung` (the wording id shown; unknown, earlier
+    or missing: 422) and only when Keycloak creates a new account. New consents accept only the
+    ids in `EINWILLIGUNG_GELTEND` (the current one); earlier ids stay in `EINWILLIGUNG_WORTLAUTE`
+    for existing memberships, which keep them.
   - Joining while logged in: `POST /api/v1/einladungen/beitreten` `{code, einwilligung: true,
     einwilligung_kennung, oeffentlich?, oeffentlich_kennung?}` counts against the invitation's
     limit once; a second join returns the existing number (`neu: false`). Own rate limit per
@@ -397,6 +412,23 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   - Admin setting `aktuelle_saison` (table `einstellungen`, default the current UTC year):
     `GET /api/v1/moderation/schalter` lists it under `einstellungen`,
     `PUT /api/v1/moderation/schalter/einstellungen/{name}` `{wert}` changes it.
+- `SEMANTIC_SEARCH_TEAM_FORTSCHRITT_AKTIV` / `SEMANTIC_SEARCH_TEAM_QUESTS_AKTIV` - upper bounds
+  of the Schalter `team_fortschritt` (#784) and `team_quests` (#792), default `false`; switch on
+  only after DSFA addendum V29 and the legal OK. `team_fortschritt` works only with `teams`,
+  `team_quests` only with `team_fortschritt`. While on, the endpoints for Beiträge, Stimmen and
+  "Ja, gepostet" raise the weekly counter `team_wochen` (team, Saison, week, no Kennung), and
+  `GET /api/v1/teams/meine` carries `wirkung` (last closed week, rounded texts, from 5 members)
+  and `quest` per own team of the current Saison (`services/team_fortschritt_service.py`). The
+  first `GET /api/v1/teams/meine` of a week writes that week's quest (`team_quests`). The weekly
+  check values for deduplication live in process memory, so this assumes one uvicorn worker
+  (as "Ja, gepostet" does); a restart mid-week can count something twice (too high, never too
+  low). `team_wochen` and `team_quests` go with the team (docs/LOESCHKONZEPT.md). Deleting a
+  team does not exist yet (invitations can only be switched off or changed, memberships go one
+  by one); when it comes, the rows must go with it via `TeamFortschrittRepository.team_loeschen`
+  (pass the caller's session to keep one transaction).
+  `tests/unit/test_team_loeschung_nimmt_zaehler_mit.py` fails on Python, SQL and shell code that
+  deletes `einladungen` or `team_nummern` in the usual forms without them (not on table names
+  built at run time).
 - `SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV` - upper bound of the Schalter `teams_oeffentlich`
   (default `false`; stays off on production until the data protection officer has advised).
   Own bound, deliberately not coupled to `SEMANTIC_SEARCH_ABZEICHEN_SICHTBAR_AKTIV`; works only

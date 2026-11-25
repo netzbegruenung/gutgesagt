@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, Tuple, TYPE_CHECKING
 from fastapi import Depends, Header, HTTPException
 
 if TYPE_CHECKING:
@@ -280,6 +280,29 @@ def get_unbeantwortete_aussagen_service(
     return UnbeantworteteAussagenService(statement_service, suchen_ohne_treffer, themen)
 
 
+# Wie viele Aussagen hoechstens fuer den Bedarf der Team-Quests gelesen werden.
+TEAM_BEDARF_HOECHSTENS = 5000
+
+
+async def team_bedarf() -> Tuple[Optional[str], int]:
+    """
+    Der Bedarf fuer die Team-Quests (#792): das Thema mit den meisten Aussagen aus "Hier
+    fehlt eine Antwort" und deren Zahl. Solange es kein Wochenthema gibt, gilt dieses
+    Thema. Die Dienste erst beim Aufruf geholt, einmal je Woche
+    (services/team_fortschritt_service.py).
+    """
+    from services.team_fortschritt_service import bedarf_aus
+
+    statement_service = get_statement_service()
+    dienst = get_unbeantwortete_aussagen_service(
+        statement_service,
+        get_suchen_ohne_treffer_service(statement_service),
+        get_aussage_themen_service(statement_service),
+    )
+    liste = await dienst.liste(limit=TEAM_BEDARF_HOECHSTENS)
+    return bedarf_aus(a.themen for a in liste)
+
+
 def get_feedback_service() -> FeedbackService:
     return FeedbackService(get_feedback_repository())
 
@@ -308,12 +331,15 @@ def get_punkte_service(
 ) -> PunkteService:
     from repositories.punkte_repository import get_punkte_repository
     from repositories.usage_tracking_repository import get_usage_repository
+    from services.team_fortschritt_service import get_team_fortschritt_service
 
     return PunkteService(
         _sichtbare_beitraege(settings),
         get_usage_repository(),
         get_punkte_repository(),
         settings,
+        # Team-Quests (#792): Der Dienst fragt seinen Schalter selbst.
+        quest_tage=get_team_fortschritt_service().quest_tage,
     )
 
 

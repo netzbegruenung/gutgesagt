@@ -37,12 +37,14 @@ from api.v1.image import router as image_router
 from api.v1.einwurf import router as einwurf_router
 from api.v1.seeding import router as seeding_router
 from api.v1.usage import router as usage_router
+from api.v1.einwilligungs_moment import router as einwilligungs_moment_router
 from api.v1.voting import router as voting_router
 from api.v1.moderation import router as moderation_router
 from api.v1.vormoderation import router as vormoderation_router
 from api.v1.loeschauftraege import router as loeschauftraege_router
 from api.v1.schalter import router as schalter_router
 from api.v1.funktionen import router as funktionen_router
+from api.v1.konter_probe import router as konter_probe_router
 from api.v1.sperren import router as sperren_router
 from api.v1.health import router as health_router
 from api.v1.feedback import router as feedback_router
@@ -372,6 +374,7 @@ app.include_router(image_router, prefix="/api/v1/image", tags=["image"])
 app.include_router(einwurf_router, prefix="/api/v1/rawinput", tags=["rawinput"])
 app.include_router(seeding_router, prefix="/api/v1", tags=["seeding"])
 app.include_router(usage_router, prefix="/api/v1/usage", tags=["usage"])
+app.include_router(einwilligungs_moment_router, prefix="/api/v1/usage", tags=["usage"])
 app.include_router(voting_router, prefix="/api/v1/voting", tags=["voting"])
 app.include_router(moderation_router, prefix="/api/v1/moderation", tags=["moderation"])
 app.include_router(
@@ -389,6 +392,8 @@ app.include_router(
 )
 # Welche Funktionen hinter einem Schalter an sind (#756), ohne Anmeldung
 app.include_router(funktionen_router, prefix="/api/v1/funktionen", tags=["schalter"])
+# Konter-Probe (#786), ohne Anmeldung, nur lesend; der Tipp bleibt im Browser
+app.include_router(konter_probe_router, prefix="/api/v1/konter-probe", tags=["spiel"])
 app.include_router(sperren_router, prefix="/api/v1/sperren", tags=["moderation"])
 app.include_router(health_router, prefix="/api/v1", tags=["monitoring"])
 app.include_router(feedback_router, prefix="/api/v1/feedback", tags=["feedback"])

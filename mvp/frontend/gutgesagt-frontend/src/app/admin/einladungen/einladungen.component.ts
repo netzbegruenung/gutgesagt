@@ -21,7 +21,12 @@ import {
 import { TeamPilleComponent } from '../../shared/teams/team-pille.component';
 import {
   TEAMNAME_HINWEIS,
+  TEAM_ARTEN,
+  TEAM_GRUPPENNAME_HINWEIS,
+  TEAM_GRUPPENNAME_LABEL,
   TEAM_MOTIVE,
+  TEAM_ZUSTIMMUNG_LABEL,
+  TeamArt,
   TEAM_NAME_MAX,
   TEAM_SAISON_MAX,
   TeamMotiv,
@@ -84,6 +89,18 @@ export class EinladungenComponent implements OnInit {
   teamnameHinweis = TEAMNAME_HINWEIS;
   teamName = '';
   teamMotiv = TEAM_MOTIVE[0].schluessel;
+  /** Teamart; Standard „Team nach Anlass, Ort oder Saison“. */
+  readonly teamArten = TEAM_ARTEN;
+  readonly zustimmungLabel = TEAM_ZUSTIMMUNG_LABEL;
+  readonly gruppennameLabel = TEAM_GRUPPENNAME_LABEL;
+  readonly gruppennameHinweis = TEAM_GRUPPENNAME_HINWEIS;
+  teamArt: TeamArt = 'anlass';
+  /** Bei „Team nach Gruppe“ Pflicht: Tag der schriftlichen Zustimmung (JJJJ-MM-TT), nicht in der Zukunft. */
+  teamZustimmungAm = '';
+  /** Höchstes erlaubtes Datum der Zustimmung: heute nach UTC, wie der Server prüft (heute_utc). */
+  get heute(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
   /** Vorschlag aus der Admin-Einstellung „aktuelle Saison“, bis jemand selbst etwas einträgt. */
   teamSaison = '';
   private saisonVorschlag = '';
@@ -140,11 +157,23 @@ export class EinladungenComponent implements OnInit {
     return this.mitTeam && !teamTextGueltig(this.teamSaison, TEAM_SAISON_MAX);
   }
 
+  /** Team nach Gruppe ohne Datum der Zustimmung, oder mit einem Datum in der Zukunft. */
+  get teamZustimmungFehlt(): boolean {
+    return (
+      this.mitTeam &&
+      this.teamArt === 'gruppe' &&
+      (!/^\d{4}-\d{2}-\d{2}$/.test(this.teamZustimmungAm) || this.teamZustimmungAm > this.heute)
+    );
+  }
+
   get kannAnlegen(): boolean {
     if (!this.notiz.trim() || this.speichert) {
       return false;
     }
-    return !this.mitTeam || (!this.teamNameUngueltig && !this.teamSaisonUngueltig && !!this.teamMotiv);
+    return (
+      !this.mitTeam ||
+      (!this.teamNameUngueltig && !this.teamSaisonUngueltig && !!this.teamMotiv && !this.teamZustimmungFehlt)
+    );
   }
 
   motivBild(schluessel: string): string | null {
@@ -156,7 +185,13 @@ export class EinladungenComponent implements OnInit {
       return;
     }
     const team: EinladungTeamFelder | undefined = this.mitTeam
-      ? { team_name: this.teamName.trim(), team_motiv: this.teamMotiv, team_saison: this.teamSaison.trim() }
+      ? {
+          team_name: this.teamName.trim(),
+          team_motiv: this.teamMotiv,
+          team_saison: this.teamSaison.trim(),
+          team_art: this.teamArt,
+          ...(this.teamArt === 'gruppe' ? { team_zustimmung_am: this.teamZustimmungAm } : {}),
+        }
       : undefined;
     this.speichert = true;
     this.anlegenFehler = false;
@@ -165,6 +200,8 @@ export class EinladungenComponent implements OnInit {
         this.einladungen = [neu, ...(this.einladungen ?? [])];
         this.notiz = '';
         this.teamName = '';
+        this.teamArt = 'anlass';
+        this.teamZustimmungAm = '';
         this.speichert = false;
       },
       error: () => {

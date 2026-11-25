@@ -37,6 +37,9 @@ public static class EndpointPolicy
         // Welche Funktionen hinter einem Schalter an sind (#756): nur lesend, ohne Person.
         // Die Admin-Seite der Schalter liegt unter /api/v1/moderation/schalter.
         "/api/v1/funktionen",
+        // Konter-Probe (#786): Proben fuer das Spiel ohne Konto, nur lesend; der Tipp
+        // bleibt im Browser. Hinter dem Schalter konter_probe, aus antwortet sie mit 404.
+        "/api/v1/konter-probe",
         "/api/v1/moderation/report",     // anonyme Meldung (DSA Art. 16)
         // Feedback an das Team, auch von Besuchern. Nur das Senden: die Liste unter
         // /api/v1/feedback ist admin-only und bleibt hinter dem Gate.

@@ -60,6 +60,7 @@ export const PAGE_TITLES = {
   AUSFORMULIEREN: 'Ausformulieren',
   HIER_FEHLT_EINE_ANTWORT: 'Hier fehlt eine Antwort',
   VARIANTEN: 'Varianten',
+  KONTER_PROBE: 'Konter-Probe',
   BEITRAG: 'Beitrag',
   SHARE_TARGET: 'Geteilter Inhalt',
   // Typnamen aus der Registry
@@ -99,6 +100,7 @@ export const ROUTES = {
   DESTILLIEREN: '/destillieren',
   HIER_FEHLT_EINE_ANTWORT: '/hier-fehlt-eine-antwort',
   VARIANTEN: '/varianten',
+  KONTER_PROBE: '/konter-probe',
   BEITRAG: '/beitrag',
   SHARE_TARGET: '/teilen',
   LOGIN: '/login',

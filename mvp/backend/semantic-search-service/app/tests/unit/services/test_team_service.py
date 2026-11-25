@@ -16,6 +16,7 @@ from core.config import Settings
 from domain.interfaces.konten_im_realm import KontoErgebnis
 from domain.teams import (
     EINWILLIGUNG_KENNUNG,
+    EINWILLIGUNG_WORTLAUTE,
     OEFFENTLICH_KENNUNG,
     UnbekannterWortlaut,
 )
@@ -148,15 +149,24 @@ class TestBeitreten:
             code=CODE,
         )
 
-    def test_speichert_die_gezeigte_kennung(self, team_repo, monkeypatch):
-        # Neuer Wortlaut, alte Seite noch offen: gespeichert wird der gezeigte.
-        import domain.teams as domain_teams
-
-        monkeypatch.setitem(domain_teams.EINWILLIGUNG_WORTLAUTE, "team-alt", "alt")
-        _teams(team_repo).beitreten("konto-1", TEAM, einwilligung_kennung="team-alt")
+    def test_speichert_die_gezeigte_kennung(self, team_repo):
+        _teams(team_repo).beitreten(
+            "konto-1", TEAM, einwilligung_kennung="team-2026-11-26"
+        )
 
         kw = team_repo.beitreten.call_args.kwargs
-        assert kw["einwilligung_kennung"] == "team-alt"
+        assert kw["einwilligung_kennung"] == "team-2026-11-26"
+
+    def test_fruehere_kennung_gilt_nicht_fuer_neue_einwilligungen(self, team_repo):
+        # Neuer Wortlaut, alte Seite noch offen: Die fruehere Kennung steht noch in
+        # EINWILLIGUNG_WORTLAUTE (vorhandene Nachweise), traegt aber keine neue
+        # Einwilligung; die Person sieht beim naechsten Versuch den neuen Wortlaut.
+        assert "team-2026-11-25" in EINWILLIGUNG_WORTLAUTE
+        with pytest.raises(UnbekannterWortlaut):
+            _teams(team_repo).beitreten(
+                "konto-1", TEAM, einwilligung_kennung="team-2026-11-25"
+            )
+        team_repo.beitreten.assert_not_called()
 
     def test_unbekannte_kennung_speichert_nichts(self, team_repo):
         with pytest.raises(UnbekannterWortlaut):
