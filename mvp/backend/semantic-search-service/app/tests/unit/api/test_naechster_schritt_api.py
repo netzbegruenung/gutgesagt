@@ -139,6 +139,28 @@ def test_neue_person_bekommt_alle_ersten_schritte(werte):
     }
 
 
+def test_regel_3_haengt_nicht_an_der_einwilligung_punkte(werte):
+    # Jura 25.11.: Vorschlaege aus eigenen Stimmen braucht keine Einwilligung "Punkte und
+    # Meilensteine"; die Art.-9-Einwilligung zur Mitwirkung genuegt. Punkte sind aus, die
+    # Punkte-Einwilligung fehlt und wird nicht gefragt, Regel 3 kommt trotzdem.
+    werte["naechster_schritt"] = True
+    punkte_einwilligung = Mock()
+    punkte_einwilligung.eingewilligt.return_value = False
+    punkte_einwilligung.lesen.return_value = None
+
+    with patch(
+        "repositories.punkte_einwilligung_repository._repository", punkte_einwilligung
+    ):
+        antwort = _client(FalscheQuellen(einwuerfe=1, stimmen=1, beitraege=[])).get(
+            URL, headers=ICH
+        )
+
+    assert Settings().punkte_aktiv is False
+    assert [v["art"] for v in antwort.json()["vorschlaege"]][0] == "bewerten"
+    punkte_einwilligung.eingewilligt.assert_not_called()
+    punkte_einwilligung.lesen.assert_not_called()
+
+
 def test_kurzfassung_aus_eigenen_beitraegen(werte):
     werte["naechster_schritt"] = True
     quellen = FalscheQuellen(

@@ -17,10 +17,12 @@ Wegklicken den naechsten):
    (ADR 0004, #446). "Noch nie kopiert" naehert deshalb "noch nichts getan" an.
 2. Noch kein Einwurf -> einwerfen.
 3. Weniger als ``stimmen_mindestens`` Stimmen -> bewerten, aber nur, wenn es so viele
-   frische Antworten anderer gibt; der Satz nennt die Zahl.
+   frische Antworten anderer gibt; der Satz nennt die Zahl. Haengt nicht an der
+   Einwilligung "Punkte und Meilensteine"; die Art.-9-Einwilligung zur Mitwirkung
+   genuegt (juristische Pruefung 25.11.2026).
 4. Noch kein Beitrag -> die Aussage, die "Hier fehlt eine Antwort" zuoberst zeigt
-   (fuer alle dieselbe, nach Bedarf sortiert). Nach Thema nur mit Einwilligung in
-   Punkte und Meilensteine; das ist hier nicht gebaut.
+   (fuer alle dieselbe, nach Bedarf sortiert). Nach Thema ist hier nicht gebaut; auch
+   dafuer genuegte die Art.-9-Einwilligung (Pruefung 25.11.2026).
 5. Ein eigener Kommentar mit Nutzung, aber ohne Kurzfassung -> Kurzfassung ergaenzen
    (der meistgenutzte).
 6. Sonst die Aussage aus Regel 4 (ein Wochenziel je Team gibt es noch nicht).
