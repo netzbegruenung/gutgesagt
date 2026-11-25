@@ -1,9 +1,9 @@
-import { Component, DestroyRef, ElementRef, Injector, OnInit, ViewChild, afterNextRender, inject } from '@angular/core';
+import { Component, DestroyRef, ElementRef, Injector, OnInit, ViewChild, afterNextRender, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/router';
-import { Observable, throwError } from 'rxjs';
-import { filter, switchMap, take } from 'rxjs/operators';
+import { Observable, forkJoin, throwError } from 'rxjs';
+import { filter, shareReplay, switchMap, take } from 'rxjs/operators';
 
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { BeitragskarteComponent } from '../../beitragskarte/beitragskarte.component';
@@ -93,14 +93,24 @@ export class BeitragGespeichertComponent implements OnInit {
   readonly einwurfNichtVerknuepft = EINWURF_NICHT_MIT_NEUEM_VERKNUEPFT;
   readonly lueckeZuTitel = LUECKE_ZU;
   readonly lueckeZuAusruf = LUECKE_ZU_AUSRUF;
-  /** Schalter luecke_zu_gross (#787): „Lücke zu!“ als großer Moment; aus: der kleine Satz. */
-  readonly lueckeZuGrossAn = inject(FunktionenService).an('luecke_zu_gross');
+  private funktionen = inject(FunktionenService);
   private injector = inject(Injector);
   /**
-   * Der Beitrag ist eben gespeichert (Router-State aus dem Formular, nicht nach dem
-   * Neuladen) und der große Moment stand zu ihm noch nicht (nicht nach „Zurück“).
+   * Der Beitrag ist eben gespeichert (Router-State aus dem Formular) und der große Moment
+   * stand zu ihm noch nicht. Angular gibt den Router-State auch nach dem Neuladen und nach
+   * „Zurück“ wieder (aus history.state); dann traegt er den Vermerk lueckeZuGezeigt.
    */
   private readonly lueckeZuFrisch: boolean;
+  /**
+   * Schalter luecke_zu_gross (#787), einmal frisch vom Server gefragt: null, solange die
+   * Antwort aussteht. So springt die Seite nicht vom kleinen Satz zum großen Moment.
+   */
+  lueckeZuGrossStand: boolean | null = null;
+  /**
+   * Die Ansage des Satzes im großen Moment, in einer Live-Region, die schon vorher steht;
+   * ein Signal, damit das Setzen nach dem Rendern neu zeichnet.
+   */
+  readonly momentAnsage = signal('');
   /** Der Fokus geht einmal auf die Überschrift des großen Moments. */
   private momentFokussieren = true;
   readonly naechsteLueckeText = NAECHSTE_LUECKE;
@@ -141,9 +151,13 @@ export class BeitragGespeichertComponent implements OnInit {
   ) {
     // Der State haengt an der laufenden Navigation; nach dem Neuladen gibt es keinen.
     this.zustand = (this.router.getCurrentNavigation()?.extras.state as GespeichertZustand | undefined) ?? {};
+    // Schon hier, nicht erst in ngOnInit: lueckeZu haengt am Typ.
+    this.typ = this.route.snapshot.data?.['typ'] ?? 'commentary';
     this.lueckeZuFrisch = this.zustand.verknuepft === true && this.zustand.lueckeZuGezeigt !== true;
     if (this.lueckeZuFrisch && this.lueckeZu) {
-      this.lueckeZuGezeigtVermerken();
+      this.lueckeZuEntscheiden();
+    } else {
+      this.lueckeZuGrossStand = false;
     }
     const aussage = this.zustand.aussage;
     // Nicht verknuepft: keine "Antwort auf"-Karte - der Hinweis nennt die Aussage.
@@ -261,11 +275,16 @@ export class BeitragGespeichertComponent implements OnInit {
 
   /**
    * „Lücke zu!“ als großer Moment (#787, Schalter luecke_zu_gross): einmal je Antwort,
-   * direkt nach dem Speichern. Nach dem Neuladen fehlt der Router-State, nach „Zurück“
-   * traegt er den Vermerk; dann steht wie bisher der kleine Satz.
+   * direkt nach dem Speichern. Nach dem Neuladen oder „Zurück“ traegt der Router-State den
+   * Vermerk; dann steht wie bisher der kleine Satz.
    */
   get lueckeZuGross(): boolean {
-    return this.lueckeZu && this.lueckeZuFrisch && this.lueckeZuGrossAn();
+    return this.lueckeZu && this.lueckeZuFrisch && this.lueckeZuGrossStand === true;
+  }
+
+  /** Solange der Schalter nicht feststeht, bleibt der Kopf leer (hoechstens FUNKTIONEN_FRISCH_WARTEN_MS). */
+  get lueckeZuOffen(): boolean {
+    return this.lueckeZu && this.lueckeZuGrossStand === null;
   }
 
   get lueckeZuMomentSatz(): string {
@@ -277,7 +296,17 @@ export class BeitragGespeichertComponent implements OnInit {
   set lueckeZuMomentTitel(el: ElementRef<HTMLElement> | undefined) {
     if (el && this.momentFokussieren) {
       this.momentFokussieren = false;
-      afterNextRender(() => el.nativeElement.focus(), { injector: this.injector });
+      afterNextRender(
+        () => {
+          // Nicht wegziehen, wenn die Person den Fokus schon woanders hat
+          const aktiv = document.activeElement;
+          if (!aktiv || aktiv === document.body) {
+            el.nativeElement.focus();
+          }
+          this.momentAnsage.set(this.lueckeZuMomentSatz);
+        },
+        { injector: this.injector },
+      );
     }
   }
 
@@ -328,18 +357,23 @@ export class BeitragGespeichertComponent implements OnInit {
   }
 
   /**
-   * Vermerkt im Verlaufseintrag dieser Seite, dass der große Moment stand
-   * (mitLueckeZuGezeigt). Erst nach dem Ende der Navigation: Vorher gehoert der Eintrag
-   * womoeglich noch der vorigen Seite.
+   * Fragt den Schalter frisch und vermerkt, wenn der große Moment steht, im Verlaufseintrag
+   * dieser Seite (mitLueckeZuGezeigt). Der Vermerk erst nach dem Ende der Navigation:
+   * Vorher gehoert der Eintrag womoeglich noch der vorigen Seite.
    */
-  private lueckeZuGezeigtVermerken(): void {
-    this.router.events
-      .pipe(
-        filter((e) => e instanceof NavigationEnd),
-        take(1),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe(() => {
+  private lueckeZuEntscheiden(): void {
+    const schalter$ = this.funktionen.frisch('luecke_zu_gross').pipe(shareReplay(1));
+    schalter$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((an) => (this.lueckeZuGrossStand = an));
+    const navigationsEnde$ = this.router.events.pipe(
+      filter((e) => e instanceof NavigationEnd),
+      take(1),
+    );
+    forkJoin([schalter$.pipe(take(1)), navigationsEnde$])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(([an]) => {
+        if (!an) {
+          return;
+        }
         try {
           window.history.replaceState(mitLueckeZuGezeigt(window.history.state), '');
         } catch (error) {

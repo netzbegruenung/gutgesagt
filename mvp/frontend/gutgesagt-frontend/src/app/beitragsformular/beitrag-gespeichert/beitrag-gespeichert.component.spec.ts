@@ -1,7 +1,7 @@
-import { Component, Input, Type, forwardRef, signal } from '@angular/core';
+import { Component, Input, Type, forwardRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { Observable, of, throwError } from 'rxjs';
+import { ActivatedRoute, NavigationEnd, Router, convertToParamMap, provideRouter } from '@angular/router';
+import { NEVER, Observable, Subject, of, throwError } from 'rxjs';
 
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -56,11 +56,14 @@ describe('BeitragGespeichertComponent', () => {
   /** Was statt der echten Karte gerendert wird. */
   let karteStub: Type<unknown>;
   /** Schalter luecke_zu_gross laut /api/v1/funktionen; Standard aus. */
-  let lueckeZuGrossAn: boolean;
+  let lueckeZuGrossAn: Observable<boolean>;
+  /** Steht statt router.events, wenn ein Test das Ende der Navigation selbst meldet. */
+  let routerEvents: Subject<unknown> | null;
 
   beforeEach(() => {
     nav = {};
-    lueckeZuGrossAn = false;
+    lueckeZuGrossAn = of(false);
+    routerEvents = null;
     karteStub = BeitragskarteStubComponent;
     geladenerEinwurf = of({ id: 'e-1', ist_eigener_einwurf: true } as Einwurf);
   });
@@ -113,7 +116,7 @@ describe('BeitragGespeichertComponent', () => {
         { provide: TEILEN_NAVIGATOR, useFactory: () => nav },
         {
           provide: FunktionenService,
-          useFactory: () => ({ an: (name: string) => signal(name === 'luecke_zu_gross' && lueckeZuGrossAn) }),
+          useFactory: () => ({ frisch: (name: string) => (name === 'luecke_zu_gross' ? lueckeZuGrossAn : of(false)) }),
         },
         {
           provide: ActivatedRoute,
@@ -131,6 +134,9 @@ describe('BeitragGespeichertComponent', () => {
       .compileComponents();
 
     // Router-State wie nach router.navigate(..., { state }); ohne ihn wie nach dem Neuladen.
+    if (routerEvents) {
+      Object.defineProperty(TestBed.inject(Router), 'events', { value: routerEvents });
+    }
     spyOn(TestBed.inject(Router), 'getCurrentNavigation').and.returnValue(
       zustand ? ({ extras: { state: zustand } } as any) : null,
     );
@@ -307,11 +313,12 @@ describe('BeitragGespeichertComponent', () => {
     const aussage = { aussage: { id: 'a-1', text: 'Windkraft tötet Vögel' }, verknuepft: true };
     const vonDort = { von: 'hier-fehlt-eine-antwort', gesucht: '4' };
 
-    beforeEach(() => (lueckeZuGrossAn = true));
+    beforeEach(() => (lueckeZuGrossAn = of(true)));
 
     it('zeigt den Moment mit der Zahl, Überschrift im Fokus und „Nächste Lücke“', async () => {
       await oeffnen(vonDort, aussage);
       await fixture.whenStable();
+      fixture.detectChanges();
       const navigieren = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
 
       const moment = seite().querySelector('.luecke-zu-moment')!;
@@ -321,11 +328,11 @@ describe('BeitragGespeichertComponent', () => {
       expect(moment.querySelector('.luecke-zu-moment-satz')!.textContent!.trim()).toBe(
         '4 Personen haben nach diesem Spruch gesucht und nichts gefunden. Ab jetzt finden sie deine Antwort.',
       );
-      // Text im role="status", der Knopf daneben
-      const status = moment.querySelector('[role="status"]')!;
-      expect(status.contains(titel)).toBeTrue();
-      expect(status.querySelector('button')).toBeNull();
+      // Fokus auf die Ueberschrift, den Satz sagt die Live-Region an, die schon vorher stand
       expect(document.activeElement).toBe(titel);
+      expect(seite().querySelector('[aria-live="polite"].luecke-zu-ansage')!.textContent!.trim()).toBe(
+        '4 Personen haben nach diesem Spruch gesucht und nichts gefunden. Ab jetzt finden sie deine Antwort.',
+      );
       // Der kleine Satz und ein zweiter Knopf "Nächste Lücke" entfallen
       expect(seite().querySelector('.luecke-zu')).toBeNull();
       expect(seite().querySelectorAll('.naechste-luecke').length).toBe(1);
@@ -342,28 +349,72 @@ describe('BeitragGespeichertComponent', () => {
       );
       expect(lueckeZuMomentSatz(0)).not.toMatch(/\d/);
       expect(lueckeZuMomentSatz(1)).toBe(
-        '1 Person hat nach diesem Spruch gesucht und nichts gefunden. Ab jetzt findet sie deine Antwort.',
+        'Eine Person hat nach diesem Spruch gesucht und nichts gefunden. Ab jetzt findet sie deine Antwort.',
       );
     });
 
     it('bleibt beim kleinen Satz, wenn der Schalter aus ist', async () => {
-      lueckeZuGrossAn = false;
+      lueckeZuGrossAn = of(false);
       await oeffnen(vonDort, aussage);
       expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
       expect(seite().querySelector('.luecke-zu-titel')!.textContent!.trim()).toBe('Lücke zu.');
     });
 
-    it('steht einmal je Antwort: nicht nach dem Neuladen und nicht nach „Zurück“', async () => {
-      // Neuladen: kein Router-State
-      await oeffnen(vonDort);
-      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
-      expect(seite().querySelector('.luecke-zu')).not.toBeNull();
-
-      // Zurück: der Router-State traegt den Vermerk
-      TestBed.resetTestingModule();
+    it('steht einmal je Antwort: Neuladen und „Zurück“ bringen den Vermerk mit', async () => {
+      // Angular gibt den Router-State samt Vermerk aus history.state wieder
       await oeffnen(vonDort, { ...aussage, lueckeZuGezeigt: true });
       expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
       expect(seite().querySelector('.luecke-zu')).not.toBeNull();
+
+      // Ganz ohne Router-State (etwa ein neuer Tab): ebenso der kleine Satz
+      TestBed.resetTestingModule();
+      await oeffnen(vonDort);
+      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
+      expect(seite().querySelector('.luecke-zu')).not.toBeNull();
+    });
+
+    it('vermerkt den Moment nach dem Ende der Navigation im Verlaufseintrag', async () => {
+      routerEvents = new Subject<unknown>();
+      const ersetzen = spyOn(window.history, 'replaceState');
+      await oeffnen(vonDort, aussage);
+      expect(ersetzen).not.toHaveBeenCalled();
+
+      routerEvents.next(new NavigationEnd(1, '/x', '/x'));
+      expect(ersetzen).toHaveBeenCalledTimes(1);
+      expect(ersetzen.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ lueckeZuGezeigt: true }));
+    });
+
+    it('vermerkt nichts, wenn der Schalter aus ist', async () => {
+      lueckeZuGrossAn = of(false);
+      routerEvents = new Subject<unknown>();
+      const ersetzen = spyOn(window.history, 'replaceState');
+      await oeffnen(vonDort, aussage);
+      routerEvents.next(new NavigationEnd(1, '/x', '/x'));
+      expect(ersetzen).not.toHaveBeenCalled();
+    });
+
+    it('springt nicht: solange der Schalter aussteht, bleibt der Kopf leer', async () => {
+      lueckeZuGrossAn = NEVER;
+      await oeffnen(vonDort, aussage);
+      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
+      expect(seite().querySelector('.luecke-zu')).toBeNull();
+      expect(seite().querySelector('.naechste-luecke')).toBeNull();
+    });
+
+    it('zieht den Fokus nicht weg, wenn er schon woanders steht', async () => {
+      const schalter = new Subject<boolean>();
+      lueckeZuGrossAn = schalter;
+      await oeffnen(vonDort, aussage);
+      const teilen = seite().querySelector('.teilen') as HTMLButtonElement;
+      document.body.appendChild(fixture.nativeElement);
+      teilen.focus();
+      schalter.next(true);
+      schalter.complete();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(seite().querySelector('.luecke-zu-moment')).not.toBeNull();
+      expect(document.activeElement).toBe(teilen);
+      fixture.nativeElement.remove();
     });
 
     it('nicht, wenn die Verknüpfung scheiterte oder es nicht von dort kam', async () => {

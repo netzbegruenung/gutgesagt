@@ -60,7 +60,7 @@ export function lueckeZuMomentSatz(personen: number): string {
     return 'Wer nach diesem Spruch sucht, findet ab jetzt deine Antwort.';
   }
   return personen === 1
-    ? '1 Person hat nach diesem Spruch gesucht und nichts gefunden. Ab jetzt findet sie deine Antwort.'
+    ? 'Eine Person hat nach diesem Spruch gesucht und nichts gefunden. Ab jetzt findet sie deine Antwort.'
     : `${personen} Personen haben nach diesem Spruch gesucht und nichts gefunden. Ab jetzt finden sie deine Antwort.`;
 }
 
