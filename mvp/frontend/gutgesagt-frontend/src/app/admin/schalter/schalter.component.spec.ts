@@ -18,6 +18,8 @@ function schalter(teil: Partial<Schalter> & { name: string }): Schalter {
     admin_wert: false,
     wirksam: false,
     dsfa_hinweis: null,
+    gruppe: 'Grundfunktionen',
+    wartet_auf_recht: false,
     ...teil,
   };
 }
@@ -98,6 +100,121 @@ describe('SchalterComponent', () => {
     expect(oeffentlich.querySelector('[data-testid="dsfa-hinweis"]')!.textContent).toContain('DSFA beschlossen');
   });
 
+  describe('Gruppen, Status und Filter (25.11.)', () => {
+    const LISTE = (): Schalter[] => [
+      schalter({ name: 'sharepic', admin_wert: true, wirksam: true }),
+      schalter({ name: 'gepostet' }),
+      schalter({ name: 'teams', gruppe: 'Teams', obergrenze: false, dsfa_hinweis: 'Rechtlich freigegeben (25.11.)' }),
+      schalter({ name: 'teams_oeffentlich', gruppe: 'Teams', obergrenze: false, dsfa_hinweis: DSFA, wartet_auf_recht: true }),
+      schalter({ name: 'punkte', gruppe: 'Punkte & Anerkennung', dsfa_hinweis: DSFA, wartet_auf_recht: true }),
+    ];
+
+    function gruppen(): HTMLElement[] {
+      return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="gruppe"]'));
+    }
+
+    function chip(text: string): HTMLButtonElement {
+      const chips = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="filter-chip"]'),
+      ) as HTMLButtonElement[];
+      return chips.find((c) => c.textContent!.trim().startsWith(text))!;
+    }
+
+    it('zeigt je Gruppe des Servers einen Abschnitt mit Überschrift und Zähler, in dessen Reihenfolge', () => {
+      laden(LISTE());
+
+      const g = gruppen();
+      expect(g.map((x) => x.querySelector('h3 span')!.textContent!.trim())).toEqual([
+        'Grundfunktionen',
+        'Teams',
+        'Punkte & Anerkennung',
+      ]);
+      expect(g[0].querySelector('[data-testid="gruppe-zaehler"]')!.textContent!.trim()).toBe('1 von 2 an');
+      expect(g[1].querySelector('[data-testid="gruppe-zaehler"]')!.textContent!.trim()).toBe('0 von 2 an');
+      // Überschriften-Hierarchie: Seite h2, Gruppe h3, Schalter h4; Abschnitt nach seiner Überschrift benannt
+      expect(g[0].getAttribute('aria-labelledby')).toBe(g[0].querySelector('h3')!.id);
+      expect(g[0].querySelectorAll('h4').length).toBe(2);
+    });
+
+    it('berechnet die Status-Pille: an, frei einschaltbar, wartet auf Recht, gesperrt (Server)', () => {
+      laden(LISTE());
+
+      const pillen = karten().map((k) => k.querySelector('[data-testid="status"]')!.textContent!.trim());
+      // teams: Hinweis steht, aber rechtlich freigegeben, und der Server sperrt ihn
+      expect(pillen).toEqual(['an', 'frei einschaltbar', 'gesperrt (Server)', 'wartet auf Recht', 'wartet auf Recht']);
+    });
+
+    it('filtert nach Status, zählt je Chip und blendet leere Gruppen aus', () => {
+      laden(LISTE());
+      expect(chip('Alle').getAttribute('aria-pressed')).toBe('true');
+      expect(chip('Wartet auf Recht').textContent).toContain('2');
+
+      chip('Wartet auf Recht').click();
+      fixture.detectChanges();
+
+      expect(chip('Wartet auf Recht').getAttribute('aria-pressed')).toBe('true');
+      expect(chip('Alle').getAttribute('aria-pressed')).toBe('false');
+      expect(karten().map((k) => k.querySelector('h4')!.textContent)).toEqual([
+        'Teams am Anzeigenamen',
+        'Punkte und Meilensteine',
+      ]);
+      expect(gruppen().length).toBe(2);
+      // Der Zähler gilt für die ganze Gruppe, nicht nur für die gefilterten
+      expect(gruppen()[0].querySelector('[data-testid="gruppe-zaehler"]')!.textContent!.trim()).toBe('0 von 2 an');
+    });
+
+    it('sagt, wenn kein Schalter zum Filter passt', () => {
+      laden([schalter({ name: 'gepostet' })]);
+      chip('Gesperrt').click();
+      fixture.detectChanges();
+
+      expect(karten().length).toBe(0);
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="filter-leer"]')!.textContent).toContain(
+        'Kein Schalter passt',
+      );
+    });
+
+    it('klappt die Details auf und zu, mit aria-expanded, und behält das beim Nachladen', () => {
+      laden(LISTE());
+      const karte = karten()[1];
+      const knopfAuf = karte.querySelector('[data-testid="aufklappen"]') as HTMLButtonElement;
+      const details = karte.querySelector('[data-testid="details"]') as HTMLElement;
+      expect(knopfAuf.getAttribute('aria-expanded')).toBe('false');
+      expect(knopfAuf.getAttribute('aria-controls')).toBe(details.id);
+      expect(knopfAuf.getAttribute('aria-label')).toBe('Details zu Rückfrage „Ja, gepostet“');
+      expect(details.hidden).toBeTrue();
+
+      knopfAuf.focus();
+      knopfAuf.click();
+      fixture.detectChanges();
+      // Dieselbe Zeile bleibt stehen, der Fokus auf dem Knopf (WCAG 2.4.3)
+      expect(knopfAuf.isConnected).toBeTrue();
+      expect(document.activeElement).toBe(knopfAuf);
+      expect(knopfAuf.getAttribute('aria-expanded')).toBe('true');
+      expect(details.hidden).toBeFalse();
+      expect((karte.querySelector('[data-testid="zustand"]') as HTMLElement).hidden).toBeFalse();
+
+      (fixture.componentInstance as unknown as { uebernehmen(d: unknown): void }).uebernehmen({ schalter: LISTE() });
+      fixture.detectChanges();
+      expect((karten()[1].querySelector('[data-testid="details"]') as HTMLElement).hidden).toBeFalse();
+
+      (karten()[1].querySelector('[data-testid="aufklappen"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect((karten()[1].querySelector('[data-testid="details"]') as HTMLElement).hidden).toBeTrue();
+    });
+
+    it('zeigt den Zustand auch zugeklappt, wenn der Admin-Wert an ist, aber nicht wirkt', () => {
+      laden([
+        schalter({ name: 'punkte', admin_wert: true, wirksam: true }),
+        schalter({ name: 'gepostet', obergrenze: false, admin_wert: true, wirksam: false }),
+      ]);
+
+      const [punkte, gepostet] = karten().map((k) => k.querySelector('[data-testid="zustand"]') as HTMLElement);
+      expect(punkte.hidden).toBeTrue();
+      expect(gepostet.hidden).toBeFalse();
+    });
+  });
+
   it('setzt beim Umschalten den Admin-Wert und zeigt den neuen Stand ohne Neuladen', () => {
     laden([schalter({ name: 'punkte' })]);
 
@@ -168,8 +285,8 @@ describe('SchalterComponent', () => {
     ]);
 
     const [kopiert, , ohneKonto, , rangliste] = karten();
-    expect(kopiert.querySelector('h3')!.textContent).toBe('Erfolgstext nach dem Kopieren');
-    expect(ohneKonto.querySelector('h3')!.textContent).toBe('Danke-Knopf ohne Konto');
+    expect(kopiert.querySelector('h4')!.textContent).toBe('Erfolgstext nach dem Kopieren');
+    expect(ohneKonto.querySelector('h4')!.textContent).toBe('Danke-Knopf ohne Konto');
     const zustand = (k: HTMLElement) => (k.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim();
     expect(zustand(ohneKonto)).toBe('Admin: an · wirksam: aus, weil Danke-Knopf aus');
     expect(zustand(rangliste)).toBe('Admin: an · wirksam: aus, weil Punkte aus');
@@ -197,8 +314,8 @@ describe('SchalterComponent', () => {
       mitEinstellungen([schalter({ name: 'teams' }), schalter({ name: 'teams_oeffentlich' })]);
 
       const [teams, oeffentlich] = karten();
-      expect(teams.querySelector('h3')!.textContent).toBe('Teams über Einladungen');
-      expect(oeffentlich.querySelector('h3')!.textContent).toBe('Teams am Anzeigenamen');
+      expect(teams.querySelector('h4')!.textContent).toBe('Teams über Einladungen');
+      expect(oeffentlich.querySelector('h4')!.textContent).toBe('Teams am Anzeigenamen');
     });
 
     it('erklärt, warum teams_oeffentlich ohne Teams nicht wirkt', () => {
