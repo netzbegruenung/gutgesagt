@@ -82,9 +82,10 @@ uses the same spaCy model and needs no further memory. Since #405 Lingua adds ab
 the Sprachhinweis (11 languages, measured in the service image), also preloaded at start. Its
 models make the image about 300 MB larger on disk (the wheel ships all languages). Since #387
 the NLI-Stufe loads an NLI model (mDeBERTa-v3-base-xnli, fp32) in the background at start
-(`SEMANTIC_SEARCH_DIESELBE_AUSSAGE_NLI`, default `schatten`): about 1.2 GB more RAM in use and
-up to about 2 GB at the peak while loading (measured on the dev VM, `python -m
-tests.regression.nli_messen --zeit`), and the image grows by about 0.55 GB. If the container has
+(`SEMANTIC_SEARCH_DIESELBE_AUSSAGE_NLI`, default `an` since #575, as set on test and
+production): about 1.2 GB more RAM in use and up to about 2 GB at the peak while loading
+(measured on the dev VM, `python -m tests.regression.nli_messen --zeit`), and the image grows by
+about 0.55 GB. If the container has
 a memory limit, raise it accordingly; `SEMANTIC_SEARCH_DIESELBE_AUSSAGE_NLI=aus` together with
 `SEMANTIC_SEARCH_SUCHE_POLARITAET_NLI=aus` (#574, below) and `SEMANTIC_SEARCH_SUCHE_BEZUG_NLI=false`
 skips the model and restores the rule before #387. The image also carries a second NLI model, the Bestätiger
@@ -474,7 +475,7 @@ alert rules and alert routing are run by the operators, outside this repository.
 | What | Where | Healthy when |
 |---|---|---|
 | Frontend reachable | `GET /` on the frontend (nginx) | 200 |
-| BFF reachable | `GET /api/check-session` on the BFF; answered by the BFF itself, without a backend call | 200 or 401 |
+| BFF reachable | `GET /api/check-session` on the BFF; answered by the BFF itself, without a backend call | 200 (also for visitors; the JSON field `isAuthenticated` says whether logged in) |
 | Semantic search reachable | `GET /api/v1/health` on the semantic search service, checked directly on the internal network | `status` in the JSON is `healthy` (`degraded`: disk or memory above 90 %; `unhealthy`: PostgreSQL or Qdrant unreachable, or one of the checks failed; above 80 % is only a `warning` in the check and leaves `status` at `healthy`). The endpoint always answers 200, so read the field |
 | Error rate (5xx) | `GET /metrics`, counter `gutgesagt_http_requests_total{status="5xx"}` | low share of all requests |
 | Search response time | `GET /metrics`, histogram `gutgesagt_search_duration_seconds` | quantiles from the buckets |

@@ -19,6 +19,23 @@ class GeseheneNutzungRepository:
         """``db``: eine AppDatabase; ohne Angabe die globale."""
         self.db = db if db is not None else get_app_database()
 
+    def schon_besucht(self, user_id: str) -> bool:
+        """
+        Ob es fuer die Kennung schon einen Stand gibt, also schon einen Besuch: Die
+        Zeile entsteht beim ersten Besuch. Liest nur und speichert nichts; die Startseite
+        laesst damit "Seit deinem letzten Besuch" beim allerersten Besuch weg (Review
+        Spielgefuehl 25.11.).
+        """
+        with self.db.get_session() as session:
+            return (
+                session.execute(
+                    select(GeseheneNutzung.user_id).where(
+                        GeseheneNutzung.user_id == user_id
+                    )
+                ).first()
+                is not None
+            )
+
     def neu_seit_letztem_besuch(self, user_id: str, nutzung_jetzt: int) -> int:
         """
         Wie viele Nutzungen seit dem zuletzt gezeigten Stand dazugekommen sind;
@@ -90,6 +107,40 @@ class GeseheneNutzungRepository:
                 .values(einwuerfe=einwuerfe_jetzt)
             )
             return 0 if gesehen is None else einwuerfe_jetzt - gesehen
+
+    def neues_echo_seit_letztem_besuch(self, user_id: str, echo_jetzt: int) -> int:
+        """
+        Wie oft die eigenen Beitraege seit dem zuletzt gezeigten Stand als oeffentlich
+        gepostet gemeldet wurden (Wirkungs-Echo, #790); danach gilt ``echo_jetzt`` als
+        gezeigt.
+
+        Ohne Stand (neue Zeile oder NULL nach der Migration) ist der Stand 0 wie bei
+        der Nutzung: Die Summe zaehlt erst seit dem Schalter, nichts davon war schon
+        Thema. Wie bei der Nutzung sinkt der Stand nie, und die Antwort ist nie negativ
+        (ein geloeschter Beitrag nimmt seine Summe mit).
+        """
+        with self.db.get_session() as session:
+            session.execute(
+                insert(GeseheneNutzung)
+                .values(user_id=user_id, nutzung=0, echo=None)
+                .on_conflict_do_nothing(index_elements=[GeseheneNutzung.user_id])
+            )
+            gesehen = (
+                session.execute(
+                    select(GeseheneNutzung.echo)
+                    .where(GeseheneNutzung.user_id == user_id)
+                    .with_for_update()
+                ).scalar_one()
+                or 0
+            )
+            if echo_jetzt <= gesehen:
+                return 0
+            session.execute(
+                update(GeseheneNutzung)
+                .where(GeseheneNutzung.user_id == user_id)
+                .values(echo=echo_jetzt)
+            )
+            return echo_jetzt - gesehen
 
 
 _repository: Optional[GeseheneNutzungRepository] = None

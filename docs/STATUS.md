@@ -16,7 +16,7 @@ use existing comments/background info, and contribute their own.
 
 * [x] Login via Keycloak (production) and Direktanmeldung with Beta-Zugänge (dev; in test and production until they move into the realm, #488)
 * [x] Anonymous / public search — search and view results without logging in (contribution stays behind login)
-* [x] Semantic search using Qdrant v1.18.2 and E5 multilingual embeddings
+* [x] Semantic search using Qdrant v1.20.2 and E5 multilingual embeddings
 * [x] Content-type-aware encoding, polarity filtering, and keyword-overlap score boosting
 * [x] Content contribution workflows (commentaries, background info / generic text, statements, images, posts)
 * [x] Image content type; the person writes the Unterschrift (ADR 0003). The AI suggestion via OpenAI and its `openai` dependency were removed (#393); no service sends anything to an AI provider

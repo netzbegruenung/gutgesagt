@@ -19,15 +19,29 @@
     </div>
 </section>
 
+<!-- Reihenfolge und Vorrang der Karten: docs/ARCHITECTURE.md, „Start page: order and priority
+     of the cards“. Pro Besuch hoechstens eine Karte mit neuer Richtung (Review 25.11.). -->
+
 <!-- Willkommen beim ersten Besuch unter dem Suchfeld statt darueber: Mobil stand das
      Suchfeld sonst erst weit unten (Nutzerfuehrung 13.11.) -->
 <app-rundgang-band ort="start"></app-rundgang-band>
 
-<!-- Fuer Angemeldete, nur wenn es Neues gibt (Nutzerfuehrung 13.11.) -->
+<!-- Fuer Angemeldete, nur wenn es Neues gibt (Nutzerfuehrung 13.11.); nicht beim ersten
+     Besuch, neben „Dein nächster Schritt“ nur mit Neuem zu eigenen Beitraegen (Review 25.11.) -->
 <app-seit-letztem-besuch></app-seit-letztem-besuch>
+
+<!-- Ein Vorschlag aus dem eigenen Stand, nur fuer Angemeldete (#789, Schalter naechster_schritt);
+     tritt hinter eigenes Neues im Block darueber zurueck -->
+<app-naechster-schritt></app-naechster-schritt>
+
+<!-- Gemeinschaftsziel der Saison (#782): nur mit Schalter saison_ziel und ab der Schwelle -->
+<app-saison-ziel></app-saison-ziel>
 
 <!-- Entfaellt ganz, solange zu wenig genutzt wurde (#364). -->
 <app-oft-genutzt></app-oft-genutzt>
+
+<!-- Konter-Probe (#786): nur mit Schalter und passender Aussage -->
+<app-konter-probe-einstieg></app-konter-probe-einstieg>
 
 <app-recent-content id="recent-content"></app-recent-content>
 
@@ -55,5 +69,8 @@
         <mat-icon class="kachel-pfeil" aria-hidden="true">arrow_forward</mat-icon>
     </a>
 </section>
+
+<!-- Weg zur Gartenansicht, fuer alle (#783, Schalter gartenansicht) -->
+<app-garten-hinweis></app-garten-hinweis>
 
 <app-about-teaser></app-about-teaser>

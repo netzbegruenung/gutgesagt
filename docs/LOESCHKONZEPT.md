@@ -113,10 +113,14 @@ dann jede folgende Anfrage ab, nach dem Entfernen nicht mehr.
    Einwilligung weiter“ mit dem Wortlaut, PR #670), in `abzeichen_sichtbarkeit` (jede
    Antwort auf die Frage nach der Sichtbarkeit der Abzeichen, auch ein Nein; #351), in
    `punkte_einwilligung` (jede Antwort auf die Einwilligung „Punkte und Meilensteine“, auch
-   ein Widerruf; #351), in `nutzungsbedingungen_zustimmungen` (jede Zustimmung zu den
-   Nutzungsbedingungen in der App mit Zeitpunkt und Stand) und die in
+   ein Widerruf; #351), in `rangliste_einwilligung` (jede Antwort auf die Einwilligung zur
+   Rangliste samt Wahl des Anzeigenamens und Ranglistenname, auch ein Nein; #793), in `nutzungsbedingungen_zustimmungen` (jede Zustimmung zu den
+   Nutzungsbedingungen in der App mit Zeitpunkt und Stand), in `team_mitgliedschaften` (jede
+   Mitgliedschaft in einem Team samt Kennung des Wortlauts und Zeitpunkt der Einwilligung), in
+   `team_oeffentlich` (die Antwort auf „Team öffentlich am Namen zeigen“) und die in
    `loeschauftraege` (offene und erledigte Löschaufträge nach einem Widerruf)
-   löschen, ebenso jeden Muster-Hinweis
+   löschen; in `einstellungen` die Kennung eines Admins (`geaendert_von`) auf `NULL` setzen,
+   der Wert bleibt; ebenso jeden Muster-Hinweis
    (`muster_hinweise`, #352), der die Person nennt. Der Anzeigename steht **nur dort** — weder in Qdrant
    noch in `raw_inputs` noch im Log —, die Karten lesen ihn beim Ausliefern dazu und
    zeigen nach Schritt 3 „ehemalige Person“.
@@ -219,7 +223,7 @@ macht für diese Person dasselbe wie der Ablauf oben, beschränkt auf die Mitwir
 Was **bleibt**: das Konto, der Anzeigename in `users`, die Einwilligungen samt Widerruf als
 Nachweis (Art. 7 Abs. 1; der Vermerk „ohne Einwilligung weiter“ in `art9_ohne_einwilligung`
 geht dagegen mit dem Löschablauf), Meldungen der Person und Muster-Hinweise (beide gehen mit ihrer
-Frist) sowie `gesehene_nutzung` (nur Zählerstände: Nutzung und Einwürfe anderer beim letzten Besuch, kein Zeitpunkt, ohne Frist, geht mit dem Konto). Erst Qdrant, dann PostgreSQL: Scheitert ein Schritt, bleibt der Auftrag offen,
+Frist) sowie `gesehene_nutzung` (nur Zählerstände: Nutzung, Einwürfe anderer und Wirkungs-Echo beim letzten Besuch, kein Zeitpunkt, ohne Frist, geht mit dem Konto). Erst Qdrant, dann PostgreSQL: Scheitert ein Schritt, bleibt der Auftrag offen,
 und ein zweiter Klick holt nach, was fehlt; beide Teile sind wiederholbar. Danach wie in
 Schritt 3 die Texte durchsehen; macht einer die Person erkennbar, wird er einzeln entfernt. Die
 Beiträge stehen danach nicht mehr in „Meine Beiträge“ der Person, sie kann sie also nicht mehr
@@ -251,13 +255,23 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Paar-Prüfwerte der Muster-Hinweise (`muster_pruefwerte`) | 7 Tage | letzte Nutzung in dieser Richtung (`tag`) |
 | Prüfwerte „Ja, gepostet“ (`gepostet_pruefwerte`, #643) | ihre Kalenderwoche | zur Zahl der Woche verdichtet und gelöscht beim ersten täglichen Lauf nach Wochenende (Montag, UTC; derselbe Task wie für `nutzung_heute`, auch bei ausgeschaltetem Schalter), spätestens bei der nächsten Meldung; der Wochenschlüssel liegt nur im Arbeitsspeicher |
 | Zahl je Woche „Ja, gepostet“ (`gepostet_wochen`) | keine | — nur eine Zahl je Woche, ohne Personenbezug |
+| Meldungen ohne Konto je Woche (`gepostet_ohne_konto_wochen`, #799) | keine | — nur die Zahl der Klicks je Woche, ohne Prüfwert, Beitrag oder Adresse; die Drosselung liegt nur im Arbeitsspeicher und vergisst nach einer Sekunde |
+| Wirkungs-Echo und Danke je Beitrag (`wirkung_je_beitrag`, #790, #791) | keine | — nur zwei Summen je Beitrag, ohne Kennung und Zeitpunkt; die Tages-Prüfwerte des Danke liegen in `nutzung_heute` und gehen mit ihnen nach dem Tageswechsel, die des Wirkungs-Echos nur im Arbeitsspeicher |
 | Muster-Hinweise (`muster_hinweise`) | 56 Tage (8 Wochen) | letzter Tag mit gegenseitiger Nutzung (`letzter_tag`) |
 | Löschaufträge (`loeschauftraege`), offen | keine | — sie sind Arbeit und bleiben, bis ein Admin den Löschablauf ausführt (Frist dafür: sieben Tage ab dem Widerruf, unter „Löschauftrag nach dem Widerruf“) |
 | Löschaufträge, erledigt | 365 Tage (entschieden 13.11.2026) | Ausführung (`erledigt_am`); mit dem Konto sofort (Schritt 2) |
 | Zustimmung zur Sichtbarkeit der Abzeichen (`abzeichen_sichtbarkeit`) | solange das Konto besteht | — Nachweis der Zustimmung (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Einwilligung „Punkte und Meilensteine“ (`punkte_einwilligung`, #351) | solange das Konto besteht | — Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
+| Einwilligung zur Rangliste (`rangliste_einwilligung`, #793) | solange das Konto besteht | — Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2); Plätze und Punkte werden nicht gespeichert |
+| Mitgliedschaften in Teams (`team_mitgliedschaften`): Kennung, Teamname, Motiv, Saison, Nummer, Tag des Beitritts, Kennung des Wortlauts und Zeitpunkt der Einwilligung | bis „Team verlassen“ (sofort gelöscht, Widerruf der Einwilligung für dieses Team) oder bis zur Löschung des Kontos | — die Einwilligung `team-2026-11-26` steht an der Mitgliedschaft und geht mit ihr; kein Bezug zur Einladung. Mit dem Konto sofort (Schritt 2), unter „Teams“ |
+| Einwilligung „Team öffentlich am Namen zeigen“ (`team_oeffentlich`): Kennung, ja/nein, Kennung des Wortlauts, Zeitpunkt | solange das Konto besteht | — nur die jüngste Antwort je Konto; Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
+| Zähler je Team und Saison (`team_nummern`): Teamname, Saison, zuletzt vergebene Nummer | keine | — kein Personenbezug (keine Kennung); hält fest, dass eine Nummer nach „Team verlassen“ nicht neu vergeben wird |
+| Saisons (`saisons`, #782): Name, erster und letzter Tag, Ziel, Anlegezeitpunkt | keine | — kein Personenbezug, auch keine Kennung des Admins; löschen lässt sich eine Saison nur vor ihrem Beginn |
+| team_wochen, team_quests: ohne Personenbezug, unbefristet; entfallen mit dem Team | keine | — Wochenzähler (Teamname, Saison, Woche, Zahl der Beiträge, Bewertungen und Meldungen „Ja, gepostet“) und Team-Quests (Teamname, Saison, Woche, Thema, Ziel), ohne Kennung, ohne Beitrag, ohne Zeitpunkt; bleiben bei „Team verlassen“ und bei der Löschung des Kontos. Entdoppelt wird über einen Wochen-Prüfwert nur im Arbeitsspeicher, der mit dem Wochenwechsel verfällt. Eine Team-Löschung gibt es noch nicht; kommt sie, gehen die Zeilen mit (`TeamFortschrittRepository.team_loeschen`) |
+| Admin-Einstellungen (`einstellungen`, etwa die aktuelle Saison): Wert, Zeitpunkt, Kennung des Admins | keine | — der Wert bleibt; die Kennung des Admins wird mit seinem Konto geleert (Schritt 2) |
 | Zustimmung zu den Nutzungsbedingungen in der App (`nutzungsbedingungen_zustimmungen`) | solange das Konto besteht | — Nachweis des Vertragsschlusses und des Stands, dem die Person zugestimmt hat (Art. 6 Abs. 1 lit. b DSGVO); geht mit dem Konto (Schritt 2) |
 | Archiv der Keycloak-Zeitpunkte der Zustimmung zu den Nutzungsbedingungen (bis 0.9.8): Kennung und Zeitpunkt | bis zur Löschung des Kontos (Entscheidung Maintainer 20.11.2026) | — am Rollout-Tag von 0.9.8 exportiert, zuletzt direkt vor dem Abschalten der Pflichtaktion, nach `/opt/gutgesagt-archiv/nb-zeitpunkte-keycloak.txt` auf dem Prod-Host (Verzeichnis 0700 root, nicht in einen Container gemountet und nicht Teil der Backups), Datei 0600 root (`mvp/scripts/manual/keycloak_nb_zeitpunkte.py --zeitpunkte`); danach wird das Attribut in Keycloak gelöscht. Mit dem Konto geht die Zeile (Schritt 4). Nachweis, wann die Person bis 0.9.8 zugestimmt hat |
+| Neue Antworten auf eigene Aussagen und „Meine Aussagen“ (#760, Schalter `antworten_hinweis`) | keine Speicherung | — beim Besuch bzw. Aufruf aus den Antwortvorschlägen der Aussagen berechnet |
 | Meilenstein-Abzeichen am Anzeigenamen (#351) | keine Speicherung | — nur im Arbeitsspeicher, alle 15 Minuten neu berechnet, nach einem Neustart leer; nach dem Löschkommando (Schritt 2) höchstens noch bis zum nächsten Lauf |
 | Schalter (`schalter`) und ihr Verlauf (`schalter_verlauf`, #708): Admin-Wert, Zeitpunkt, Kennung des Admins | Verlauf: 12 Monate ab der Änderung, Bereinigungslauf (Task der Löschfristen, `SCHALTER_VERLAUF_TAGE` in `services/loeschfristen_service.py`, unabhängig vom abschaltbaren Bereinigungsjob; Entscheidung Maintainer 18.11.2026). Der aktuelle Stand in `schalter` bleibt. | Kennung des Admins: mit seinem Konto geleert (`person_loeschen.sql`), beim Umstellen der Kennungen mit umgeschrieben (#487) — betrifft nur Admins, nicht Nutzende; die Kennung steht nur dort, kein Klarname |
 | Herkunft prüfen (`herkunft_pruefung`, #759): Adresse einer Herkunft, Ergebnis, HTTP-Status, Weiterleitungsziel, Zeitpunkte | solange die Herkunft sichtbar ist | — kein Personenbezug (keine Kennung, kein Beitrag); jeder Lauf löscht die Zeilen zu gelöschten oder gesperrten Herkünften. Nur mit dem Schalter `herkunft_pruefen`; ohne ihn entsteht nichts, und nach dem Ausschalten leert der stündliche Takt die Tabelle (`services/herkunft_pruefen.py`) |
@@ -356,6 +370,7 @@ Verzeichnis der Verarbeitungstätigkeiten).
 | Zugriffsprotokolle des vorgelagerten Webservers | 14 Tage | Betrieb am Host; Datenschutzerklärung „Protokolldateien“ |
 | Zugriffsprotokolle des Webservers der Anwendung, Protokolle der Anwendung | **keine**; Ziel 14 Tage, noch nicht ausgerollt | Betrieb am Host; unter „Was nicht gelöscht wird“ (#485, #336) |
 | Zähler der Rate-Limits | höchstens etwa 16 Minuten, nur im Arbeitsspeicher | Anwendung; Datenschutzerklärung zu Suche, Meldungen, Feedback, Einladungen, Gegenlesen |
+| Zähler des Tagesdeckels (Kennung und Zahl der Anlagen des laufenden UTC-Tages) | bis zum Ende des UTC-Tages plus ein Aufräumtakt (eine Minute), nur im Arbeitsspeicher; ein Neustart verwirft sie | Anwendung (`utils/tagesdeckel.py`); Datenschutzerklärung noch ohne eigenen Satz (Fachfrage im PR) |
 | Sicherungskopien | bis zu 28 Tage (7 Tages-, 4 Wochenstände) | `mvp/scripts/backup/backup.sh`; unter „Was nicht gelöscht wird“ |
 | Beta-Zugänge (`managed-users.json`) | auf Test und Produktion seit dem Realm-Umzug (20.11.2026) entfernt, die Zugänge sind Konten im Realm (#488); in der Entwicklung nur Beispielkonten | Schritt 4 im „Ablauf“ |
 
@@ -425,6 +440,47 @@ und der Ablauf oben erfasst die Tabelle nicht.
   über eine Einladung entstehen; ältere mit bestätigter Adresse und ohne Passwort bleiben.
   Wird ein solches Konto später mit dem Netzbegrünung-Login verknüpft, fragt Keycloak beim
   ersten Anmelden einmal nach einem Passwort.
+
+## Teams
+
+Eine Einladung kann zu einem Team gehören (GLOSSARY „Teamlink“): An `einladungen` stehen dann
+zusätzlich Teamname, Motiv, Saison und Teamart, bei einem Team nach Gruppe dazu der Tag der
+schriftlichen Zustimmung der Gruppenleitung (Nachweis nur für Admins, ohne Namen; bleibt mit der
+Einladung stehen, siehe „Einladungen“), weiter ohne Mail-Adresse und ohne Kennung. Eine
+Mitgliedschaft (`team_mitgliedschaften`) entsteht nur, wenn die Person auf der Begrüßung
+ausdrücklich einwilligt (Wortlaut `team-2026-11-26`, gespeichert mit Kennung und Zeitpunkt an
+der Mitgliedschaft). Sie trägt **keinen Bezug zur Einladung**: Welche Einladung jemand genutzt
+hat, steht weiter nirgends. Ohne Ja zählt die Einladung wie bisher nur.
+
+- **Widerruf der Zustimmung einer Gruppe (Team nach Gruppe):** Das Team wird in einen neutralen
+  Namen nach Anlass, Ort oder Saison umbenannt (in eine andere Gruppe nur mit neuer Einwilligung
+  der Mitglieder, nicht mit dem Skript), an
+  Einladungen, Mitgliedschaften und Nummernzähler zugleich (`mvp/scripts/manual/team_umbenennen.sql`);
+  die Einladungen werden zu einem Team nach Anlass, Ort oder Saison, das Datum der Zustimmung
+  wird geleert. Mitgliedschaften, Nummern und Einwilligungen bleiben.
+- **„Team verlassen“:** Die Person löscht ihre Mitgliedschaft unter „Meine Teams“ selbst; der
+  Eintrag ist sofort gelöscht (`DELETE /api/v1/teams/meine/{id}`), auch bei ausgeschaltetem
+  Schalter `teams`. Das ist der Widerruf der Einwilligung für dieses Team. Die Nummer wird
+  nicht neu vergeben (`team_nummern` zählt weiter, ohne Kennung).
+- **Löschung des Kontos:** Alle Mitgliedschaften und die Antwort auf „Team öffentlich am
+  Namen zeigen“ gehen sofort mit (Schritt 2, `person_loeschen.sql`).
+- **Nie benutzte Konten (#538):** Die Mitgliedschaft entsteht schon beim Anlegen des Kontos,
+  vor dem ersten Anmelden. Löscht der tägliche Lauf ein nie benutztes Konto im Realm, löscht er
+  danach auch dessen Mitgliedschaften und `team_oeffentlich`
+  (`TeamRepository.konten_loeschen`), auch wenn der Lauf im Realm mittendrin abbricht.
+- **Abgeschalteter Schalter `teams`:** Vorhandene Mitgliedschaften stehen weiter unter „Meine
+  Teams“, mit „Team verlassen“; es kommen nur keine neuen hinzu.
+- **Widerruf der Art.-9-Einwilligung:** erfasst die Mitgliedschaften nicht, denn sie hängen an
+  ihrer eigenen Einwilligung; die Person widerruft sie mit „Team verlassen“.
+- **Teams am Namen:** werden nicht gespeichert, sondern beim Ausliefern eines Beitrags aus den
+  Mitgliedschaften der aktuellen Saison und `team_oeffentlich` gelesen; nach „Team verlassen“
+  oder einem Nein verschwinden sie mit der nächsten Antwort.
+- **Admins:** sehen je Team nur die Zahl der Mitglieder. Eine Liste, einen Export oder eine
+  API auf fremde Mitgliedschaften gibt es nicht; die Daten liegen nur in der Datenbank.
+- **Sicherungskopien:** Gelöschte Mitgliedschaften stehen dort bis zu deren Ablauf weiter (bis
+  zu 28 Tage, unter „Was nicht gelöscht wird“).
+- **Kennungen umstellen:** Die Tabellen `team_mitgliedschaften` und `team_oeffentlich` stellt
+  das Umstellen der Kennungen mit um (`services/wartung/kennungen_umstellen.py`).
 
 ## Vier Fallen
 
@@ -702,7 +758,7 @@ docker exec -i gutgesagt-app-postgres psql -U app_user -d gutgesagt_app \
 #   -v ON_ERROR_STOP=1 -v uid="$KENNUNG"
 
 docker exec -i gutgesagt-app-postgres psql -U app_user -d gutgesagt_app -c \
-  "VACUUM FULL votes, content_reports, raw_inputs, raw_input_content_links, raw_input_drafts, usage_events, users, gesehene_nutzung, muster_hinweise, art9_einwilligungen, art9_ohne_einwilligung, abzeichen_sichtbarkeit, punkte_einwilligung, nutzungsbedingungen_zustimmungen, loeschauftraege;"
+  "VACUUM FULL votes, content_reports, raw_inputs, raw_input_content_links, raw_input_drafts, usage_events, users, gesehene_nutzung, muster_hinweise, art9_einwilligungen, art9_ohne_einwilligung, abzeichen_sichtbarkeit, punkte_einwilligung, rangliste_einwilligung, nutzungsbedingungen_zustimmungen, team_mitgliedschaften, team_oeffentlich, loeschauftraege;"
 ```
 
 ```bash

@@ -13,8 +13,11 @@ import { expect, test } from './fixtures';
 async function ohneStack(page: Page): Promise<void> {
   await page.route('**/api/**', (anfrage) => {
     const pfad = new URL(anfrage.request().url()).pathname;
-    const status = pfad === '/api/user-info' || pfad === '/api/check-session' ? 401 : 404;
-    return anfrage.fulfill({ status, json: {} });
+    // Wie das BFF: Besucher bekommen von den Anmelde-Pruefungen 200 mit isAuthenticated = false.
+    if (pfad === '/api/user-info' || pfad === '/api/check-session') {
+      return anfrage.fulfill({ json: { isAuthenticated: false } });
+    }
+    return anfrage.fulfill({ status: 404, json: {} });
   });
 }
 

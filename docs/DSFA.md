@@ -588,7 +588,7 @@ Empfänger und Ort“.
 
 - **Zweck:** Mitwirkenden zeigen, dass ihre Beiträge helfen (`DSE:589`), und auf der Startseite unter „Seit deinem letzten Besuch“, was seitdem neu ist (Nutzerführung 13.11.).
 - **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f (`DSE:590-592`).
-- **Daten:** je Kennung zwei Zählerstände (Nutzung, Einwürfe anderer beim letzten Besuch), kein Zeitpunkt (`ss/infrastructure/database/models.py`, `GeseheneNutzung`). Nur Zählerstand, Zeitpunkt nur grob ableitbar (für Admins mit DB-Zugriff): Der Einwurf-Stand und `raw_inputs.created_at` grenzen ein, wann der letzte Besuch etwa war. „Wann du da warst, speichern wir nicht“ bleibt wahr; gerundet wird nicht. Dazu zwei Zahlen über die letzten 7 Tage, beim Besuch berechnet und nicht gespeichert: eigene Einwürfe, die andere ausformuliert haben, und neue Kommentare und Hintergrundinfos anderer (#741).
+- **Daten:** je Kennung zwei Zählerstände (Nutzung, Einwürfe anderer beim letzten Besuch), kein Zeitpunkt (`ss/infrastructure/database/models.py`, `GeseheneNutzung`). Nur Zählerstand, Zeitpunkt nur grob ableitbar (für Admins mit DB-Zugriff): Der Einwurf-Stand und `raw_inputs.created_at` grenzen ein, wann der letzte Besuch etwa war. „Wann du da warst, speichern wir nicht“ bleibt wahr; gerundet wird nicht. Dazu zwei Zahlen über die letzten 7 Tage, beim Besuch berechnet und nicht gespeichert: eigene Einwürfe, die andere ausformuliert haben, und neue Kommentare und Hintergrundinfos anderer (#741). Mit dem Schalter `antworten_hinweis` (Standard aus) eine dritte Zahl dieser Art: Antworten anderer auf die eigenen Aussagen, aus den Antwortvorschlägen der Aussage und deren Zeitpunkt der Verknüpfung (#760); die Liste „Meine Aussagen“ zeigt je Antwort nur „von dir“ oder nicht, keine Kennung und keinen Namen anderer. Nichts davon wird gespeichert.
 - **Frist:** bis zur Kontolöschung (`DSE:593`).
 - **Risiko:** gering. **Offen:** Die Rückmeldung läuft unter lit. f, obwohl sie an der Mitwirkung
   hängt, die sonst unter Art. 9 Abs. 2 lit. a steht.
@@ -614,7 +614,7 @@ Empfänger und Ort“.
 - **Risiko und Maßnahmen:** Abschnitt 3 (Sichtbarkeit, Nutzungsnetz, Zweckentfremdung),
   Rechtsgrundlage Abschnitt 4. Schalter `punkte_aktiv`, Standard aus (`ss/core/config.py:238-244`).
 - **Meilensteine, nur für die Person selbst (#615, gemergt am 09.11.2026):** hinter
-  demselben Schalter (ohne `punkte_aktiv` 404, `ss/api/v1/usage.py:478-479`), gleiche Rechtsgrundlage, nicht gespeichert, bei jedem Abruf berechnet
+  demselben Schalter (ohne `punkte_aktiv` leer mit `aktiv: false`, früher 404, `ss/api/v1/usage.py`), gleiche Rechtsgrundlage, nicht gespeichert, bei jedem Abruf berechnet
   (`ss/services/meilensteine_service.py`). Neu gegenüber den Punkten: gezählt wird auch, wie viele
   Einwürfe anderer die Person ausformuliert hat (Ausformulierer an der Verknüpfung,
   `ss/infrastructure/database/models.py:577`, V4), nicht nur

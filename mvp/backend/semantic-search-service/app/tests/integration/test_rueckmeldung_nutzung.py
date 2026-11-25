@@ -94,6 +94,15 @@ class TestSeitLetztemBesuch:
 
         assert repo.neu_seit_letztem_besuch(AUTORIN, nutzung_jetzt=5) == 5
 
+    def test_schon_besucht_erst_nach_dem_ersten_besuch(self, datenbank):  # noqa: F811
+        repo = GeseheneNutzungRepository(datenbank)
+
+        assert repo.schon_besucht(AUTORIN) is False
+        # Nur lesen legt nichts an
+        assert repo.schon_besucht(AUTORIN) is False
+        repo.neu_seit_letztem_besuch(AUTORIN, nutzung_jetzt=0)
+        assert repo.schon_besucht(AUTORIN) is True
+
     def test_neu_seit_letztem_besuch_danach_nur_den_zuwachs(
         self, datenbank
     ):  # noqa: F811
@@ -312,3 +321,38 @@ class TestAusformulierteEinwuerfe:
         assert repo.count_ausformuliert_von_anderen(AUTORIN, seit) == 2
         assert repo.count_ausformuliert_von_anderen("andere", seit) == 1
         assert repo.count_ausformuliert_von_anderen("niemand", seit) == 0
+
+
+class TestNeuesEchoSeitLetztemBesuch:
+    """
+    Wirkungs-Echo (#790) auf der Startseite: ein Zaehlerstand der Summe "oeffentlich
+    gepostet", die Kachel nennt nur den Zuwachs.
+    """
+
+    def test_erster_besuch_nennt_die_summe_einmal(self, datenbank):  # noqa: F811
+        repo = GeseheneNutzungRepository(datenbank)
+
+        assert repo.neues_echo_seit_letztem_besuch(AUTORIN, 3) == 3
+        assert repo.neues_echo_seit_letztem_besuch(AUTORIN, 3) == 0
+        with datenbank.get_session() as s:
+            zeile = s.get(GeseheneNutzung, AUTORIN)
+            assert (zeile.nutzung, zeile.echo) == (0, 3)
+
+    def test_zuwachs_und_stand_sinkt_nie(self, datenbank):  # noqa: F811
+        repo = GeseheneNutzungRepository(datenbank)
+        repo.neues_echo_seit_letztem_besuch(AUTORIN, 5)
+
+        assert repo.neues_echo_seit_letztem_besuch(AUTORIN, 7) == 2
+        # Beitrag geloescht: kein negativer Zuwachs, der hoehere Stand bleibt
+        assert repo.neues_echo_seit_letztem_besuch(AUTORIN, 4) == 0
+        assert repo.neues_echo_seit_letztem_besuch(AUTORIN, 8) == 1
+
+    def test_vorhandene_zeile_ohne_stand_zaehlt_ab_null(self, datenbank):  # noqa: F811
+        # Wie nach der Migration: Nutzung und Einwuerfe stehen, der Echo-Stand ist NULL.
+        with datenbank.get_session() as s:
+            s.add(GeseheneNutzung(user_id=AUTORIN, nutzung=5, einwuerfe=2, echo=None))
+        repo = GeseheneNutzungRepository(datenbank)
+
+        assert repo.neues_echo_seit_letztem_besuch(AUTORIN, 2) == 2
+        assert repo.neu_seit_letztem_besuch(AUTORIN, nutzung_jetzt=5) == 0
+        assert repo.neue_einwuerfe_seit_letztem_besuch(AUTORIN, 2) == 0

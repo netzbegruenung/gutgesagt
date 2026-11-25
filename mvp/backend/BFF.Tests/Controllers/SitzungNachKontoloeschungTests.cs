@@ -21,7 +21,8 @@ namespace BFF.Tests.Controllers;
 /// Jeder Test meldet sich bei einem Host an, aendert die Kontodateien und schickt das Cookie
 /// an einen zweiten Host mit demselben Schluesselring -- so wie das Loeschkonzept es vorsieht:
 /// Datei aendern, BFF neu starten. Gelesen wird /api/check-session, das allein am Cookie
-/// haengt (200 angemeldet, 401 nicht), und eine schreibende Route hinter dem Proxy: Dort
+/// haengt (immer 200, isAuthenticated true oder false; Besucher bekommen dort keine 401, sonst
+/// sperrt fail2ban am Gateway geteilte IPs), und eine schreibende Route hinter dem Proxy: Dort
 /// legte die geloeschte Person bisher weiter Daten an.
 /// </summary>
 public class SitzungNachKontoloeschungTests : IDisposable
@@ -144,7 +145,7 @@ public class SitzungNachKontoloeschungTests : IDisposable
 
         using var response = await CheckSessionAsync(useKeycloak, cookie);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(await SitzungsAntwort.AngemeldetAsync(response));
     }
 
     [Theory]
@@ -157,7 +158,7 @@ public class SitzungNachKontoloeschungTests : IDisposable
 
         using var response = await CheckSessionAsync(useKeycloak, cookie);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.False(await SitzungsAntwort.AngemeldetAsync(response));
     }
 
     [Theory]
@@ -206,7 +207,7 @@ public class SitzungNachKontoloeschungTests : IDisposable
 
         using var response = await CheckSessionAsync(useKeycloak: true, cookie);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(await SitzungsAntwort.AngemeldetAsync(response));
     }
 
     [Fact]
@@ -216,7 +217,7 @@ public class SitzungNachKontoloeschungTests : IDisposable
 
         using var response = await CheckSessionAsync(useKeycloak: true, cookie);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(await SitzungsAntwort.AngemeldetAsync(response));
     }
 
     [Fact]
@@ -227,7 +228,7 @@ public class SitzungNachKontoloeschungTests : IDisposable
 
         using var response = await CheckSessionAsync(useKeycloak: true, cookie);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.False(await SitzungsAntwort.AngemeldetAsync(response));
         AssertCookieGeloescht(response);
     }
 

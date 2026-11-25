@@ -26,6 +26,10 @@ from services.content.statement_service import StatementService
 from services.anzeigename_service import get_anzeigename_service
 from services.bilanz_service import BilanzService
 from services.gepostet_service import GepostetService, get_gepostet_service
+from services.gepostet_ohne_konto_service import (
+    GepostetOhneKontoService,
+    get_gepostet_ohne_konto_service,
+)
 from services.metrics_service import get_metrics_service
 from services.muster_hinweise_service import MUSTER_FRIST_TAGE, MusterHinweiseService
 from services.suchen_ohne_treffer_service import (
@@ -458,11 +462,16 @@ def get_bilanz(
 
 class GepostetWocheResponse(BaseModel):
     woche: date = Field(description="Montag der Kalenderwoche (UTC)")
+    # Verschiedene Menschen mit Konto: der Nordstern
     personen: int
+    # Meldungen ohne Konto (#799): Klicks, keine Menschen; nie zu ``personen`` addieren
+    meldungen_ohne_konto: int = 0
 
 
 class GepostetResponse(BaseModel):
     aktiv: bool
+    # Ob "Ja, gepostet" ohne Konto gerade gezaehlt wird (#799)
+    ohne_konto_aktiv: bool = False
     woechentlich: List[GepostetWocheResponse]
 
 
@@ -477,24 +486,38 @@ async def get_gepostet(
     admin_user: str = Depends(require_admin),
     settings: Settings = Depends(get_settings),
     dienst: GepostetService = Depends(get_gepostet_service),
+    ohne_konto: GepostetOhneKontoService = Depends(get_gepostet_ohne_konto_service),
 ):
     """
     Der Nordstern (#643): je Kalenderwoche, wie viele verschiedene Personen nach dem
     Kopieren "Ja, gepostet" gemeldet haben. Nur Zahlen, keine Kennungen
     (services/gepostet_service.py). Ohne ``gepostet_aktiv`` entstehen keine Meldungen;
     ``aktiv`` sagt das.
+
+    Daneben getrennt die Meldungen ohne Konto (#799): Klicks je Woche, keine Menschen,
+    deshalb ein eigenes Feld und nie in ``personen``.
     """
     if not schalter_wirksam("gepostet", settings):
         return GepostetResponse(aktiv=False, woechentlich=[])
     try:
         zeilen = await asyncio.to_thread(dienst.wochen, wochen)
+        ohne = {
+            z.woche: z.meldungen
+            for z in await asyncio.to_thread(ohne_konto.wochen, wochen)
+        }
     except Exception as e:
         logger.error(f"Error fetching Gepostet: {type(e).__name__}", exc_info=True)
         raise HTTPException(status_code=500, detail=INTERNER_FEHLER)
     return GepostetResponse(
         aktiv=True,
+        ohne_konto_aktiv=schalter_wirksam("gepostet_ohne_konto", settings),
         woechentlich=[
-            GepostetWocheResponse(woche=z.woche, personen=z.personen) for z in zeilen
+            GepostetWocheResponse(
+                woche=z.woche,
+                personen=z.personen,
+                meldungen_ohne_konto=ohne.get(z.woche, 0),
+            )
+            for z in zeilen
         ],
     )
 

@@ -122,6 +122,11 @@ class MeinBeitragResponse(BeitragResponse):
     # Worauf der Beitrag antwortet, mit Themen (Album); None ohne sichtbare Aussage
     # oder wenn sie nicht nachschlagbar war.
     aussage: Optional[AussageImAlbum] = None
+    # Wirkungs-Echo (#790): wie oft der Beitrag als oeffentlich gepostet gemeldet
+    # wurde; Danke (#791): wie oft jemand Danke gesagt hat. Nur Summen, nie wer.
+    # None, solange der jeweilige Schalter aus ist oder die Zahlen nicht lesbar waren.
+    oeffentlich_gepostet: Optional[int] = None
+    danke: Optional[int] = None
 
 
 class GetContributionsOfUserResponse(BaseModel):

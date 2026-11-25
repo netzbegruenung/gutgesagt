@@ -5,6 +5,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { Router, provideRouter } from '@angular/router';
 import { EinladungAnmeldenComponent } from './einladung-anmelden.component';
 import { environment } from '../../environments/environment';
+import { teamMerkerAblegen } from './team-merker';
 
 describe('EinladungAnmeldenComponent', () => {
   let fixture: ComponentFixture<EinladungAnmeldenComponent>;
@@ -33,14 +34,14 @@ describe('EinladungAnmeldenComponent', () => {
   });
 
   function abgemeldet() {
-    http.expectOne(`${environment.baseUrl}/api/check-session`).flush('nein', { status: 401, statusText: 'Unauthorized' });
+    http.expectOne(`${environment.baseUrl}/api/check-session`).flush({ isAuthenticated: false });
   }
 
-  it('startet ohne Sitzung gleich die Keycloak-Anmeldung, zurueck auf die Startseite', () => {
+  it('startet ohne Sitzung gleich die Keycloak-Anmeldung, zurueck auf die Begruessung', () => {
     abgemeldet();
     http.expectOne(`${environment.baseUrl}/api/auth/modes`).flush({ keycloakEnabled: true, managedAuthEnabled: false });
 
-    expect(fenster.location.href).toBe(`${environment.baseUrl}/api/auth/login/keycloak?returnUrl=%2F`);
+    expect(fenster.location.href).toBe(`${environment.baseUrl}/api/auth/login/keycloak?returnUrl=%2Fwillkommen`);
     // Keine Mail-Adresse in der Adresse (Zugriffsprotokolle)
     expect(fenster.location.href).not.toContain('login_hint');
   });
@@ -52,19 +53,45 @@ describe('EinladungAnmeldenComponent', () => {
     expect(fenster.location.href).toContain('/api/auth/login/keycloak');
   });
 
-  it('fuehrt ohne Keycloak (Entwicklung) zur Login-Auswahl', () => {
+  it('fuehrt ohne Keycloak (Entwicklung) zur Login-Auswahl, danach auf die Begruessung', () => {
     abgemeldet();
     http.expectOne(`${environment.baseUrl}/api/auth/modes`).flush({ keycloakEnabled: false, managedAuthEnabled: true });
 
-    expect(router.navigate).toHaveBeenCalledWith(['/login']);
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/willkommen' } });
     expect(fenster.location.href).toBe('');
   });
 
-  it('schickt Angemeldete auf die Startseite, ohne neue Anmeldung', () => {
-    http.expectOne(`${environment.baseUrl}/api/check-session`).flush({ ok: true });
+  it('schickt Angemeldete auf die Begruessung, ohne neue Anmeldung', () => {
+    http.expectOne(`${environment.baseUrl}/api/check-session`).flush({ isAuthenticated: true });
 
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/willkommen');
     expect(fenster.location.href).toBe('');
+  });
+
+  describe('mit einer Einladung mit Team im Merker', () => {
+    beforeEach(() => teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-26', oeffentlich: false }));
+    afterEach(() => localStorage.clear());
+
+    it('fuehrt nach der Anmeldung zurueck auf die Einladung, ohne den Code in der Adresse', () => {
+      abgemeldet();
+      http.expectOne(`${environment.baseUrl}/api/auth/modes`).flush({ keycloakEnabled: true, managedAuthEnabled: false });
+
+      expect(fenster.location.href).toBe(`${environment.baseUrl}/api/auth/login/keycloak?returnUrl=%2Feinladung`);
+      expect(fenster.location.href).not.toContain('Code123');
+    });
+
+    it('fuehrt ohne Keycloak zur Login-Auswahl mit Rueckkehr auf die Einladung', () => {
+      abgemeldet();
+      http.expectOne(`${environment.baseUrl}/api/auth/modes`).flush({ keycloakEnabled: false, managedAuthEnabled: true });
+
+      expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/einladung' } });
+    });
+
+    it('schickt Angemeldete auf die Einladung', () => {
+      http.expectOne(`${environment.baseUrl}/api/check-session`).flush({ isAuthenticated: true });
+
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/einladung');
+    });
   });
 
   it('hat einen Knopf, falls die Weiterleitung nicht losgeht', () => {

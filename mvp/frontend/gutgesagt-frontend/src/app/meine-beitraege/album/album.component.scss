@@ -176,8 +176,11 @@
 // Suche: klebt oben, solange das Album im Bild ist
 .suche {
   position: sticky;
-  top: 0;
-  z-index: var(--z-index-sticky);
+  /* Am Handy unter dem klebenden Kopf (styles.css), am Desktop oben */
+  top: var(--kopf-klebt, 0px);
+  /* Unter dem klebenden Handy-Kopf (z-index 100): Schiebt das Album-Ende die Suche nach
+     oben, laeuft sie unter ihm durch statt darueber */
+  z-index: 99;
   margin: var(--spacing-md) calc(-1 * var(--page-margin)) 0;
   padding: 12px var(--page-margin) 4px;
   background: var(--seite-grund);
@@ -560,5 +563,29 @@
 @media (prefers-reduced-motion: reduce) {
   .abschnitt-pfeil {
     transition: none;
+  }
+}
+
+// Wirkungs-Echo und Danke (#790, #791) unter der Karte: leise, mit Symbol und Namen
+.wirkung-echo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs, 4px) var(--spacing-md);
+  margin: var(--spacing-xs, 4px) 0 0;
+  padding: 0 var(--spacing-md);
+  list-style: none;
+  font-size: 14px;
+  color: var(--text-leise);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
   }
 }

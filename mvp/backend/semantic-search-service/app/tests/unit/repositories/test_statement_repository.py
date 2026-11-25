@@ -544,6 +544,45 @@ class TestMitKommentar:
         groessen = [len(c.kwargs["ids"]) for c in retrieve.call_args_list]
         assert groessen == [statement_repository._IDS_JE_ABRUF, 1]
 
+    async def test_antwort_autoren_nur_sichtbare_beitraege(
+        self, test_settings, test_embeddings_manager
+    ):
+        """#760: Autorin je sichtbarer Antwort; gesperrte und Aussagen fallen weg."""
+        gesperrt = uuid.UUID("cccccccc-0000-0000-0000-000000000002")
+        punkte = {
+            str(self.KOMMENTAR): self._punkt(
+                self.KOMMENTAR,
+                content_type="commentary",
+                status="visible",
+                original_author="bo-2",
+            ),
+            str(self.TEXT): self._punkt(
+                self.TEXT, content_type="generic_text", original_author="kim-1"
+            ),
+            str(gesperrt): self._punkt(
+                gesperrt,
+                content_type="commentary",
+                status="blocked",
+                original_author="bo-2",
+            ),
+            str(self.ZWEITE): self._punkt(
+                self.ZWEITE, content_type="statement", original_author="bo-2"
+            ),
+        }
+        repository, retrieve = self._repository(
+            test_settings, test_embeddings_manager, punkte
+        )
+
+        ergebnis = await repository.antworten_mit_autor(
+            [self.KOMMENTAR, self.TEXT, gesperrt, self.ZWEITE]
+        )
+        assert {k: autorin for k, (_, autorin) in ergebnis.items()} == {
+            self.KOMMENTAR: "bo-2",
+            self.TEXT: "kim-1",
+        }
+        assert ergebnis[self.KOMMENTAR][0].content_type == "commentary"
+        assert await repository.antworten_mit_autor([]) == {}
+
     async def test_kommentare_auch_in_paketen(
         self, test_settings, test_embeddings_manager
     ):

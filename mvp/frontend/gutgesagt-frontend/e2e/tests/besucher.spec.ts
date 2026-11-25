@@ -6,12 +6,13 @@ import { KONTO } from './konto';
  * ist, fuehrt zur Anmeldung. Laeuft ohne gespeicherte Sitzung.
  */
 test('Besucher: Suche ohne Anmeldung', async ({ page, bild }) => {
-  // Kein 401 ausser den Anmelde-Pruefungen: Ein 401 einer Nebenabfrage leitete auf /login um
-  // (Themenliste unter der erkannten Aussage, Befund auf Test, v0.9.9).
+  // Kein 401, auch nicht von den Anmelde-Pruefungen: Ein 401 einer Nebenabfrage leitete auf
+  // /login um (Themenliste unter der erkannten Aussage, Befund auf Test, v0.9.9), und am
+  // Gateway sperrt fail2ban eine IP nach 20 Antworten 401 in 5 Minuten (Saal-WLAN, BDK).
   const abgewiesen: string[] = [];
   page.on('response', (r) => {
     const pfad = new URL(r.url()).pathname;
-    if (r.status() === 401 && !['/api/check-session', '/api/user-info'].includes(pfad)) abgewiesen.push(pfad);
+    if (r.status() === 401) abgewiesen.push(pfad);
   });
   const suche = page.waitForResponse((r) => r.url().includes('/api/v1/search/searchByText'));
   await page.goto(`/result?searchQuery=${encodeURIComponent('Windräder töten Vögel')}`);
@@ -24,6 +25,21 @@ test('Besucher: Suche ohne Anmeldung', async ({ page, bild }) => {
   // Ohne Anmeldung kein Autor auf den Karten (beitragskarte: zeigtAutor)
   await expect.soft(page.locator('app-kartenliste .karte-meta', { hasText: 'Von:' })).toHaveCount(0);
   await bild('90-besucher-suche');
+});
+
+// Startseite und eine geschuetzte Seite: AppComponent, PublicGuard und AuthGuard fragen die
+// Anmelde-Pruefungen und erzeugen dabei keine 401 (fail2ban am Gateway, Saal-WLAN).
+test('Besucher: Startseite und geschuetzte Seite ohne 401', async ({ page }) => {
+  const abgewiesen: string[] = [];
+  page.on('response', (r) => {
+    if (r.status() === 401) abgewiesen.push(new URL(r.url()).pathname);
+  });
+  await page.goto('/search');
+  await page.waitForLoadState('networkidle');
+  await page.goto('/contributions');
+  await page.waitForURL(/\/login\?/);
+  await page.waitForLoadState('networkidle');
+  expect(abgewiesen).toEqual([]);
 });
 
 test('Besucher: von der Startseite suchen und zurueck', async ({ page }) => {

@@ -296,6 +296,58 @@ public class AuthGatePipelineTests
         Assert.False(await UserInfoIsAdmin(adminUserIds: null));
     }
 
+    /// <summary>
+    /// Die beiden Anmelde-Pruefungen antworten Besuchern mit 200 und isAuthenticated = false,
+    /// nie mit 401. Das Frontend fragt sie bei jedem Seitenaufruf; am IPv4-Gateway sperrt
+    /// fail2ban eine IP nach 20 Antworten 401 in 5 Minuten, und im Saal-WLAN teilen sich
+    /// hunderte Besucher eine IP. In beiden Betriebsarten, weil die Endpunkte vor dem Proxy
+    /// gemappt sind und keine davon abhaengt.
+    /// </summary>
+    [Theory]
+    [InlineData("/api/check-session", false, false)]
+    [InlineData("/api/check-session", false, true)]
+    [InlineData("/api/check-session", true, false)]
+    [InlineData("/api/check-session", true, true)]
+    [InlineData("/api/user-info", false, false)]
+    [InlineData("/api/user-info", false, true)]
+    [InlineData("/api/user-info", true, false)]
+    [InlineData("/api/user-info", true, true)]
+    public async Task SessionCheck_Answers200WithIsAuthenticated(string path, bool authenticated, bool useKeycloak)
+    {
+        using var factory = CreateHost(useKeycloak);
+        using var client = factory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        if (authenticated)
+        {
+            request.Headers.Add(TestUserHeader, "1");
+        }
+
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(authenticated, await SitzungsAntwort.AngemeldetAsync(response));
+    }
+
+    [Fact]
+    public async Task UserInfo_ForAVisitor_CarriesNoPersonAndNoAdmin()
+    {
+        using var factory = CreateHost(useKeycloak: true, adminUserIds: "test-user");
+        using var client = factory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        using var response = await client.GetAsync("/api/user-info");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = payload.RootElement;
+        Assert.False(root.GetProperty("isAuthenticated").GetBoolean());
+        Assert.False(root.GetProperty("isAdmin").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("userId").ValueKind);
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("userName").ValueKind);
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("claims").ValueKind);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("Information")]

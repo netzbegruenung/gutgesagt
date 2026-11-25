@@ -4,15 +4,26 @@ import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { Observable, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { keycloakAnmelden } from '../login/keycloak-anmeldung';
+import { sitzungPruefen } from '../auth/sitzung';
+import { teamMerkerLesen } from './team-merker';
+import { ROUTES } from '../shared/constants/app.constants';
 
 /** Pfad der Seite; das Backend setzt ihn als Ziel des Links in der Mail (ANMELDEN_PFAD in keycloak_konten.py). */
 export const EINLADUNG_ANMELDEN_PFAD = 'einladung/anmelden';
 
-/** Wohin es nach der Anmeldung geht; ohne Einwilligung leitet die App von dort auf /einwilligung (#489). */
-const ZIEL = '/';
+/**
+ * Wohin es nach der Anmeldung geht: die Begrüßung mit dem ersten Schritt. Ohne Einwilligung
+ * leitet die App von dort auf /einwilligung (#489) und danach zurück.
+ */
+const ZIEL = ROUTES.WILLKOMMEN;
+/**
+ * Ziel, wenn eine Einladung mit Team mitgetragen wird (team-merker): zurück auf die Einladung,
+ * die dort das Team zeigt. Der Code bleibt im Merker; als returnUrl stünde er in den Protokollen.
+ */
+const ZIEL_MIT_TEAM = '/einladung';
 
 type Weiter = 'angemeldet' | 'keycloak' | 'auswahl';
 
@@ -20,7 +31,8 @@ type Weiter = 'angemeldet' | 'keycloak' | 'auswahl';
  * Ziel des Links in der Mail „Passwort festlegen“ (Einladung, #429): Nach Passwort und
  * Nutzungsbedingungen endet Keycloak ohne Anmeldung und verweist hierher. Die Seite
  * startet gleich die Anmeldung, statt die Person abgemeldet auf der Startseite stehen zu
- * lassen. Wer schon angemeldet ist, geht auf die Startseite.
+ * lassen. Wer schon angemeldet ist, geht auf die Begrüßung (/willkommen), oder mit einer Einladung mit
+ * Team (team-merker) zurück auf /einladung, die das Team zeigt.
  *
  * Die Mail-Adresse geht bewusst nicht als login_hint mit: Sie stuende dann in den
  * Adressen zu BFF und Keycloak und damit in deren Zugriffsprotokollen.
@@ -60,7 +72,7 @@ export class EinladungAnmeldenComponent implements OnInit {
   ngOnInit(): void {
     this.weiter().subscribe((weiter) => {
       if (weiter === 'angemeldet') {
-        void this.router.navigateByUrl(ZIEL);
+        void this.router.navigateByUrl(this.ziel());
         return;
       }
       this.mitKeycloak = weiter === 'keycloak';
@@ -70,22 +82,28 @@ export class EinladungAnmeldenComponent implements OnInit {
 
   /** Auch der Knopf, falls die Weiterleitung nicht von selbst losgeht. */
   anmelden(): void {
+    const ziel = this.ziel();
     if (this.mitKeycloak) {
-      keycloakAnmelden(ZIEL, this.fenster);
+      keycloakAnmelden(ziel, this.fenster);
     } else {
-      void this.router.navigate(['/login']);
+      void this.router.navigate(['/login'], { queryParams: { returnUrl: ziel } });
     }
   }
 
+  private ziel(): string {
+    return teamMerkerLesen() ? ZIEL_MIT_TEAM : ZIEL;
+  }
+
   private weiter(): Observable<Weiter> {
-    return this.http.get(`${environment.baseUrl}/api/check-session`).pipe(
-      map((): Weiter => 'angemeldet'),
-      catchError(() =>
-        // Wie auf „Das erwartet dich mit Konto“: im Zweifel die Keycloak-Anmeldung.
-        this.http.get<{ keycloakEnabled: boolean }>(`${environment.baseUrl}/api/auth/modes`).pipe(
-          map((m): Weiter => (m?.keycloakEnabled === false ? 'auswahl' : 'keycloak')),
-          catchError(() => of<Weiter>('keycloak')),
-        ),
+    return sitzungPruefen(this.http).pipe(
+      switchMap((angemeldet) =>
+        angemeldet
+          ? of<Weiter>('angemeldet')
+          : // Wie auf „Das erwartet dich mit Konto“: im Zweifel die Keycloak-Anmeldung.
+            this.http.get<{ keycloakEnabled: boolean }>(`${environment.baseUrl}/api/auth/modes`).pipe(
+              map((m): Weiter => (m?.keycloakEnabled === false ? 'auswahl' : 'keycloak')),
+              catchError(() => of<Weiter>('keycloak')),
+            ),
       ),
     );
   }

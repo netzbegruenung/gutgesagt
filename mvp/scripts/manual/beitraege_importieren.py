@@ -437,8 +437,9 @@ SITZUNGS_COOKIE = "GutGesagtAuthCookie"
 ART9_EINWILLIGUNG_FEHLT = "art9_einwilligung_fehlt"
 # Dasselbe ohne Zustimmung zu den Nutzungsbedingungen in der App (dependencies.py).
 NUTZUNGSBEDINGUNGEN_FEHLEN = "nutzungsbedingungen_fehlen"
-# Rate-Limit des Dienstes fuer addCommentary: 10 je Minute, 100 je Stunde
-# (main.py, middleware/rate_limit.py). Nach einer Ablehnung eine Minute warten.
+# Rate-Limit des Dienstes fuer addCommentary: standardmaessig 10 je Minute, 100 je Stunde
+# (main.py, middleware/rate_limit.py); Startkonten sind ausgenommen. Nach einer
+# Ablehnung eine Minute warten.
 WARTEN_NACH_LIMIT = 61
 VERSUCHE_BEI_LIMIT = 3
 
@@ -528,7 +529,7 @@ def importieren(
     die Aussage, wie im Formular "den eigenen nehmen". Einen nur aehnlichen
     eigenen Kommentar haengt das Skript nicht um; es meldet ihn. Ein abgelehnter Kommentar haelt den Rest nicht
     auf; ohne gueltige Anmeldung (401/403) bricht der Lauf mit ``ApiFehler`` ab.
-    Bleibt das Rate-Limit nach den Versuchen (100 je Stunde erreicht), endet der
+    Bleibt das Rate-Limit nach den Versuchen (Stundenlimit erreicht), endet der
     Lauf, und die uebrigen stehen als nicht versucht im Bericht.
     """
     bericht = Bericht()
@@ -588,7 +589,7 @@ def importieren(
                     bericht.fehlgeschlagen.append(
                         (
                             rest.zeile,
-                            "nicht versucht: Rate-Limit (100 je Stunde), in einer "
+                            "nicht versucht: Rate-Limit (Stundenlimit), in einer "
                             f"Stunde mit derselben Datei erneut laufen lassen: {rest.titel}",
                         )
                     )
@@ -810,17 +811,26 @@ class BffBestand:
             raise
 
     def wer(self) -> Dict:
-        """Wer angemeldet ist (``/api/user-info`` des BFF)."""
+        """Wer angemeldet ist (``/api/user-info`` des BFF).
+
+        Das BFF antwortet auch ohne gueltige Sitzung mit 200 und ``isAuthenticated:
+        false`` (keine 401 fuer Besucher, docs/ARCHITECTURE.md); aeltere BFF antworteten
+        mit 401. Beides heisst hier: nicht angemeldet.
+        """
+        nicht_angemeldet = ApiFehler(
+            401,
+            "nicht angemeldet: Sitzung abgelaufen, unvollstaendig kopiert "
+            "oder von einer anderen Adresse",
+        )
         try:
-            return self._anfrage("GET", "/api/user-info")
+            antwort = self._anfrage("GET", "/api/user-info")
         except ApiFehler as fehler:
             if fehler.status == 401:
-                raise ApiFehler(
-                    401,
-                    "nicht angemeldet: Sitzung abgelaufen, unvollstaendig kopiert "
-                    "oder von einer anderen Adresse",
-                ) from None
+                raise nicht_angemeldet from None
             raise
+        if antwort.get("isAuthenticated") is not True:
+            raise nicht_angemeldet
+        return antwort
 
     def kommentar_anlegen(self, daten: Dict) -> Dict:
         pfad = "/api/v1/commentary/addCommentary"

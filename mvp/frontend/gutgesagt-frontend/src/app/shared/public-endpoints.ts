@@ -10,7 +10,8 @@
  *   Anmeldung; die Komponenten behandeln den 401 selbst und zeigen einen Hinweis,
  *   statt die Seite zu verlassen.
  * - '/api/user-info' und '/api/check-session' sind Anmelde-Pruefungen. Sie antworten
- *   fuer Anonyme absichtlich mit 401; ein Redirect darauf waere eine Schleife.
+ *   auch Besuchern mit 200 (isAuthenticated = false, sitzung.ts); stehen bleiben sie, damit
+ *   eine 401 von einem aelteren BFF waehrend eines Rollouts nicht auf /login umleitet.
  * - '/api/auth/' ist die Anmeldung selbst. Ein 401 dort heisst "falsches Passwort";
  *   das Formular zeigt den Fehler, ein Redirect auf /login warf es leer zurueck (#512).
  * - '/api/metrics' existiert serverseitig nicht mehr (der Pfad antwortet 404) und
@@ -28,13 +29,16 @@ export class PublicEndpoints {
     '/api/v1/search/',
     '/api/v1/metrics/',
     '/api/metrics',
-    '/api/user-info',      // Auth check endpoint - returns 401 for anonymous but shouldn't redirect
-    '/api/check-session',  // Session check endpoint - returns 401 for anonymous but shouldn't redirect
+    '/api/user-info',      // Anmelde-Pruefung: 200 auch fuer Besucher, nie Redirect
+    '/api/check-session',  // Anmelde-Pruefung: 200 auch fuer Besucher, nie Redirect
     '/api/auth/',          // Anmeldung selbst: 401 = falsche Angaben, kein Redirect (#512)
     '/api/v1/usage/content/',  // Allow anonymous usage tracking
     '/api/v1/usage/trending',   // Allow anonymous access to trending content
     '/api/v1/usage/punkte/status', // Schalter der Punkte, ohne Anmeldung lesbar (UX-Review B20)
     '/api/v1/funktionen',          // oeffentliche Schalter, ohne Anmeldung lesbar (#756)
+    '/api/v1/saisons/aktuell',     // Saisonbalken, ohne Anmeldung lesbar (#782)
+    '/api/v1/konter-probe',        // Konter-Probe ohne Konto (#786)
+    '/api/v1/ereignis',            // Meldungen ohne Konto, neutraler Sammelpfad (#799)
     '/api/v1/content/recent',   // oeffentlich am BFF; fehlte hier, ein anonymer
                                 // Besucher wurde deshalb auf /login umgeleitet
     '/api/v1/content/beitrag/', // eigene Adresse eines Beitrags (#300), oeffentlich am BFF

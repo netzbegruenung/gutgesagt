@@ -20,7 +20,7 @@ clone:
 
 services:
   - name: qdrant
-    image: qdrant/qdrant:v1.18.2
+    image: qdrant/qdrant:v1.20.2
     # Ohne absoluten Pfad startet der Dienst nicht
     entrypoint: [/qdrant/qdrant]
   # Der Dienststart (dependencies.initialize_services) oeffnet die App-Datenbank (#576).

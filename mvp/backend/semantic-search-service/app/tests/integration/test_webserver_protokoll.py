@@ -155,6 +155,20 @@ def test_keine_zeile_je_suche():
     assert not [zeile for zeile in zugriffe if "searchbytext" in zeile.lower()]
 
 
+@pytest.mark.usefixtures("docker_noetig")
+def test_keine_zeile_je_meldung_ohne_konto():
+    """#799: Adresse und Uhrzeit der Meldung liessen sich der Kopie davor zuordnen."""
+    with _nginx("nginx.docker.conf") as (basis, name):
+        _anfrage(f"{basis}/api/v1/ereignis", methode="POST")
+        _anfrage(f"{basis}/api/v1/Ereignis/", methode="POST")
+        _anfrage(f"{basis}/api/v1/metrics/getMetrics")
+
+        zugriffe = _zugriffe(name)
+
+    assert any("/api/v1/metrics/getMetrics" in zeile for zeile in zugriffe), zugriffe
+    assert not [zeile for zeile in zugriffe if "ereignis" in zeile.lower()]
+
+
 def test_browser_schickt_den_suchtext_nicht_als_verweisende_seite():
     """Fuer den vorgelagerten Webserver, dessen Format nicht hier im Repo steht.
 

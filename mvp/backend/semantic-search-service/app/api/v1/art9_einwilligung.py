@@ -21,6 +21,7 @@ from domain.art9_einwilligung import (
 from api.v1.nutzungsbedingungen import NbStandResponse, nb_stand
 from services import art9_einwilligung_service
 from services.abzeichen_service import get_abzeichen_service
+from services import rangliste_service
 from services.art9_einwilligung_service import UnbekannterWortlaut, WortlautGiltNicht
 
 logger = get_logger(__name__)
@@ -138,17 +139,26 @@ def widerrufen(user_id: str = Depends(require_user)) -> Response:
     # Ohne Einwilligung keine Meilensteine: das sichtbare Abzeichen sofort weg, und ein
     # frueheres Ja gilt nicht ueber eine neue Einwilligung hinweg (#351). Zuerst und
     # unabhaengig vom Widerruf: Scheitert eines von beiden, laeuft das andere trotzdem.
-    abzeichen_fehlgeschlagen = False
+    zuruecknehmen_fehlgeschlagen = False
     abzeichen = get_abzeichen_service()
     if abzeichen is not None:
         try:
             abzeichen.zuruecknehmen(user_id)
         except Exception as e:
-            abzeichen_fehlgeschlagen = True
+            zuruecknehmen_fehlgeschlagen = True
             logger.error(
                 f"Zustimmung zur Sichtbarkeit von {log_pseudonym(user_id)} nicht zurueckgenommen: {type(e).__name__}",
                 exc_info=True,
             )
+    # Ebenso die Rangliste (#793): ein frueheres Ja gilt als Nein.
+    try:
+        rangliste_service.zuruecknehmen(user_id)
+    except Exception as e:
+        zuruecknehmen_fehlgeschlagen = True
+        logger.error(
+            f"Einwilligung zur Rangliste von {log_pseudonym(user_id)} nicht zurueckgenommen: {type(e).__name__}",
+            exc_info=True,
+        )
     # Vermerk, Loeschen der Stimmen und Loeschauftrag in einer Transaktion
     # (Art9EinwilligungService.widerrufen): Bei einem Fehler gilt die Einwilligung
     # weiter, und die Person kann erneut widerrufen.
@@ -160,6 +170,6 @@ def widerrufen(user_id: str = Depends(require_user)) -> Response:
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail=INTERNER_FEHLER)
-    if abzeichen_fehlgeschlagen:
+    if zuruecknehmen_fehlgeschlagen:
         raise HTTPException(status_code=500, detail=INTERNER_FEHLER)
     return Response(status_code=204)

@@ -48,7 +48,9 @@ ALLE_TYPEN = Mock(name="alle_typen")
 def _client(beitraege):
     app = FastAPI()
     app.include_router(usage_router, prefix="/api/v1/usage")
-    app.dependency_overrides[get_settings] = lambda: Mock()
+    app.dependency_overrides[get_settings] = lambda: Mock(
+        oft_genutzt_mindest_nutzungen=4, oft_genutzt_mindest_beitraege=3
+    )
     app.dependency_overrides[get_reference_service] = lambda: Mock()
 
     nutzung = Mock()
@@ -57,8 +59,10 @@ def _client(beitraege):
     ]
 
     class _Service:
-        def __init__(self, *_):
-            pass
+        schwellen: dict = {}
+
+        def __init__(self, *_, **schwellen):
+            _Service.schwellen = schwellen
 
         async def beitraege(self):
             return [dict(b) for b in beitraege]
@@ -99,6 +103,15 @@ class TestOftGenutztApi:
             laden = usage_module.sichtbaren_beitrag_laden
 
         assert laden.call_args.args[1] is ALLE_TYPEN
+
+    def test_oft_genutzt_schwellen_aus_der_konfiguration(self, namen):
+        """Mindestnutzung und Mindestzahl kommen aus Settings (SEMANTIC_SEARCH_OFT_GENUTZT_*)."""
+        patcher, client = _client([_beitrag(1), _beitrag(2), _beitrag(3)])
+        with patcher:
+            client.get(URL)
+            schwellen = usage_module.OftGenutztService.schwellen
+
+        assert schwellen == {"mindest_nutzungen": 4, "mindest_beitraege": 3}
 
     def test_oft_genutzt_angemeldet_mit_anzeigename_und_nutzung(self, namen):
         patcher, client = _client([_beitrag(1), _beitrag(2), _beitrag(3)])

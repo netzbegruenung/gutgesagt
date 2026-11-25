@@ -15,7 +15,7 @@ const BEITRAG = 'e2e-beitrag';
 interface Stand {
   angemeldet: boolean;
   stimmen: number;
-  einloesen: Array<{ code: string; email: string }>;
+  einloesen: Array<{ code: string; email: string; vorname?: string; nachname?: string }>;
 }
 
 async function ohneStack(page: Page): Promise<Stand> {
@@ -27,11 +27,11 @@ async function ohneStack(page: Page): Promise<Stand> {
     if (pfad === '/api/user-info') {
       return stand.angemeldet
         ? anfrage.fulfill({ json: { isAuthenticated: true, userId: 'e2e-konto', userName: 'Testkonto', claims: {} } })
-        : anfrage.fulfill({ status: 401, json: {} });
+        : anfrage.fulfill({ json: { isAuthenticated: false, userId: null, userName: null, claims: null } });
     }
     if (pfad === '/api/check-session') {
       // PublicGuard: ohne Sitzung setzt er die Person auf "nicht angemeldet"
-      return anfrage.fulfill(stand.angemeldet ? { json: {} } : { status: 401, json: {} });
+      return anfrage.fulfill({ json: { isAuthenticated: stand.angemeldet } });
     }
     if (pfad === '/api/auth/modes') {
       return anfrage.fulfill({ json: { keycloakEnabled: false, managedAuthEnabled: true } });
@@ -105,10 +105,12 @@ test('Login-Seite: Einladung einlösen, Link einfügen, Konto anlegen', async ({
   await page.getByRole('button', { name: 'Weiter' }).click();
   const mail = page.getByLabel('Mail-Adresse');
   await expect(mail).toBeVisible();
+  await page.getByLabel('Vorname').fill('Erika');
+  await page.getByLabel('Nachname').fill('Muster');
   await mail.fill('neu@example.org');
   await page.getByRole('button', { name: 'Konto anlegen' }).click();
   await expect(page.locator('app-einladung')).toContainText('Schau in dein Postfach');
-  expect(stand.einloesen).toEqual([{ code: 'E2eCode_123', email: 'neu@example.org' }]);
+  expect(stand.einloesen).toEqual([{ code: 'E2eCode_123', email: 'neu@example.org', vorname: 'Erika', nachname: 'Muster' }]);
 
   // Leere Seite ohne horizontales Scrollen bei 360 px
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
