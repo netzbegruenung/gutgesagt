@@ -58,7 +58,10 @@ describe('EinladungComponent mit Team', () => {
     fixture.detectChanges();
   }
 
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    vertrauenssatzAn = false;
+  });
 
   afterEach(() => {
     http.verify();
@@ -69,11 +72,20 @@ describe('EinladungComponent mit Team', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
+  /** Antwort von /funktionen für den Schalter teamlink_vertrauenssatz, je Test einstellbar. */
+  let vertrauenssatzAn = false;
+
   function pruefen(antwort: { einloesbar: boolean; team: TeamBeimPruefen | null }, angemeldet = false) {
     const anfrage = http.expectOne(`${URL}/pruefen`);
     expect(anfrage.request.body).toEqual({ code: 'Code123' });
     anfrage.flush(antwort);
     http.expectOne(SITZUNG).flush({ isAuthenticated: angemeldet });
+    // Mit Team fragt die Seite den Schalter teamlink_vertrauenssatz (höchstens einmal je Stand).
+    if (antwort.team) {
+      http
+        .match(FUNKTIONEN)
+        .forEach((r) => r.flush({ funktionen: { teams: true, teamlink_vertrauenssatz: vertrauenssatzAn } }));
+    }
     fixture.detectChanges();
   }
 
@@ -155,6 +167,77 @@ describe('EinladungComponent mit Team', () => {
 
       expect(el().querySelector('[data-testid="team-schon-konto"]')).toBeNull();
       expect(el().querySelector('[data-testid="team-gruppe"]')).toBeNull();
+    });
+  });
+
+  describe('Vertrauenssatz (Schalter teamlink_vertrauenssatz)', () => {
+    const ERSTER = 'Beitreten heißt nur: Du zählst zu diesem Team.';
+    const ZWEITER = 'Die Gruppe, nach der es benannt ist, bekommt keine Daten über dich.';
+
+    function vertrauen(): HTMLElement | null {
+      return el().querySelector<HTMLElement>('[data-testid="team-vertrauen"]');
+    }
+
+    function beschreibung(): string | null {
+      return el().querySelector('.team-knoepfe[role="group"]')!.getAttribute('aria-describedby');
+    }
+
+    it('Schalter aus: kein Satz, die Knöpfe beschreibt nur die Erklärung', () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team({ art: 'gruppe', name: 'Netzfeuerwehr' }) });
+
+      expect(vertrauen()).toBeNull();
+      expect(el().textContent).not.toContain('Beitreten heißt nur');
+      expect(beschreibung()).toBe('team-gruppe team-erklaerung');
+    });
+
+    it('Team nach Anlass, ohne Konto: nur der erste Satz, nach der Erklärung und vor den Knöpfen', () => {
+      vertrauenssatzAn = true;
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team({ art: 'anlass' }) });
+
+      const satz = vertrauen()!;
+      expect(satz.textContent!.trim()).toBe(ERSTER);
+      expect(el().textContent).not.toContain(ZWEITER);
+      expect(satz.previousElementSibling?.id).toBe('team-erklaerung');
+      expect(satz.compareDocumentPosition(knopf('team-ja'))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(beschreibung()).toBe('team-erklaerung team-vertrauen');
+    });
+
+    it('ohne Art (älterer Server): nur der erste Satz', () => {
+      vertrauenssatzAn = true;
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team() }, true);
+
+      expect(vertrauen()!.textContent!.trim()).toBe(ERSTER);
+    });
+
+    it('Team nach Gruppe, angemeldet: beide Sätze wortgleich, der Gruppensatz bleibt direkt über der Erklärung', () => {
+      vertrauenssatzAn = true;
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team({ art: 'gruppe', name: 'Netzfeuerwehr' }) }, true);
+
+      expect(vertrauen()!.textContent!.trim()).toBe(`${ERSTER} ${ZWEITER}`);
+      expect(el().querySelector('[data-testid="team-gruppe"]')!.nextElementSibling?.id).toBe('team-erklaerung');
+      expect(beschreibung()).toBe('team-gruppe team-erklaerung team-vertrauen');
+    });
+
+    it('Einladung ohne Team: fragt den Schalter nicht und zeigt keinen Satz', () => {
+      vertrauenssatzAn = true;
+      starten('Code123');
+      pruefen({ einloesbar: true, team: null });
+
+      http.expectNone(FUNKTIONEN);
+      expect(vertrauen()).toBeNull();
+    });
+
+    it('nach dem Ergebnis steht der Satz nicht mehr', () => {
+      vertrauenssatzAn = true;
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team({ art: 'anlass' }) }, true);
+      klick('team-nein');
+
+      expect(vertrauen()).toBeNull();
     });
   });
 

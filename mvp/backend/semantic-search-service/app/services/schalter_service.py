@@ -326,6 +326,23 @@ SCHALTER: Dict[str, Schalterart] = {
             dsfa_hinweis=True,
             oeffentlich=True,
         ),
+        Schalterart(
+            name="teamlink_vertrauenssatz",
+            gruppe=TEAMS,
+            feld="teamlink_vertrauenssatz_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_TEAMLINK_VERTRAUENSSATZ_AKTIV",
+            erklaerung=(
+                "Vertrauenssatz vor der Frage beim Teambeitritt: „Beitreten heißt nur: "
+                "Du zählst zu diesem Team.“, bei einem Team nach Gruppe dazu, dass die "
+                "Gruppe keine Daten bekommt. Speichert nichts; wirkt nur zusammen mit "
+                "„teams“."
+            ),
+            einschalt_hinweis=(
+                "Vor dem Einschalten: Jura prüft teams.py (was Mitglieder voneinander "
+                "sehen)."
+            ),
+            oeffentlich=True,
+        ),
         *SPIEL_SCHALTER,
     )
 }
@@ -488,6 +505,9 @@ def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool
         return an and _wirksam("punkte", einstellungen, werte)
     if name == "teams_oeffentlich":
         # Ohne Teams keine Teams am Namen
+        return an and _wirksam("teams", einstellungen, werte)
+    if name == "teamlink_vertrauenssatz":
+        # Ohne Teams keine Frage zum Teambeitritt, an der der Satz stehen koennte
         return an and _wirksam("teams", einstellungen, werte)
     if name == "gepostet_ohne_konto":
         # Unterschalter: ohne "Ja, gepostet" keine Meldungen ohne Konto

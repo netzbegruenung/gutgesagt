@@ -507,6 +507,14 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   authors who gave the second consent (no number); visitors never. While off, the second
   question is not asked, `GET /api/v1/teams/meine` reports `oeffentlich_verfuegbar: false` and
   `autor_teams` stays `null`.
+- `SEMANTIC_SEARCH_TEAMLINK_VERTRAUENSSATZ_AKTIV` - upper bound of the Schalter
+  `teamlink_vertrauenssatz` (default `false`; switch on only after legal has checked what team
+  members see of each other, preliminary legal assessment of 26.11.2026, point d). Text only,
+  stores nothing; public (`GET /api/v1/funktionen`), works only together with `teams`, and an
+  admin has to switch it on too. While on, the greeting of a team link shows the trust sentence
+  after the sentences before the question (`shared/team-texte.ts`, `teamVertrauenssatz`): for a
+  team named after a group both sentences, otherwise only the first. The page asks
+  `/funktionen` only when the invitation carries a team.
 - `DOCKER_CONTAINER` - set to `true` inside containers to enforce strict path validation
 
 #### Schalter für das Spielgefühl (#782 to #793)
