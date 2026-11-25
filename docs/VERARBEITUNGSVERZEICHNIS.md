@@ -287,7 +287,7 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
 - **Zweck:** der Person zeigen, in welchen Teams sie dabei ist, und die Nummer im Team vergeben
   (GLOSSARY „Team“, „Teamlink“, „Mitgliedschaft“, „Saison“); mit derselben Einwilligung die
   Zahl der Beiträge und Bewertungen in eine Summe des Teams einbeziehen (noch nicht
-  eingeschaltet); später, mit eigener Einwilligung
+  gebaut); später, mit eigener Einwilligung
   und eigenem Schalter, die Teams der aktuellen Saison am Anzeigenamen zeigen.
 - **Rechtsgrundlage:** Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a über eine eigene,
   ausdrückliche Einwilligung je Team (Wortlaut `team-2026-11-25`, Knopf „Ja, speichert, dass ich
@@ -304,7 +304,9 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   kann die Mitgliedschaft auf politische Haltung und Ort schließen lassen (Art. 9).
 - **Empfänger:** die Person selbst („Meine Teams“); Admins nur die Zahl der Mitglieder je
   Team, keine Liste, kein Export, keine API; am Namen für andere Angemeldete nur mit Schalter
-  `teams_oeffentlich` und zweiter Einwilligung, Besucher nie.
+  `teams_oeffentlich` und zweiter Einwilligung, Besucher nie; die Summe des Teams (noch nicht
+  gebaut) nur Mitglieder des Teams, nur für abgeschlossene Wochen, erst ab fünf Einwilligenden,
+  gerundet und ohne Namen.
 - **Fristen:** LK „Teams“ und „Fristen“: „Team verlassen“ löscht sofort, die Kontolöschung
   alle Mitgliedschaften (LK „Ablauf“, Schritt 2); Sicherungskopien bis zu ihrem Ablauf.
 - **TOM:** DSFA-Nachtrag „Teams“. Schalter `teams` (Obergrenze `SEMANTIC_SEARCH_TEAMS_AKTIV`) und

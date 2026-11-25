@@ -863,15 +863,21 @@ describe('DatenschutzComponent', () => {
       const text = abschnitt('Weitere Einträge').replace(/\s+/g, ' ');
 
       expect(text).toContain(
-        'Sagst du ohne Konto bei einer Einladung zu einem Team „Ja, speichert …“, merkt sich dein Browser den Code ' +
-          'der Einladung, die Kennung des Wortlauts, dem du zugestimmt hast, und deine Antwort auf die zweite Frage, ' +
-          'ob deine Teams an deinem Namen erscheinen dürfen.'
+        'Sagst du ohne Konto bei einer Einladung zu einem Team „Ja, speichert …“, merkt sich dein Browser, auch über ' +
+          'das Schließen des Tabs hinaus, den Code der Einladung, die Kennung des Wortlauts, dem du zugestimmt hast, ' +
+          'ob du der zweiten Frage zugestimmt hast, ob deine Teams an deinem Namen erscheinen dürfen (ohne diese ' +
+          'Frage: nein), und bis wann der Eintrag gilt.'
       );
-      expect(text).toContain('Willst du dich zum Beitreten erst anmelden, merkt er sich nur den Code.');
-      expect(text).toContain('bis zur Anmeldung nach dem Anlegen deines Kontos');
-      expect(text).toContain('den Namen des Teams und deine Nummer enthält der Eintrag nicht');
-      expect(text).toContain('höchstens drei Tage');
-      expect(text).toContain('wird gelöscht, sobald die Seite der Einladung ihn nach deiner Anmeldung gelesen hat');
+      expect(text).toContain('Damit trägt er deine Antwort bis zur Anmeldung nach dem Anlegen deines Kontos.');
+      expect(text).toContain(
+        'Hast du schon ein Konto und willst dich zum Beitreten erst anmelden, merkt er sich nur den Code, bis du angemeldet zurückkommst.'
+      );
+      expect(text).toContain('Den Namen des Teams und deine Nummer enthält der Eintrag nie.');
+      expect(text).toContain('Er gilt höchstens drei Tage, so lange wie der Link in der Mail.');
+      expect(text).toContain(
+        'Wir löschen ihn, sobald die Seite der Einladung ihn nach deiner Anmeldung gelesen hat, und einen abgelaufenen ' +
+          'Eintrag beim nächsten Aufruf der Einladung.'
+      );
     });
 
     it('Gerätespeicher: Willkommen und Rundgang „Mitmachen“ als zwei Vermerke ohne Übertragung (#516)', () => {
