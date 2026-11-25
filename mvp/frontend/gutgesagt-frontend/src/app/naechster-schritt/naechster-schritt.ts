@@ -73,7 +73,10 @@ export function anzeige(vorschlag: Vorschlag): Anzeige | null {
     case 'bewerten': {
       const anzahl = vorschlag.anzahl ?? 3;
       return {
-        satz: `${zahlAmSatzanfang(anzahl)} frische Antworten warten auf deine Einschätzung.`,
+        satz:
+          anzahl === 1
+            ? 'Eine frische Antwort wartet auf deine Einschätzung.'
+            : `${zahlAmSatzanfang(anzahl)} frische Antworten warten auf deine Einschätzung.`,
         knopf: 'Frisch aus der Community',
         // Die Startseite ist /search; '/' leitet um und verliert dabei den Anker
         ziel: ROUTES.SEARCH,
@@ -111,9 +114,10 @@ export function anzeige(vorschlag: Vorschlag): Anzeige | null {
       }
       return {
         satz: `Deine Antwort „${kommentar.titel}“ wurde ${kommentar.nutzung}-mal genutzt. Mit einer Kurzfassung passt sie auch in einen Chat.`,
-        hinweis: 'Ergänzen kannst du sie an der Karte im Menü ⋮ unter „Beitrag ändern“.',
+        // Ändern geht nur im eigenen Album: Stift-Knopf „Ändern“ an der Karte
+        hinweis: 'In „Meine Beiträge“ ergänzt du sie über den Stift „Ändern“ an der Karte.',
         knopf: 'Kurzfassung ergänzen',
-        ziel: `${ROUTES.BEITRAG}/${kommentar.content_id}`,
+        ziel: ROUTES.MEINE_BEITRAEGE,
       };
     }
     default:
@@ -218,6 +222,15 @@ function schreiben(werte: Partial<Record<VorschlagArt, string>>): void {
     }
   } catch {
     // Ohne Speicher gilt das Wegklicken nur bis zum Neuladen.
+  }
+}
+
+/** Löscht den Eintrag ganz, etwa beim Abmelden; ohne Speicher passiert nichts. */
+export function weggeklicktEntfernen(): void {
+  try {
+    localStorage.removeItem(WEGGEKLICKT_SCHLUESSEL);
+  } catch {
+    // Ohne Speicher gibt es nichts zu löschen.
   }
 }
 

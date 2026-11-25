@@ -25,6 +25,8 @@ describe('Gartenansicht (#783)', () => {
   it('nennt Zahlen ehrlich in Einzahl und Mehrzahl', () => {
     expect([antwortenText(0), antwortenText(1), antwortenText(12)]).toEqual(['noch keine Antwort', '1 Antwort', '12 Antworten']);
     expect([ohneAntwortText(0), ohneAntwortText(1), ohneAntwortText(3)]).toEqual(['', '1 Spruch ohne Antwort', '3 Sprüche ohne Antwort']);
+    // Ueber der Grenze der Liste „Hier fehlt eine Antwort“ wie dort „50+“
+    expect([ohneAntwortText(50), ohneAntwortText(51)]).toEqual(['50 Sprüche ohne Antwort', '50+ Sprüche ohne Antwort']);
   });
 
   describe('Seite', () => {
@@ -108,6 +110,15 @@ describe('Gartenansicht (#783)', () => {
       fixture.detectChanges();
       expect(fixture.nativeElement.textContent).toContain('Diese Übersicht ist gerade nicht eingeschaltet.');
       expect(beete(fixture).length).toBe(0);
+    });
+
+    it('verspricht nach 403 keinen neuen Versuch und zeigt keinen Spinner', () => {
+      const fixture = starten(false);
+      http.expectOne(URL).flush('nein', { status: 403, statusText: 'Forbidden' });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Diese Übersicht ist gerade nicht erreichbar.');
+      expect(fixture.nativeElement.textContent).not.toContain('Wir versuchen es gleich noch einmal.');
+      expect(fixture.nativeElement.querySelector('mat-spinner')).toBeNull();
     });
 
     it('meldet einen Ladefehler ohne „neu laden“', () => {

@@ -421,7 +421,7 @@ Eine Aussage ohne Kommentar, auch eine, nach der mindestens zwei Personen ohne T
 _Avoid_: Offene Aussage (offen ist eine Stufe eines Einwurfs), Wunsch, Anfrage
 
 **Gartenansicht**:
-Die Seite „Themen im Überblick“ (#783): je Thema eine Kachel mit Motiv und Name, der Zahl der Antworten und der Zahl der unbeantworteten Aussagen, für alle. Besucher sehen nur Zahlen; den Wortlaut zeigt weiter nur „Hier fehlt eine Antwort“. Im Bild des Gartens ist ein Thema ein Beet und eine unbeantwortete Aussage eine Brachfläche; in der Oberfläche steht das höchstens einmal je Bildschirm, sonst „Antworten“ und „ohne Antwort“. Schalter `gartenansicht`.
+Die Seite „Themen im Überblick“ (#783): je Thema eine Kachel mit Motiv und Name, der Zahl der Antworten (sichtbare Kommentare) und der Zahl der unbeantworteten Aussagen, für alle. Besucher sehen nur Zahlen; den Wortlaut zeigt weiter nur „Hier fehlt eine Antwort“. Im Bild des Gartens ist ein Thema ein Beet und eine unbeantwortete Aussage eine Brachfläche; in der Oberfläche steht das höchstens einmal je Bildschirm, sonst „Antworten“ und „ohne Antwort“. Schalter `gartenansicht`.
 _Avoid_: Lagekarte, Karte, Dashboard
 
 **Nächster Schritt**:

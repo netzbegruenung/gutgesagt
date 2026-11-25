@@ -43,10 +43,20 @@ export function antwortenText(anzahl: number): string {
   return anzahl === 1 ? '1 Antwort' : `${anzahl} Antworten`;
 }
 
-/** „3 Sprüche ohne Antwort“, „1 Spruch ohne Antwort“; leer bei 0. */
+/**
+ * So viele Aussagen zeigt „Hier fehlt eine Antwort“ hoechstens (LIMIT_STANDARD im Backend,
+ * services/unbeantwortete_aussagen_service.py). Darueber nennt die Kachel „50+“, damit die
+ * Zahl zur Liste hinter „Jetzt antworten“ passt (wie „Seit deinem letzten Besuch“).
+ */
+export const OHNE_ANTWORT_GRENZE = 50;
+
+/** „3 Sprüche ohne Antwort“, „1 Spruch ohne Antwort“, „50+ Sprüche ohne Antwort“; leer bei 0. */
 export function ohneAntwortText(anzahl: number): string {
   if (anzahl <= 0) {
     return '';
+  }
+  if (anzahl > OHNE_ANTWORT_GRENZE) {
+    return `${OHNE_ANTWORT_GRENZE}+ Sprüche ohne Antwort`;
   }
   return anzahl === 1 ? '1 Spruch ohne Antwort' : `${anzahl} Sprüche ohne Antwort`;
 }

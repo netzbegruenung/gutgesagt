@@ -52,6 +52,8 @@ export class GartenansichtComponent implements OnInit {
   readonly aus = signal(false);
   /** Der letzte Versuch ist gescheitert; die Seite versucht es von selbst weiter. */
   readonly fehler = signal(false);
+  /** 401/403: Die Seite fragt nicht weiter und verspricht keinen neuen Versuch. */
+  readonly gestoppt = signal(false);
 
   readonly angemeldet$ = inject(AuthService).userInfo$.pipe(map((info) => info?.isAuthenticated === true));
 
@@ -63,11 +65,16 @@ export class GartenansichtComponent implements OnInit {
           this.beete.set(lauf.daten?.beete ?? []);
           this.fehler.set(false);
           this.aus.set(false);
+          this.gestoppt.set(false);
           return;
         }
         if ((lauf.fehler as { status?: unknown } | null)?.status === 404) {
           this.aus.set(true);
           this.beete.set(null);
+          return;
+        }
+        if (endgueltig(lauf.fehler)) {
+          this.gestoppt.set(true);
           return;
         }
         this.fehler.set(true);

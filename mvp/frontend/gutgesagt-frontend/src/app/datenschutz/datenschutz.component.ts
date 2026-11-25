@@ -25,7 +25,11 @@ export class DatenschutzComponent {
   readonly meilensteinMerker = inject(MEILENSTEIN_MERKER);
   /** Merker „Hinweis Home-Bildschirm ausgeblendet“; der Absatz dazu steht nur, wenn er an ist. */
   readonly homeHinweisMerker = inject(HOME_HINWEIS_MERKER);
-  /** Karte „Dein nächster Schritt“ (#789): ihre zwei Absätze stehen, solange der Schalter an ist. */
+  /**
+   * Karte „Dein nächster Schritt“ (#789): der Satz unter „Rückmeldung zur Nutzung“ steht,
+   * solange der Schalter an ist; der Absatz zum Eintrag auf dem Gerät immer, weil ein
+   * Eintrag nach dem Ausschalten noch bis zu sieben Tage liegen kann.
+   */
   readonly naechsterSchritt = inject(FunktionenService).an('naechster_schritt');
   readonly KONTAKT_MAIL = LEGAL_ENTITY.KONTAKT_MAIL;
 

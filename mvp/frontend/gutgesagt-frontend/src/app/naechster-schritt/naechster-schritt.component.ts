@@ -126,7 +126,6 @@ export class NaechsterSchrittComponent {
 
   private readonly an = inject(FunktionenService).an(NAECHSTER_SCHRITT_SCHALTER);
   private readonly vorschlaege = signal<Vorschlag[]>([]);
-  /** Erst gelesen, wenn die Karte überhaupt gezeigt werden kann (angemeldet, Schalter an). */
   private readonly weggeklickt = signal<ReturnType<typeof weggeklicktLesen>>({});
   /** Für Screenreader nach dem Wegklicken. */
   readonly ansage = signal('');
@@ -139,6 +138,9 @@ export class NaechsterSchrittComponent {
   });
 
   constructor() {
+    // Aufräumen bei jedem Laden der Startseite, auch ohne Schalter und ohne Anmeldung:
+    // Abgelaufenes fällt weg, damit kein Eintrag länger als sieben Tage liegt.
+    this.weggeklickt.set(weggeklicktLesen());
     const angemeldet$ = inject(AuthService).userInfo$.pipe(
       map((info) => info?.isAuthenticated === true),
       distinctUntilChanged(),
@@ -149,7 +151,6 @@ export class NaechsterSchrittComponent {
           if (!angemeldet || !an) {
             return of([] as Vorschlag[]);
           }
-          this.weggeklickt.set(weggeklicktLesen());
           return this.http.get<NaechsterSchrittAntwort>(NAECHSTER_SCHRITT_URL, { context: stillerKontext() }).pipe(
             map((antwort) => antwort?.vorschlaege ?? []),
             catchError(() => of([] as Vorschlag[])),
@@ -171,8 +172,13 @@ export class NaechsterSchrittComponent {
   weg(vorschlag: Vorschlag): void {
     this.weggeklickt.set(wegklicken(vorschlag.art));
     // Die Karte bleibt stehen, der Fokus auf dem Knopf; neu ist nur der Satz, die Ansage
-    // liest ihn vor. Verschwindet die Karte, sagt die Ansage das.
+    // liest ihn vor.
     const naechster = this.aktuell();
     this.ansage.set(naechster ? `Anderer Vorschlag: ${naechster.anzeige.satz}` : 'Vorschlag ausgeblendet.');
+    if (!naechster) {
+      // Der Knopf verschwindet mit der Karte: Der Fokus geht ins Suchfeld darüber, nicht an
+      // den Anfang der Seite (WCAG 2.4.3).
+      document.getElementById(SUCHFELD_ID)?.focus({ preventScroll: true });
+    }
   }
 }

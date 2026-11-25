@@ -9,6 +9,8 @@
 
     @if (aus()) {
         <p class="garten-hinweis">Diese Übersicht ist gerade nicht eingeschaltet.</p>
+    } @else if (gestoppt() && !beete()) {
+        <p class="garten-hinweis">Diese Übersicht ist gerade nicht erreichbar.</p>
     } @else if (beete()) {
         @let liste = beete()!;
         <ul class="beete">
@@ -48,7 +50,7 @@
 
     <!-- Ein Satz, solange ein Ladefehler offen ist; die Seite versucht es selbst weiter -->
     <p class="garten-fehler" role="status">
-        @if (fehler() && !aus()) {
+        @if (fehler() && !aus() && !gestoppt()) {
             Die Zahlen kommen gerade nicht an. Wir versuchen es gleich noch einmal.
         }
     </p>

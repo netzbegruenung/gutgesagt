@@ -14,6 +14,7 @@ import {
   anzeige,
   offeneVorschlaege,
   tagVon,
+  weggeklicktEntfernen,
   weggeklicktLesen,
   wegklicken,
   zahlAmSatzanfang,
@@ -47,6 +48,7 @@ describe('Dein nächster Schritt (#789)', () => {
     it('Regel 3: Stimmen, mit der Zahl vom Server als Wort', () => {
       expect(anzeige({ art: 'bewerten', anzahl: 3 })!.satz).toBe('Drei frische Antworten warten auf deine Einschätzung.');
       expect(anzeige({ art: 'bewerten', anzahl: 15 })!.satz).toBe('15 frische Antworten warten auf deine Einschätzung.');
+      expect(anzeige({ art: 'bewerten', anzahl: 1 })!.satz).toBe('Eine frische Antwort wartet auf deine Einschätzung.');
       const a = anzeige({ art: 'bewerten', anzahl: 3 })!;
       expect([a.ziel, a.fragment]).toEqual(['/search', 'recent-content']);
       expect(zahlAmSatzanfang(5)).toBe('Fünf');
@@ -66,11 +68,12 @@ describe('Dein nächster Schritt (#789)', () => {
       expect(a.queryParams).toEqual({ aussage: AUSSAGE, von: 'hier-fehlt-eine-antwort' });
     });
 
-    it('Regel 5: Kurzfassung ergänzen, ehrlich „-mal genutzt“, zur Beitragsansicht', () => {
+    it('Regel 5: Kurzfassung ergänzen, ehrlich „-mal genutzt“, nach „Meine Beiträge“ mit dem Stift „Ändern“', () => {
       const a = anzeige({ art: 'kurzfassung', kommentar: { content_id: KOMMENTAR, titel: 'Windräder schützen Vögel', nutzung: 14 } })!;
       expect(a.satz).toContain('„Windräder schützen Vögel“ wurde 14-mal genutzt');
       expect(a.satz).not.toMatch(/Menschen|Leute/);
-      expect(a.ziel).toBe(`/beitrag/${KOMMENTAR}`);
+      expect(a.ziel).toBe('/contributions');
+      expect(a.hinweis).toContain('„Ändern“');
     });
 
     it('ohne Daten oder bei unbekannter Art nichts', () => {
@@ -112,6 +115,12 @@ describe('Dein nächster Schritt (#789)', () => {
       expect(JSON.parse(localStorage.getItem(WEGGEKLICKT_SCHLUESSEL)!)).toEqual({ bewerten: '2026-11-24' });
     });
 
+    it('löscht den Eintrag mit weggeklicktEntfernen (Abmelden)', () => {
+      wegklicken('einwerfen', heute);
+      weggeklicktEntfernen();
+      expect(localStorage.getItem(WEGGEKLICKT_SCHLUESSEL)).toBeNull();
+    });
+
     it('lässt weggeklickte Arten aus, Reihenfolge wie vom Server', () => {
       const liste: Vorschlag[] = [{ art: 'suchen' }, { art: 'einwerfen' }, BRACHE];
       expect(offeneVorschlaege(liste, { suchen: tagVon(heute) }).map((v) => v.art)).toEqual(['einwerfen', 'brachflaeche']);
@@ -150,12 +159,12 @@ describe('Dein nächster Schritt (#789)', () => {
       expect(fixture.nativeElement.querySelector('.naechster-schritt')).toBeNull();
     });
 
-    it('fragt ohne Schalter nichts und liest den Browser-Speicher nicht', () => {
-      spyOn(Storage.prototype, 'getItem').and.callThrough();
+    it('fragt ohne Schalter nichts, räumt aber Abgelaufenes auf', () => {
+      localStorage.setItem(WEGGEKLICKT_SCHLUESSEL, JSON.stringify({ einwerfen: '2020-01-01' }));
       const fixture = starten(true, false);
       http.expectNone(NAECHSTER_SCHRITT_URL);
       expect(fixture.nativeElement.querySelector('.naechster-schritt')).toBeNull();
-      expect(Storage.prototype.getItem).not.toHaveBeenCalledWith(WEGGEKLICKT_SCHLUESSEL);
+      expect(localStorage.getItem(WEGGEKLICKT_SCHLUESSEL)).toBeNull();
     });
 
     it('zeigt genau einen Vorschlag und nach dem Wegklicken den nächsten', () => {
@@ -177,10 +186,19 @@ describe('Dein nächster Schritt (#789)', () => {
       expect(JSON.parse(localStorage.getItem(WEGGEKLICKT_SCHLUESSEL)!)).toEqual({ einwerfen: tagVon(new Date()) });
       expect((fixture.nativeElement.querySelector('.naechster-schritt-weg') as HTMLElement).textContent!.trim()).toBe('Ausblenden');
 
-      (fixture.nativeElement.querySelector('.naechster-schritt-weg') as HTMLButtonElement).click();
-      fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('.naechster-schritt')).toBeNull();
-      expect(fixture.nativeElement.querySelector('[aria-live]').textContent).toContain('Vorschlag ausgeblendet.');
+      const feld = document.createElement('input');
+      feld.id = 'suche';
+      document.body.appendChild(feld);
+      try {
+        (fixture.nativeElement.querySelector('.naechster-schritt-weg') as HTMLButtonElement).click();
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.naechster-schritt')).toBeNull();
+        expect(fixture.nativeElement.querySelector('[aria-live]').textContent).toContain('Vorschlag ausgeblendet.');
+        // Der Knopf ist weg: Der Fokus geht ins Suchfeld, nicht an den Seitenanfang
+        expect(document.activeElement).toBe(feld);
+      } finally {
+        feld.remove();
+      }
     });
 
     it('lässt schon Weggeklicktes beim Laden aus', () => {

@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from domain.models.content_type import ContentType
 from domain.themen import THEMEN
 from services import gartenansicht_service
 from services.gartenansicht_service import GartenansichtService
@@ -17,7 +18,7 @@ from services.gartenansicht_service import GartenansichtService
 pytestmark = pytest.mark.unit
 
 A1, A2, A3 = (uuid.uuid4() for _ in range(3))
-K1, K2, K3, GESPERRT = (uuid.uuid4() for _ in range(4))
+K1, K2, K3, GESPERRT, HINTERGRUND = (uuid.uuid4() for _ in range(5))
 
 
 @pytest.fixture(autouse=True)
@@ -46,12 +47,22 @@ def _dienst():
             _aussage(A1, [K1, K2]),
             # K1 haengt auch an A2: im Beet Klima nur einmal
             _aussage(A2, [K1, GESPERRT]),
-            _aussage(A3, [K3]),
+            # Eine Hintergrundinfo zaehlt nicht als Antwort
+            _aussage(A3, [K3, HINTERGRUND]),
         ]
     )
     aussagen.sichtbare_antworten = AsyncMock(
         side_effect=lambda ids: [
-            SimpleNamespace(id=i) for i in ids if i in {K1, K2, K3}
+            SimpleNamespace(
+                id=i,
+                content_type=(
+                    ContentType.GENERIC_TEXT
+                    if i == HINTERGRUND
+                    else ContentType.COMMENTARY
+                ),
+            )
+            for i in ids
+            if i in {K1, K2, K3, HINTERGRUND}
         ]
     )
     ohne = Mock()
@@ -102,6 +113,28 @@ def test_zwischenspeicher_fragt_nicht_bei_jedem_aufruf():
     asyncio.run(dienst.beete())
 
     assert aussagen.kuratierte.await_count == 1
+
+
+def test_gleichzeitige_aufrufe_rechnen_einmal():
+    dienst, aussagen, _ = _dienst()
+
+    async def drei():
+        return await asyncio.gather(dienst.beete(), dienst.beete(), dienst.beete())
+
+    a, b, c = asyncio.run(drei())
+
+    assert a == b == c
+    assert aussagen.kuratierte.await_count == 1
+
+
+def test_fehler_wird_nicht_zwischengespeichert():
+    dienst, aussagen, _ = _dienst()
+    gut = aussagen.kuratierte.return_value
+    aussagen.kuratierte.side_effect = [RuntimeError("weg"), gut]
+
+    with pytest.raises(RuntimeError):
+        asyncio.run(dienst.beete())
+    assert len(asyncio.run(dienst.beete())) == len(THEMEN)
 
 
 def test_ohne_zuordnungen_keine_abfrage_im_suchindex():

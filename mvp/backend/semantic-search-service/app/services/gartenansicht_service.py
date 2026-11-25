@@ -3,9 +3,9 @@ Gartenansicht fuer alle (#783): je Thema die Zahl der Antworten und die Zahl der
 Aussagen ohne Antwort. Nur Zahlen, fuer Besucher wie fuer Angemeldete; den Wortlaut der
 Aussagen ohne Antwort sehen wie bisher nur Angemeldete in "Hier fehlt eine Antwort".
 
-Antworten je Thema: die sichtbaren Antworten (Kommentare, Hintergrundinfos) an den
-kuratierten Aussagen mit diesem Thema, dieselbe Grundlage wie "Alles zum Thema"
-(services/themen_aussagen_service.py). Eine Antwort an zwei Aussagen desselben Themas
+Antworten je Thema: die sichtbaren Kommentare an den kuratierten Aussagen mit diesem
+Thema, auf derselben Grundlage wie "Alles zum Thema" (services/themen_aussagen_service.py),
+aber ohne Hintergrundinfos: "ohne Antwort" heisst ohne Kommentar. Eine Antwort an zwei Aussagen desselben Themas
 zaehlt einmal, an Aussagen zweier Themen in beiden.
 
 Ohne Antwort je Thema: die Aussagen, die "Hier fehlt eine Antwort" zeigt
@@ -25,6 +25,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Protocol, Set, Tuple
 
+from domain.models.content_type import ContentType
 from domain.models.statement import AntwortKurz, StatementDbEntry
 from domain.themen import THEMEN
 
@@ -37,12 +38,16 @@ OHNE_ANTWORT_HOECHSTENS = 100000
 
 _uhr = time.monotonic
 _zwischenspeicher: Optional[Tuple[float, List["Beet"]]] = None
+# Die laufende Neuberechnung: Wer waehrenddessen fragt, wartet auf sie, statt selbst
+# alles neu zu zaehlen (die Ansicht ist ohne Anmeldung offen).
+_laufend: Optional["asyncio.Future[List[Beet]]"] = None
 
 
 def zwischenspeicher_leeren() -> None:
     """Fuer Tests und nach Aenderungen, die sofort sichtbar sein sollen."""
-    global _zwischenspeicher
+    global _zwischenspeicher, _laufend
     _zwischenspeicher = None
+    _laufend = None
 
 
 class _ThemenRepository(Protocol):
@@ -81,11 +86,23 @@ class GartenansichtService:
 
     async def beete(self) -> List[Beet]:
         """Je Thema der festen Liste ein Beet, in ihrer Reihenfolge (zwischengespeichert)."""
+        global _laufend
+        if _zwischenspeicher is not None and _zwischenspeicher[0] >= _uhr():
+            return _zwischenspeicher[1]
+        if (
+            _laufend is None
+            or _laufend.done()
+            or _laufend.get_loop() is not asyncio.get_running_loop()
+        ):
+            _laufend = asyncio.ensure_future(self._berechnen_und_merken())
+        # shield: Bricht ein Aufrufer ab, rechnet die Aufgabe fuer die anderen weiter.
+        return await asyncio.shield(_laufend)
+
+    async def _berechnen_und_merken(self) -> List[Beet]:
         global _zwischenspeicher
-        if _zwischenspeicher is None or _zwischenspeicher[0] < _uhr():
-            beete = await self._berechnen()
-            _zwischenspeicher = (_uhr() + ZWISCHENSPEICHER_SEKUNDEN, beete)
-        return _zwischenspeicher[1]
+        beete = await self._berechnen()
+        _zwischenspeicher = (_uhr() + ZWISCHENSPEICHER_SEKUNDEN, beete)
+        return beete
 
     async def _berechnen(self) -> List[Beet]:
         # Die PostgreSQL-Abfrage ist synchron: im Thread, nicht in der Schleife.
@@ -110,8 +127,15 @@ class GartenansichtService:
         antwort_ids = list(
             dict.fromkeys(v.id for a in aussagen for v in a.replysuggestions)
         )
+        # Nur Kommentare: "ohne Antwort" heisst ohne Kommentar (Glossar "Unbeantwortete
+        # Aussage"); sonst stuende eine Aussage mit nur einer Hintergrundinfo in beiden Zahlen.
         sichtbar = (
-            {a.id for a in await self._aussagen.sichtbare_antworten(antwort_ids)}
+            {
+                a.id
+                for a in await self._aussagen.sichtbare_antworten(antwort_ids)
+                if getattr(a.content_type, "value", a.content_type)
+                == ContentType.COMMENTARY.value
+            }
             if antwort_ids
             else set()
         )
