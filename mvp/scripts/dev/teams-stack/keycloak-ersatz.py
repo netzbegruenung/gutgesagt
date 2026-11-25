@@ -39,6 +39,11 @@ class H(BaseHTTPRequestHandler):
             email = konto.get("email")
             if email in state["emails"]:
                 return self._send(409, {"errorMessage": "exists"})
+            if state["next"] >= len(IDS):
+                # Mehr Konten als vorbereitete Kennungen: klar sagen statt Verbindung abbrechen
+                return self._send(
+                    500, {"errorMessage": "keine Kennung mehr frei (IDS)"}
+                )
             kid = IDS[state["next"]]
             state["next"] += 1
             state["emails"][email] = kid

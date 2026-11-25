@@ -17,7 +17,8 @@ import { expect, test } from './fixtures';
  * Container `E2E_PG_CONTAINER`. Schreibt: Einladungen, Mitgliedschaften, Schalter; nur auf
  * frischer Datenbank aussagekräftig (Nummern ab 1).
  */
-const AN = process.env['E2E_TEAMS_STACK'] === '1';
+// Nur zusammen mit einer eigenen Adresse: Gegen den Dev-Stack (Standard 8080) schaltete die Spec dort teams an.
+const AN = process.env['E2E_TEAMS_STACK'] === '1' && !!process.env['E2E_BASE_URL'];
 const PG = process.env['E2E_PG_CONTAINER'] ?? 'gutgesagt-app-postgres-teams';
 const PASSWORT = 'Liebe>Hass!';
 const ADMIN = { email: 'admin@example.com', passwort: 'Liebe>Hass!' };
@@ -29,7 +30,7 @@ const KENNUNG = 'team-2026-11-25';
 const TEAM_A = { name: 'Stacktest Bayreuth', saison: '2026' };
 const TEAM_B = { name: 'Stacktest Nordstand', saison: '2026' };
 
-test.skip(!AN, 'nur gegen den Teams-Stack (E2E_TEAMS_STACK=1, e2e/README.md)');
+test.skip(!AN, 'nur gegen den Teams-Stack (E2E_TEAMS_STACK=1 und E2E_BASE_URL, e2e/README.md)');
 test.describe.configure({ mode: 'serial' });
 
 function sql(abfrage: string): string {
@@ -88,6 +89,8 @@ const links: Record<string, string> = {};
 
 test.describe('Teams gegen den echten Stack', () => {
   test('1 Admin legt einen Teamlink an, die Liste zeigt Team und Mitglieder', async ({ page, bild }) => {
+    // Nummern ab 1 und die Kennungen des Keycloak-Ersatzes gelten nur auf einem frischen Stack
+    expect(sql('SELECT count(*) FROM einladungen'), 'Stack nicht frisch: erst down -v, dann up (e2e/README.md)').toBe('0');
     await anmelden(page, ADMIN.email, ADMIN.passwort);
     await schalter(page.request, 'teams', true);
     await page.goto('/admin/dashboard');
@@ -148,24 +151,21 @@ test.describe('Teams gegen den echten Stack', () => {
     await expect(page.locator('app-einladung')).toContainText('Schau in dein Postfach');
     expect(zeilen(NEU1.id)).toEqual([`${TEAM_A.name}|${TEAM_A.saison}|1|${KENNUNG}`]);
     // Kein Bezug zur Einladung: die Tabelle hat keine Spalte dafür
-    expect(sql(`SELECT count(*) FROM information_schema.columns WHERE table_name = 'team_mitgliedschaften' AND column_name LIKE 'einladung%id'`)).toBe('0');
+    expect(
+      sql(`SELECT string_agg(column_name, ',' ORDER BY column_name) FROM information_schema.columns WHERE table_name = 'team_mitgliedschaften'`),
+    ).toBe('eingetreten_am,einwilligung_kennung,einwilligung_zeitpunkt,id,konto_kennung,nummer,saison,team_motiv,team_name');
     expect(einloesungen(TEAM_A.name)).toBe(1);
 
     // Link aus der Mail: Passwort ist gesetzt, Anmeldung, zurück auf /einladung/anmelden
     // Erstes Anmelden ohne Nutzungsbedingungen und Art.-9-Einwilligung, wie bei einem echten neuen Konto
     await anmelden(page, NEU1.email, PASSWORT, false);
     await page.goto('/einladung/anmelden');
-    await page.waitForLoadState('networkidle');
-    await bild('nach-anmelden-erster-stand', true);
-    if (page.url().includes('/einwilligung')) {
-      await page.getByText('Ich stimme den Nutzungsbedingungen zu.').click();
-      await page.getByText(/Ich willige ausdrücklich ein/).click();
-      await page.getByRole('button', { name: /Weiter|Speichern|Zustimmen/ }).click();
-      await page.waitForLoadState('networkidle');
-      await bild('nach-einwilligung', true);
-    }
+    // Der Merker führt zuerst zurück auf die Einladung, mit dem Ergebnis (nicht auf /einwilligung)
+    await expect(page).toHaveURL(/\/einladung$/);
     await expect(page.getByTestId('team-ergebnis')).toHaveText(`Neu in deiner Sammlung: Team ${TEAM_A.name}, Nr. 1`);
+    await bild('neu-in-der-sammlung', true);
     await page.getByRole('link', { name: 'Zu meinen Teams' }).click();
+    await expect(page).toHaveURL(/\/contributions/);
     const team = page.getByTestId('meine-teams').getByTestId('team');
     await expect(team).toHaveCount(1);
     await expect(team).toContainText(TEAM_A.name);
@@ -244,6 +244,10 @@ test.describe('Teams gegen den echten Stack', () => {
 
   test('7 Schalter teams aus: Einladung wie vorher, „Meine Teams“ mit Verlassen', async ({ page, bild }) => {
     await anmelden(page, ADMIN.email, ADMIN.passwort);
+    // Die Admin-Liste zählt nur die Mitglieder: A noch das Testkonto, B niemand mehr
+    const liste = await (await page.request.get('/api/v1/einladungen')).json();
+    const mitglieder = Object.fromEntries(liste.einladungen.map((e: { team: { name: string; mitglieder: number } }) => [e.team.name, e.team.mitglieder]));
+    expect(mitglieder).toEqual({ [TEAM_A.name]: 1, [TEAM_B.name]: 0 });
     await schalter(page.request, 'teams', false);
     await abmelden(page);
 
