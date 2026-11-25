@@ -381,11 +381,13 @@ class Settings(BaseSettings):
     # "Diese Woche oft genutzt" (services/oft_genutzt_service.py): Ein Beitrag gilt ab so
     # vielen entdoppelten Nutzungen in sieben Tagen als oft genutzt, und den Bereich gibt
     # es erst ab so vielen solchen Beitraegen. Entdoppelt wird je Person und Tag, nicht je
-    # Woche: Mindestnutzung 2 kann also eine Person an zwei Tagen erreichen. Deshalb
-    # bleibt sie mindestens 2 (eine einzelne Kopie ist Zufall), und die Mindestzahl 2
-    # verlangt dafuer schon zwei Beitraege. Startphase zur BDK (Maintainer 25.11.2026:
-    # bei kleinen Zahlen frueher zeigen): 2 Beitraege statt vorher 3; mit mehr Nutzung
-    # hebt der Betrieb sie an. Hoechstens 5, so viele zeigt der Bereich (ANZAHL dort).
+    # Woche: Eine Person allein kann den Bereich ausloesen, wenn sie die noetigen Beitraege
+    # an zwei Tagen kopiert (ohne Anmeldung auch ueber wechselnde Anschluesse). Das galt
+    # auch bei 3 und ist fuer die Startphase in Kauf genommen; wer was kopiert hat, zeigt
+    # der Bereich nicht. Die Mindestnutzung bleibt mindestens 2: eine einzelne Kopie ist
+    # Zufall, kein "oft". Startphase zur BDK (Maintainer 25.11.2026: bei kleinen Zahlen
+    # frueher zeigen): Standard 2 Beitraege; mit mehr Nutzung hebt der Betrieb ihn an.
+    # Hoechstens 5, so viele zeigt der Bereich (ANZAHL dort).
     oft_genutzt_mindest_nutzungen: int = Field(default=2, ge=2)
     oft_genutzt_mindest_beitraege: int = Field(default=2, ge=1, le=5)
 

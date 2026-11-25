@@ -338,9 +338,9 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   `SEMANTIC_SEARCH_OFT_GENUTZT_MINDEST_BEITRAEGE` (default 2, 1 to 5) - „Diese Woche oft genutzt“
   (GLOSSARY.md „Oft genutzt“): a Beitrag counts from that many entdoppelte Nutzungen in seven days,
   and the section appears from that many such Beiträge (`services/oft_genutzt_service.py`). The
-  defaults suit the start phase with few active people (before 25.11.2026 the minimum number of
-  Beiträge was 3); raise them once usage grows. Entdoppelt means per person and day, so one person
-  can reach 2 Nutzungen on two days.
+  defaults suit the start phase with few active people; raise them once usage grows. Entdoppelt
+  means per person and day, so one person alone can make the section appear by copying the needed
+  Beiträge on two days; the section never shows who copied what.
 - `SEMANTIC_SEARCH_<LIMIT>_RATE_LIMIT_ANFRAGEN` - requests per window of the rate limits without
   login, counted per Anschluss (`utils/rate_limiter.py`). In a venue WLAN all visitors share one
   address, so operations raise them there. `<LIMIT>` and default: `AEHNLICHE_AUSSAGEN` 60 and
