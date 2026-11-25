@@ -879,10 +879,25 @@ class TestFrontendStattBff:
             skript,
             "https://bff.gutgesagt.example.org",
             "application/json; charset=utf-8",
-            '{"userName": "Startkonto 1"}',
+            '{"isAuthenticated": true, "userName": "Startkonto 1"}',
         )
 
-        assert bff.wer() == {"userName": "Startkonto 1"}
+        assert bff.wer() == {"isAuthenticated": True, "userName": "Startkonto 1"}
+
+    def test_besucher_antwort_gilt_als_nicht_angemeldet(self, skript):
+        # Das BFF antwortet ohne gueltige Sitzung mit 200 und isAuthenticated: false
+        # (keine 401 fuer Besucher); das Skript darf damit nicht weitermachen.
+        bff = _bff_mit_antwort(
+            skript,
+            "https://bff.gutgesagt.example.org",
+            "application/json; charset=utf-8",
+            '{"isAuthenticated": false, "userId": null, "userName": null}',
+        )
+
+        with pytest.raises(skript.ApiFehler, match="nicht angemeldet") as fehler:
+            bff.wer()
+
+        assert fehler.value.status == 401
 
     def test_main_meldet_frontend_ohne_cookie(
         self, skript, tmp_path, capsys, monkeypatch

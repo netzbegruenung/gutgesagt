@@ -27,11 +27,11 @@ async function ohneStack(page: Page): Promise<Stand> {
     if (pfad === '/api/user-info') {
       return stand.angemeldet
         ? anfrage.fulfill({ json: { isAuthenticated: true, userId: 'e2e-konto', userName: 'Testkonto', claims: {} } })
-        : anfrage.fulfill({ status: 401, json: {} });
+        : anfrage.fulfill({ json: { isAuthenticated: false, userId: null, userName: null, claims: null } });
     }
     if (pfad === '/api/check-session') {
       // PublicGuard: ohne Sitzung setzt er die Person auf "nicht angemeldet"
-      return anfrage.fulfill(stand.angemeldet ? { json: {} } : { status: 401, json: {} });
+      return anfrage.fulfill({ json: { isAuthenticated: stand.angemeldet } });
     }
     if (pfad === '/api/auth/modes') {
       return anfrage.fulfill({ json: { keycloakEnabled: false, managedAuthEnabled: true } });

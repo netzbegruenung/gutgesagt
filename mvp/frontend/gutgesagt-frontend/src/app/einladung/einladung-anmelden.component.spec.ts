@@ -33,7 +33,7 @@ describe('EinladungAnmeldenComponent', () => {
   });
 
   function abgemeldet() {
-    http.expectOne(`${environment.baseUrl}/api/check-session`).flush('nein', { status: 401, statusText: 'Unauthorized' });
+    http.expectOne(`${environment.baseUrl}/api/check-session`).flush({ isAuthenticated: false });
   }
 
   it('startet ohne Sitzung gleich die Keycloak-Anmeldung, zurueck auf die Startseite', () => {
@@ -61,7 +61,7 @@ describe('EinladungAnmeldenComponent', () => {
   });
 
   it('schickt Angemeldete auf die Startseite, ohne neue Anmeldung', () => {
-    http.expectOne(`${environment.baseUrl}/api/check-session`).flush({ ok: true });
+    http.expectOne(`${environment.baseUrl}/api/check-session`).flush({ isAuthenticated: true });
 
     expect(router.navigateByUrl).toHaveBeenCalledWith('/');
     expect(fenster.location.href).toBe('');

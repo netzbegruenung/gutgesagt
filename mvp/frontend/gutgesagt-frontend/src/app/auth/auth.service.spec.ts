@@ -90,4 +90,42 @@ describe('AuthService', () => {
       req.flush(null, { status: 500, statusText: 'Server Error' });
     });
   });
+
+  describe('fetchUserInfo', () => {
+    const userInfoUrl = `${environment.baseUrl}/api/user-info`;
+
+    it('setzt Besucher aus 200 mit isAuthenticated = false, ohne Fehler', () => {
+      let geliefert: unknown;
+      let fehler = false;
+      service.fetchUserInfo().subscribe({ next: (u) => (geliefert = u), error: () => (fehler = true) });
+
+      httpMock.expectOne(userInfoUrl).flush({
+        isAuthenticated: false, userId: null, userName: null, isAdmin: false, claims: null,
+      });
+
+      expect(fehler).toBeFalse();
+      const besucher = { isAuthenticated: false, userId: null, userName: null, claims: null };
+      expect(geliefert).toEqual(besucher);
+      expect(service.getUserInfo()).toEqual(besucher);
+    });
+
+    it('nimmt bei isAuthenticated = true die Person wie geliefert', () => {
+      const person = { isAuthenticated: true, userId: 'u1', userName: 'Jo', isAdmin: true, claims: { sub: 'u1' } };
+      service.fetchUserInfo().subscribe();
+
+      httpMock.expectOne(userInfoUrl).flush(person);
+
+      expect(service.getUserInfo()).toEqual(person);
+    });
+
+    it('gibt einer Antwort ohne isAuthenticated keine Rechte, auch wenn Felder darin stehen', () => {
+      service.fetchUserInfo().subscribe();
+
+      httpMock.expectOne(userInfoUrl).flush({ userId: 'u1', isAdmin: true });
+
+      expect(service.getUserInfo()?.isAuthenticated).toBeFalse();
+      expect(service.getUserInfo()?.isAdmin).toBeUndefined();
+      expect(service.getUserInfo()?.userId).toBeNull();
+    });
+  });
 });

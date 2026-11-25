@@ -211,6 +211,16 @@ On every request with the session cookie the BFF also checks that its issuer is 
 realm (`Keycloak:Authority`) and ends sessions from another realm, e.g. after a realm switch
 (`BFF/Services/KontoPruefung.cs`, `AnmeldeAussteller.cs`).
 
+### Session checks answer visitors with 200, not 401
+`GET /api/check-session` and `GET /api/user-info` always answer 200; whether someone is logged
+in is the field `isAuthenticated` (`false` for visitors, also right after the BFF ended a
+session). The frontend asks on every page view (`AppComponent`, the guards) and reads only the
+field (`src/app/auth/sitzung.ts`). Reason: test and production sit behind the verdigado IPv4
+gateway, whose fail2ban bans an IP for 10 minutes after 20 responses 401 in 5 minutes
+(`haproxy-auth-flood`; 50 × 404 for `haproxy-probing`). In a hall WLAN hundreds of visitors
+share one IP (BDK), so a 401 for every visitor would lock out the whole hall. Real 401s stay
+where a login is needed and missing: the auth gate in front of the proxy (`EndpointPolicy`).
+
 ## Deployment Configurations
 
 ### Docker Compose Files

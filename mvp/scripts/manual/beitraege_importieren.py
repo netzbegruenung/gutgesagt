@@ -810,17 +810,26 @@ class BffBestand:
             raise
 
     def wer(self) -> Dict:
-        """Wer angemeldet ist (``/api/user-info`` des BFF)."""
+        """Wer angemeldet ist (``/api/user-info`` des BFF).
+
+        Das BFF antwortet auch ohne gueltige Sitzung mit 200 und ``isAuthenticated:
+        false`` (keine 401 fuer Besucher, docs/ARCHITECTURE.md); aeltere BFF antworteten
+        mit 401. Beides heisst hier: nicht angemeldet.
+        """
+        nicht_angemeldet = ApiFehler(
+            401,
+            "nicht angemeldet: Sitzung abgelaufen, unvollstaendig kopiert "
+            "oder von einer anderen Adresse",
+        )
         try:
-            return self._anfrage("GET", "/api/user-info")
+            antwort = self._anfrage("GET", "/api/user-info")
         except ApiFehler as fehler:
             if fehler.status == 401:
-                raise ApiFehler(
-                    401,
-                    "nicht angemeldet: Sitzung abgelaufen, unvollstaendig kopiert "
-                    "oder von einer anderen Adresse",
-                ) from None
+                raise nicht_angemeldet from None
             raise
+        if antwort.get("isAuthenticated") is not True:
+            raise nicht_angemeldet
+        return antwort
 
     def kommentar_anlegen(self, daten: Dict) -> Dict:
         pfad = "/api/v1/commentary/addCommentary"
