@@ -52,6 +52,9 @@ def test_logo_im_kopf_mit_neuem_namen_und_vorhanden():
     assert "marke/logo.svg" not in pfade
     # Das SVG-Favicon ist seit "-v3" das Logo auf dem App-Gelb, seit "-v4" mit runden Ecken
     assert "marke/favicon-v4.svg" in _verweise_index()
+    favicon = (PUBLIC / "marke/favicon-v4.svg").read_text(encoding="utf-8")
+    assert 'rx="112"' in favicon
+    assert "FLUENT-EMOJI-LIZENZ.txt" in favicon
     fehlend = sorted(p for p in pfade if not (PUBLIC / p).is_file())
     assert not fehlend, f"genannt, aber nicht unter public/: {fehlend}"
 
@@ -86,8 +89,10 @@ def test_symbolgrund_ist_das_app_gelb():
         r, g, b = bild.getpixel((0, 0))
         assert f"#{r:02x}{g:02x}{b:02x}" == kopf, name
     # Die Favicons sind abgerundet: Gelb an der Kante, die Ecken durchsichtig
-    for name in ("favicon-32-v4", "favicon-64-v4"):
+    for groesse in (32, 64):
+        name = f"favicon-{groesse}-v4"
         bild = Image.open(PUBLIC / f"marke/{name}.png").convert("RGBA")
+        assert bild.size == (groesse, groesse), name
         breite, hoehe = bild.size
         r, g, b, a = bild.getpixel((breite // 2, 0))
         assert (f"#{r:02x}{g:02x}{b:02x}", a) == (kopf, 255), name
