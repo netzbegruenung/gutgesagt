@@ -34,6 +34,130 @@
       <button mat-stroked-button type="button" (click)="andererLink()">Anderen Link einfügen</button>
     </ng-container>
 
+    <!-- Teams: das Ticket mit Motiv, Teamname und Nummer; das Motiv ist Zierde, der Name steht immer daneben. -->
+    <ng-template #ticket let-zeile="zeile" let-name="name" let-nummer="nummer" let-nummerText="nummerText">
+      <div class="team-ticket">
+        <span class="team-medaillon" *ngIf="motivBild">
+          <img [src]="motivBild" [alt]="'Motiv ' + motivName" width="36" height="36" />
+        </span>
+        <span class="team-ticket-text">
+          <span class="team-zeile">{{ zeile }}</span>
+          <span class="team-name">Team {{ name }}</span>
+          <span class="team-nummer"><span class="team-zeile">{{ nummerText }}</span> Nr. {{ nummer }}</span>
+        </span>
+      </div>
+    </ng-template>
+
+    <section *ngIf="kastenZeigen && team" class="team-kasten" aria-labelledby="team-gruss" data-testid="team-kasten">
+      <h2 id="team-gruss" class="team-ueberschrift">Herzlich willkommen im Team {{ team.name }}! Du wärst Nr. {{ team.naechste_nummer }}.</h2>
+      <ng-container *ngTemplateOutlet="ticket; context: { zeile: 'Willkommen im', name: team.name, nummer: team.naechste_nummer, nummerText: 'Deine Nummer' }"></ng-container>
+      <p class="team-leise">
+        <ng-container *ngIf="team.mitglieder > 0; else erstePerson">Schon {{ team.mitglieder }} dabei.</ng-container>
+        <ng-template #erstePerson>Noch ist niemand dabei.</ng-template>
+        <ng-container *ngIf="!angemeldet">
+          Die Nummer steht erst fest, wenn dein Konto angelegt ist. Ist jemand schneller, bekommst du die nächste.
+        </ng-container>
+        <ng-container *ngIf="angemeldet">
+          Die Nummer steht erst fest, wenn du beitrittst. Ist jemand schneller, bekommst du die nächste.
+        </ng-container>
+      </p>
+      <p id="team-erklaerung">
+        Wenn du willst, speichern wir an deinem Konto, dass du im Team {{ team.name }} bist, mit deiner
+        Nummer und dem Tag. Das siehst nur du, unter „Meine Teams“. Weil Gut gesagt grüne Argumente
+        sammelt, kann das zusammen mit dem Teamnamen auf deine politische Haltung und deinen Ort schließen
+        lassen. Du kannst das jederzeit unter „Meine Teams“ mit „Team verlassen“ widerrufen, dann löschen
+        wir es sofort.
+      </p>
+      <ng-container *ngIf="team.oeffentlich_text">
+        <mat-checkbox name="teamOeffentlich" [(ngModel)]="teamOeffentlich" [disabled]="stand === 'tritt_bei'"
+                      aria-describedby="team-oeffentlich-text" data-testid="team-oeffentlich">
+          Team öffentlich am Namen zeigen
+        </mat-checkbox>
+        <p class="team-leise team-unter-haekchen" id="team-oeffentlich-text">
+          {{ team.oeffentlich_text }} Gilt nur zusammen mit „Ja“.
+        </p>
+      </ng-container>
+      <div class="team-knoepfe" role="group" aria-labelledby="team-gruss" aria-describedby="team-erklaerung">
+        <button mat-stroked-button type="button" class="team-knopf" data-testid="team-ja"
+                [class.gewaehlt]="teamWahl === 'ja'" [attr.aria-pressed]="angemeldet ? null : teamWahl === 'ja'"
+                [disabled]="stand === 'tritt_bei' || stand === 'sendet'" (click)="wahl('ja')">
+          {{ team.knopf_ja }}
+        </button>
+        <button mat-stroked-button type="button" class="team-knopf" data-testid="team-nein"
+                [class.gewaehlt]="teamWahl === 'nein'" [attr.aria-pressed]="angemeldet ? null : teamWahl === 'nein'"
+                [disabled]="stand === 'tritt_bei' || stand === 'sendet'" (click)="wahl('nein')">
+          {{ team.knopf_nein }}
+        </button>
+      </div>
+      <p *ngIf="!angemeldet && teamWahl" class="team-gewaehlt" data-testid="team-gewaehlt">
+        <ng-container *ngIf="teamWahl === 'ja'">Gewählt: Wir speichern dein Team, sobald dein Konto angelegt ist.</ng-container>
+        <ng-container *ngIf="teamWahl === 'nein'">Gewählt: ohne Team. Wir speichern nichts dazu.</ng-container>
+      </p>
+      <p *ngIf="stand === 'tritt_bei'">Wird gespeichert …</p>
+      <details class="team-wortlaut">
+        <summary>Wortlaut der Einwilligung</summary>
+        <p>{{ team.einwilligung_text }}</p>
+      </details>
+      <p class="team-leise">
+        Mehr dazu in der <a routerLink="/datenschutz">Datenschutzerklärung</a> unter „Teams“.
+      </p>
+      <p *ngIf="!angemeldet" class="team-leise">
+        Hast du schon ein Konto? Dann <a href="/login" (click)="anmeldenUmBeizutreten()">melde dich an</a>,
+        und du kannst dem Team mit deinem Konto beitreten.
+      </p>
+    </section>
+
+    <ng-container *ngIf="stand === 'beigetreten' && beitritt">
+      <h2 #ueberschrift tabindex="-1" class="team-ueberschrift" data-testid="team-ergebnis">
+        <ng-container *ngIf="beitritt.neu">Neu in deiner Sammlung: Team {{ beitritt.name }}, Nr. {{ beitritt.nummer }}</ng-container>
+        <ng-container *ngIf="!beitritt.neu">Du bist schon dabei (Nr. {{ beitritt.nummer }})</ng-container>
+      </h2>
+      <ng-container *ngTemplateOutlet="ticket; context: { zeile: beitritt.neu ? 'Neu in deiner Sammlung' : 'Du bist schon dabei', name: beitritt.name, nummer: beitritt.nummer, nummerText: 'Deine Nummer' }"></ng-container>
+      <p *ngIf="beitritt.neu">Deine Teams stehen unter „Meine Beiträge“. Nur du siehst sie.</p>
+      <p *ngIf="!beitritt.neu">Dieser Link zählt für dich nicht noch einmal. Gib ihn gern weiter.</p>
+      <div class="team-knoepfe">
+        <a mat-raised-button color="primary" [routerLink]="routen.MEINE_BEITRAEGE">Zu meinen Teams</a>
+        <a mat-stroked-button [routerLink]="routen.SEARCH">Weiter suchen</a>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="stand === 'ohne_team'">
+      <h2 #ueberschrift tabindex="-1" class="team-ueberschrift">Ohne Team weiter</h2>
+      <p>Gut, wir speichern kein Team. Solange der Link gilt, kannst du ihn später noch einmal öffnen.</p>
+      <a mat-raised-button color="primary" [routerLink]="routen.SEARCH">Zur Suche</a>
+    </ng-container>
+
+    <ng-container *ngIf="stand === 'schon_konto'">
+      <h2 #ueberschrift tabindex="-1" class="team-ueberschrift">Du hast schon ein Konto</h2>
+      <p>
+        Du bist angemeldet; ein zweites Konto brauchst du nicht. Gib die Einladung gern an jemanden
+        weiter, der noch keins hat.
+      </p>
+      <a mat-raised-button color="primary" [routerLink]="routen.SEARCH">Zur Suche</a>
+    </ng-container>
+
+    <ng-container *ngIf="stand === 'angekommen'">
+      <h2 #ueberschrift tabindex="-1" class="team-ueberschrift">Dein Konto ist bereit</h2>
+      <p>Hast du beim Anlegen „Ja“ gesagt, steht dein Team jetzt unter „Meine Beiträge“.</p>
+      <div class="team-knoepfe">
+        <a mat-raised-button color="primary" [routerLink]="routen.MEINE_BEITRAEGE">Zu meinen Teams</a>
+        <a mat-stroked-button [routerLink]="routen.SEARCH">Weiter suchen</a>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="stand === 'beitritt_fehler'" [ngSwitch]="beitrittFehler">
+      <p *ngSwitchCase="'zu_oft'" class="warnung" role="alert">
+        Von hier kamen gerade sehr viele Versuche. Bitte versuch es in einer Viertelstunde noch einmal.
+      </p>
+      <p *ngSwitchCase="'abgemeldet'" class="warnung" role="alert">
+        Du bist nicht mehr angemeldet. Bitte <a routerLink="/login">melde dich an</a> und öffne den Link noch einmal.
+      </p>
+      <p *ngSwitchDefault class="warnung" role="alert">
+        Das hat nicht geklappt. Bitte versuch es in ein paar Minuten noch einmal.
+      </p>
+      <button mat-stroked-button type="button" (click)="nochmalFragen()">Zurück zur Frage</button>
+    </ng-container>
+
     <form *ngIf="stand === 'formular' || stand === 'sendet' || stand === 'fehler'" (ngSubmit)="einloesen()">
       <p>
         Gib deinen Namen und deine Mail-Adresse ein. Du bekommst eine Mail, mit der du dein Passwort
@@ -81,6 +205,9 @@
         Mit dem Konto gelten die <a routerLink="/nutzungsbedingungen">Nutzungsbedingungen</a>; mehr
         zum Umgang mit deinen Daten steht in der <a routerLink="/datenschutz">Datenschutzerklärung</a>.
       </p>
+      <p *ngIf="teamWahlFehlt" class="warnung" role="alert" data-testid="team-wahl-fehlt">
+        Bitte wähl oben zuerst: mit Team oder ohne Team.
+      </p>
       <button mat-raised-button color="primary" type="submit" [disabled]="!vollstaendig || stand === 'sendet'">
         Konto anlegen
       </button>
@@ -91,6 +218,9 @@
       <p>
         Schau in dein Postfach: Dort ist eine Mail, mit der du dein Passwort festlegst. Der Link darin
         gilt drei Tage. Danach meldest du dich gleich an.
+      </p>
+      <p *ngIf="team && teamWahl === 'ja'" data-testid="team-nach-mail">
+        Dein Team speichern wir, sobald dein Konto angelegt ist. Nach dem Anmelden siehst du es unter „Meine Beiträge“.
       </p>
       <p>
         Keine Mail bekommen, oder gab es schon ein Konto mit dieser Adresse? Dann

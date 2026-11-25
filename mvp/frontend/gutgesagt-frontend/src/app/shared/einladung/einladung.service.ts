@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { stillerKontext } from '../selbst-nachladen';
+import { BeitretenAntwort, PruefenAntwort, TeamAntwort } from './team-einladung';
 
 // Grenzen wie im Backend (services/einladung_service.py).
 export const EINLADUNG_NOTIZ_MAX = 200;
@@ -72,13 +73,21 @@ export class EinladungService {
     return this.http.patch<Einladung>(`${this.baseUrl}/${id}`, { abgeschaltet });
   }
 
-  pruefen(code: string): Observable<boolean> {
+  /** Ob die Einladung gilt und, bei wirksamem Schalter teams, ihr Team (sonst null). */
+  pruefen(code: string): Observable<PruefenAntwort> {
     return this.http
-      .post<{ einloesbar: boolean }>(`${this.baseUrl}/pruefen`, { code })
-      .pipe(map((antwort) => antwort.einloesbar));
+      .post<Partial<PruefenAntwort>>(`${this.baseUrl}/pruefen`, { code })
+      .pipe(map((antwort) => ({ einloesbar: antwort?.einloesbar === true, team: antwort?.team ?? null })));
   }
 
-  einloesen(code: string, email: string, vorname: string, nachname: string): Observable<unknown> {
-    return this.http.post(`${this.baseUrl}/einloesen`, { code, email, vorname, nachname });
+  /** ``team``: nur bei einer Einladung mit Team; ohne bleibt der Aufruf wie vor den Teams. */
+  einloesen(code: string, email: string, vorname: string, nachname: string, team?: TeamAntwort): Observable<unknown> {
+    const teamfelder = team ? { team_einwilligung: team.einwilligung, team_oeffentlich: team.einwilligung && team.oeffentlich } : {};
+    return this.http.post(`${this.baseUrl}/einloesen`, { code, email, vorname, nachname, ...teamfelder });
+  }
+
+  /** Angemeldet dem Team der Einladung beitreten, nach dem Knopf „Ja, speichert …“. */
+  beitreten(code: string, oeffentlich: boolean): Observable<BeitretenAntwort> {
+    return this.http.post<BeitretenAntwort>(`${this.baseUrl}/beitreten`, { code, einwilligung: true, oeffentlich });
   }
 }
