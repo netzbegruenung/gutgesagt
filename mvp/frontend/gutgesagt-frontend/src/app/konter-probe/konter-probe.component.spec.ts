@@ -7,7 +7,7 @@ import { signal } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 
 import { KonterProbeComponent } from './konter-probe.component';
-import { KonterProbeEinstiegComponent } from './konter-probe-einstieg.component';
+import { KONTER_PROBE_NACHFRAGEN_MS, KonterProbeEinstiegComponent } from './konter-probe-einstieg.component';
 import {
   KONTER_PROBE_PFAD,
   KonterProbe,
@@ -258,6 +258,48 @@ describe('KonterProbeEinstiegComponent', () => {
     an.set(true);
     fixture.detectChanges();
     expect(service.proben).toHaveBeenCalledTimes(1);
+    expect(fixture.nativeElement.querySelector('section')).not.toBeNull();
+  });
+
+  it('fragt nach einem Ladefehler von selbst erneut', fakeAsync(() => {
+    service.proben.and.returnValues(throwError(() => ({ status: 500 })), of([probe()]));
+    an.set(true);
+    const fixture = erstellen();
+    expect(fixture.nativeElement.querySelector('section')).toBeNull();
+
+    tick(2000);
+    fixture.detectChanges();
+    expect(service.proben).toHaveBeenCalledTimes(2);
+    expect(fixture.nativeElement.querySelector('section')).not.toBeNull();
+    fixture.destroy();
+  }));
+
+  it('fragt ohne passende Aussage spaeter erneut', fakeAsync(() => {
+    service.proben.and.returnValues(of([]), of([probe()]));
+    an.set(true);
+    const fixture = erstellen();
+    expect(fixture.nativeElement.querySelector('section')).toBeNull();
+
+    tick(KONTER_PROBE_NACHFRAGEN_MS);
+    fixture.detectChanges();
+    expect(service.proben).toHaveBeenCalledTimes(2);
+    expect(fixture.nativeElement.querySelector('section')).not.toBeNull();
+    fixture.destroy();
+  }));
+
+  it('verschwindet beim Ausschalten und fragt beim Wiedereinschalten neu', () => {
+    service.proben.and.returnValue(of([probe()]));
+    an.set(true);
+    const fixture = erstellen();
+    expect(fixture.nativeElement.querySelector('section')).not.toBeNull();
+
+    an.set(false);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('section')).toBeNull();
+
+    an.set(true);
+    fixture.detectChanges();
+    expect(service.proben).toHaveBeenCalledTimes(2);
     expect(fixture.nativeElement.querySelector('section')).not.toBeNull();
   });
 });

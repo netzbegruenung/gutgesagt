@@ -1,17 +1,24 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { Subscription } from 'rxjs';
+import { Subject, Subscription, timer } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 import { FunktionenService } from '../services/funktionen.service';
 import { ROUTES } from '../shared/constants/app.constants';
+import { LadeWiederholung } from '../shared/lade-wiederholung';
 import { KONTER_PROBE_SCHALTER, KonterProbeService } from './konter-probe';
+
+/** So oft fragt der Einstieg ohne passende Aussage erneut; so lange hält der Server seinen Vorrat. */
+export const KONTER_PROBE_NACHFRAGEN_MS = 5 * 60 * 1000;
 
 /**
  * Einstieg in die Konter-Probe auf der Startseite (#786): nur wenn der Schalter an ist
  * und es mindestens eine passende Aussage gibt. Sonst nichts, auch kein Platzhalter.
  * Schaltet ein Admin um, kommt das mit dem nächsten Stand der Funktionen an
- * (FunktionenService), ohne dass jemand neu lädt.
+ * (FunktionenService), ohne dass jemand neu lädt. Ebenso ohne Neuladen: Nach einem
+ * Ladefehler fragt der Einstieg von selbst erneut (LadeWiederholung), ohne passende
+ * Aussage alle KONTER_PROBE_NACHFRAGEN_MS.
  */
 @Component({
   selector: 'app-konter-probe-einstieg',
@@ -87,19 +94,67 @@ export class KonterProbeEinstiegComponent {
   readonly sichtbar = signal(false);
   readonly ziel = ROUTES.KONTER_PROBE;
 
+  private readonly ende$ = new Subject<void>();
+  private readonly wiederholung = new LadeWiederholung(this.ende$);
   private anfrage: Subscription | null = null;
+  private nachfrage: Subscription | null = null;
 
   constructor() {
-    // Erst fragen, wenn der Schalter an ist: Aus kostet keinen Abruf.
+    // Erst fragen, wenn der Schalter an ist: Aus kostet keinen Abruf. Geht er aus,
+    // endet alles; geht er wieder an, wird neu gefragt.
     effect(() => {
-      if (this.an() && !this.anfrage) {
-        this.anfrage = this.service.proben().subscribe({
-          next: (proben) => this.sichtbar.set(proben.length > 0),
-          // Beiwerk der Startseite: Ohne Antwort bleibt der Einstieg weg.
-          error: () => this.sichtbar.set(false),
-        });
+      if (!this.an()) {
+        untracked(() => this.beenden());
+      } else if (!this.anfrage) {
+        untracked(() => this.laden());
       }
     });
-    inject(DestroyRef).onDestroy(() => this.anfrage?.unsubscribe());
+    inject(DestroyRef).onDestroy(() => {
+      this.ende$.next();
+      this.ende$.complete();
+      this.beenden();
+    });
+  }
+
+  private laden(): void {
+    this.wiederholung.abbrechen();
+    this.nachfrage?.unsubscribe();
+    this.anfrage?.unsubscribe();
+    this.anfrage = this.service.proben().subscribe({
+      next: (proben) => {
+        this.wiederholung.erfolg();
+        this.sichtbar.set(proben.length > 0);
+        // Noch keine passende Aussage: später von selbst noch einmal fragen.
+        if (proben.length === 0) {
+          this.spaeterNachfragen();
+        }
+      },
+      // Beiwerk der Startseite: Ohne Antwort bleibt der Einstieg weg, bis ein neuer
+      // Versuch (LadeWiederholung) klappt; 404 heißt Schalter aus, dann wie leer.
+      error: (fehler) => {
+        this.sichtbar.set(false);
+        if (fehler?.status === 404) {
+          this.wiederholung.erfolg();
+          this.spaeterNachfragen();
+          return;
+        }
+        this.wiederholung.fehlgeschlagen(fehler, () => this.laden());
+      },
+    });
+  }
+
+  private spaeterNachfragen(): void {
+    this.nachfrage = timer(KONTER_PROBE_NACHFRAGEN_MS)
+      .pipe(takeUntil(this.ende$))
+      .subscribe(() => this.laden());
+  }
+
+  private beenden(): void {
+    this.wiederholung.abbrechen();
+    this.nachfrage?.unsubscribe();
+    this.nachfrage = null;
+    this.anfrage?.unsubscribe();
+    this.anfrage = null;
+    this.sichtbar.set(false);
   }
 }

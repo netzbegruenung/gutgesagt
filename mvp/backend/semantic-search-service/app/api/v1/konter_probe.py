@@ -77,6 +77,8 @@ def get_konter_probe_service(
             QdrantRepositoryFactory(),
             reference_service,
         ),
+        # Fuer Auswahl und Spitzenreiter: je Person, Beitrag und Tag einmal (#352).
+        lambda ids: get_usage_service().repository.get_nutzung_entdoppelt_batch(ids),
     )
 
 

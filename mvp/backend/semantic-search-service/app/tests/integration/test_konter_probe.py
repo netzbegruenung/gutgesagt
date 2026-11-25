@@ -82,6 +82,7 @@ async def test_aussage_mit_drei_stilen_ergibt_probe(
             real_repository_factory,
             ReferenceService(integration_settings, real_repository_factory),
         ),
+        lambda ids: {str(i): nutzung.get(i, 0) for i in ids},
     )
     proben = await service.proben(hoechstens=1000)
 
@@ -93,3 +94,11 @@ async def test_aussage_mit_drei_stilen_ergibt_probe(
         (str(humorvoll), "commentary", 8),
         (str(persoenlich), "commentary", 1),
     }
+
+    # Nach dem Aufbau des Vorrats gesperrt: Der naechste Abruf liefert die Probe
+    # nicht mehr, obwohl der Vorrat zwischengespeichert ist.
+    await real_repository_factory.create_content_repository(
+        integration_settings
+    ).update_status(humorvoll, ContentStatus.BLOCKED)
+    proben = await service.proben(hoechstens=1000)
+    assert aussage_id not in {p.statement_id for p in proben}

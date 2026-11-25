@@ -548,7 +548,7 @@ Ein Meilenstein für das eigene Tun, nicht für die Wirkung bei anderen (#351): 
 _Avoid_: Achievement, Erfolg
 
 **Konter-Probe**:
-Ein kleines Spiel ohne Konto (#786, Schalter `konter_probe`): Zu einer Aussage stehen drei sichtbare Kommentare in verschiedenen Stilen; wer spielt, tippt an, welcher bei Mitlesenden am besten wirkt, und sieht danach die echte Nutzung aller drei und die Karten zum Kopieren. Ausgewählt werden nur Kommentare für die Kommentarspalte, die drei zusammen mindestens sechsmal genutzt, mit einem klaren Spitzenreiter. Der Tipp wird nur im Browser ausgewertet und nirgends gespeichert; keine Punkte, kein Countdown, keine Rangliste. Ohne passende Aussage gibt es keinen Einstieg auf der Startseite.
+Ein kleines Spiel ohne Konto (#786, Schalter `konter_probe`): Zu einer Aussage stehen drei sichtbare Kommentare in verschiedenen Stilen; wer spielt, tippt an, welcher bei Mitlesenden am besten wirkt, und sieht danach die echte Nutzung aller drei und die Karten zum Kopieren. Ausgewählt werden nur Kommentare für die Kommentarspalte, die drei zusammen mindestens sechsmal genutzt, mit einem klaren Spitzenreiter; dafür zählt die Nutzung je Person, Beitrag und Tag einmal (#352). Der Tipp wird nur im Browser ausgewertet und nirgends gespeichert; keine Punkte, kein Countdown, keine Rangliste. Ohne passende Aussage gibt es keinen Einstieg auf der Startseite.
 _Avoid_: Quiz, Ratespiel
 
 **Zustimmung zur Sichtbarkeit**:
