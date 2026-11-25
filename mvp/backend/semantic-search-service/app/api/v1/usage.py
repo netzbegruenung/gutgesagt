@@ -58,6 +58,8 @@ from repositories.punkte_einwilligung_repository import (
     get_punkte_einwilligung_repository,
 )
 from services.gepostet_service import GepostetService, get_gepostet_service
+from services.wirkung_service import get_wirkung_service
+from domain.content_registry import BEITRAGSTYPEN_WERTE
 from domain.team_fortschritt import Art as TeamArt
 from services.team_fortschritt_service import team_zaehlen_async
 from services import antworten_hinweis
@@ -143,6 +145,11 @@ class BesuchResponse(BaseModel):
     # (#760, services/antworten_hinweis.py). None, solange der Schalter
     # antworten_hinweis aus ist: Dann zeigt das Frontend weder Kachel noch Reiter.
     antworten_auf_eigene_aussagen: Optional[int] = None
+    # Wirkungs-Echo (#790): wie oft die eigenen Beitraege seit dem letzten Besuch als
+    # oeffentlich gepostet gemeldet wurden, als Zaehlerstand wie die Nutzung
+    # (gesehene_nutzung.echo, kein Zeitpunkt). None, solange der Schalter
+    # wirkungs_echo aus ist.
+    neu_oeffentlich_gepostet: Optional[int] = None
 
 
 # So lange warten die Nebenzahlen (alles ausser der Nutzung) hoechstens; danach gilt
@@ -241,6 +248,25 @@ class GepostetResponse(BaseModel):
     """Wie viele verschiedene Personen diese Kalenderwoche "Ja, gepostet" gemeldet haben (#643)."""
 
     personen_diese_woche: int
+    # Wirkungs-Echo (#790): Ob das Frontend beim Melden den Beitrag nennen soll. Nur
+    # mit Schalter wirkungs_echo; sonst schickt es keinen, und der Server erfaehrt
+    # wie bisher nicht, welcher Beitrag gepostet wurde.
+    beitrag_nennen: bool = False
+
+
+class GepostetRequest(BaseModel):
+    """Optional der gepostete Beitrag (#790); ohne Schalter wirkungs_echo verworfen."""
+
+    content_id: Optional[str] = None
+
+
+class DankeResponse(BaseModel):
+    """
+    Ob das Danke gezaehlt wurde (#791). Keine Summe: Die sieht nur die Autorin, in
+    "Meine Beitraege".
+    """
+
+    gezaehlt: bool
 
 
 class TrendingContentResponse(BaseModel):
@@ -816,7 +842,15 @@ async def besuch(
     # nicht; scheitert sie, ist der Besuch gescheitert (500).
     # Ohne Schalter fragt der Besuch die eigenen Aussagen gar nicht erst ab (#760).
     mit_antworten = schalter_wirksam(antworten_hinweis.SCHALTER, settings)
+    mit_echo = schalter_wirksam("wirkungs_echo", settings)
     try:
+        echo = (
+            _hoechstens(
+                _neues_echo(current_user, settings, gesehen), 0, "Wirkungs-Echo"
+            )
+            if mit_echo
+            else _keine()
+        )
         antworten = (
             _hoechstens(
                 _neue_antworten(current_user, settings, seit), 0, "Neue Antworten"
@@ -824,7 +858,7 @@ async def besuch(
             if mit_antworten
             else _keine()
         )
-        anzahl, neu, wartend, ausformuliert, beitraege, antworten = (
+        anzahl, neu, wartend, ausformuliert, beitraege, antworten, gepostet = (
             await asyncio.gather(
                 get_usage_service().nutzung_seit_letztem_besuch(current_user),
                 _hoechstens(
@@ -844,6 +878,7 @@ async def besuch(
                     _neue_beitraege(current_user, settings, seit), 0, "Neue Beitraege"
                 ),
                 antworten,
+                echo,
             )
         )
     except Exception as e:
@@ -860,7 +895,30 @@ async def besuch(
         ausformulierte_einwuerfe=max(0, ausformuliert),
         neue_beitraege=max(0, beitraege),
         antworten_auf_eigene_aussagen=max(0, antworten) if mit_antworten else None,
+        neu_oeffentlich_gepostet=max(0, gepostet) if mit_echo else None,
     )
+
+
+async def _neues_echo(
+    person: str, settings: Settings, gesehen: GeseheneNutzungRepository
+) -> int:
+    """
+    Wirkungs-Echo (#790): der Zuwachs der Summe "oeffentlich gepostet" ueber die
+    eigenen Beitraege seit dem letzten Besuch, als Zaehlerstand wie die Nutzung. So
+    steht die Kachel nur da, wenn wirklich etwas dazukam. Bei einem Fehler 0.
+    """
+    try:
+        eigene = await get_content_repository(settings).getByAuthor(
+            user_id=person, limit=10000, offset=0, content_types=BEITRAGSTYPEN_WERTE
+        )
+        ids = [uuid.UUID(str(beitrag.id)) for beitrag in eigene]
+        summe = await asyncio.to_thread(get_wirkung_service().gepostet_summe, ids)
+        return await asyncio.to_thread(
+            gesehen.neues_echo_seit_letztem_besuch, person, summe
+        )
+    except Exception as e:
+        logger.warning(f"Wirkungs-Echo nicht gezaehlt: {type(e).__name__}")
+        return 0
 
 
 async def _keine() -> int:
@@ -1065,6 +1123,7 @@ async def gepostet_stand(
     current_user: str = Depends(require_user),
     dienst: GepostetService = Depends(_gepostet_dienst),
     _einwilligung: None = Depends(require_art9_einwilligung),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Ob die Rueckmeldung "Gepostet?" angeboten wird (200) und wie viele Personen diese
@@ -1079,20 +1138,30 @@ async def gepostet_stand(
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Internal server error")
-    return GepostetResponse(personen_diese_woche=anzahl)
+    return GepostetResponse(
+        personen_diese_woche=anzahl,
+        beitrag_nennen=schalter_wirksam("wirkungs_echo", settings),
+    )
 
 
 @router.post("/users/me/gepostet", response_model=GepostetResponse)
 async def gepostet_melden(
+    body: Optional[GepostetRequest] = None,
     current_user: str = Depends(require_user),
     dienst: GepostetService = Depends(_gepostet_dienst),
     _einwilligung: None = Depends(require_art9_einwilligung),
+    laden: BeitragLader = Depends(get_beitrag_laden),
+    settings: Settings = Depends(get_settings),
 ):
     """
     "Ja, gepostet" nach dem Kopieren (#643): zaehlt die Person einmal je
     Kalenderwoche als "oeffentlich gekontert", ohne Beitrag und ohne festzuhalten,
     wer es war (services/gepostet_service.py). Ein zweiter Klick in derselben Woche
     aendert die Zahl nicht. Die Person kommt aus ``X-User``, nicht aus dem Pfad (#284).
+
+    Wirkungs-Echo (#790): Mit Schalter ``wirkungs_echo`` und genanntem Beitrag zaehlt
+    zusaetzlich dessen Summe "oeffentlich gepostet" (services/wirkung_service.py),
+    ausser beim eigenen Beitrag. Scheitert das, bleibt die Wochenzahl gezaehlt.
     """
     try:
         anzahl = await asyncio.to_thread(dienst.melden, current_user)
@@ -1105,7 +1174,91 @@ async def gepostet_melden(
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Internal server error")
-    return GepostetResponse(personen_diese_woche=anzahl)
+    echo = schalter_wirksam("wirkungs_echo", settings)
+    if echo and body is not None and body.content_id:
+        await _echo_zaehlen(current_user, body.content_id, laden)
+    return GepostetResponse(personen_diese_woche=anzahl, beitrag_nennen=echo)
+
+
+async def _echo_zaehlen(person: str, content_id: str, laden: BeitragLader) -> None:
+    """
+    "Oeffentlich gepostet" fuer diesen Beitrag zaehlen (#790), nur wenn es ihn gibt
+    und er nicht der Person selbst gehoert. Fehler kosten nur das Echo.
+    """
+    try:
+        content_uuid = uuid.UUID(content_id)
+        beitrag = await laden(content_uuid)
+        if beitrag is None or beitrag.original_author == person:
+            return
+        await asyncio.to_thread(
+            get_wirkung_service().gepostet_melden, person, content_uuid
+        )
+    except Exception as e:
+        logger.warning(f"Wirkungs-Echo nicht gezaehlt: {type(e).__name__}")
+
+
+@router.post("/content/{content_id}/danke", response_model=DankeResponse)
+async def danke_sagen(
+    content_id: str,
+    request: Request,
+    aufrufer: Optional[str] = Depends(get_current_user_optional),
+    laden: BeitragLader = Depends(get_beitrag_laden),
+    settings: Settings = Depends(get_settings),
+    limiter: RateLimiter = Depends(get_nutzung_rate_limiter),
+):
+    """
+    "Danke an die Autorin" nach dem Kopieren (#791). Hoechstens ein Danke je Person,
+    Beitrag und Tag, entdoppelt wie die Nutzung (Tages-Pruefwert,
+    services/entdoppelung.py); keine Punkte. Die Autorin sieht nur die Summe.
+
+    Angemeldet nur mit Art.-9-Einwilligung (403 wie beim Abstimmen); ohne Konto nur
+    mit dem Unterschalter ``danke_ohne_konto``, entdoppelt ueber das
+    Besuchermerkmal. Eigene Beitraege und Startkonten zaehlen nicht, ohne Fehler.
+    Ohne Schalter 404.
+    """
+    angemeldet = bool(aufrufer) and aufrufer != ANONYM
+    if not schalter_wirksam("danke_knopf", settings) or (
+        not angemeldet and not schalter_wirksam("danke_ohne_konto", settings)
+    ):
+        raise HTTPException(status_code=404, detail="Not found")
+    try:
+        content_uuid = uuid.UUID(content_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid content ID format")
+    if angemeldet:
+        # Erst nach dem Schalter, damit ein ausgeschalteter die Datenbank nicht fragt.
+        await asyncio.to_thread(require_art9_einwilligung, aufrufer)
+    if await limiter.is_rate_limited(
+        f"danke:user:{aufrufer}"
+        if angemeldet
+        else f"danke:{derive_client_key(request)}"
+    ):
+        raise HTTPException(status_code=429, detail="Too many requests. Please wait.")
+    try:
+        beitrag = await laden(content_uuid)
+    except BeitragUnlesbar:
+        # Wem er gehoert, ist dann nicht feststellbar: im Zweifel nicht zaehlen.
+        return DankeResponse(gezaehlt=False)
+    except Exception as e:
+        logger.error(f"Danke: Beitrag nicht lesbar: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+    if beitrag is None:
+        raise HTTPException(status_code=404, detail="Content not found")
+    if (angemeldet and beitrag.original_author == aufrufer) or settings.ist_startkonto(
+        aufrufer
+    ):
+        return DankeResponse(gezaehlt=False)
+    try:
+        gezaehlt = await asyncio.to_thread(
+            get_wirkung_service().danke_sagen,
+            aufrufer if angemeldet else None,
+            None if angemeldet else besucher_merkmal(request),
+            content_uuid,
+        )
+    except Exception as e:
+        logger.error(f"Danke nicht gezaehlt: {type(e).__name__}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+    return DankeResponse(gezaehlt=gezaehlt)
 
 
 @router.get("/trending", response_model=TrendingContentResponse)

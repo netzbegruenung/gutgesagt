@@ -107,7 +107,17 @@ export const GEPOSTET_NICHT_ANGEBOTEN = 'nicht_angeboten' as const;
 export interface GepostetAntwort {
   /** Verschiedene Personen, die diese Kalenderwoche „Ja, gepostet“ gemeldet haben. */
   personen_diese_woche: number;
+  /** Wirkungs-Echo (#790): ob beim Melden der Beitrag mitgehen soll; nur mit Schalter. */
+  beitrag_nennen?: boolean;
 }
+
+/** Antwort von POST /content/{id}/danke (#791). */
+export interface DankeAntwort {
+  gezaehlt: boolean;
+}
+
+/** Was nach „Danke an die Autorin“ passiert ist (#791). */
+export type DankeErgebnis = 'gezaehlt' | 'nicht_gezaehlt' | 'nicht_angeboten' | 'fehler';
 
 export interface BesuchResponse {
   nutzung_seit_letztem_besuch: number;
@@ -126,6 +136,12 @@ export interface BesuchResponse {
    * Schalter „antworten_hinweis“ aus, dann gibt es weder Kachel noch Reiter „Meine Aussagen“.
    */
   antworten_auf_eigene_aussagen?: number | null;
+  /**
+   * Wirkungs-Echo (#790): wie oft die eigenen Beiträge seit dem letzten Besuch als
+   * öffentlich gepostet gemeldet wurden (Zählerstand wie die Nutzung, kein Zeitraum).
+   * null oder fehlend: Schalter aus.
+   */
+  neu_oeffentlich_gepostet?: number | null;
 }
 
 export interface TrendingContent {
@@ -158,6 +174,12 @@ export class UsageTrackingService {
 
   /** Je Kennung, ob „Ja, gepostet“ angeboten wird, soweit schon sicher bekannt (#643). */
   private gepostetStand = new Map<string, boolean>();
+
+  /**
+   * Je Kennung, ob beim Melden von „Ja, gepostet“ der Beitrag mitgehen soll (Wirkungs-Echo,
+   * #790); jede Antwort des Servers schreibt es fort. Ohne Ja geht kein Beitrag mit.
+   */
+  private beitragNennen = new Map<string, boolean>();
 
   /**
    * Seit wann die Punkte am Server als ausgeschaltet gelten: ``punkte`` oder
@@ -434,6 +456,7 @@ export class UsageTrackingService {
       return of(gemerkt);
     }
     return this.http.get<GepostetAntwort>(`${this.apiUrl}/users/me/gepostet`).pipe(
+      tap((antwort) => this.beitragNennen.set(kennung, antwort?.beitrag_nennen === true)),
       map(() => true),
       tap(() => this.gepostetStand.set(kennung, true)),
       catchError((error) => {
@@ -460,9 +483,17 @@ export class UsageTrackingService {
    * Kalenderwoche. Liefert die Zahl der Personen dieser Woche, bei einem Fehler null.
    * Ein 403 (Einwilligung widerrufen) oder 404 (Schalter aus) heißt: nicht mehr
    * angeboten; dann vergisst der Dienst das gemerkte Ja und liefert NICHT_ANGEBOTEN.
+   *
+   * Wirkungs-Echo (#790): Nur wenn der Server es zuletzt verlangt hat (Schalter an), geht
+   * ``inhaltId`` mit; sonst erfährt er wie bisher nicht, welcher Beitrag gepostet wurde.
    */
-  gepostetMelden(kennung: string): Observable<number | null | typeof GEPOSTET_NICHT_ANGEBOTEN> {
-    return this.http.post<GepostetAntwort>(`${this.apiUrl}/users/me/gepostet`, {}).pipe(
+  gepostetMelden(
+    kennung: string,
+    inhaltId?: string,
+  ): Observable<number | null | typeof GEPOSTET_NICHT_ANGEBOTEN> {
+    const body = inhaltId && this.beitragNennen.get(kennung) ? { content_id: inhaltId } : {};
+    return this.http.post<GepostetAntwort>(`${this.apiUrl}/users/me/gepostet`, body).pipe(
+      tap((antwort) => this.beitragNennen.set(kennung, antwort?.beitrag_nennen === true)),
       // Ein Gewinn mit Dank: Danach wartet jede Einwilligungsfrage (#788).
       tap(() => this.budget.gewinn()),
       map((antwort) => antwort.personen_diese_woche),
@@ -475,6 +506,28 @@ export class UsageTrackingService {
         return of(null);
       }),
     );
+  }
+
+  /**
+   * „Danke an die Autorin“ (#791): ``gezaehlt``, ``nicht_gezaehlt`` (der Server sagt nicht,
+   * warum: heute schon gedankt, derselbe Anschluss ohne Konto, Beitrag nicht lesbar,
+   * Startkonto), ``nicht_angeboten`` (403 ohne Einwilligung, die meldet der
+   * Auth-Interceptor selbst mit Knopf zur Einwilligung, oder 404, Schalter aus) und
+   * ``fehler`` für alles andere.
+   */
+  dankeSagen(inhaltId: string): Observable<DankeErgebnis> {
+    return this.http
+      .post<DankeAntwort>(`${this.apiUrl}/content/${encodeURIComponent(inhaltId)}/danke`, {})
+      .pipe(
+        map((antwort): DankeErgebnis => (antwort?.gezaehlt === true ? 'gezaehlt' : 'nicht_gezaehlt')),
+        catchError((error) => {
+          if (error?.status === 403 || error?.status === 404) {
+            return of<DankeErgebnis>('nicht_angeboten');
+          }
+          this.loggingService.error('Danke nicht gemeldet', error);
+          return of<DankeErgebnis>('fehler');
+        }),
+      );
   }
 
   /** Ja oder Nein zur Sichtbarkeit speichern; true, wenn es geklappt hat. */

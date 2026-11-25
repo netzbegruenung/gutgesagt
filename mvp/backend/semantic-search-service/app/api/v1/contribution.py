@@ -23,6 +23,8 @@ from services.beitrag_kontext import aussagen_fuers_album
 from services.content.statement_service import StatementService
 from domain.content_registry import BEITRAGSTYPEN_WERTE
 from services.usage_tracking_service import get_usage_service
+from services.schalter_service import schalter_wirksam
+from services.wirkung_service import get_wirkung_service
 from core.config import Settings
 from core.logging import get_logger
 from core.fehler import INTERNER_FEHLER
@@ -115,6 +117,21 @@ async def search_content(
             mit_nutzung = [
                 {**eintrag, "nutzung_je_fassung": None} for eintrag in mit_nutzung
             ]
+
+        # Wirkungs-Echo und Danke (#790, #791), je nur mit Schalter; fehlen die Zahlen,
+        # zeigt die Karte sie nicht.
+        mit_gepostet = schalter_wirksam("wirkungs_echo", settings)
+        mit_danke = schalter_wirksam("danke_knopf", settings)
+        try:
+            if mit_gepostet or mit_danke:
+                mit_nutzung = get_wirkung_service().nachtragen(
+                    mit_nutzung, mit_gepostet=mit_gepostet, mit_danke=mit_danke
+                )
+        except Exception as e:
+            logger.warning(
+                f"Wirkung fuer Meine Beitraege nicht lesbar, zeige keine: "
+                f"{type(e).__name__}"
+            )
 
         # Worauf jeder Beitrag antwortet, mit Themen: das Album ordnet danach. Faellt
         # das aus, kommt die Liste trotzdem, alle Beitraege stehen dann "Ohne Thema".

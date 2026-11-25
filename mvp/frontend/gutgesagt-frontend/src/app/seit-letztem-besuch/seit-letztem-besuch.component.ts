@@ -100,6 +100,23 @@ export function neuesListe(stand: NeuesStand): NeuesEintrag[] {
     });
   }
 
+  // Wirkungs-Echo (#790): nur der Zuwachs seit dem letzten Besuch, als Zaehlerstand wie die
+  // Nutzung; ohne Neues keine Kachel. Nur mit Schalter.
+  const echo = positiv(stand.neu_oeffentlich_gepostet);
+  if (echo) {
+    const wort = 'mal öffentlich gepostet';
+    liste.push({
+      art: 'echo',
+      ziel: ROUTES.MEINE_BEITRAEGE,
+      icon: 'campaign',
+      zahl: `${echo}`,
+      wort,
+      satz: `${echo} ${wort}`,
+      zeile: 'mal wurden deine Beiträge öffentlich gepostet.',
+      knopf: PAGE_TITLES.MEINE_BEITRAEGE,
+    });
+  }
+
   const ausformuliert = positiv(stand.ausformulierte_einwuerfe);
   if (ausformuliert) {
     const eins = ausformuliert === 1;

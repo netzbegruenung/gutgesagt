@@ -565,3 +565,27 @@
     transition: none;
   }
 }
+
+// Wirkungs-Echo und Danke (#790, #791) unter der Karte: leise, mit Symbol und Namen
+.wirkung-echo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs, 4px) var(--spacing-md);
+  margin: var(--spacing-xs, 4px) 0 0;
+  padding: 0 var(--spacing-md);
+  list-style: none;
+  font-size: 14px;
+  color: var(--text-leise);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}

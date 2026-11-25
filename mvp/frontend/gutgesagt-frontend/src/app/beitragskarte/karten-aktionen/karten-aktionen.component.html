@@ -102,6 +102,8 @@
         </button>
     </mat-menu>
 </div>
+<!-- Danke an die Autorin nach dem Kopieren (#791) -->
+<app-danke-knopf *ngIf="dankeSichtbar" [inhaltId]="inhaltId"></app-danke-knopf>
 
 <!--
     Eigenes Album (Meine Beitraege, Variante A 20.11.): links Aendern, in der Mitte Teilen als

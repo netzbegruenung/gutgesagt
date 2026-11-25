@@ -115,6 +115,32 @@ def pruefwert(
     )
 
 
+def danke_pruefwert(
+    user_id: Optional[str],
+    besucher_merkmal: Optional[str],
+    content_id: uuid.UUID,
+    moment: Optional[datetime] = None,
+) -> Optional[str]:
+    """
+    Der Pruefwert eines "Danke an die Autorin" (#791): wie ``pruefwert``, mit
+    demselben Tagesschluessel und in derselben Tabelle ``nutzung_heute``, aber mit
+    eigenem Praefix. So entdoppelt das Danke wie die Nutzung (hoechstens eins je
+    Person, Beitrag und Tag), ohne dass eine Nutzung ein Danke verbraucht oder
+    umgekehrt; verworfen wird es mit den Nutzungs-Pruefwerten nach dem Tageswechsel.
+    """
+    if user_id and user_id != ANONYM:
+        person = f"konto:{user_id}"
+    elif besucher_merkmal:
+        person = f"besucher:{besucher_merkmal}"
+    else:
+        return None
+    tag = (moment or datetime.now(timezone.utc)).astimezone(timezone.utc).date()
+    return _hmac(
+        _NUTZUNG_SCHLUESSEL.fuer(tag),
+        f"danke|{person}|{content_id}|{tag.isoformat()}",
+    )
+
+
 def paar_pruefwert(nutzende: str, autor: str, tag: date) -> str:
     """
     Der Pruefwert fuer "``nutzende`` hat einen Beitrag von ``autor`` genutzt", wie er

@@ -187,6 +187,10 @@ export interface KartenDaten {
   varianten?: number;
   /** Davon in den letzten 7 Tagen; nur in Meine Beitraege gesetzt, sonst kein Zuwachs. */
   nutzungLetzte7Tage?: number;
+  /** Nur in Meine Beitraege: wie oft als öffentlich gepostet gemeldet (#790); fehlt = Schalter aus. */
+  oeffentlichGepostet?: number | null;
+  /** Nur in Meine Beitraege: wie oft jemand Danke gesagt hat (#791); fehlt = Schalter aus. */
+  danke?: number | null;
   /** Am Kommentar in Meine Beitraege: Nutzung und Zuwachs je vorhandener Fassung (#355). */
   nutzungJeFassung?: NutzungJeFassung;
   quellen: KartenQuelle[];
@@ -350,6 +354,8 @@ export function ausBeitrag(eintrag: ContentResult): KartenDaten {
     autorTeams: eintrag.autor_teams ?? null,
     nutzung: eintrag.usage_count ?? 0,
     nutzungLetzte7Tage: eintrag.nutzung_letzte_7_tage ?? 0,
+    oeffentlichGepostet: eintrag.oeffentlich_gepostet ?? null,
+    danke: eintrag.danke ?? null,
     nutzungJeFassung: typ === 'commentary' ? (eintrag.nutzung_je_fassung ?? undefined) : undefined,
     quellen: (eintrag.references ?? []).map(quelle),
     bildUrl: eintrag.image_url || undefined,
