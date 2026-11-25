@@ -520,8 +520,12 @@ Der Hinweis an Admins, dass zwei Konten sich gegenseitig nutzen: Innerhalb von s
 _Avoid_: Betrugsverdacht, Alarm, Sockenpuppen-Erkennung
 
 **Rangliste**:
-Die Reihenfolge der Mitwirkenden nach Punkten einer Woche oder eines Monats. Nur Angemeldete sehen sie, und dort erscheint nur, wer ausdrücklich zugestimmt hat.
+Die Reihenfolge der Mitwirkenden nach ihren Punkten in der laufenden Saison (#793, ersetzt Woche und Monat). Darin steht und sie sieht nur, wer angemeldet ist, ausdrücklich eingewilligt hat (Wortlaut `rangliste-2026-11-25`) und die Art.-9-Einwilligung und „Punkte und Meilensteine“ gegeben hat; fällt eine weg, ist die Person beim nächsten Abruf draußen. Gezeigt werden die ersten zehn Plätze und der eigene, erst ab zehn Teilnehmenden, mit dem Ranglistennamen; vergangene Saisons nur als eigene Summe. Schalter `rangliste`, wirkt nur mit den Punkten.
 _Avoid_: Leaderboard, Highscore
+
+**Ranglistenname**:
+Der Name einer Person in der Rangliste: zufällig aus festen Listen (Eigenschaft, Tier, Zahl, etwa „Flinke Amsel 42“), beim ersten Ja echt zufällig gewürfelt und mit der Einwilligung gespeichert, ohne Freitext. Aus der Kennung lässt er sich nicht ausrechnen; die Person behält ihn, auch über Saisons hinweg. Stehen zwei gleiche Namen in einer Liste, bekommt der zweite eine Nummer („(2)“). Den Anzeigenamen zeigt die Rangliste nur, wenn die Person ihn unter „Meine Beiträge“ selbst wählt.
+_Avoid_: Spitzname, Nickname
 
 **Quest**:
 Eine Aufgabe mit prüfbarem Ergebnis, die Punkte bringt, etwa eine unbeantwortete Aussage beantworten. Tagesaufgaben sind Quests für einen Tag, das Wochenziel ist eine gemeinsame Quest aller.

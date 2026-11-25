@@ -26,6 +26,7 @@ from fastapi.testclient import TestClient
 
 import api.v1.funktionen as funktionen_module
 import api.v1.metrics as metrics_module
+import api.v1.rangliste as rangliste_module
 import api.v1.usage as usage_module
 from core.config import Settings
 from dependencies import (
@@ -54,6 +55,7 @@ ALLE_OBERGRENZEN_AN = dict(
     gepostet_aktiv=True,
     abkuerzungen_aktiv=True,
     sharepic_aktiv=True,
+    rangliste_aktiv=True,
 )
 
 
@@ -97,6 +99,7 @@ def client(muster, abzeichen):
     app.include_router(usage_module.router, prefix="/api/v1/usage")
     app.include_router(metrics_module.router, prefix="/api/v1/metrics")
     app.include_router(funktionen_module.router, prefix="/api/v1/funktionen")
+    app.include_router(rangliste_module.router, prefix="/api/v1/rangliste")
     app.dependency_overrides[get_settings] = lambda: Settings(**ALLE_OBERGRENZEN_AN)
     app.dependency_overrides[get_punkte_service] = lambda: Mock(
         punkte=AsyncMock(side_effect=RuntimeError("nur bis hierher"))
@@ -204,6 +207,8 @@ STELLEN = {
     "gepostet_admin": (_admin_aktiv_aus("/api/v1/metrics/gepostet"), ("gepostet",)),
     "abkuerzungen": (_funktion_aus("abkuerzungen"), ("abkuerzungen",)),
     "sharepic": (_funktion_aus("sharepic"), ("sharepic",)),
+    # Rangliste je Saison (#793): wirkt nur zusammen mit den Punkten.
+    "rangliste": (_404("/api/v1/rangliste"), ("rangliste", "punkte")),
 }
 
 FAELLE = [

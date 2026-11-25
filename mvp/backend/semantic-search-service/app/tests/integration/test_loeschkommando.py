@@ -32,6 +32,7 @@ from infrastructure.database.models import (
     MusterHinweisZeile,
     NutzungsbedingungenZustimmungZeile,
     PunkteEinwilligungZeile,
+    RanglisteEinwilligungZeile,
     Einwurf,
     AusformuliertIn,
     Satz,
@@ -294,6 +295,16 @@ def spuren(datenbank, einwuerfe):
                 user_id=PERSON,
                 eingewilligt=True,
                 wortlaut="2026-11-13",
+                beantwortet_am=datetime.now(timezone.utc),
+            )
+        )
+        # Die Einwilligung zur Rangliste (#793).
+        s.add(
+            RanglisteEinwilligungZeile(
+                user_id=PERSON,
+                teilnehmen=True,
+                mit_anzeigename=False,
+                wortlaut="rangliste-2026-11-25",
                 beantwortet_am=datetime.now(timezone.utc),
             )
         )

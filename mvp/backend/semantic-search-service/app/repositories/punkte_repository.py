@@ -5,8 +5,8 @@ services/punkte_service.py und services/meilensteine_service.py.
 """
 
 import uuid
-from datetime import date, datetime
-from typing import Dict, List, Optional, Set
+from datetime import date, datetime, time, timedelta
+from typing import Dict, List, Optional, Set, Tuple
 
 from sqlalchemy import bindparam, func, select, text
 
@@ -21,16 +21,36 @@ class PunkteRepository:
         """``db``: eine AppDatabase; ohne Angabe die globale."""
         self.db = db if db is not None else get_app_database()
 
-    def zustimmungen(self, content_ids: List[uuid.UUID], ausgenommen: Set[str]) -> int:
-        """Zustimmungen zu diesen Beitraegen, ohne Stimmen der ausgenommenen Kennungen."""
+    def zustimmungen(
+        self,
+        content_ids: List[uuid.UUID],
+        ausgenommen: Set[str],
+        zeitraum: Optional[Tuple[date, date]] = None,
+    ) -> int:
+        """
+        Zustimmungen zu diesen Beitraegen, ohne Stimmen der ausgenommenen Kennungen.
+        Mit ``zeitraum`` (erster und letzter UTC-Tag) nur Stimmen, die an diesen Tagen
+        zuletzt gesetzt wurden (``created`` in UTC ohne Zeitzone, vote_repository.py).
+        """
         if not content_ids:
             return 0
+        sql = (
+            "SELECT count(*) FROM votes WHERE vote_type = 'like'"
+            f" AND content_id IN :ids AND {OHNE_AUSGENOMMENE}"
+        )
+        grenzen: Dict = {}
+        if zeitraum is not None:
+            sql += " AND created >= :von AND created < :bis"
+            grenzen = {
+                "von": datetime.combine(zeitraum[0], time.min),
+                "bis": datetime.combine(zeitraum[1] + timedelta(days=1), time.min),
+            }
         # votes legt vote_repository.py per Hand an; content_id ist dort UUID.
         abfrage, werte = ohne_ausgenommene(
-            "SELECT count(*) FROM votes WHERE vote_type = 'like'"
-            f" AND content_id IN :ids AND {OHNE_AUSGENOMMENE}",
+            sql,
             ausgenommen,
             ids=[str(i) for i in content_ids],
+            **grenzen,
         )
         abfrage = abfrage.bindparams(bindparam("ids", expanding=True))
         with self.db.get_session() as session:

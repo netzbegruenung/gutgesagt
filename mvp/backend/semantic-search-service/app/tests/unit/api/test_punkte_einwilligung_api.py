@@ -129,3 +129,30 @@ def test_speicherfehler_500(repo):
     )
 
     assert antwort.status_code == 500
+
+
+def test_widerruf_haelt_ja_zur_rangliste_als_nein_fest(repo, rangliste_ohne_datenbank):
+    """Sonst stuende die Person nach neuer Punkte-Einwilligung ungefragt in der Rangliste (#793)."""
+    from domain.rangliste import AKTUELLER_WORTLAUT as RANGLISTE_WORTLAUT
+    from repositories.rangliste_einwilligung_repository import RanglisteAntwort
+
+    rangliste_ohne_datenbank.lesen.return_value = RanglisteAntwort(
+        True, True, RANGLISTE_WORTLAUT, datetime(2026, 12, 1, tzinfo=timezone.utc)
+    )
+
+    antwort = _client().put(
+        URL, headers=KIM, json={"eingewilligt": False, "wortlaut": AKTUELLER_WORTLAUT}
+    )
+
+    assert antwort.status_code == 204
+    rangliste_ohne_datenbank.antworten.assert_called_once_with(
+        "kim-1", False, False, RANGLISTE_WORTLAUT
+    )
+
+
+def test_einwilligen_laesst_die_rangliste_unberuehrt(repo, rangliste_ohne_datenbank):
+    _client().put(
+        URL, headers=KIM, json={"eingewilligt": True, "wortlaut": AKTUELLER_WORTLAUT}
+    )
+
+    rangliste_ohne_datenbank.antworten.assert_not_called()

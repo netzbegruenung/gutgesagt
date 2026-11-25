@@ -113,7 +113,8 @@ dann jede folgende Anfrage ab, nach dem Entfernen nicht mehr.
    Einwilligung weiter“ mit dem Wortlaut, PR #670), in `abzeichen_sichtbarkeit` (jede
    Antwort auf die Frage nach der Sichtbarkeit der Abzeichen, auch ein Nein; #351), in
    `punkte_einwilligung` (jede Antwort auf die Einwilligung „Punkte und Meilensteine“, auch
-   ein Widerruf; #351), in `nutzungsbedingungen_zustimmungen` (jede Zustimmung zu den
+   ein Widerruf; #351), in `rangliste_einwilligung` (jede Antwort auf die Einwilligung zur
+   Rangliste samt Wahl des Anzeigenamens und Ranglistenname, auch ein Nein; #793), in `nutzungsbedingungen_zustimmungen` (jede Zustimmung zu den
    Nutzungsbedingungen in der App mit Zeitpunkt und Stand), in `team_mitgliedschaften` (jede
    Mitgliedschaft in einem Team samt Kennung des Wortlauts und Zeitpunkt der Einwilligung), in
    `team_oeffentlich` (die Antwort auf „Team öffentlich am Namen zeigen“) und die in
@@ -258,6 +259,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Löschaufträge, erledigt | 365 Tage (entschieden 13.11.2026) | Ausführung (`erledigt_am`); mit dem Konto sofort (Schritt 2) |
 | Zustimmung zur Sichtbarkeit der Abzeichen (`abzeichen_sichtbarkeit`) | solange das Konto besteht | — Nachweis der Zustimmung (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Einwilligung „Punkte und Meilensteine“ (`punkte_einwilligung`, #351) | solange das Konto besteht | — Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
+| Einwilligung zur Rangliste (`rangliste_einwilligung`, #793) | solange das Konto besteht | — Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2); Plätze und Punkte werden nicht gespeichert |
 | Mitgliedschaften in Teams (`team_mitgliedschaften`): Kennung, Teamname, Motiv, Saison, Nummer, Tag des Beitritts, Kennung des Wortlauts und Zeitpunkt der Einwilligung | bis „Team verlassen“ (sofort gelöscht, Widerruf der Einwilligung für dieses Team) oder bis zur Löschung des Kontos | — die Einwilligung `team-2026-11-26` steht an der Mitgliedschaft und geht mit ihr; kein Bezug zur Einladung. Mit dem Konto sofort (Schritt 2), unter „Teams“ |
 | Einwilligung „Team öffentlich am Namen zeigen“ (`team_oeffentlich`): Kennung, ja/nein, Kennung des Wortlauts, Zeitpunkt | solange das Konto besteht | — nur die jüngste Antwort je Konto; Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Zähler je Team und Saison (`team_nummern`): Teamname, Saison, zuletzt vergebene Nummer | keine | — kein Personenbezug (keine Kennung); hält fest, dass eine Nummer nach „Team verlassen“ nicht neu vergeben wird |
@@ -753,7 +755,7 @@ docker exec -i gutgesagt-app-postgres psql -U app_user -d gutgesagt_app \
 #   -v ON_ERROR_STOP=1 -v uid="$KENNUNG"
 
 docker exec -i gutgesagt-app-postgres psql -U app_user -d gutgesagt_app -c \
-  "VACUUM FULL votes, content_reports, raw_inputs, raw_input_content_links, raw_input_drafts, usage_events, users, gesehene_nutzung, muster_hinweise, art9_einwilligungen, art9_ohne_einwilligung, abzeichen_sichtbarkeit, punkte_einwilligung, nutzungsbedingungen_zustimmungen, team_mitgliedschaften, team_oeffentlich, loeschauftraege;"
+  "VACUUM FULL votes, content_reports, raw_inputs, raw_input_content_links, raw_input_drafts, usage_events, users, gesehene_nutzung, muster_hinweise, art9_einwilligungen, art9_ohne_einwilligung, abzeichen_sichtbarkeit, punkte_einwilligung, rangliste_einwilligung, nutzungsbedingungen_zustimmungen, team_mitgliedschaften, team_oeffentlich, loeschauftraege;"
 ```
 
 ```bash
