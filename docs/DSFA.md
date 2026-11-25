@@ -2,10 +2,11 @@
 
 > **Entwurf, nicht juristisch geprüft, nicht beschlossen.** Keine Rechtsberatung. Entscheiden
 > müssen der Vorstand der Netzbegrünung als Verantwortlicher und die Datenschutzbeauftragte, am
-> besten in derselben Runde wie #296; die Fragen an sie stehen in Abschnitt 6. Bis dahin soll
-> der Admin-Schalter der Punkte aus bleiben (#708); ob er aus ist, ist offen (Abschnitt 7). Die
-> Obergrenze `SEMANTIC_SEARCH_PUNKTE_AKTIV` steht in Produktion schon auf an (erlaubt). Aussagen ohne Beleg im Repo
-> oder in der Konfiguration des Betreibers stehen als **offen** da.
+> besten in derselben Runde wie #296; die Fragen an sie stehen in Abschnitt 6. Bedingung für
+> das Einschalten der Punkte ist diese Entscheidung (#708, Abschnitt 7); ob der Admin-Schalter
+> heute aus ist, ist offen. Die Obergrenze `SEMANTIC_SEARCH_PUNKTE_AKTIV` steht in Produktion auf
+> an (erlaubt). Aussagen ohne Beleg im Repo oder in der Konfiguration des Betreibers stehen als
+> **offen** da.
 
 Abschnitte 1 bis 7 prüfen Punkte, Quests und Ranglisten, Abschnitte 8 und 9 alle übrigen
 Verarbeitungen des Dienstes (#374). Das Verzeichnis der Verarbeitungstätigkeiten (Art. 30)
@@ -20,8 +21,8 @@ Meilensteine nur mit eigener Einwilligung, Abschnitt 1), #691 (Schleifensperre, 
 (Admin-Schalter mit Obergrenze, #708, Abschnitt 7), #713 und #734 (Gegenlesen, V20), #718 (Wortlaut `2026-11-19`), #739 (Punkte
 fürs Bewerten, Sofort-Dank, V11), #748 (Themen am Einwurf, V4) und #770 (Antworten-Hinweis,
 V10). Neu an diesem Stand: die offenen Fakten F1 bis F6 (8.6), soweit sie sich in der
-Konfiguration des Betreibers belegen lassen, die Haken in Abschnitt 7 und 9 und die geplante
-Verarbeitung „Teams“ (V23, R10, Frage 8). Fundstellen `Salt:<Datei>` zeigen auf die
+Konfiguration des Betreibers belegen lassen, die Haken in Abschnitt 7 und 9 und die Verarbeitung
+„Teams“ (nicht im Betrieb) (V23, R10, Frage 8). Fundstellen `Salt:<Datei>` zeigen auf die
 Konfiguration des Betreibers (nicht öffentlich, Stand 24.11.2026); die Zeilenbelege liegen
 beim Betreiber. Inhaltlich noch nicht geprüft und für den nächsten Stand vorgemerkt: #746
 (Linkvorschau), #765 (Herkunft prüfen, ausgehende Abrufe), #767 (Teilen als Bild) und #778
@@ -63,7 +64,7 @@ Muster-Hinweis; Ausbaustufe steht in
   Dazu, hinter einem zweiten Schalter (`abzeichen_sichtbar_aktiv`, Standard aus), das
   Abzeichen am Anzeigenamen für andere Angemeldete mit eigener Zustimmung; geprüft in
   Abschnitt 8.2, V22.
-- **Geplant, nicht gebaut:** Ranglisten (die ersten 10 und der eigene Platz, nur für Angemeldete,
+- **Nicht gebaut:** Ranglisten (die ersten 10 und der eigene Platz, nur für Angemeldete,
   nur mit Zustimmung), Quests, Krone, Wochenthema
   (`docs/VISION.md:99-103`).
 - **Fristen** (`docs/LOESCHKONZEPT.md:161-163` (#476)): Prüfwert 1 Tag, Paar-Prüfwert 7 Tage,
@@ -184,7 +185,7 @@ Verhältnismäßigkeit des Grundbetriebs ohne Punkte: 8.5.
    Stimmen, #661 legt für Beiträge, Einwürfe und Sätze einen Löschauftrag an, den ein Admin binnen
    sieben Tagen ausführt (R9b): Genügen Frist und Ausführung von Hand, oder ist ohne den
    vollautomatischen Ablauf vor dem Start die Aufsichtsbehörde zu konsultieren (Art. 36, 8.4)?
-8. Teams (V23, geplant): Trägt eine eigene ausdrückliche Einwilligung die Speicherung der
+8. Teams (V23, nicht im Betrieb): Trägt eine eigene ausdrückliche Einwilligung die Speicherung der
    Teamzugehörigkeit, die nur die Person selbst sieht? Unter welchen Bedingungen darf das Team
    mit einer zweiten Einwilligung am Namen für andere Angemeldete erscheinen (Mindestgröße eines
    Teams, Saison)? Gebündelt mit Frage 6.
@@ -241,9 +242,9 @@ nach einem Widerruf der Einwilligung bleiben Beiträge, Einwürfe und Sätze an 
 Admin den Löschauftrag ausführt, höchstens sieben Tage (#658 löscht die Stimmen sofort, #661 legt
 den Auftrag an; V2, R9); das
 Tagespseudonym angemeldeter Personen ist am laufenden Tag mit dem Schlüssel aus der Konfiguration
-nachrechenbar, weil er in Produktion gesetzt ist (V7, F5); für die Anwendungsprotokolle ist die Frist von 14 Tagen
-eine Maßnahme in Umsetzung (V16, F6). Nach der Methode in 8.4 liegt R9 mit dem Löschauftrag (#661) in der mittleren Klasse
-„Risiko“, ebenso R2, R3, R4, R5 und R6. Ob die Ausführung von Hand binnen sieben Tagen genügt oder
+nachrechenbar, weil er in Produktion gesetzt ist (V7, F5); für die Container-Logs ist die Frist von 14 Tagen
+Voraussetzung für den Livebetrieb ab 27.11.2026 (V16, F6). Nach der Methode in 8.4 liegt R9 mit dem Löschauftrag (#661) in der mittleren Klasse
+„Risiko“, ebenso R2, R3, R4 und R6. Ob die Ausführung von Hand binnen sieben Tagen genügt oder
 erst der vollautomatische Ablauf, ist eine Frage an die Datenschutzbeauftragte (Frage 7;
 Folgerung in 8.4). **Erst wenn die vier Lücken geschlossen
 sind**, die Maßnahmen aus 8.2 und 8.3 stehen
@@ -286,10 +287,10 @@ Empfänger und Ort“.
   **Ort (Stand 25.11.2026, F1):** Die Hosts gutgesagt* (Test und Produktion) laufen seit dem
   Umzug auf Proxmox im Rechenzentrum von verdigado in Nürnberg (#206, Stand 22.11.2026;
   Zuordnung `Salt:states/top.sls`, `Salt:pillars/top.sls`). Hetzner betrifft nur
-  noch die Altsysteme unter dem früheren Projektnamen, die bis zu ihrem Abbau in der Konfiguration stehen
+  noch die Altsysteme unter dem früheren Projektnamen, die noch in der Konfiguration stehen
   (`Salt:states/top.sls`, `Salt:pillars/top.sls`; Abbau offen in #206). Die
-  Datenschutzerklärung nennt Hetzner noch als Unterauftragsverarbeiterin (`DSE:66-75`); nach dem
-  Abbau anpassen (`docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md`, Frage 3).
+  Datenschutzerklärung nennt Hetzner als Unterauftragsverarbeiterin (`DSE:66-75`,
+  `docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md`, Frage 3).
   **AV-Vertrag (F1):** verdigado hat am 04.09.2026 bestätigt, dass AV-Verträge vorliegen
   (`docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md`, Frage 3); die Datenschutzerklärung nennt den Vertrag
   (`DSE:66-75`). Ob der bestehende Rahmenvertrag Gut gesagt mit Zweck, Datenarten (auch
@@ -734,25 +735,36 @@ Empfänger und Ort“.
   (`DSE:162-165`, `LK:278-281`); eine Einladung für eine Gruppe verriete sonst die Zugehörigkeit.
 - **Maßnahmen:** keine Zuordnung von Einladung und Konto (ADR 0006:9); Notiz ohne Namen
   (`LK:273-275`).
-- **Geplant:** Einladungen, die zu einem Team gehören (V23). Auch dann steht am Konto nicht,
-  über welche Einladung es entstand; gespeichert wird nur das Team, und nur mit eigener
-  Einwilligung.
+- **Teams (V23, Schalter aus, nicht im Betrieb):** Einladungen, die zu einem Team gehören. Auch
+  dann steht am Konto nicht, über welche Einladung es entstand; gespeichert wird nur das Team,
+  und nur mit eigener Einwilligung.
 
 #### V16 Protokolle
 
 - **Zweck, Rechtsgrundlage:** Betrieb, Fehlersuche, Abwehr; Art. 6 Abs. 1 lit. f (`DSE:870-871`).
 - **Daten:** vorgelagerter Webserver mit voller IP (`DSE:863-867`); Anwendung ohne Suchtext und mit
   gekürzter Kennung (`DSE:896-899`, `LK:398-406`).
-- **Frist:** vorgelagerter Webserver 14 Tage (`DSE:872-873`); Anwendung und Frontend-nginx: Ziel
-  14 Tage (`LK` „Protokolle“, #485, #336). **Stand 25.11.2026 (F6):** Maßnahme in Umsetzung beim
-  Betreiber; ob der Altbestand gelöscht ist, lässt sich aus der Konfiguration nicht ablesen
-  (**offen**, Prüfung durch den Betreiber).
-- **Risiko:** Altbestand vor #275 und #284 trägt Suchtexte und Kennungen im Klartext (`DSE:902-905`,
-  `LK:491-498`). Der vorgelagerte Webserver protokolliert je Suche eine Zeile mit IP und Uhrzeit,
-  die sich mit der Aussage aus der Suche verbinden lässt (`LK:502-507`, **offen**). Das
-  Log-Pseudonym ist ungesalzen und bei bekannten Kennungen zurückrechenbar (`LK:402-404`).
-- **Maßnahmen:** keine Suchtexte, Pfade und Fehlertexte im Log (`LK:427-464`); Referrer nur Ursprung
-  (`LK:499-502`).
+- **Frist, vorgelagerter Webserver:** 14 Tage, täglich umgebrochen, 14 Dateien; lesbar nur für
+  `root` (`DSE:872-873`; Zählung des Betreibers am 25.11.2026).
+- **Frist, Container (Anwendung und Frontend-nginx):** **Voraussetzung für den Livebetrieb ab
+  27.11.2026:** Frist 14 Tage für die Container-Logs (Salt-PR verdigado-Privileged/Salt#SALT-PR).
+  Die Datenschutzerklärung nennt für diese Protokolle noch „keine Löschfrist“ (`DSE:889-891`,
+  `DSE:910-911`).
+- **Altbestand:** keiner. Die Container laufen seit dem 20.11.2026, ihre Logs enthalten keinen
+  Suchtext (Zählung des Betreibers am 25.11.2026). Der Altbestand vor #275 und #284 (`LK:491-498`)
+  besteht damit nicht mehr.
+- **Risiko:** Der vorgelagerte Webserver schreibt die aufgerufene Adresse mit voller IP und
+  Uhrzeit. Der Suchtext steht darin nur, wenn jemand die Ergebnisseite direkt aufruft (Neuladen,
+  geteilter Link); normale Suchen laufen per POST, und der Referrer trägt nur den Ursprung
+  (`mvp/frontend/gutgesagt-frontend/src/index.html:7`). Gezählt am 25.11.2026: 30 solche Zeilen
+  in 14 Tagen. Das Log-Pseudonym der Anwendung ist ungesalzen und bei bekannten Kennungen
+  zurückrechenbar (`LK:402-404`).
+- **Bewusst akzeptiert (Entscheidung Maintainer, 25.11.2026):** die Suchtexte in den Zeilen des
+  vorgelagerten Webservers bei direktem Aufruf der Ergebnisseite. Begründung: wenige Zeilen,
+  Zugriff nur für `root`, Frist 14 Tage; die Datenschutzerklärung nennt es im Abschnitt
+  „Zugriffe auf den vorgelagerten Webserver“.
+- **Maßnahmen:** keine Suchtexte, Pfade und Fehlertexte im Log der Anwendung (`LK:427-464`);
+  Referrer nur Ursprung (`LK:499-502`).
 
 #### V17 Sicherungskopien
 
@@ -765,7 +777,10 @@ Empfänger und Ort“.
   Datenschutzerklärung nennt (`DSE:1031-1034`).
 - **Zugriff (F3, F4):** wer am Host `root` wird, und das Betriebsteam von verdigado mit dem
   Sicherungsdienst („Für alle“, Zugriffe).
-- **Verschlüsselung (F3):** Maßnahme in Umsetzung beim Betreiber.
+- **Bewusst akzeptiert (Entscheidung Maintainer, 25.11.2026):** Die Verschlüsselung der Kopie
+  beim Betreiber ist nicht belegt. Restrisiko, angemessen, weil nur `root` und das Betriebsteam
+  zugreifen, die Kopie im Rechenzentrum des Betreibers verdigado liegt und der AV-Vertrag gilt
+  (unter dem Vorbehalt von F1).
 
 #### V18 Flüchtige Zähler gegen Missbrauch
 
@@ -823,7 +838,7 @@ oder Kennung nur gekürzt im Arbeitsspeicher, höchstens etwa 16 Minuten, mit Sc
 #### V22 Meilenstein-Abzeichen am Anzeigenamen (gebaut, ausgeschaltet; #351)
 
 Wiederholte Prüfung von Risiko 1 (Abschnitt 3) für diesen einen Teil, vor dem Bau verlangt
-unten unter „Geplant, nicht gebaut“.
+unten unter „Nicht gebaut“.
 
 - **Zweck:** Anerkennung durch andere sichtbar machen (`docs/VISION.md` „Meilensteine“).
 - **Rechtsgrundlage:** Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a, eine eigene Einwilligung
@@ -858,10 +873,10 @@ unten unter „Geplant, nicht gebaut“.
   (Abschnitt 6). Die Datenschutzerklärung beschreibt das Abzeichen im Abschnitt „Punkte“
   (Absatz „Abzeichen an deinem Namen“, Fachfrage in PR #634).
 
-#### V23 Teams über Einladungslinks (geplant, Schalter `teams`, Standard aus)
+#### V23 Teams über Einladungslinks (Schalter `teams` aus, nicht im Betrieb)
 
-Nachtrag vom 25.11.2026 für eine geplante Verarbeitung; geprüft am Entwurf, noch nicht gebaut.
-Vor dem Einschalten ist diese Prüfung am gebauten Stand zu wiederholen.
+Nachtrag vom 25.11.2026, geprüft an der Ausgestaltung vom 24.11.2026; in `main` @ `23b211b7`
+nicht enthalten. Bedingung für das Einschalten: diese Prüfung am gebauten Stand wiederholen.
 
 - **Zweck:** Eine Einladung kann zu einem Team gehören, etwa einem Treffen, einem Ort oder einer
   Saison („Team BDK 26 Berlin“). Die Person sieht, in welchen Teams sie ist, und bekommt im Team
@@ -885,32 +900,31 @@ Vor dem Einschalten ist diese Prüfung am gebauten Stand zu wiederholen.
   Wortlauts (`team-2026-11-24`) und Zeitpunkt.
 - **Empfänger:** nur die Person selbst, unter „Meine Teams“. Admins sehen je Team nur die Zahl
   der Mitglieder: keine Liste, kein Export, keine Schnittstelle für fremde Teams.
-- **Öffentliche Anzeige am Namen:** wird mitgebaut, bleibt aber hinter einem eigenen Schalter
-  aus und braucht eine zweite, gesonderte Einwilligung („Team öffentlich am Namen zeigen“,
-  Standard nein). Eingeschaltet wird sie erst nach dem Rat der Datenschutzbeauftragten
-  (Abschnitt 6, Frage 8). Mindestgröße eines Teams für die Anzeige: offen (Frage 8).
+- **Öffentliche Anzeige am Namen:** eigener Schalter, aus; dazu eine zweite, gesonderte
+  Einwilligung („Team öffentlich am Namen zeigen“, Standard nein). Bedingung für das Einschalten:
+  Rat der Datenschutzbeauftragten (Abschnitt 6, Frage 8). Mindestgröße eines Teams für die Anzeige: offen (Frage 8).
 - **Frist:** „Team verlassen“ widerruft die Einwilligung für dieses Team und löscht die
   Mitgliedschaft sofort; ebenso mit dem Konto. Die Nummer wird nicht neu vergeben. Nachweise der
   Einwilligung bis zur Kontolöschung. In Sicherungen bis zu deren Ablauf (V17).
 - **Risiko:** Zuordnung Person – Gruppe – Ort, etwa durch Admins mit Zugriff auf die Datenbank,
-  ein Datenleck oder eine spätere öffentliche Anzeige. Umgekehrt wird eine bisher dokumentierte
-  Schutzmaßnahme aufgeweicht: Bisher steht am Konto nichts, was auf eine Gruppe schließen lässt
+  ein Datenleck oder die öffentliche Anzeige, falls sie eingeschaltet wird. Eine bisher
+  dokumentierte Schutzmaßnahme wird aufgeweicht: Bisher steht am Konto nichts, was auf eine Gruppe schließen lässt
   (V15, ADR 0006).
 - **Maßnahmen:** eigene ausdrückliche Einwilligung vor dem Speichern; keine Kennung der
   Einladung; nur selbst sichtbar; Admins nur Zahlen; kein Export und keine Liste über die
   Schnittstelle; Teamnamen nur nach Anlass, Ort oder Saison, nie Personennamen und keine Namen,
   die weitere Merkmale nach Art. 9 verraten (Regel im Admin-Formular); Schalter `teams`
   (Obergrenze `SEMANTIC_SEARCH_TEAMS_AKTIV`) und der Schalter der Anzeige Standard aus;
-  Datenschutzerklärung mit eigenem Abschnitt „Teams“ und angepasstem Satz in „Konto aus einer
-  Einladung“, Löschkonzept nachgezogen, beides vor dem Einschalten in Produktion.
+  Bedingung für das Einschalten in Produktion: Datenschutzerklärung mit eigenem Abschnitt
+  „Teams“ und angepasstem Satz in „Konto aus einer Einladung“ und Löschkonzept im Repo.
 - **Rest:** Risiko (mittlere Klasse, R10, 8.4), hinnehmbar, solange die Zugehörigkeit nur für die
   Person selbst sichtbar ist; mit öffentlicher Anzeige neu zu prüfen.
 
-#### Geplant, nicht gebaut
+#### Nicht gebaut
 
 Ranglisten, Quests, Level, Krone und Wochenthema (`docs/VISION.md:99-103`,
 #351, #564). Sie machen sichtbar, wer wie aktiv ist, und brauchen ein eigenes Opt-in
-(`docs/VISION.md:101`, Abschnitt 3 Risiko 1). Abschnitt 1 bis 7 prüft sie als Plan; vor dem Bau ist
+(`docs/VISION.md:101`, Abschnitt 3 Risiko 1). Abschnitt 1 bis 7 prüft sie als Entwurf; vor dem Bau ist
 die Prüfung zu wiederholen; `docs/VISION.md:134` legt die DSFA vor die Ranglisten, Abschnitt 2
 empfiehlt sie schon vor dem Einschalten der Punkte.
 
@@ -921,13 +935,13 @@ empfiehlt sie schon vor dem Einschalten der Punkte.
 | R1 | **Politische Haltung wird sichtbar**: Anzeigename an Beiträgen, Einwürfen und Sätzen für alle Angemeldeten, darunter Nicht-Mitglieder (V1, V3, V4) | nur Angemeldete, nur Vorname und Initial, Kennung nur für Admins; Einwilligung vor dem Beitragen (V2) | geringes Risiko |
 | R2 | **Zuordnung pseudonymer Daten**: Tagespseudonym der Angemeldeten am laufenden Tag nachrechenbar, der Schlüssel ist in Produktion gesetzt (V7, F5), Uhrzeiten im vorgelagerten Webserver (V16) | Tag statt Uhrzeit, Verdichten am Tagesende, Schlüssel der Besucher nur im Speicher, Besucher ohne User-Agent; für Angemeldete am laufenden Tag **offen** | Risiko; geringes Risiko, sobald V7 umgestellt ist |
 | R3 | **Daten Dritter** in Beiträgen, Einwürfen und Suchtexten, auch deren politische Zuordnung (V3, V4, V6), darunter „Gepostet von“ am Post | Hinweise im Formular und in der Erklärung; „Gepostet von“ freiwillig; Melden; Einzelfall-Löschung | Risiko, hinnehmbar |
-| R4 | **Datenpanne oder Zugriff durch Admins**: Kennungen, Meldungen mit Name und E-Mail-Adresse, Muster-Hinweise | Fristen (`LK:150-164`), Kennungen nur gekürzt im Log, keine Weitergabe (`DSE:74-75`); Host nur für benannte Gruppen mit Schlüssel, Datenbanken ohne Port nach außen, kleiner Kreis von Admins in der App (F4, Stand 25.11.); Anlage zum AV-Vertrag in Abstimmung (F1), Verschlüsselung der Sicherungen in Umsetzung (F3) | Risiko unter Vorbehalt von 8.6; **hoch**, wenn der bestehende AV-Vertrag Gut gesagt nicht erfasst |
-| R5 | **Protokolle ohne wirksame Frist** mit Altbestand aus Suchtexten und Kennungen (V16) | Ziel 14 Tage (`LK` „Protokolle“), Maßnahme in Umsetzung beim Betreiber (F6); Löschung des Altbestands offen | Risiko, bis umgesetzt und Altbestand gelöscht |
+| R4 | **Datenpanne oder Zugriff durch Admins**: Kennungen, Meldungen mit Name und E-Mail-Adresse, Muster-Hinweise | Fristen (`LK:150-164`), Kennungen nur gekürzt im Log, keine Weitergabe (`DSE:74-75`); Host nur für benannte Gruppen mit Schlüssel, Datenbanken ohne Port nach außen, kleiner Kreis von Admins in der App (F4, Stand 25.11.); Anlage zum AV-Vertrag in Abstimmung (F1); Verschlüsselung der Kopie der Sicherungen nicht belegt, bewusst akzeptiert (F3, V17) | Risiko unter Vorbehalt von 8.6; **hoch**, wenn der bestehende AV-Vertrag Gut gesagt nicht erfasst |
+| R5 | **Protokolle**: Container-Logs ohne Frist, Suchtexte im vorgelagerten Webserver bei direktem Aufruf der Ergebnisseite (V16) | Container-Logs ohne Suchtext und ohne Altbestand (Zählung 25.11.); Frist 14 Tage Voraussetzung für den Livebetrieb ab 27.11. (Salt#SALT-PR); vorgelagerter Webserver 14 Tage, nur `root`, bewusst akzeptiert | geringes Risiko mit der Frist für die Container-Logs |
 | R6 | **Löschung von Hand, nie an echten Daten erprobt** (`LK:3-13`, `DSE:1161-1163`) | Skript getestet gegen Testdaten (`LK:531-532`); Backup und Protokoll beim ersten Lauf | Risiko; geringes Risiko nach dem ersten belegten Lauf |
 | R7 | **Scoring und Zweckentfremdung** durch Punkte (V11) | Abschnitt 3 | Risiko (wie Risiko 3) |
 | R8 | **Rückschluss auf einzelne Stimmen** über kleine Zähler oder die Güte (V5) | M5: Summen und Stimmenanteil der Güte erst ab drei verschiedenen Stimmenden, darunter keine Zahl in der Antwort; ohne Startkonten und eigene Stimme; Gewicht der Stimmen gedeckelt (#427) | geringes Risiko |
 | R9 | **Widerruf ohne volle Folgen**: Beiträge, Einwürfe, Sätze (und ohne #658 auch Stimmen) bleiben nach dem Widerruf der Art.-9-Einwilligung mit Kennung und Anzeigenamen (V2) | R9a (#658, gebaut): Stimmen werden beim Widerruf gelöscht; R9b (#661, gebaut als Löschauftrag): ein Admin anonymisiert Beiträge, Einwürfe und Sätze wie bei der Kontolöschung binnen sieben Tagen (V2) | Risiko; geringes Risiko, wenn der Ablauf ohne Admin läuft |
-| R10 | **Teamzugehörigkeit** (geplant, V23): Zuordnung Person – Gruppe – Ort | eigene Einwilligung vor dem Speichern, keine Kennung der Einladung, nur selbst sichtbar, Admins nur Zahlen, Schalter aus; öffentliche Anzeige erst nach Frage 8 | Risiko, hinnehmbar, solange nur selbst sichtbar |
+| R10 | **Teamzugehörigkeit** (V23, nicht im Betrieb): Zuordnung Person – Gruppe – Ort | eigene Einwilligung vor dem Speichern, keine Kennung der Einladung, nur selbst sichtbar, Admins nur Zahlen, Schalter aus; öffentliche Anzeige erst nach Frage 8 | Risiko, hinnehmbar, solange nur selbst sichtbar |
 
 ### 8.4 Risikomethode und Einstufung (DSK-Kurzpapier Nr. 18)
 
@@ -967,19 +981,20 @@ Entwurfs; sie zu bestätigen oder zu ändern, ist Teil der Beratung (Abschnitt 6
 | R2 Zuordnung pseudonymer Daten | überschaubar: braucht Datenbank und Konfiguration, nur der laufende Tag | substanziell: kann auf einen Suchtext führen | **Risiko** | gering (V7 umgestellt) |
 | R3 Daten Dritter | substanziell: Beiträge nennen oft Dritte | überschaubar: öffentliche Äußerungen, Melden möglich | **Risiko** | Risiko, hinnehmbar |
 | R4 Datenpanne, Zugriff durch Admins | überschaubar, unter Vorbehalt von 8.6 (F2 und F5 belegt, F3 und F4 teilweise, Stand 25.11.); substanziell, wenn der bestehende AV-Vertrag Gut gesagt nicht erfasst | substanziell: Art.-9-Daten, Name und E-Mail in Meldungen | **Risiko**, im genannten Fall **hoch** | gering (8.6 belegt, Zugriff geregelt) |
-| R5 Protokolle ohne Frist | überschaubar | substanziell: Altbestand mit Suchtexten und Kennungen | **Risiko** | gering (14 Tage ausgerollt, Altbestand gelöscht) |
+| R5 Protokolle | geringfügig: kein Altbestand, Suchtexte nur bei direktem Aufruf, 30 Zeilen in 14 Tagen, nur `root` | substanziell: Suchtext mit IP | **gering**, unter der Voraussetzung der Frist für die Container-Logs vor dem Livebetrieb | gering |
 | R6 Löschung von Hand | überschaubar: nie an echten Daten gelaufen | substanziell: Art.-9-Daten bleiben | **Risiko** | gering (erster Lauf belegt) |
 | R8 Rückschluss auf Stimmen | geringfügig: Schwelle drei | überschaubar | gering | gering |
 | R9 Widerruf ohne volle Folgen | überschaubar: mit dem Löschauftrag (#661) bleibt die Zuordnung bis zur Ausführung, höchstens sieben Tage, länger nur, wenn ein Admin die Frist versäumt (überfällige hervorgehoben) | substanziell: in dieser Zeit bleibt die Zuordnung politischer Beiträge zur Person ohne Rechtsgrundlage (wie R6), für alle Angemeldeten sichtbar | **Risiko** (vor #661 **hoch**) | gering, wenn der Ablauf ohne Admin läuft: Wahrscheinlichkeit geringfügig |
-| R10 Teamzugehörigkeit (geplant, V23) | überschaubar: in der App nur selbst sichtbar, keine Liste, keine Kennung der Einladung; wer Zugang zur Datenbank hat, sieht sie aber (wie R2) | substanziell: politische Meinung und Ort | **Risiko** | Risiko; mit öffentlicher Anzeige neu einstufen |
+| R10 Teamzugehörigkeit (V23, nicht im Betrieb) | überschaubar: in der App nur selbst sichtbar, keine Liste, keine Kennung der Einladung; wer Zugang zur Datenbank hat, sieht sie aber (wie R2) | substanziell: politische Meinung und Ort | **Risiko** | Risiko; mit öffentlicher Anzeige neu einstufen |
 
 **Gesamtrisiko heute: Risiko**, unter dem Vorbehalt der offenen Fakten (8.6): Mit dem
 Löschauftrag (#661) liegt R9 in der mittleren Klasse, vorher war es **hoch**. **Folgerung zu
 Art. 36:** Nach den Maßnahmen bleibt kein hohes Risiko, solange die offenen Fakten F1 bis F6 (8.6)
 R4 nicht auf hoch heben, also der bestehende AV-Vertrag Gut gesagt erfasst (F1, offen; Anlage in
 Abstimmung). Bis das geklärt ist, ist das Gesamtrisiko nicht abschließend eingestuft: Erfasst der
-Vertrag Gut gesagt nicht, sind R4 und das Gesamtrisiko bis zur Anlage **hoch** (Art. 36). Für
-„gering“ bei R4 und R5 braucht es zusätzlich die Maßnahmen zu F3 und F6. Ob die Ausführung von Hand binnen sieben Tagen dafür genügt oder erst der
+Vertrag Gut gesagt nicht, sind R4 und das Gesamtrisiko bis zur Anlage **hoch** (Art. 36). Für R5
+ist die Frist für die Container-Logs Voraussetzung für den Livebetrieb (F6); F3 ist bewusst
+akzeptiert (V17). Ob die Ausführung von Hand binnen sieben Tagen dafür genügt oder erst der
 vollautomatische Ablauf, ist Frage 7 an die Datenschutzbeauftragte.
 Nach den offenen Maßnahmen bleibt Risiko bei Risiko 3 und R3;
 beide sind hinnehmbar, Risiko 3 nur, solange die Punkte aus sind oder die Bilanz nichts
@@ -1008,7 +1023,8 @@ Abschnitt 5 prüft das für die Punkte. Für den Grundbetrieb ohne Punkte:
   von einem täglichen Task. Ohne Frist und begründet: Beiträge (Zweck ist der Bestand, bei
   Kontolöschung anonymisiert), offene Meldungen und aktive Sperren (laufende Arbeit), der
   Anzeigename (solange das Konto besteht). Für die Protokolle der Anwendung und des
-  Frontend-nginx ist die Frist von 14 Tagen eine Maßnahme in Umsetzung (V16, R5, F6).
+  Frontend-nginx ist die Frist von 14 Tagen Voraussetzung für den Livebetrieb ab 27.11.2026
+  (V16, R5, F6).
 - **Angemessenheit:** Mitwirkung, aus der eine politische Meinung folgt, nur mit ausdrücklicher
   Einwilligung (V2), die Sperre ist durch einen Test abgesichert. Unter den Angemeldeten sind
   Nicht-Mitglieder; deshalb sehen auch Angemeldete keine Kennungen, und Besucher sehen keine
@@ -1027,7 +1043,7 @@ Abschnitt 5 prüft das für die Punkte. Für den Grundbetrieb ohne Punkte:
 **Ergebnis:** Der Grundbetrieb ist im Kern notwendig und verhältnismäßig. Nicht verhältnismäßig
 sind heute vier Punkte, die Maßnahmen dazu stehen in Abschnitt 9: Anzeigename vor der
 Einwilligung (V1), Widerruf ohne volle Folgen (V2, R9; mit dem Löschauftrag aus #661 nur noch bis zur Ausführung, höchstens sieben Tage), nachrechenbares Tagespseudonym der
-Angemeldeten (V7), Protokolle, bis die Frist umgesetzt ist (V16).
+Angemeldeten (V7), Container-Logs ohne Frist, Voraussetzung für den Livebetrieb (V16).
 
 ### 8.6 Offene Fakten
 
@@ -1037,12 +1053,12 @@ Konfiguration des Betreibers (`Salt:…`, Stand 24.11.2026) oder aus Tickets die
 
 | # | Offen | Warum es zählt | Stand 25.11.2026 | Stellen |
 |---|---|---|---|---|
-| F1 | **AV-Vertrag** mit verdigado: erfasst er Gut gesagt mit Zweck, Datenarten (auch Art. 9) und Betroffenen (Art. 28 Abs. 3)? Rolle von Hetzner? | Ohne Vertrag fehlt die Grundlage für die Verarbeitung bei verdigado, und die Aussage der Datenschutzerklärung stimmt nicht. | **offen:** ob der bestehende Rahmenvertrag Gut gesagt erfasst; Anlage „Gut gesagt“ mit verdigado in Abstimmung, Verhältnis zum Rahmenvertrag offen. **Belegt:** gutgesagt* im Rechenzentrum von verdigado in Nürnberg; Hetzner nur noch für die Altsysteme unter dem früheren Projektnamen bis zum Abbau (#206). | „Für alle“, R4, #506 |
+| F1 | **AV-Vertrag** mit verdigado: erfasst er Gut gesagt mit Zweck, Datenarten (auch Art. 9) und Betroffenen (Art. 28 Abs. 3)? Rolle von Hetzner? | Ohne Vertrag fehlt die Grundlage für die Verarbeitung bei verdigado, und die Aussage der Datenschutzerklärung stimmt nicht. | **offen:** ob der bestehende Rahmenvertrag Gut gesagt erfasst; Anlage „Gut gesagt“ mit verdigado in Abstimmung, Verhältnis zum Rahmenvertrag offen. **Belegt:** gutgesagt* im Rechenzentrum von verdigado in Nürnberg; Hetzner nur noch für die Altsysteme unter dem früheren Projektnamen (Abbau offen, #206). | „Für alle“, R4, #506 |
 | F2 | **SMTP-Server** in Produktion: welcher, wer betreibt ihn? Ebenso der Mailversand des Anmeldedienstes. | Mails tragen E-Mail-Adresse und Anlass (Meldung, Entscheidung). | **belegt:** `mail.verdigado.net`, betrieben von verdigado, Port 465 mit TLS (`Salt:states/gutgesagt/files/docker-compose.yml`). **offen:** Mailversand des Anmeldedienstes (Einstellung des Realms). | „Für alle“ |
-| F3 | **Sicherungen**: Verschlüsselung, Ablage außerhalb des Hosts, Zugriff. | Sicherungen halten alles bis zu 28 Tage, auch Gelöschtes. | **belegt:** Ablage auf dem Host und als Kopie beim Betreiber im selben Rechenzentrum, innerhalb der Frist der Datenschutzerklärung (`Salt:states/gutgesagt/init.sls`, `Salt:states/backup/files/config.yml.j2`). **Verschlüsselung:** Maßnahme in Umsetzung. | V17, R4 |
+| F3 | **Sicherungen**: Verschlüsselung, Ablage außerhalb des Hosts, Zugriff. | Sicherungen halten alles bis zu 28 Tage, auch Gelöschtes. | **belegt:** Ablage auf dem Host und als Kopie beim Betreiber im selben Rechenzentrum, innerhalb der Frist der Datenschutzerklärung (`Salt:states/gutgesagt/init.sls`, `Salt:states/backup/files/config.yml.j2`). **Verschlüsselung der Kopie:** nicht belegt, bewusst akzeptiert (V17). | V17, R4 |
 | F4 | **Rollen und Zugriff**: wer Admin ist, wer an Host, Datenbank, Konfiguration und die Datei der Beta-Zugänge kommt, wie Zugänge vergeben und entzogen werden. | Admins sehen Kennungen, Meldungen mit Name und E-Mail-Adresse, Muster-Hinweise. | **belegt:** Admins in Produktion ein kleiner Kreis, nur über die Liste, die Realm-Vorlage setzt keinen Claim; Host nur für das Betriebsteam von verdigado und eine kleine Gruppe für gutgesagt*, Anmeldung nur mit Schlüssel; Datenbank und Konfiguration nur über `root`; Datei der Beta-Zugänge entfernt. **offen:** Admin-Claim im laufenden Realm, Mitglieder der Passbolt-Gruppe, Ablauf für Vergabe und Entzug. | „Für alle“, R4, V19 |
 | F5 | **Schlüssel des Tagespseudonyms** der Angemeldeten (`SEMANTIC_SEARCH_ACTOR_HASH_SECRET`): in Produktion gesetzt? | Davon hängt ab, ob das Pseudonym am laufenden Tag nachrechenbar ist. | **belegt: ja** (`Salt:states/gutgesagt/files/docker-compose.yml`, aus Passbolt). Folge: V7 und R2 gelten wie beschrieben; Abhilfe ist Abschnitt 9, Punkt 3. | V7, R2 |
-| F6 | **Frist der Protokolle** am Host: 14 Tage ausgerollt, Altbestand gelöscht? | Speicherbegrenzung, Altbestand mit Suchtexten. | **Frist:** Maßnahme in Umsetzung (#485, #336). **Altbestand:** offen, Prüfung durch den Betreiber. | V16, R5 |
+| F6 | **Frist der Protokolle** am Host: 14 Tage ausgerollt, Altbestand gelöscht? | Speicherbegrenzung, Altbestand mit Suchtexten. | **Container-Logs:** Frist 14 Tage Voraussetzung für den Livebetrieb ab 27.11. (Salt#SALT-PR); kein Altbestand, kein Suchtext (Zählung des Betreibers 25.11.). **Vorgelagerter Webserver:** 14 Tage, 14 Dateien, nur `root`. | V16, R5 |
 
 ## 9. Offene Entscheidungen für den Maintainer
 
@@ -1060,8 +1076,9 @@ Konfiguration des Betreibers (`Salt:…`, Stand 24.11.2026) oder aus Tickets die
    (`ss/services/search_tracking_service.py`), und er ist in Produktion gesetzt (F5).
 4. **Frist für Protokolle** (V16): 14 Tage für Anwendung und Frontend-nginx am Host ausrollen
    (`LK` „Protokolle“; Tickets #485 und #336) und den Altbestand mit Suchtexten und
-   Kennungen löschen. Das ist Betrieb am Host, nicht Code. **Stand 25.11.2026:** Maßnahme in
-   Umsetzung beim Betreiber; Löschung des Altbestands offen, Prüfung durch den Betreiber (F6).
+   Kennungen löschen. Das ist Betrieb am Host, nicht Code. **Stand 25.11.2026:** Voraussetzung
+   für den Livebetrieb ab 27.11.2026 (Salt#SALT-PR); Altbestand gibt es nicht (Zählung des
+   Betreibers, F6). Der vorgelagerte Webserver ist bewusst akzeptiert (V16).
 5. **Formales:** Wer übernimmt die DSFA (Vorstand mit Datenschutzbeauftragter, Art. 35 Abs. 2)?
    Das Verzeichnis der Verarbeitungstätigkeiten steht als Entwurf in
    `docs/VERARBEITUNGSVERZEICHNIS.md`; führen muss es der Verein (Art. 30 Abs. 1).
@@ -1071,7 +1088,7 @@ Konfiguration des Betreibers (`Salt:…`, Stand 24.11.2026) oder aus Tickets die
 7. **Widerruf der Art.-9-Einwilligung** (V2, R9): Stimmen löschen ist gebaut (R9a, #658), R9b
    als Löschauftrag (#661): Der Widerruf legt ihn an, ein Admin führt binnen sieben Tagen den
    Löschablauf aus; der Widerrufstext der Datenschutzerklärung und der Wortlaut `2026-11-13` sind
-   angepasst. Offen ist der vollautomatische Ablauf nach dem Freeze, mit dem R9 gering wird.
+   angepasst. Nicht gebaut ist der vollautomatische Ablauf; mit ihm wäre R9 gering.
    Empfehlung: eigenes Ticket. **Stand 25.11.2026: offen.** Der Löschauftrag wird weiter von
    einem Admin ausgeführt (`ss/services/loeschauftrag_service.py`, `ausfuehren`); der tägliche
    Lauf räumt nur erledigte Aufträge nach einem Jahr ab (`ss/services/loeschfristen_service.py`).
