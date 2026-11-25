@@ -448,6 +448,13 @@ without an entry. The building blocks arrive in their own PRs; until then a swit
 nothing. "public" means `GET /api/v1/funktionen` reports the effective value without login.
 Team progress (#784) and team quests (#792) get their switches later.
 
+The admin page groups all switches by `Schalterart.gruppe` (Grundfunktionen, Teams, Spielgefühl,
+Punkte & Anerkennung, order in `GRUPPEN`) and shows a status per switch: on, free to switch on,
+waiting for legal clearance (`wartet_auf_recht`: a hint is set and the switch is not
+`rechtlich_freigegeben`) or locked by the server. `teams` is legally cleared (25.11.) and may be
+switched on before the DSFA is adopted; `teams_oeffentlich` stays off until the data protection
+officer has advised.
+
 | Schalter | Upper bound | Default | Public | Condition for switching on (issue) |
 |----------|-------------|---------|--------|------------------------------------|
 | `saison_ziel` | `SEMANTIC_SEARCH_SAISON_ZIEL_AKTIV` | off | yes | none; privacy policy sentence ships with #782 (see below) |
@@ -456,7 +463,7 @@ Team progress (#784) and team quests (#792) get their switches later.
 | `konter_probe` | `SEMANTIC_SEARCH_KONTER_PROBE_AKTIV` | off | yes | none (#786) |
 | `luecke_zu_gross` | `SEMANTIC_SEARCH_LUECKE_ZU_GROSS_AKTIV` | off | yes | none; while on (or while the browser holds the entry), the privacy policy shows the paragraph on the browser entry `gutgesagt-ton-bei-erfolgen`, DSFA V21 names it (#787) |
 | `einwilligung_im_gewinn` | `SEMANTIC_SEARCH_EINWILLIGUNG_IM_GEWINN_AKTIV` | off | yes | none, wordings stay (#788) |
-| `naechster_schritt` | `SEMANTIC_SEARCH_NAECHSTER_SCHRITT_AKTIV` | off | yes | none; privacy policy sentences ship with #789 |
+| `naechster_schritt` | `SEMANTIC_SEARCH_NAECHSTER_SCHRITT_AKTIV` | off | yes | DSFA addendum Spielgefühl (V10); privacy policy sentences ship with #789 |
 | `wirkungs_echo` | `SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV` | off | no | DSFA addendum V31 (#790) |
 | `danke_knopf` | `SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV` | off | yes | DSFA addendum V31 (#791) |
 | `danke_ohne_konto` | `SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV` | off | yes | V31 and visitor marker (#495); works only with `danke_knopf` |

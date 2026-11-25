@@ -144,6 +144,20 @@ describe('SchalterComponent', () => {
       expect(pillen).toEqual(['an', 'frei einschaltbar', 'gesperrt (Server)', 'wartet auf Recht', 'wartet auf Recht']);
     });
 
+    it('sagt bei einem wirksamen Schalter mit offenem Recht „an, Recht offen“', () => {
+      laden([schalter({ name: 'punkte', admin_wert: true, wirksam: true, dsfa_hinweis: DSFA, wartet_auf_recht: true })]);
+
+      const pille = karten()[0].querySelector('[data-testid="status"]') as HTMLElement;
+      expect(pille.textContent!.trim()).toBe('an, Recht offen');
+      expect(pille.classList).toContain('pille-recht');
+      expect(fixture.componentInstance.anzahl('an')).toBe(1);
+    });
+
+    it('fasst Schalter ohne Gruppe vom Server unter „Weitere“', () => {
+      laden([schalter({ name: 'gepostet', gruppe: '' })]);
+      expect(gruppen()[0].querySelector('h3 span')!.textContent!.trim()).toBe('Weitere');
+    });
+
     it('filtert nach Status, zählt je Chip und blendet leere Gruppen aus', () => {
       laden(LISTE());
       expect(chip('Alle').getAttribute('aria-pressed')).toBe('true');

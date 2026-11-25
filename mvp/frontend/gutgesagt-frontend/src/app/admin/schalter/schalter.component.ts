@@ -158,7 +158,7 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
             <div class="zeile">
               <h4>{{ titel(s) }}</h4>
               <div class="steuer">
-                <span class="pille" [ngClass]="'pille-' + status(s)" data-testid="status">{{ statusText(s) }}</span>
+                <span class="pille" [ngClass]="rechtOffenAn(s) ? 'pille-recht' : 'pille-' + status(s)" data-testid="status">{{ statusText(s) }}</span>
                 <button
                   mat-icon-button
                   type="button"
@@ -349,8 +349,13 @@ export class SchalterComponent implements OnInit {
     return s.obergrenze ? 'frei' : 'gesperrt';
   }
 
+  /** Wirkt ein Schalter, dessen Recht noch offen ist, sagt die Pille das dazu. */
+  rechtOffenAn(s: Schalter): boolean {
+    return s.wirksam && s.wartet_auf_recht;
+  }
+
   statusText(s: Schalter): string {
-    return STATUS_TEXT[this.status(s)];
+    return this.rechtOffenAn(s) ? 'an, Recht offen' : STATUS_TEXT[this.status(s)];
   }
 
   anzahl(filter: SchalterFilter): number {

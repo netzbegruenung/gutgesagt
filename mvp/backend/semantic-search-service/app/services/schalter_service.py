@@ -60,6 +60,11 @@ class Schalterart:
     # weiter gilt): Die Admin-Seite zeigt den Schalter nicht als "wartet auf Recht".
     rechtlich_freigegeben: bool = False
 
+    def __post_init__(self):
+        # Beim Import auffallen statt mit 500 auf der Admin-Seite
+        if self.gruppe not in GRUPPEN:
+            raise ValueError(f"Unbekannte Gruppe {self.gruppe!r} fuer {self.name}")
+
 
 # Spielgefuehl zur BDK (#782 bis #793, docs/ARCHITECTURE.md "Schalter fuer das
 # Spielgefuehl"): je Baustein ein Schalter, Obergrenze von Haus aus aus. Die Bausteine
