@@ -46,7 +46,7 @@
           <mat-label>{{ teamArt === 'gruppe' ? gruppennameLabel : 'Teamname' }}</mat-label>
           <input matInput name="teamName" [(ngModel)]="teamName" [maxlength]="TEAM_NAME_MAX"
                  [attr.aria-invalid]="teamNameUngueltig" />
-          <mat-hint data-testid="teamname-hinweis">{{ teamArt === 'gruppe' ? gruppennameHinweis + ' ' : '' }}{{ teamnameHinweis }}</mat-hint>
+          <mat-hint data-testid="teamname-hinweis">{{ teamnameHinweis }}{{ teamArt === 'gruppe' ? ' ' + gruppennameHinweis : '' }}</mat-hint>
         </mat-form-field>
         <mat-form-field *ngIf="teamArt === 'gruppe'" appearance="outline" class="team-zustimmung"
                         subscriptSizing="dynamic" data-testid="team-zustimmung">

@@ -27,6 +27,8 @@
 BEGIN;
 -- Sperre: Ziel nur ein neutraler Name. Bei art ungleich anlass scheitert die
 -- Umwandlung des Textes in eine Zahl, und die Transaktion endet ohne Aenderung.
+-- Traegt nur, weil psql den Wert als Literal einsetzt (Postgres faltet das CASE);
+-- mit einem Server-Parameter in einem generischen Plan loeste sie immer aus.
 SELECT CASE WHEN :'art' = 'anlass' THEN 0 ELSE CAST(CAST('Abbruch: nur in einen neutralen Namen (art=anlass)' AS TEXT) AS INTEGER) END AS sperre;
 UPDATE einladungen
    SET team_name = :'neu', team_art = 'anlass', team_zustimmung_am = NULL
