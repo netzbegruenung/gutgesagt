@@ -8,8 +8,8 @@ import { ROUTES } from '../../shared/constants/app.constants';
 import { AndereTonlage, KOPIERT_ERFOLG, KOPIERT_ERFOLG_ZEICHEN, nutzungSatz, tonlagenHinweis } from './kopiert-erfolg';
 
 /**
- * Der Erfolgstext unter der Aktionsleiste nach dem Kopieren (#785). Die Region steht
- * immer da (role="status"), damit Screenreader den Text ansagen, sobald er erscheint;
+ * Der Erfolgstext unter der Aktionsleiste nach dem Kopieren (#785). Die Region steht da,
+ * solange der Schalter an ist (role="status"), damit Screenreader den Text ansagen, sobald er erscheint;
  * er blockiert nichts und bleibt ohne Frist stehen, bis die Person ihn schliesst, damit
  * der Link nicht unter der Hand verschwindet.
  */
@@ -19,9 +19,9 @@ import { AndereTonlage, KOPIERT_ERFOLG, KOPIERT_ERFOLG_ZEICHEN, nutzungSatz, ton
   imports: [CommonModule, RouterLink, MatButtonModule, MatIconModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="kopiert-erfolg-region" role="status">
-      <div class="kopiert-erfolg" *ngIf="sichtbar">
-        <div class="kopiert-erfolg-text">
+    <div class="kopiert-erfolg-rahmen" [class.sichtbar]="sichtbar">
+      <div class="kopiert-erfolg-region" role="status">
+        <div class="kopiert-erfolg" *ngIf="sichtbar">
           <p class="erfolg-satz">
             {{ erfolg }} <span aria-hidden="true">{{ zeichen }}</span>
             <ng-container *ngIf="nutzungText as n">&ngsp;<span class="erfolg-nutzung">{{ n }}</span></ng-container>
@@ -30,10 +30,12 @@ import { AndereTonlage, KOPIERT_ERFOLG, KOPIERT_ERFOLG_ZEICHEN, nutzungSatz, ton
             {{ t.frage }}&ngsp;<a class="erfolg-tonlage-link" [routerLink]="[beitragPfad, andereTonlage!.id]">{{ t.link }}</a>
           </p>
         </div>
-        <button mat-icon-button type="button" class="erfolg-schliessen" aria-label="Hinweis schließen" (click)="schliessen.emit()">
-          <mat-icon aria-hidden="true">close</mat-icon>
-        </button>
       </div>
+      <!-- Ausserhalb der Status-Region: Der Knopf soll nicht mit angesagt werden -->
+      <button *ngIf="sichtbar" mat-icon-button type="button" class="erfolg-schliessen" aria-label="Hinweis schließen"
+              (click)="schliessen.emit()">
+        <mat-icon aria-hidden="true">close</mat-icon>
+      </button>
     </div>
   `,
   styles: [
@@ -41,7 +43,7 @@ import { AndereTonlage, KOPIERT_ERFOLG, KOPIERT_ERFOLG_ZEICHEN, nutzungSatz, ton
       :host {
         display: block;
       }
-      .kopiert-erfolg {
+      .kopiert-erfolg-rahmen.sichtbar {
         display: flex;
         align-items: flex-start;
         gap: var(--spacing-sm);
@@ -52,7 +54,7 @@ import { AndereTonlage, KOPIERT_ERFOLG, KOPIERT_ERFOLG_ZEICHEN, nutzungSatz, ton
         border-radius: var(--border-radius-small);
         color: var(--text);
       }
-      .kopiert-erfolg-text {
+      .kopiert-erfolg-region {
         flex: 1;
         min-width: 0;
         padding-top: var(--spacing-xs);

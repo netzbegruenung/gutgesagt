@@ -155,10 +155,18 @@ describe('Erfolgstext nach dem Kopieren - Karte (#785)', () => {
 
   it('laesst sich schliessen', () => {
     kopieren();
-    (erfolg()!.querySelector('.erfolg-schliessen') as HTMLButtonElement).click();
+    (fixture.nativeElement.querySelector('.erfolg-schliessen') as HTMLButtonElement).click();
     fixture.detectChanges();
 
     expect(erfolg()).toBeNull();
+    expect(fixture.nativeElement.querySelector('.erfolg-schliessen')).toBeNull();
+  });
+
+  it('der Schliessen-Knopf steht ausserhalb der Status-Region', () => {
+    kopieren();
+
+    expect(fixture.nativeElement.querySelector('[role="status"] .erfolg-schliessen')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.erfolg-schliessen')).not.toBeNull();
   });
 
   it('angemeldet mit Frage „Gepostet?“ kommt die Frage weiter als Snackbar dazu', () => {
