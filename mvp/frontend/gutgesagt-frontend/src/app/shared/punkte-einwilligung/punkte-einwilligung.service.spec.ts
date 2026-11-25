@@ -33,7 +33,7 @@ describe('PunkteEinwilligungService', () => {
   afterEach(() => http.verify());
 
   it('ein Nein geht mit der Kennung des Wortlauts an den Server, wie ein Ja', () => {
-    const speicherVorher = localStorage.length;
+    const schreiben = spyOn(Storage.prototype, 'setItem').and.callThrough();
     let ok: boolean | undefined;
     service.setzen(false).subscribe((r) => (ok = r));
 
@@ -43,7 +43,8 @@ describe('PunkteEinwilligungService', () => {
     anfrage.flush(null, { status: 204, statusText: 'No Content' });
 
     expect(ok).toBeTrue();
-    expect(localStorage.length).toBeLessThanOrEqual(speicherVorher);
+    // Nichts in localStorage oder sessionStorage: Das Nein steht nur auf dem Server.
+    expect(schreiben).not.toHaveBeenCalled();
   });
 
   it('nach dem Nein ist der Stand beantwortet: eine Frage gilt dann nicht mehr als offen', () => {

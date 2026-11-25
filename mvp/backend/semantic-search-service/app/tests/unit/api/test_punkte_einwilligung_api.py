@@ -72,6 +72,11 @@ def test_eingewilligt_zum_geltenden_wortlaut(repo):
     assert _client().get(URL, headers=KIM).json()["eingewilligt"] is True
 
 
+def test_die_frage_nutzt_den_wortlaut_2026_11_13():
+    # #788, Jura 25.11.: Die Frage im Moment des Gewinns bringt keinen neuen Wortlaut.
+    assert AKTUELLER_WORTLAUT == "2026-11-13"
+
+
 def test_nach_einem_nein_ist_die_frage_beantwortet(repo):
     # #788: Das Nein steht mit Kennung auf dem Server; ``wortlaut`` ist danach gesetzt,
     # und die App fragt in keinem spaeteren Besuch wieder.

@@ -525,6 +525,25 @@ describe('MeilensteineComponent (#351)', () => {
       fixture.destroy();
     }));
 
+    it('ist der Schalter nicht sicher aus (Fehler, keine Antwort), lädt die Seite nach einem Nein nicht wieder ein', () => {
+      einwilligung.next({ eingewilligt: false, wortlaut: '2026-11-13', aktueller_wortlaut: WORTLAUT });
+      moment = null;
+      const element = erstellen([]);
+
+      expect(element.querySelector('.meilensteine-einladung')).toBeNull();
+      expect(element.querySelector('app-punkte-einwilligung')).toBeNull();
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeUndefined();
+    });
+
+    it('ist der Schalter sicher aus (404), bleibt die Einladung mit Häkchen wie bisher', () => {
+      einwilligung.next({ eingewilligt: false, wortlaut: '2026-11-13', aktueller_wortlaut: WORTLAUT });
+      moment = null;
+      vorBudget = (b) => (b.schalterAus = true);
+      const element = erstellen([]);
+
+      expect(element.querySelector('app-punkte-einwilligung')).not.toBeNull();
+    });
+
     it('die Frage steht ohne Lob daneben und wirbt nicht („Hol dir …“)', () => {
       einwilligung.next(NIE_GEANTWORTET);
       moment = MOMENT;

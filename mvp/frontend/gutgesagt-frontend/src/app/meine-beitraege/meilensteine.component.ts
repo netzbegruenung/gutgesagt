@@ -170,9 +170,16 @@ export class MeilensteineComponent implements OnInit, OnDestroy {
     }, warten + 50);
   }
 
-  /** Die alte Einladung mit Häkchen: nur ohne Schalter einwilligung_im_gewinn. */
+  /**
+   * Die alte Einladung mit Häkchen: nur ohne Schalter einwilligung_im_gewinn. Ist der
+   * Schalter nicht sicher aus (Fehler, keine Antwort), lädt sie niemanden noch einmal ein,
+   * der schon geantwortet hat: Ein Nein gilt dauerhaft (#788, Jura 25.11.).
+   */
   get haekchenEinladung(): boolean {
-    return this.einladen && this.momentGeladen && !this.moment;
+    if (!this.einladen || !this.momentGeladen || this.moment) {
+      return false;
+    }
+    return !this.punkteStand?.wortlaut || this.budget.schalterAus;
   }
 
   /** Text der Frage: der Wortlaut vom Server, unverändert. */

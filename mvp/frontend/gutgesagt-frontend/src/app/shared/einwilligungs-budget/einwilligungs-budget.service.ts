@@ -33,6 +33,12 @@ export class EinwilligungsBudgetService {
   readonly gewinn$ = this.gewinne.asObservable();
   /** Für Tests ersetzbar. */
   jetzt: () => number = () => Date.now();
+  /**
+   * true erst, wenn der Server den Schalter sicher als aus gemeldet hat (404). Bei einem
+   * Fehler oder ohne Antwort bleibt es false: Dann ist unklar, ob der Schalter an ist,
+   * und wer schon geantwortet hat, wird nicht noch einmal eingeladen (#788, Jura 25.11.).
+   */
+  schalterAus = false;
 
   /**
    * Die Fakten vom Server; null ohne Schalter (404) oder bei einem Fehler. Dann fragt
@@ -48,6 +54,7 @@ export class EinwilligungsBudgetService {
         // Antwortet der Server nicht, fragt die App wie bisher, statt nichts zu zeigen.
         timeout(MOMENT_WARTEN_MS),
         catchError((fehler) => {
+          this.schalterAus = fehler?.status === 404;
           if (fehler?.status !== 404 && fehler?.status !== 401 && fehler?.name !== 'TimeoutError') {
             this.logger?.error('Einwilligungs-Moment nicht geladen', fehler);
           }
