@@ -42,6 +42,8 @@ import { platzhalterDialogOeffnen } from './platzhalter-dialog.component';
 import { GEPOSTET_FRAGE_MS, JA_GEPOSTET, KOPIERT_GEPOSTET_FRAGE, gepostetDank } from './gepostet-texte';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
 import { STIMM_DANK_MS, stimmDank } from './stimm-dank-texte';
+import { KopiertErfolgComponent } from './kopiert-erfolg.component';
+import type { AndereTonlage } from './kopiert-erfolg';
 
 /**
  * So lange steht „Kopiert“: Mit 1,5 s war es beim Wechsel in die andere App schon weg
@@ -76,7 +78,7 @@ export interface KopierVariante {
 @Component({
   selector: 'app-karten-aktionen',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, KopiertErfolgComponent],
   templateUrl: './karten-aktionen.component.html',
   styleUrls: ['./karten-aktionen.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -140,6 +142,15 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
 
   /** „Als Bild teilen“ steht nur im Menue, wenn der Schalter an ist (#756, Standard aus). */
   readonly sharepicAn = inject(FunktionenService).an('sharepic');
+
+  /** Erfolgstext nach dem Kopieren (#785): die Nutzung, wie die Karte sie zeigt; null = unbekannt. */
+  @Input() nutzung: number | null = null;
+  /** Erfolgstext nach dem Kopieren: eine Antwort zur selben Aussage in anderem Stil; null = kein Hinweis. */
+  @Input() andereTonlage: AndereTonlage | null = null;
+  /** Statt „Kopiert – jetzt unter dem Post einfügen.“ der Erfolgstext unter der Leiste (#785, Standard aus). */
+  readonly kopiertErfolgAn = inject(FunktionenService).an('kopiert_erfolg');
+  /** Ob der Erfolgstext gerade dasteht; bis die Person ihn schließt, ohne Frist. */
+  kopiertErfolg = false;
 
   @Output() likeToggled = new EventEmitter<string>();
   /** Im Album: "Ändern" angetippt; den Dialog oeffnet die Seite. */
@@ -300,6 +311,9 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
    *
    * Hat der Text noch einen Platzhalter „[Hier …]“ (#640), bleibt es beim Hinweis aufs
    * Ausfüllen: Gepostet sein kann der Text dann noch nicht.
+   *
+   * Mit dem Schalter `kopiert_erfolg` (#785) ersetzt der Erfolgstext unter der Leiste die
+   * Snackbar „Kopiert“; die Frage „Gepostet?“ kommt wie bisher als Snackbar dazu.
    */
   private kopiertMelden(text: string): void {
     // Sicherheitsnetz: Seit dem Platzhalter-Dialog kommt hier normalerweise kein Text mit
@@ -310,10 +324,16 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
       this.snackBar.open(KOPIERT_MIT_LUECKE, 'OK', { duration: 6000 });
       return;
     }
+    const mitErfolg = this.kopiertErfolgAn();
+    if (mitErfolg) {
+      this.kopiertErfolgZeigen();
+    }
     const person = this.authService.getUserInfo();
     const kennung = person?.isAuthenticated ? person.userId : null;
     if (!kennung) {
-      this.snackBar.open(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
+      if (!mitErfolg) {
+        this.snackBar.open(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
+      }
       return;
     }
     if (this.usageTrackingService.gepostetBekannt(kennung)) {
@@ -321,8 +341,11 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
     // Noch unbekannt oder nicht angeboten: sofort die gewohnte Bestätigung; kommt vom
-    // Server ein Ja, ersetzt die Frage sie (eine neue Snackbar schließt die alte).
-    this.snackBar.open(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
+    // Server ein Ja, ersetzt die Frage sie (eine neue Snackbar schließt die alte). Mit
+    // Erfolgstext (#785) steht die Bestätigung schon unter der Leiste.
+    if (!mitErfolg) {
+      this.snackBar.open(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
+    }
     if (this.usageTrackingService.gepostetBekannt(kennung) === false) {
       return;
     }
@@ -334,6 +357,24 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
           this.gepostetFragen(kennung);
         }
       });
+  }
+
+  /**
+   * Den Erfolgstext (neu) einblenden: erst weg, dann wieder da, damit Screenreader ihn
+   * auch beim zweiten Kopieren erneut ansagen.
+   */
+  private kopiertErfolgZeigen(): void {
+    if (this.kopiertErfolg) {
+      this.kopiertErfolg = false;
+      this.cdr.detectChanges();
+    }
+    this.kopiertErfolg = true;
+    this.cdr.markForCheck();
+  }
+
+  kopiertErfolgSchliessen(): void {
+    this.kopiertErfolg = false;
+    this.cdr.markForCheck();
   }
 
   /** Ob gerade die Snackbar „Kopiert. Gepostet? [Ja, gepostet]“ offen ist, von welcher Karte auch immer. */

@@ -163,3 +163,7 @@
         </button>
     </mat-menu>
 </div>
+
+<!-- Erfolgstext nach dem Kopieren (#785, Schalter kopiert_erfolg): auch im Album, nie in der Vorschau -->
+<app-kopiert-erfolg *ngIf="kopiertErfolgAn() && !vorschau" [sichtbar]="kopiertErfolg" [nutzung]="nutzung"
+                    [andereTonlage]="andereTonlage" (schliessen)="kopiertErfolgSchliessen()"></app-kopiert-erfolg>
