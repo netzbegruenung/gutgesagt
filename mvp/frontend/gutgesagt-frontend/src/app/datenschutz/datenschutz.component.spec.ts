@@ -5,6 +5,7 @@ import { abschnitt as abschnittIn, istTagesdatum, normalisiert, stand } from '..
 import { DatenschutzComponent } from './datenschutz.component';
 import { SUCHANFRAGEN_ABSCHNITT } from '../search/search.component';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
+import { FEIER_TON_SCHLUESSEL } from '../shared/feier/feier-ton.service';
 
 /** Der Satz zu Widerrufen vor dem Einspielen: mit Platzhalter oder mit Datum („1. Dezember 2026“). */
 const WIDERRUF_VOR_DEM_EINSPIELEN = new RegExp(
@@ -1017,6 +1018,21 @@ describe('DatenschutzComponent', () => {
       const text = mitMerker(true);
       expect(text).toContain(ABSATZ);
       expect(text).toContain('sie schon gesehen hast. Das sind zwei Vermerke ohne Angaben über dich.');
+    });
+  });
+
+  describe('Ton bei Erfolgen (#787)', () => {
+    it('steht immer unter „Speicherung auf deinem Gerät“, unabhängig von Schalter und Browserzustand', () => {
+      localStorage.removeItem(FEIER_TON_SCHLUESSEL);
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ imports: [DatenschutzComponent], providers: [provideRouter([])] });
+      const fixture = TestBed.createComponent(DatenschutzComponent);
+      fixture.detectChanges();
+      const text = abschnittIn(fixture.nativeElement as HTMLElement, 'Weitere Einträge');
+      expect(text).toContain(`unter dem Schlüssel „${FEIER_TON_SCHLUESSEL}“`);
+      expect(text).toContain('Der Eintrag enthält nur, dass der Ton an ist, und keine Angaben über dich');
+      expect(text).toContain('schaltest du ihn wieder aus, löschen wir den Eintrag');
+      expect(text).toContain('bis du ihn änderst');
     });
   });
 });
