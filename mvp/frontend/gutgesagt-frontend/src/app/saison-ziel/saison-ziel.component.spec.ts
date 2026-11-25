@@ -116,6 +116,40 @@ describe('SaisonZielComponent', () => {
     expect(bestandBereich()).toBeNull();
   });
 
+  it('zeigt nichts, wenn der Bestand schon beim ersten Laden fehlschlägt', () => {
+    fixture.detectChanges();
+    http.expectOne(URL).flush({ balken: null });
+    http.expectOne(METRICS).flush('kaputt', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+    expect(bestandBereich()).toBeNull();
+    expect(bereich()).toBeNull();
+  });
+
+  it('behält die Bestandszahl, wenn die Zählung einmal 0 meldet (gescheiterte Zählung)', fakeAsync(() => {
+    fixture.detectChanges();
+    http.expectOne(URL).flush({ balken: null });
+    http.expectOne(METRICS).flush(BESTAND);
+    tick(SAISON_NACHLADEN_MS);
+    http.expectOne(URL).flush({ balken: null });
+    http.expectOne(METRICS).flush({ ...BESTAND, commentary_count: 0 });
+    fixture.detectChanges();
+    expect(text()).toContain('Schon 800 Antworten auf 250 Sprüche');
+    fixture.destroy();
+  }));
+
+  it('Saison vorbei und Bestand kaputt: kein veralteter Balken', fakeAsync(() => {
+    fixture.detectChanges();
+    http.expectOne(URL).flush({ balken: { name: 'Winter 26', ziel: 100, erreicht: 10 } });
+    fixture.detectChanges();
+    expect(bereich()).not.toBeNull();
+    tick(SAISON_NACHLADEN_MS);
+    http.expectOne(URL).flush({ balken: null });
+    http.expectOne(METRICS).flush('kaputt', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+    expect(bereich()).toBeNull();
+    fixture.destroy();
+  }));
+
   it('Einzahl bei einem Spruch', () => {
     fixture.detectChanges();
     http.expectOne(URL).flush({ balken: null });

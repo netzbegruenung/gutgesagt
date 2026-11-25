@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 
 import { Observable, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { catchError, map, switchMap } from 'rxjs/operators';
 
 import { MetricsService } from '../services/metrics.service';
 import { SaisonBalken, SaisonService } from '../services/saison.service';
@@ -83,11 +83,11 @@ const LEER: Anzeige = { balken: null, bestand: null };
         <!-- Bestandszahl statt Balken unter der Schwelle (Entscheidung 25.11.2026): nur Inhalte, keine Personen -->
         <section class="saison-ziel" aria-labelledby="bestandszahl-titel" data-testid="bestandszahl">
           <h2 id="bestandszahl-titel">
-            Schon {{ zahl(z.antworten) }} {{ z.antworten === 1 ? 'Antwort' : 'Antworten' }} auf
+            Schon {{ zahl(z.antworten) }} Antworten auf
             {{ zahl(z.sprueche) }} {{ z.sprueche === 1 ? 'Spruch' : 'Sprüche' }}
           </h2>
           <p class="erklaerung">
-            Fertig zum Kopieren und Anpassen. Jede neue Antwort hilft allen, die nach dir suchen.
+            Fertig zum Kopieren und Anpassen. Jede neue Antwort hilft allen, die später danach suchen.
           </p>
         </section>
       }
@@ -175,7 +175,9 @@ export class SaisonZielComponent implements OnInit {
 
   /**
    * Balken, sonst bei Schalter an die Bestandszahl aus /getMetrics (öffentlich, im Server 60 s
-   * gecacht, nie 401/404). Ein Fehler geht weiter: Das Nachladen behält dann den letzten Stand.
+   * gecacht, nie 401/404). Ein Fehler beim Saisonstand geht weiter (das Nachladen behält den
+   * letzten Stand). Ein Fehler beim Bestand oder eine 0 (so meldet /getMetrics eine gescheiterte
+   * Zählung) behält nur die letzte Bestandszahl; der neue Saisonstand gilt trotzdem.
    */
   private laden(): Observable<Anzeige> {
     return this.saisons.zustand().pipe(
@@ -186,9 +188,16 @@ export class SaisonZielComponent implements OnInit {
         if (stand.balken) {
           return of({ balken: stand.balken, bestand: null });
         }
-        return this.metrics
-          .getMetrics()
-          .pipe(map((m) => ({ balken: null, bestand: bestandszahl(m?.commentary_count, m?.statement_count) })));
+        return this.metrics.getMetrics(true).pipe(
+          map((m): Anzeige => {
+            const gezaehlt = !!m?.commentary_count && !!m?.statement_count;
+            return {
+              balken: null,
+              bestand: gezaehlt ? bestandszahl(m.commentary_count, m.statement_count) : this.bestand,
+            };
+          }),
+          catchError(() => of<Anzeige>({ balken: null, bestand: this.bestand })),
+        );
       }),
     );
   }
