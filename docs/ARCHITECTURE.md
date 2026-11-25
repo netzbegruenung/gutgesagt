@@ -496,7 +496,9 @@ consent and "Punkte und Meilensteine" both valid (one query each for all partici
 Startkonto. Points are those of ADR 0004
 within the days of the running season (`PunkteService.punkte(user, zeitraum)`): usage from
 `usage_events` with `entdoppelt` (so only within their retention, `usage_retention_days` while
-the cleanup job runs), approvals by the day of their last change, Tun and ratings by their day.
+the cleanup job runs), approvals by the day of their last change, Tun and ratings by their day,
+Team-Quest points by their quest week (its Monday within the season, not the Monday they are
+credited, so a quest of the last season week still counts for that season).
 A season used with the Rangliste should therefore not be longer than that retention, otherwise
 usage from its first days drops out near its end. Season points of all participants are cached
 in memory once per season for 120 s; one request recomputes (at most 8 people in parallel), the
