@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, Subject, of } from 'rxjs';
-import { catchError, timeout } from 'rxjs/operators';
+import { catchError, map, timeout } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
 import { LoggingService } from '../../services/logging.service';
@@ -34,25 +34,33 @@ export class EinwilligungsBudgetService {
   /** Für Tests ersetzbar. */
   jetzt: () => number = () => Date.now();
   /**
-   * true erst, wenn der Server den Schalter sicher als aus gemeldet hat (404). Bei einem
-   * Fehler oder ohne Antwort bleibt es false: Dann ist unklar, ob der Schalter an ist,
-   * und wer schon geantwortet hat, wird nicht noch einmal eingeladen (#788, Jura 25.11.).
+   * true erst, wenn der Endpunkt selbst den Schalter sicher als aus gemeldet hat:
+   * `aktiv: false` (oder, bei einem älteren Backend, ein 404). Bei einem Fehler oder ohne
+   * Antwort bleibt es false: Dann ist unklar, ob der Schalter an ist, und wer schon
+   * geantwortet hat, wird nicht noch einmal eingeladen (#788, Jura 25.11.). Bewusst nicht
+   * aus GET /api/v1/funktionen: Dessen Stand kann bis zu fünf Minuten alt sein, und ein
+   * alter Stand ist kein sicheres „aus“.
    */
   schalterAus = false;
 
   /**
-   * Die Fakten vom Server; null ohne Schalter (404) oder bei einem Fehler. Dann fragt
-   * die App wie bisher.
+   * Die Fakten vom Server; null ohne Schalter oder bei einem Fehler. Dann fragt die App
+   * wie bisher. Ohne Schalter antwortet der Endpunkt 200 mit `aktiv: false`, nie 404
+   * (Gateway-fail2ban, docs/ARCHITECTURE.md); gefragt wird er nur auf „Meine Beiträge“.
    */
   moment(): Observable<EinwilligungsMoment | null> {
     if (!this.http) {
       return of(null);
     }
     return this.http
-      .get<EinwilligungsMoment>(`${environment.baseUrl}/api/v1/usage/users/me/einwilligungs-moment`)
+      .get<EinwilligungsMoment & { aktiv?: boolean }>(`${environment.baseUrl}/api/v1/usage/users/me/einwilligungs-moment`)
       .pipe(
         // Antwortet der Server nicht, fragt die App wie bisher, statt nichts zu zeigen.
         timeout(MOMENT_WARTEN_MS),
+        map((antwort) => {
+          this.schalterAus = antwort?.aktiv === false;
+          return this.schalterAus ? null : antwort;
+        }),
         catchError((fehler) => {
           this.schalterAus = fehler?.status === 404;
           if (fehler?.status !== 404 && fehler?.status !== 401 && fehler?.name !== 'TimeoutError') {

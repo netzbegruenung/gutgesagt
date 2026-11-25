@@ -1,5 +1,5 @@
 """
-GET /api/v1/usage/users/me/naechster-schritt (#789): ohne Schalter 404 und keine
+GET /api/v1/usage/users/me/naechster-schritt (#789): ohne Schalter leer und keine
 Abfrage, nur fuer Angemeldete, Vorschlaege aus den Quellen; eine Quelle, die scheitert,
 laesst nur ihre Regel aus. Die Quellen sind ersetzt, es gibt keine Datenbank.
 """
@@ -86,22 +86,25 @@ def _client(quellen, obergrenze=True) -> TestClient:
     return TestClient(app)
 
 
-def test_schalter_aus_404_ohne_abfrage(werte):
+def test_schalter_aus_leer_ohne_abfrage(werte):
+    # 200 statt 404: Die Startseite fragt automatisch (Gateway-fail2ban)
     quellen = FalscheQuellen()
 
     antwort = _client(quellen).get(URL, headers=ICH)
 
-    assert antwort.status_code == 404
+    assert antwort.status_code == 200
+    assert antwort.json() == {"vorschlaege": [], "aktiv": False}
     assert quellen.gefragt == []
 
 
 def test_obergrenze_aus_schlaegt_admin_wert(werte):
     werte["naechster_schritt"] = True
+    quellen = FalscheQuellen()
 
-    assert (
-        _client(FalscheQuellen(), obergrenze=False).get(URL, headers=ICH).status_code
-        == 404
-    )
+    antwort = _client(quellen, obergrenze=False).get(URL, headers=ICH)
+
+    assert antwort.json()["aktiv"] is False
+    assert quellen.gefragt == []
 
 
 def test_obergrenze_von_haus_aus_aus():

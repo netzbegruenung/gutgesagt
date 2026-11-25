@@ -1,7 +1,7 @@
 """
 GET /api/v1/konter-probe (#786): Proben fuer die Konter-Probe, ohne Anmeldung.
 
-Hinter dem Schalter konter_probe: aus heisst 404. Besucher sehen weder Anzeigenamen
+Hinter dem Schalter konter_probe: aus heisst leer mit aktiv false. Besucher sehen weder Anzeigenamen
 noch Kennungen (wie "Diese Woche oft genutzt").
 """
 
@@ -74,18 +74,20 @@ def namen(anzeigenamen_ohne_datenbank):
 
 @pytest.mark.unit
 class TestKonterProbeApi:
-    def test_schalter_aus_404(self):
+    def test_schalter_aus_leer(self):
+        # 200 statt 404: Die Startseite fragt automatisch (Gateway-fail2ban)
         patcher, client = _client(False, [])
         with patcher:
             antwort = client.get(URL)
-        assert antwort.status_code == 404
+        assert antwort.status_code == 200
+        assert antwort.json() == {"proben": [], "aktiv": False}
 
     def test_ohne_passende_aussage_leer(self):
         patcher, client = _client(True, [])
         with patcher:
             antwort = client.get(URL)
         assert antwort.status_code == 200
-        assert antwort.json() == {"proben": []}
+        assert antwort.json() == {"proben": [], "aktiv": True}
 
     def test_probe_besucher_ohne_namen_mit_nutzung(self, namen):
         probe = KonterProbe(

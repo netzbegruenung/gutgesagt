@@ -36,10 +36,12 @@ def _client(aktiv: bool = True) -> TestClient:
     return TestClient(app)
 
 
-def test_ohne_schalter_404_und_keine_abfrage(repo):
+def test_ohne_schalter_aus_und_keine_abfrage(repo):
+    # 200 statt 404 (Gateway-fail2ban); aktiv false ist das sichere "Schalter aus" (#812)
     antwort = _client(aktiv=False).get(URL, headers=KIM)
 
-    assert antwort.status_code == 404
+    assert antwort.status_code == 200
+    assert antwort.json()["aktiv"] is False
     repo.lesen.assert_not_called()
 
 
@@ -59,6 +61,7 @@ def test_liefert_die_fakten_der_person(repo):
 
     assert antwort.status_code == 200
     assert antwort.json() == {
+        "aktiv": True,
         "abgestimmt": True,
         "beantwortet": 2,
         "konto_seit": "2026-11-20T09:00:00Z",

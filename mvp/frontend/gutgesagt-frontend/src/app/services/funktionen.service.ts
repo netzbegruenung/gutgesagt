@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { catchError, map, tap, timeout } from 'rxjs/operators';
+import { catchError, finalize, map, shareReplay, tap, timeout } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
 
@@ -19,6 +19,14 @@ export const FUNKTIONEN_FRISCH_WARTEN_MS = 3000;
 /** So alt darf der Stand werden; danach fragt die nächste Karte, die ihn braucht, neu. */
 export const FUNKTIONEN_NACHLADEN_MS = 5 * 60 * 1000;
 
+/** Nach einem Fehler fragt stand$() so lange nicht neu, sondern meldet unbekannt. */
+export const FUNKTIONEN_FEHLER_PAUSE_MS = 60_000;
+
+/** true/false für einen bekannten Namen, null für einen, den der Server nicht meldet. */
+function wert(funktionen: FunktionenAntwort['funktionen'], name: string): boolean | null {
+  return Object.hasOwn(funktionen, name) ? funktionen[name] === true : null;
+}
+
 /**
  * Welche Funktionen hinter einem Schalter an sind (Glossar „Schalter“, #708), für
  * Funktionen, die nur im Browser laufen oder die die App ohne eigenen Abruf ausblendet. Gefragt wird beim ersten
@@ -26,7 +34,8 @@ export const FUNKTIONEN_NACHLADEN_MS = 5 * 60 * 1000;
  * Komponente ihn braucht: So kommt ein Umschalten auf der Admin-Seite an, ohne dass
  * jemand neu lädt, und ohne dauernd laufenden Takt. Bis zur ersten Antwort gilt aus: Eine
  * Funktion, die nicht sicher an ist, zeigt die App nicht. Nach einem Fehler bleibt der
- * letzte bekannte Stand.
+ * letzte bekannte Stand. Karten mit eigenem Endpunkt fragen über stand$() zuerst hier und
+ * ihren Endpunkt nur, wenn der Schalter nicht sicher aus ist.
  */
 @Injectable({ providedIn: 'root' })
 export class FunktionenService {
@@ -34,7 +43,12 @@ export class FunktionenService {
   private readonly http = inject(HttpClient, { optional: true });
   private readonly stand = signal<FunktionenAntwort['funktionen']>({});
   private gefragtUm: number | null = null;
-  private unterwegs = false;
+  /** Wann der Server zuletzt geantwortet hat; null: noch nie. */
+  private geladenUm: number | null = null;
+  /** Wann die letzte Abfrage scheiterte; null nach einer Antwort. */
+  private fehlerUm: number | null = null;
+  /** Die laufende Abfrage für stand$() und an(), geteilt, damit mehrere Karten nur einmal fragen. */
+  private abfrage: Observable<FunktionenAntwort['funktionen'] | null> | null = null;
 
   /** Ob die Funktion an ist; als Signal, damit OnPush-Vorlagen beim Umschalten neu zeichnen. */
   an(name: string): Signal<boolean> {
@@ -55,30 +69,77 @@ export class FunktionenService {
       timeout(FUNKTIONEN_FRISCH_WARTEN_MS),
       tap((antwort) => {
         this.gefragtUm = Date.now();
-        this.stand.set(antwort?.funktionen ?? {});
+        this.uebernehmen(antwort?.funktionen ?? {});
       }),
       map((antwort) => antwort?.funktionen?.[name] === true),
       catchError(() => of(false)),
     );
   }
 
+  /**
+   * Ob die Funktion an ist, sobald der Stand bekannt ist: aus dem frischen Stand
+   * (jünger als FUNKTIONEN_NACHLADEN_MS) ohne Abfrage, sonst nach einer geteilten Abfrage.
+   * null heißt unbekannt: Der Server antwortet nicht oder mit Fehler (auch wenn es einen
+   * älteren Stand gibt), oder er kennt den Namen nicht. Dann darf der Aufrufer seinen
+   * Endpunkt selbst fragen, der im Leerfall 200 antwortet. So fragen Karten hinter einem
+   * Schalter ihren Endpunkt nur, wenn er nicht sicher aus ist, und sparen bei
+   * ausgeschaltetem Schalter jeden Abruf (docs/ARCHITECTURE.md, Gateway-fail2ban). Nach
+   * einem Fehler fragt stand$() FUNKTIONEN_FEHLER_PAUSE_MS lang nicht neu, sondern meldet
+   * unbekannt, damit ein gestörter Server nicht doppelt so viele Abrufe bekommt.
+   */
+  stand$(name: string): Observable<boolean | null> {
+    if (!this.http) {
+      return of(false);
+    }
+    const jetzt = Date.now();
+    if (this.geladenUm !== null && jetzt - this.geladenUm < FUNKTIONEN_NACHLADEN_MS) {
+      return of(wert(this.stand(), name));
+    }
+    if (!this.abfrage && this.fehlerUm !== null && jetzt - this.fehlerUm < FUNKTIONEN_FEHLER_PAUSE_MS) {
+      return of(null);
+    }
+    return this.laden().pipe(map((funktionen) => (funktionen === null ? null : wert(funktionen, name))));
+  }
+
+  /**
+   * Die geteilte Abfrage für stand$() und an(): Läuft schon eine, hängen sich weitere
+   * Aufrufer an. Nach einem Fehler null; an() behält
+   * dann seinen letzten Stand (das Signal ändert sich nur bei einer Antwort).
+   */
+  private laden(): Observable<FunktionenAntwort['funktionen'] | null> {
+    if (!this.abfrage) {
+      this.gefragtUm = Date.now();
+      this.abfrage = this.http!.get<FunktionenAntwort>(`${environment.baseUrl}/api/v1/funktionen`).pipe(
+        // Ohne eigenes timeout: Ein Timer hielte die Zone der App bis zu seinem Ablauf
+        // unruhig (whenStable, Tests); bis zur Antwort warten Saisonbalken und Garten.
+        map((antwort) => antwort?.funktionen ?? {}),
+        tap((funktionen) => this.uebernehmen(funktionen)),
+        catchError(() => {
+          this.fehlerUm = Date.now();
+          return of(null);
+        }),
+        finalize(() => {
+          this.abfrage = null;
+        }),
+        shareReplay(1),
+      );
+    }
+    return this.abfrage;
+  }
+
+  private uebernehmen(funktionen: FunktionenAntwort['funktionen']): void {
+    this.geladenUm = Date.now();
+    this.fehlerUm = null;
+    this.stand.set(funktionen);
+  }
+
   private auffrischen(): void {
-    if (!this.http || this.unterwegs) {
+    if (!this.http || this.abfrage) {
       return;
     }
     if (this.gefragtUm !== null && Date.now() - this.gefragtUm < FUNKTIONEN_NACHLADEN_MS) {
       return;
     }
-    this.unterwegs = true;
-    this.gefragtUm = Date.now();
-    this.http.get<FunktionenAntwort>(`${environment.baseUrl}/api/v1/funktionen`).subscribe({
-      next: (antwort) => {
-        this.unterwegs = false;
-        this.stand.set(antwort?.funktionen ?? {});
-      },
-      error: () => {
-        this.unterwegs = false;
-      },
-    });
+    this.laden().subscribe();
   }
 }

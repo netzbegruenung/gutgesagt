@@ -153,14 +153,14 @@ async def meine_teams(
 ):
     """
     Die eigenen Teams aller Saisons, neueste zuerst. Bei ausgeschaltetem Schalter teams
-    nur, wenn es eigene gibt (zum Ansehen und Verlassen, ohne Umschalter), sonst 404.
+    die eigenen (zum Ansehen und Verlassen, ohne Umschalter); ohne eigene eine leere
+    Liste mit ``teams_aktiv: false``, kein 404: "Meine Beitraege" laedt selbst nach, und
+    das Gateway sperrt eine IP nach 50 Antworten 404 (docs/ARCHITECTURE.md).
     Je Team mit Schalter team_fortschritt die Wirkung der letzten abgeschlossenen
     Woche und mit team_quests die Quest; nur fuer die eigenen Teams.
     """
     teams = await asyncio.to_thread(service.meine, user_id)
     aktiv = service.wirksam()
-    if not aktiv and not teams:
-        raise HTTPException(status_code=404, detail="Not found")
     saison = service.aktuelle_saison()
     verfuegbar = aktiv and service.oeffentlich_wirksam()
     antwort = (

@@ -77,7 +77,11 @@ class TestWirkungsEcho:
         )
 
         assert antwort.status_code == 200
-        assert antwort.json() == {"personen_diese_woche": 7, "beitrag_nennen": True}
+        assert antwort.json() == {
+            "personen_diese_woche": 7,
+            "beitrag_nennen": True,
+            "angeboten": True,
+        }
         gepostet.melden.assert_called_once_with("kim-1")
         (person, beitrag), _ = wirkung.gepostet_melden.call_args
         assert person == "kim-1" and str(beitrag) == BEITRAG_ID
@@ -85,7 +89,11 @@ class TestWirkungsEcho:
     def test_ohne_schalter_wird_der_beitrag_verworfen(self, gepostet, wirkung):
         antwort = _client().post(GEPOSTET, json={"content_id": BEITRAG_ID}, headers=KIM)
 
-        assert antwort.json() == {"personen_diese_woche": 7, "beitrag_nennen": False}
+        assert antwort.json() == {
+            "personen_diese_woche": 7,
+            "beitrag_nennen": False,
+            "angeboten": True,
+        }
         wirkung.gepostet_melden.assert_not_called()
 
     def test_stand_sagt_ob_der_beitrag_mitgehen_soll(self, gepostet, wirkung):

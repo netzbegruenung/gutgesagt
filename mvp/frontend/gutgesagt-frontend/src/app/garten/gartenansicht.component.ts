@@ -11,7 +11,7 @@ import { nachladeStrom } from '../shared/selbst-nachladen';
 import { MIT_KONTO_PFAD, ZIEL_PARAM } from '../mit-konto/vorschau-schritte';
 import { Beet, GartenService, antwortenText, ohneAntwortText } from './garten.service';
 
-/** Nach diesen Antworten fragt die Seite nicht weiter: aus (404) oder ohne Rechte. */
+/** Nach diesen Antworten fragt die Seite nicht weiter: aus (404, älteres Backend) oder ohne Rechte. */
 function endgueltig(fehler: unknown): boolean {
   const status = (fehler as { status?: unknown } | null)?.status;
   return status === 404 || status === 401 || status === 403;
@@ -25,7 +25,8 @@ function endgueltig(fehler: unknown): boolean {
  * Ein Tipp auf die Kachel sucht nach dem Namen des Themas und zeigt so „Alles zum Thema“;
  * Angemeldete haben bei Spruechen ohne Antwort einen zweiten Link auf „Hier fehlt eine
  * Antwort“, gefiltert auf das Thema. Die Seite laedt selbst nach (nachladeStrom); ohne den
- * Schalter `gartenansicht` antwortet der Server 404, dann steht ein Satz da.
+ * Schalter `gartenansicht` antwortet der Server 200 mit `aktiv: false` (oder fragt die
+ * Seite gar nicht), dann steht ein Satz da. Geht er an, zeigt der nächste Lauf die Beete.
  */
 @Component({
   selector: 'app-gartenansicht',
@@ -48,7 +49,7 @@ export class GartenansichtComponent implements OnInit {
   readonly ohneAntwortText = ohneAntwortText;
 
   readonly beete = signal<Beet[] | null>(null);
-  /** Der Server sagt 404: Der Schalter ist aus. */
+  /** Der Schalter ist aus (`aktiv: false`, bei einem älteren Backend 404). */
   readonly aus = signal(false);
   /** Der letzte Versuch ist gescheitert; die Seite versucht es von selbst weiter. */
   readonly fehler = signal(false);
@@ -61,6 +62,13 @@ export class GartenansichtComponent implements OnInit {
     nachladeStrom(() => this.garten.beete(), { sofort: true, aufhoerenBei: endgueltig })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((lauf) => {
+        if (lauf.fehler === null && lauf.daten?.aktiv === false) {
+          this.aus.set(true);
+          this.beete.set(null);
+          this.fehler.set(false);
+          this.gestoppt.set(false);
+          return;
+        }
         if (lauf.fehler === null) {
           this.beete.set(lauf.daten?.beete ?? []);
           this.fehler.set(false);

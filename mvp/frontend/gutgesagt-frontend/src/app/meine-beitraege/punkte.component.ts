@@ -20,7 +20,7 @@ export const PUNKTE_PLATZHALTER_MS = 1_000;
  * sichtbar ist (nicht hinter dem Tab „Meine Einwürfe“), jede Minute. Der Pfad steht
  * deshalb nicht im Cache (auth/cache.interceptor.ts).
  *
- * Nichts zu sehen bei ausgeschalteten Punkten (404) und für Konten, die keine Punkte
+ * Nichts zu sehen bei ausgeschalteten Punkten (`aktiv: false`, ältere Backends 404) und für Konten, die keine Punkte
  * sammeln (Startkonto, keine Art.-9-Einwilligung). Scheitert ein Nachladen anders,
  * bleibt der letzte Stand stehen.
  */

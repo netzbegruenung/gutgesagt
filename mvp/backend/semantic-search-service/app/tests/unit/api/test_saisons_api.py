@@ -60,9 +60,12 @@ def _client(repository, wirksam=True, zahlen=None, saisons=(LAUFEND,)):
 
 
 class TestAktuell:
-    def test_schalter_aus_404(self, repository):
+    def test_schalter_aus_200_ohne_balken(self, repository):
+        # Kein 404: Die Startseite fragt bei jedem Aufruf, und das Gateway sperrt eine
+        # IP nach 50 Antworten 404 (Saal-WLAN, docs/ARCHITECTURE.md).
         antwort = _client(repository, wirksam=False).get("/api/v1/saisons/aktuell")
-        assert antwort.status_code == 404
+        assert antwort.status_code == 200
+        assert antwort.json() == {"balken": None, "aktiv": False}
         repository.alle.assert_not_called()
 
     def test_balken_nur_summen(self, repository):
@@ -78,7 +81,7 @@ class TestAktuell:
     def test_unter_der_schwelle_null(self, repository):
         antwort = _client(repository, zahlen={}).get("/api/v1/saisons/aktuell")
         assert antwort.status_code == 200
-        assert antwort.json() == {"balken": None}
+        assert antwort.json() == {"balken": None, "aktiv": True}
 
 
 class TestAdmin:

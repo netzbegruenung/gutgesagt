@@ -79,7 +79,7 @@ export class TeamsService {
 
   constructor(private http: HttpClient) {}
 
-  /** 404: Schalter teams aus; ``still``: Hintergrund-Abfrage (STILLE_ABFRAGE). */
+  /** Ohne Schalter teams und ohne eigene Teams `teams: []`, `teams_aktiv: false` (200, nie 404); ``still``: Hintergrund-Abfrage (STILLE_ABFRAGE). */
   meine(still = false): Observable<MeineTeams> {
     return this.http.get<MeineTeams>(`${this.baseUrl}/meine`, { context: still ? stillerKontext() : undefined });
   }

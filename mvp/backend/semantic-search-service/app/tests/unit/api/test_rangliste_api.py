@@ -103,10 +103,20 @@ def test_teilnehmend_mit_rangliste(dienst):
 
 
 @pytest.mark.parametrize("rangliste,punkte", [(False, True), (True, False)])
-def test_ohne_schalter_oder_ohne_punkte_404(dienst, rangliste, punkte):
+def test_ohne_schalter_oder_ohne_punkte_lesen_aus_aendern_404(
+    dienst, rangliste, punkte
+):
     client = _client(rangliste=rangliste, punkte=punkte)
 
-    assert client.get(URL, headers=KIM).status_code == 404
+    # Lesen laedt die Seite selbst nach: 200 mit aktiv false statt 404 (Gateway-fail2ban)
+    stand = client.get(URL, headers=KIM)
+    assert stand.status_code == 200
+    body = stand.json()
+    assert body["aktiv"] is False
+    assert body["gefragt"] is False
+    assert body["voraussetzungen"] is False
+    assert body["rangliste"] is None
+    dienst.stand.assert_not_called()
     antwort = client.put(
         f"{URL}/einwilligung",
         json={"teilnehmen": True, "wortlaut": AKTUELLER_WORTLAUT},

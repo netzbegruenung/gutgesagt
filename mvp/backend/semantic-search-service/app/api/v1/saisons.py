@@ -2,8 +2,10 @@
 Saisons mit Gemeinschaftsziel (#782, services/saison_service.py).
 
 - ``router`` unter /api/v1/saisons, ohne Anmeldung: der Balken der laufenden Saison
-  (``GET /aktuell``). 404, solange der Schalter ``saison_ziel`` nicht wirkt; ohne
-  laufende Saison oder unter der Schwelle ``{"balken": null}``. Nur Summen.
+  (``GET /aktuell``). Solange der Schalter ``saison_ziel`` nicht wirkt
+  ``{"balken": null, "aktiv": false}``, ohne laufende Saison oder unter der Schwelle
+  ``{"balken": null}``; nie 404, die Startseite fragt bei jedem Aufruf (Gateway-fail2ban,
+  docs/ARCHITECTURE.md). Nur Summen.
 - ``admin_router`` unter /api/v1/moderation/saisons, nur Admins: Saisons mit Stand
   lesen, anlegen, aendern und vor ihrem Beginn loeschen. Das geht auch bei Schalter
   aus, damit eine Saison vor dem Einschalten bereitsteht; wirken tut sie erst mit ihm.
@@ -47,6 +49,8 @@ class BalkenResponse(BaseModel):
 class AktuellResponse(BaseModel):
     # null: keine laufende Saison oder Schwelle noch nicht erreicht
     balken: Optional[BalkenResponse]
+    # false: Schalter saison_ziel aus (statt 404, die Startseite fragt automatisch)
+    aktiv: bool = True
 
 
 class SaisonRequest(BaseModel):
@@ -109,7 +113,7 @@ def _liste(stand: AdminStand) -> SaisonListeResponse:
 async def aktuell(service: SaisonService = Depends(_service)) -> AktuellResponse:
     # wirksam() liest bei abgelaufenem Cache die Schalter aus der Datenbank
     if not await asyncio.to_thread(service.wirksam):
-        raise HTTPException(status_code=404, detail="Nicht gefunden")
+        return AktuellResponse(balken=None, aktiv=False)
     try:
         balken = await asyncio.to_thread(service.balken)
     except Exception as e:

@@ -3,7 +3,9 @@ Konter-Probe (#786): Proben aus Spruch und drei echten Antworten, ohne Anmeldung
 
 Nur lesend. Der Tipp bleibt im Browser: Es gibt keinen Endpunkt, der ihn annimmt,
 und nichts wird gespeichert oder gezaehlt. Hinter dem Schalter ``konter_probe``
-(services/schalter_service.py); ist er aus, antwortet der Pfad mit 404.
+(services/schalter_service.py); ist er aus, antwortet der Pfad mit 200,
+``{"proben": [], "aktiv": false}``: Die Startseite fragt automatisch, und ein 404 je
+Aufruf sperrte am Gateway ein ganzes Saal-WLAN (docs/ARCHITECTURE.md).
 
 Die Antworten kommen als Karten wie bei "Diese Woche oft genutzt" (api/v1/usage.py,
 oft_genutzt), aufbereitet mit ``fuer_aufrufer``: Besucher sehen weder Anzeigenamen
@@ -57,6 +59,8 @@ class KonterProbeEintrag(BaseModel):
 
 class KonterProbenResponse(BaseModel):
     proben: List[KonterProbeEintrag]
+    # false: Schalter konter_probe aus
+    aktiv: bool = True
 
 
 def get_konter_probe_service(
@@ -93,7 +97,7 @@ async def konter_proben(
     Leer, wenn keine Aussage passt; dann zeigt die App keinen Einstieg.
     """
     if not schalter_wirksam("konter_probe", settings):
-        raise HTTPException(status_code=404, detail="Not found")
+        return KonterProbenResponse(proben=[], aktiv=False)
 
     try:
         # Im try gebaut: Scheitert ein Repository, antwortet der Endpunkt mit 500 und Log.

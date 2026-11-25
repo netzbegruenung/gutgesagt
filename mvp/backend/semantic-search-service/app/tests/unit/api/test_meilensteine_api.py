@@ -86,15 +86,18 @@ def test_eigene_meilensteine_mit_stand(dienst):
                 "stand": 0,
                 "erreicht": False,
             },
-        ]
+        ],
+        "aktiv": True,
     }
     dienst.meilensteine.assert_awaited_once_with("kim-1")
 
 
-def test_eigene_meilensteine_ohne_schalter_404(dienst):
+def test_eigene_meilensteine_ohne_schalter_leer(dienst):
+    # 200 statt 404: "Meine Beitraege" fragt automatisch (Gateway-fail2ban)
     antwort = _client(dienst, aktiv=False).get(URL, headers={"X-User": "kim-1"})
 
-    assert antwort.status_code == 404
+    assert antwort.status_code == 200
+    assert antwort.json() == {"meilensteine": [], "aktiv": False}
     dienst.meilensteine.assert_not_called()
 
 

@@ -89,7 +89,13 @@ describe('MeineTeamsComponent', () => {
     expect(el().querySelector('[data-testid="sichtbarkeit"]')!.textContent).toContain('Nur du siehst deine Teams.');
   });
 
-  it('zeigt ohne Schalter teams (404) keine Karte', () => {
+  it('zeigt ohne Schalter teams und ohne eigene Teams keine Karte (200 statt 404, Saal)', () => {
+    laden(stand({ teams_aktiv: false, teams: [], oeffentlich_verfuegbar: false }));
+
+    expect(el().querySelector('[data-testid="meine-teams"]')).toBeNull();
+  });
+
+  it('zeigt ohne Schalter teams bei einem älteren Backend (404) keine Karte', () => {
     http.expectOne(`${URL}/meine`).flush({ detail: 'Not found' }, { status: 404, statusText: 'Not Found' });
     fixture.detectChanges();
 

@@ -708,13 +708,18 @@ class TestMeineTeams:
         assert body["oeffentlich_text"] is None
         team_repo.oeffentlich_lesen.assert_not_called()
 
-    def test_ohne_schalter_und_ohne_teams_404(self, einladung_repo, team_repo):
+    def test_ohne_schalter_und_ohne_teams_leer(self, einladung_repo, team_repo):
+        # 200 statt 404: "Meine Beitraege" laedt selbst nach (Gateway-fail2ban)
         team_repo.meine.return_value = []
         antwort = _client(einladung_repo, team_repo, AUS).get(
             "/api/v1/teams/meine", headers=PERSON
         )
 
-        assert antwort.status_code == 404
+        assert antwort.status_code == 200
+        body = antwort.json()
+        assert body["teams_aktiv"] is False
+        assert body["teams"] == []
+        assert body["oeffentlich_verfuegbar"] is False
 
     def test_ohne_schalter_eigene_teams_zum_verlassen(self, einladung_repo, team_repo):
         # Widerruf so leicht wie die Einwilligung: auch nach dem Ausschalten sichtbar.

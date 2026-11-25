@@ -42,6 +42,7 @@ def test_eigene_punkte_je_stufe_und_gesamt(dienst):
         "wirkung": 25,
         "gesamt": 28,
         "sammelt": True,
+        "aktiv": True,
     }
     dienst.punkte.assert_awaited_once_with("kim-1")
 
@@ -58,10 +59,13 @@ def test_eigene_punkte_sammelt_nicht(dienst):
     assert antwort.json()["sammelt"] is False
 
 
-def test_eigene_punkte_ohne_schalter_404(dienst):
+def test_eigene_punkte_ohne_schalter_aus(dienst):
+    # 200 statt 404: "Meine Beitraege" fragt automatisch (Gateway-fail2ban)
     antwort = _client(dienst, aktiv=False).get(URL, headers={"X-User": "kim-1"})
 
-    assert antwort.status_code == 404
+    assert antwort.status_code == 200
+    assert antwort.json()["aktiv"] is False
+    assert antwort.json()["sammelt"] is False
     dienst.punkte.assert_not_called()
 
 

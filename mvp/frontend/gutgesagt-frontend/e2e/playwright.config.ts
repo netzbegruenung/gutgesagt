@@ -54,8 +54,14 @@ export default defineConfig({
       use: { ...devices['Pixel 5'], viewport: { width: 360, height: 740 } },
     },
     {
+      // Saal (BDK): null 401/404 bei Seitenaufrufen, Schalter aus und an; meldet sich selbst an (README.md).
+      name: 'saal',
+      testMatch: /saal-ohne-404\.spec\.ts/,
+      use: { ...devices['Pixel 5'], viewport: { width: 360, height: 740 } },
+    },
+    {
       name: 'mobil-360',
-      testIgnore: /(stichproben|besucher|fangkorb-desktop|12-ergebnisseite|13-teilen|15-teams|16-teams-stack)\.spec\.ts/,
+      testIgnore: /(stichproben|besucher|fangkorb-desktop|12-ergebnisseite|13-teilen|15-teams|16-teams-stack|saal-ohne-404)\.spec\.ts/,
       dependencies: ['setup'],
       use: {
         ...devices['Pixel 5'],

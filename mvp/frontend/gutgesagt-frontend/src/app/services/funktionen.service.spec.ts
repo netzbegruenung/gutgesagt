@@ -3,7 +3,12 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { environment } from '../../environments/environment';
-import { FUNKTIONEN_FRISCH_WARTEN_MS, FUNKTIONEN_NACHLADEN_MS, FunktionenService } from './funktionen.service';
+import {
+  FUNKTIONEN_FEHLER_PAUSE_MS,
+  FUNKTIONEN_FRISCH_WARTEN_MS,
+  FUNKTIONEN_NACHLADEN_MS,
+  FunktionenService,
+} from './funktionen.service';
 
 describe('FunktionenService', () => {
   const URL = `${environment.baseUrl}/api/v1/funktionen`;
@@ -68,6 +73,89 @@ describe('FunktionenService', () => {
 
     expect(an()).toBeTrue();
   });
+});
+
+describe('FunktionenService.stand$ (Saal: Abrufe hinter Schaltern nur, wenn nicht sicher aus)', () => {
+  const URL = `${environment.baseUrl}/api/v1/funktionen`;
+  let service: FunktionenService;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    service = TestBed.inject(FunktionenService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  it('wartet auf den Server und meldet an oder aus, mehrere Karten teilen eine Abfrage', () => {
+    const gemeldet: (boolean | null)[] = [];
+    service.stand$('a').subscribe((an) => gemeldet.push(an));
+    service.stand$('b').subscribe((an) => gemeldet.push(an));
+    // an() haengt sich an dieselbe Abfrage
+    const signal = service.an('a');
+    expect(gemeldet).toEqual([]);
+
+    http.expectOne(URL).flush({ funktionen: { a: true, b: false } });
+
+    expect(gemeldet).toEqual([true, false]);
+    expect(signal()).toBeTrue();
+  });
+
+  it('antwortet aus dem frischen Stand ohne neue Abfrage', () => {
+    service.stand$('a').subscribe();
+    http.expectOne(URL).flush({ funktionen: { a: false } });
+
+    let gemeldet: boolean | null | undefined;
+    service.stand$('a').subscribe((an) => (gemeldet = an));
+    http.expectNone(URL);
+    expect(gemeldet).toBeFalse();
+  });
+
+  it('meldet unbekannt (null), wenn der Server nie geantwortet hat', () => {
+    let gemeldet: boolean | null | undefined;
+    service.stand$('a').subscribe((an) => (gemeldet = an));
+    http.expectOne(URL).flush('weg', { status: 503, statusText: 'Service Unavailable' });
+    expect(gemeldet).toBeNull();
+  });
+
+  it('meldet nach einem Fehler unbekannt, nicht den alten Stand (alt ist nicht sicher aus)', () => {
+    const jetzt = Date.now();
+    const uhr = spyOn(Date, 'now').and.returnValue(jetzt);
+    service.stand$('a').subscribe();
+    http.expectOne(URL).flush({ funktionen: { a: false } });
+
+    uhr.and.returnValue(jetzt + FUNKTIONEN_NACHLADEN_MS + 1);
+    let gemeldet: boolean | null | undefined;
+    service.stand$('a').subscribe((an) => (gemeldet = an));
+    http.expectOne(URL).flush('weg', { status: 503, statusText: 'Service Unavailable' });
+    expect(gemeldet).toBeNull();
+  });
+
+  it('fragt nach einem Fehler eine Weile nicht neu, dann wieder', () => {
+    const jetzt = Date.now();
+    const uhr = spyOn(Date, 'now').and.returnValue(jetzt);
+    service.stand$('a').subscribe();
+    http.expectOne(URL).flush('weg', { status: 503, statusText: 'Service Unavailable' });
+
+    let gemeldet: boolean | null | undefined;
+    service.stand$('a').subscribe((an) => (gemeldet = an));
+    http.expectNone(URL);
+    expect(gemeldet).toBeNull();
+
+    uhr.and.returnValue(jetzt + FUNKTIONEN_FEHLER_PAUSE_MS + 1);
+    service.stand$('a').subscribe((an) => (gemeldet = an));
+    http.expectOne(URL).flush({ funktionen: { a: true } });
+    expect(gemeldet).toBeTrue();
+  });
+
+  it('meldet einen Namen, den der Server nicht kennt, als unbekannt', () => {
+    let gemeldet: boolean | null | undefined;
+    service.stand$('nicht_oeffentlich').subscribe((an) => (gemeldet = an));
+    http.expectOne(URL).flush({ funktionen: { a: false } });
+    expect(gemeldet).toBeNull();
+  });
+
 });
 
 describe('FunktionenService.frisch (#757)', () => {

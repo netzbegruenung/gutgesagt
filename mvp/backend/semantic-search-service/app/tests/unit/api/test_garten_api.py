@@ -1,5 +1,5 @@
 """
-GET /api/v1/search/garten (#783): ohne Schalter 404 ohne Abfrage, sonst je Thema Name,
+GET /api/v1/search/garten (#783): ohne Schalter leer mit aktiv false, ohne Abfrage, sonst je Thema Name,
 Motiv und zwei Zahlen, fuer Besucher wie fuer Angemeldete, ohne Texte von Aussagen.
 """
 
@@ -57,17 +57,23 @@ def _client(dienst, obergrenze=True) -> TestClient:
     return TestClient(app)
 
 
-def test_schalter_aus_404_ohne_abfrage(werte):
+def test_schalter_aus_leer_ohne_abfrage(werte):
+    # 200 statt 404: Die Seite laedt selbst nach (Gateway-fail2ban, docs/ARCHITECTURE.md)
     dienst = FalscherDienst()
 
-    assert _client(dienst).get(URL).status_code == 404
+    antwort = _client(dienst).get(URL)
+
+    assert antwort.status_code == 200
+    assert antwort.json() == {"beete": [], "aktiv": False}
     assert dienst.gefragt == 0
 
 
 def test_obergrenze_aus_schlaegt_admin_wert(werte):
     werte["gartenansicht"] = True
+    dienst = FalscherDienst()
 
-    assert _client(FalscherDienst(), obergrenze=False).get(URL).status_code == 404
+    assert _client(dienst, obergrenze=False).get(URL).json()["aktiv"] is False
+    assert dienst.gefragt == 0
 
 
 def test_obergrenze_von_haus_aus_aus():

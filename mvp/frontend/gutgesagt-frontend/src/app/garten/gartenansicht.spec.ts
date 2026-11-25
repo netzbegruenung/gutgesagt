@@ -3,7 +3,7 @@ import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import { AuthService, UserInfo } from '../auth/auth.service';
@@ -31,6 +31,12 @@ describe('Gartenansicht (#783)', () => {
 
   describe('Seite', () => {
     let http: HttpTestingController;
+    /** Was FunktionenService zum Schalter gartenansicht meldet; null: unbekannt. */
+    let schalter: boolean | null = true;
+
+    afterEach(() => {
+      schalter = true;
+    });
 
     function starten(angemeldet: boolean) {
       const nutzer = new BehaviorSubject<UserInfo | null>({ isAuthenticated: angemeldet, userId: null, userName: null, claims: null });
@@ -41,6 +47,7 @@ describe('Gartenansicht (#783)', () => {
           provideHttpClientTesting(),
           provideRouter([]),
           { provide: AuthService, useValue: { userInfo$: nutzer } },
+          { provide: FunktionenService, useValue: { stand$: () => of(schalter) } },
         ],
       });
       http = TestBed.inject(HttpTestingController);
@@ -104,7 +111,25 @@ describe('Gartenansicht (#783)', () => {
       expect(fixture.nativeElement.querySelector('.garten-konto')).toBeNull();
     });
 
-    it('sagt bei 404, dass die Übersicht aus ist, und fragt nicht weiter', () => {
+    it('fragt den Endpunkt nicht, solange der Schalter sicher aus ist, und sagt das (Saal, kein 404)', () => {
+      schalter = false;
+      const fixture = starten(false);
+      http.expectNone(URL);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Diese Übersicht ist gerade nicht eingeschaltet.');
+      expect(beete(fixture).length).toBe(0);
+    });
+
+    it('sagt bei aktiv false vom Server, dass die Übersicht aus ist', () => {
+      schalter = null;
+      const fixture = starten(false);
+      http.expectOne(URL).flush({ beete: [], aktiv: false });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Diese Übersicht ist gerade nicht eingeschaltet.');
+      expect(fixture.nativeElement.querySelector('mat-spinner')).toBeNull();
+    });
+
+    it('sagt bei 404 eines älteren Backends, dass die Übersicht aus ist, und fragt nicht weiter', () => {
       const fixture = starten(false);
       http.expectOne(URL).flush('weg', { status: 404, statusText: 'Not Found' });
       fixture.detectChanges();

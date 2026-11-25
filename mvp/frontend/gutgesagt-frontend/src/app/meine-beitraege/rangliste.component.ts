@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { Subject } from 'rxjs';
 
 import { RanglisteService, RanglisteStand, RanglistenPlatz } from '../services/rangliste.service';
-import { nachladeStrom, ohneRechte } from '../shared/selbst-nachladen';
+import { AUS_NACHLADEN_MS, NACHLADEN_MS, nachladeStrom, ohneRechte } from '../shared/selbst-nachladen';
 
 export const RANGLISTE_JA = 'Ja, zeigt mich in der Rangliste';
 export const RANGLISTE_NEIN = 'Nein, ohne Rangliste';
@@ -22,8 +22,9 @@ export const RANGLISTE_NEIN = 'Nein, ohne Rangliste';
  *   zufällige Ranglistenname, außer die Person wählt hier aktiv ihren Anzeigenamen.
  * - „Aus der Rangliste nehmen“ wirkt sofort, ohne Rückfrage, so leicht wie das Ja.
  *
- * Ohne Schalter (404) oder ohne Anmeldung zeigt die Komponente nichts. Sie lädt selbst
- * nach, auch nach jeder Antwort.
+ * Ohne Schalter (`aktiv: false`, bei einem älteren Backend 404) oder ohne Anmeldung zeigt
+ * die Komponente nichts. Sie lädt selbst nach, auch nach jeder Antwort; ohne Schalter nur
+ * alle AUS_NACHLADEN_MS.
  */
 @Component({
   selector: 'app-rangliste',
@@ -52,14 +53,18 @@ export class RanglisteComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly anstoss$ = new Subject<void>();
   private erstes = true;
+  /** Der Server meldet den Schalter aus (`aktiv: false`): seltener nachladen. */
+  private aus = false;
 
   ngOnInit(): void {
     const abo = nachladeStrom(() => this.service.laden(!this.erstes), {
       sofort: true,
+      ms: () => (this.aus ? AUS_NACHLADEN_MS : NACHLADEN_MS),
       aufhoerenBei: ohneRechte,
       anstoss$: this.anstoss$,
     }).subscribe((lauf) => {
       this.erstes = false;
+      this.aus = lauf.fehler === null && lauf.daten === null;
       if (lauf.fehler === null) {
         this.stand = lauf.daten;
       } else {

@@ -44,7 +44,11 @@ def test_melden_zaehlt_die_person_und_nennt_die_zahl(dienst):
     antwort = _client().post(URL, headers=KIM)
 
     assert antwort.status_code == 200
-    assert antwort.json() == {"personen_diese_woche": 7, "beitrag_nennen": False}
+    assert antwort.json() == {
+        "personen_diese_woche": 7,
+        "beitrag_nennen": False,
+        "angeboten": True,
+    }
     dienst.melden.assert_called_once_with("kim-1")
 
 
@@ -52,17 +56,45 @@ def test_stand_ohne_zu_zaehlen(dienst):
     antwort = _client().get(URL, headers=KIM)
 
     assert antwort.status_code == 200
-    assert antwort.json() == {"personen_diese_woche": 6, "beitrag_nennen": False}
+    assert antwort.json() == {
+        "personen_diese_woche": 6,
+        "beitrag_nennen": False,
+        "angeboten": True,
+    }
     dienst.melden.assert_not_called()
 
 
-def test_ohne_schalter_404_ohne_datenbank(dienst, art9_einwilligung_ohne_datenbank):
+def test_ohne_schalter_melden_404_ohne_datenbank(
+    dienst, art9_einwilligung_ohne_datenbank
+):
     client = _client(an=False)
 
-    assert client.get(URL, headers=KIM).status_code == 404
     assert client.post(URL, headers=KIM).status_code == 404
     dienst.melden.assert_not_called()
     art9_einwilligung_ohne_datenbank.lesen.assert_not_called()
+
+
+def test_ohne_schalter_stand_nicht_angeboten(dienst, art9_einwilligung_ohne_datenbank):
+    # Den Stand fragt das Frontend nach dem Kopieren von selbst: 200 statt 404
+    # (Gateway-fail2ban, docs/ARCHITECTURE.md), ohne den Zaehler zu lesen.
+    antwort = _client(an=False).get(URL, headers=KIM)
+
+    assert antwort.status_code == 200
+    assert antwort.json()["angeboten"] is False
+    dienst.diese_woche.assert_not_called()
+    # Erst mit Schalter fragt die Sperre die Einwilligung: kein 403, keine Abfrage (#643)
+    art9_einwilligung_ohne_datenbank.lesen.assert_not_called()
+
+
+def test_ohne_schalter_auch_ohne_einwilligung_kein_403(
+    dienst, art9_einwilligung_ohne_datenbank
+):
+    art9_einwilligung_ohne_datenbank.lesen.return_value = None
+
+    antwort = _client(an=False).get(URL, headers=KIM)
+
+    assert antwort.status_code == 200
+    assert antwort.json()["angeboten"] is False
 
 
 @pytest.mark.parametrize("kopf", [{}, {"X-User": "anonymous"}])
@@ -87,7 +119,7 @@ def test_startkonto_zaehlt_nicht(dienst):
     client = _client(startkonten="kim-1")
 
     assert client.post(URL, headers=KIM).status_code == 404
-    assert client.get(URL, headers=KIM).status_code == 404
+    assert client.get(URL, headers=KIM).json()["angeboten"] is False
     dienst.melden.assert_not_called()
 
 

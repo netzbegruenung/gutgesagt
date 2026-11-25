@@ -2,7 +2,9 @@
 GET /api/v1/search/garten: die Gartenansicht (#783), je Thema die Zahl der Antworten
 und der Aussagen ohne Antwort (services/gartenansicht_service.py). Unter /search, damit
 sie wie die Suche auch fuer Besucher offen ist (BFF EndpointPolicy). Nur Zahlen, keine
-Texte. Ohne den Schalter ``gartenansicht`` 404, ohne eine Abfrage.
+Texte. Ohne den Schalter ``gartenansicht`` 200 mit ``{"beete": [], "aktiv": false}``,
+ohne eine Abfrage; kein 404, weil die Seite selbst nachlaedt (Gateway-fail2ban,
+docs/ARCHITECTURE.md).
 """
 
 from typing import List, Optional
@@ -40,12 +42,8 @@ class BeetDto(BaseModel):
 
 class GartenResponse(BaseModel):
     beete: List[BeetDto]
-
-
-def _schalter_an(settings: Settings = Depends(get_settings)) -> None:
-    """Vor allen anderen Abhaengigkeiten: ohne Schalter keine Abfrage."""
-    if not schalter_wirksam(SCHALTER, settings):
-        raise HTTPException(status_code=404, detail="Not found")
+    # false: Schalter gartenansicht aus
+    aktiv: bool = True
 
 
 def get_gartenansicht_service(
@@ -59,12 +57,18 @@ def get_gartenansicht_service(
     )
 
 
-@router.get(
-    "/garten", response_model=GartenResponse, dependencies=[Depends(_schalter_an)]
-)
+def _schalter_an(settings: Settings = Depends(get_settings)) -> bool:
+    return schalter_wirksam(SCHALTER, settings)
+
+
+@router.get("/garten", response_model=GartenResponse)
 async def garten(
+    an: bool = Depends(_schalter_an),
     service: GartenansichtService = Depends(get_gartenansicht_service),
 ) -> GartenResponse:
+    # Der Dienst ist gebaut, fragt aber erst mit beete() etwas ab.
+    if not an:
+        return GartenResponse(beete=[], aktiv=False)
     try:
         beete = await service.beete()
     except Exception as e:

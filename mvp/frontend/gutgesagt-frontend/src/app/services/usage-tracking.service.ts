@@ -109,6 +109,8 @@ export interface GepostetAntwort {
   personen_diese_woche: number;
   /** Wirkungs-Echo (#790): ob beim Melden der Beitrag mitgehen soll; nur mit Schalter. */
   beitrag_nennen?: boolean;
+  /** Nur GET: false ohne Schalter oder für Startkonten (statt 404, Gateway-fail2ban). */
+  angeboten?: boolean;
 }
 
 /** Antwort von POST /content/{id}/danke (#791). */
@@ -372,7 +374,7 @@ export class UsageTrackingService {
 
   /**
    * Der eigene Punktestand (#352), nur für die Person selbst. Solange die Punkte
-   * ausgeschaltet sind, antwortet der Server 404, dann null: „Meine Beiträge“ zeigt
+   * ausgeschaltet sind, antwortet der Server mit `aktiv: false` (ältere: 404), dann null: „Meine Beiträge“ zeigt
    * keine Punkte. Jeder andere Fehler (502, Zeitüberschreitung) heißt nur, dass der
    * Stand gerade unbekannt ist: PUNKTE_NICHT_GELADEN.
    */
@@ -381,7 +383,15 @@ export class UsageTrackingService {
       switchMap((status) =>
         !status.aktiv || this.punkteAus
           ? of(null)
-          : this.http.get<Punktestand>(`${this.apiUrl}/users/me/punkte`).pipe(
+          : this.http.get<Punktestand & { aktiv?: boolean }>(`${this.apiUrl}/users/me/punkte`).pipe(
+              // Schalter aus: 200 mit aktiv false statt 404 (Gateway-fail2ban), gilt wie zuvor das 404
+              map((stand) => {
+                if (stand?.aktiv === false) {
+                  this.punkteAusSeit = Date.now();
+                  return null;
+                }
+                return stand;
+              }),
               catchError((error) => {
                 if (error?.status === 404) {
                   this.punkteAusSeit = Date.now();
@@ -397,7 +407,7 @@ export class UsageTrackingService {
 
   /**
    * Die eigenen Meilensteine (#351), nur für die Person selbst. Solange die Punkte
-   * ausgeschaltet sind, antwortet der Server 404; dann und bei jedem anderen Fehler
+   * ausgeschaltet sind, antwortet der Server mit `aktiv: false` (ältere: 404); dann und bei jedem anderen Fehler
    * eine leere Liste, und „Meine Beiträge“ zeigt keine Meilensteine.
    */
   getEigeneMeilensteine(): Observable<Meilenstein[]> {
@@ -405,8 +415,14 @@ export class UsageTrackingService {
       switchMap((status) =>
         !status.aktiv || this.punkteAus
           ? of([])
-          : this.http.get<{ meilensteine: Meilenstein[] }>(`${this.apiUrl}/users/me/meilensteine`).pipe(
-              map((antwort) => antwort.meilensteine ?? []),
+          : this.http.get<{ meilensteine: Meilenstein[]; aktiv?: boolean }>(`${this.apiUrl}/users/me/meilensteine`).pipe(
+              map((antwort) => {
+                if (antwort?.aktiv === false) {
+                  this.punkteAusSeit = Date.now();
+                  return [];
+                }
+                return antwort.meilensteine ?? [];
+              }),
               catchError((error) => {
                 if (error?.status === 404) {
                   this.punkteAusSeit = Date.now();
@@ -422,7 +438,7 @@ export class UsageTrackingService {
 
   /**
    * Ob andere Angemeldete die eigenen Meilenstein-Abzeichen sehen (#351). Ohne die
-   * Schalter antwortet der Server 404; dann und bei jedem Fehler null, und die Seite
+   * Schalter antwortet der Server mit `aktiv: false` (ältere: 404); dann und bei jedem Fehler null, und die Seite
    * fragt nicht.
    */
   getAbzeichenSichtbarkeit(): Observable<AbzeichenSichtbarkeit | null> {
@@ -430,7 +446,14 @@ export class UsageTrackingService {
       switchMap((status) =>
         !status.abzeichen_sichtbar || this.punkteAus || this.sichtbarkeitAus
           ? of(null)
-          : this.http.get<AbzeichenSichtbarkeit>(`${this.apiUrl}/users/me/abzeichen-sichtbarkeit`).pipe(
+          : this.http.get<AbzeichenSichtbarkeit & { aktiv?: boolean }>(`${this.apiUrl}/users/me/abzeichen-sichtbarkeit`).pipe(
+              map((antwort) => {
+                if (antwort?.aktiv === false) {
+                  this.sichtbarkeitAusSeit = Date.now();
+                  return null;
+                }
+                return antwort;
+              }),
               catchError((error) => {
                 if (error?.status === 404) {
                   this.sichtbarkeitAusSeit = Date.now();
@@ -446,9 +469,10 @@ export class UsageTrackingService {
 
   /**
    * Ob nach dem Kopieren „Ja, gepostet“ angeboten wird (#643): nur mit Schalter am
-   * Server, angemeldet und mit Art.-9-Einwilligung (sonst 404, 401 oder 403). Ein Ja
-   * und ein 404 (Schalter aus, Startkonto) gelten je Kennung bis zum Neuladen; ein 403
-   * wird nicht gemerkt, die Einwilligung kann inzwischen da sein.
+   * Server, angemeldet und mit Art.-9-Einwilligung (sonst `angeboten: false`, 401 oder
+   * 403). Ein Ja und ein Nein (Schalter aus, Startkonto; bei einem älteren Backend 404)
+   * gelten je Kennung bis zum Neuladen; ein 403 wird nicht gemerkt, die Einwilligung kann
+   * inzwischen da sein.
    */
   gepostetAngeboten(kennung: string): Observable<boolean> {
     const gemerkt = this.gepostetStand.get(kennung);
@@ -457,8 +481,10 @@ export class UsageTrackingService {
     }
     return this.http.get<GepostetAntwort>(`${this.apiUrl}/users/me/gepostet`).pipe(
       tap((antwort) => this.beitragNennen.set(kennung, antwort?.beitrag_nennen === true)),
-      map(() => true),
-      tap(() => this.gepostetStand.set(kennung, true)),
+      // angeboten false: Schalter aus oder Startkonto (200 statt 404, Gateway-fail2ban);
+      // gemerkt wie zuvor das 404. Ein älteres Backend ohne das Feld bietet an.
+      map((antwort) => antwort?.angeboten !== false),
+      tap((angeboten) => this.gepostetStand.set(kennung, angeboten)),
       catchError((error) => {
         if (error?.status === 404) {
           this.gepostetStand.set(kennung, false);

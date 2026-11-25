@@ -1,7 +1,9 @@
 """
 GET /api/v1/usage/users/me/naechster-schritt: die Vorschlaege fuer die Karte "Dein
 naechster Schritt" (#789, services/naechster_schritt.py). Nur fuer Angemeldete, nur mit
-dem Schalter ``naechster_schritt`` (sonst 404, ohne eine Abfrage).
+dem Schalter ``naechster_schritt``; ohne ihn 200 mit ``{"vorschlaege": [], "aktiv": false}``
+und ohne eine Abfrage (kein 404: die Startseite fragt automatisch, Gateway-fail2ban,
+docs/ARCHITECTURE.md).
 
 Der Abruf liest nur: eigene Einwuerfe, Stimmen und Beitraege samt Nutzung, die Zahl
 frischer Beitraege anderer und die erste Aussage aus "Hier fehlt eine Antwort". Er
@@ -78,6 +80,8 @@ class VorschlagDto(BaseModel):
 class NaechsterSchrittResponse(BaseModel):
     # Alle passenden Vorschlaege, der erste gilt; nach dem Wegklicken der naechste.
     vorschlaege: List[VorschlagDto]
+    # false: Schalter naechster_schritt aus
+    aktiv: bool = True
 
 
 class Quellen:
@@ -149,22 +153,20 @@ async def _oder_none(aufruf: Awaitable[T], was: str) -> Optional[T]:
         return None
 
 
-def _schalter_an(settings: Settings = Depends(get_settings)) -> None:
-    """Vor allen anderen Abhaengigkeiten: ohne Schalter keine Abfrage."""
-    if not schalter_wirksam(SCHALTER, settings):
-        raise HTTPException(status_code=404, detail="Not found")
+def _schalter_an(settings: Settings = Depends(get_settings)) -> bool:
+    return schalter_wirksam(SCHALTER, settings)
 
 
-@router.get(
-    "/users/me/naechster-schritt",
-    response_model=NaechsterSchrittResponse,
-    dependencies=[Depends(_schalter_an)],
-)
+@router.get("/users/me/naechster-schritt", response_model=NaechsterSchrittResponse)
 async def naechster_schritt(
     current_user: str = Depends(require_user),
+    an: bool = Depends(_schalter_an),
     quellen: Quellen = Depends(get_quellen),
     settings: Settings = Depends(get_settings),
 ) -> NaechsterSchrittResponse:
+    # Quellen sind gebaut, fragen aber erst beim Aufruf ihrer Methoden etwas ab.
+    if not an:
+        return NaechsterSchrittResponse(vorschlaege=[], aktiv=False)
     einwuerfe, stimmen, beitraege, frisch, brache = await asyncio.gather(
         _oder_none(quellen.einwuerfe(current_user), "Einwuerfe"),
         _oder_none(quellen.stimmen(current_user), "Stimmen"),

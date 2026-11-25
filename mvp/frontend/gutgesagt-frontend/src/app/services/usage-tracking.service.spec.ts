@@ -139,7 +139,19 @@ describe('UsageTrackingService', () => {
       expect(ergebnis).toEqual([EINER]);
     });
 
-    it('liefert bei ausgeschalteten Punkten (404) still eine leere Liste', () => {
+    it('liefert bei ausgeschalteten Punkten (200, aktiv false) still eine leere Liste und fragt nicht gleich wieder', () => {
+      let ergebnis: unknown;
+      service.getEigeneMeilensteine().subscribe((liste) => (ergebnis = liste));
+      status();
+
+      http.expectOne(MEILENSTEINE).flush({ meilensteine: [], aktiv: false });
+
+      expect(ergebnis).toEqual([]);
+      service.getEigeneMeilensteine().subscribe();
+      http.expectNone(MEILENSTEINE);
+    });
+
+    it('liefert bei ausgeschalteten Punkten (404, älteres Backend) still eine leere Liste', () => {
       let ergebnis: unknown;
       service.getEigeneMeilensteine().subscribe((liste) => (ergebnis = liste));
       status();
@@ -178,7 +190,18 @@ describe('UsageTrackingService', () => {
       expect(ergebnis).toEqual(STAND);
     });
 
-    it('liefert bei ausgeschalteten Punkten (404) still null', () => {
+    it('liefert bei ausgeschalteten Punkten (200, aktiv false) still null', () => {
+      let ergebnis: unknown = 'unberuehrt';
+      service.getEigenePunkte().subscribe((stand) => (ergebnis = stand));
+      status();
+
+      http.expectOne(PUNKTE).flush({ tun: 0, quests: 0, wirkung: 0, gesamt: 0, sammelt: false, aktiv: false });
+
+      expect(ergebnis).toBeNull();
+      expect(TestBed.inject(LoggingService).error).not.toHaveBeenCalled();
+    });
+
+    it('liefert bei ausgeschalteten Punkten (404, älteres Backend) still null', () => {
       let ergebnis: unknown = 'unberuehrt';
       service.getEigenePunkte().subscribe((stand) => (ergebnis = stand));
       status();
@@ -320,7 +343,18 @@ describe('UsageTrackingService', () => {
       http.expectNone(GEPOSTET);
     });
 
-    it('merkt sich ein 404 (Schalter aus) still', () => {
+    it('merkt sich angeboten false (Schalter aus, 200 statt 404) still', () => {
+      let ergebnis: boolean | undefined;
+      service.gepostetAngeboten('kim-1').subscribe((ja) => (ergebnis = ja));
+      http.expectOne(GEPOSTET).flush({ personen_diese_woche: 0, angeboten: false });
+
+      expect(ergebnis).toBeFalse();
+      expect(angeboten()).toBeFalse();
+      http.expectNone(GEPOSTET);
+      expect(TestBed.inject(LoggingService).error).not.toHaveBeenCalled();
+    });
+
+    it('merkt sich ein 404 (Schalter aus, älteres Backend) still', () => {
       let ergebnis: boolean | undefined;
       service.gepostetAngeboten('kim-1').subscribe((ja) => (ergebnis = ja));
       http.expectOne(GEPOSTET).flush('weg', { status: 404, statusText: 'Not Found' });
@@ -475,7 +509,22 @@ describe('UsageTrackingService', () => {
       expect(ergebnis).toEqual(stand);
     });
 
-    it('liefert ohne Schalter (404) still null', () => {
+    it('liefert ohne Schalter (200, aktiv false) still null', () => {
+      let ergebnis: unknown = 'unberuehrt';
+      service.getAbzeichenSichtbarkeit().subscribe((stand) => (ergebnis = stand));
+      status();
+
+      http.expectOne(SICHTBARKEIT).flush({
+        gefragt: false,
+        zeigen: null,
+        aktueller_wortlaut: { kennung: 'k', text: 'x', mehr_dazu: 'y' },
+        aktiv: false,
+      });
+
+      expect(ergebnis).toBeNull();
+    });
+
+    it('liefert ohne Schalter (404, älteres Backend) still null', () => {
       let ergebnis: unknown = 'unberuehrt';
       service.getAbzeichenSichtbarkeit().subscribe((stand) => (ergebnis = stand));
       status();

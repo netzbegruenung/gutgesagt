@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
 import { stillerKontext } from '../shared/selbst-nachladen';
@@ -24,6 +25,8 @@ export interface Rangliste {
 
 /** GET /api/v1/rangliste (#793): nur für die angemeldete Person selbst. */
 export interface RanglisteStand {
+  /** false: Schalter aus (200 statt 404, Gateway-fail2ban); dann gibt es nichts zu zeigen. */
+  aktiv?: boolean;
   gefragt: boolean;
   teilnehmen: boolean | null;
   mit_anzeigename: boolean;
@@ -45,16 +48,22 @@ export interface RanglisteStand {
 
 /**
  * Rangliste je Saison mit eigener Einwilligung (#793, Schalter „rangliste“). Ohne
- * wirksamen Schalter antwortet der Server mit 404. Kein teilbarer Link, kein Export.
+ * wirksamen Schalter antwortet der Server beim Lesen mit 200 und `aktiv: false` (nie 404:
+ * „Meine Beiträge“ lädt selbst nach, Gateway-fail2ban). Kein teilbarer Link, kein Export.
  */
 @Injectable({ providedIn: 'root' })
 export class RanglisteService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.baseUrl}/api/v1/rangliste`;
 
-  /** ``still``: Nachladen im Hintergrund, ohne Umleitung zur Anmeldung bei 401. */
-  laden(still = false): Observable<RanglisteStand> {
-    return this.http.get<RanglisteStand>(this.baseUrl, { context: still ? stillerKontext() : undefined });
+  /**
+   * Der eigene Stand; null bei ausgeschaltetem Schalter (`aktiv: false`).
+   * ``still``: Nachladen im Hintergrund, ohne Umleitung zur Anmeldung bei 401.
+   */
+  laden(still = false): Observable<RanglisteStand | null> {
+    return this.http
+      .get<RanglisteStand>(this.baseUrl, { context: still ? stillerKontext() : undefined })
+      .pipe(map((stand) => (stand?.aktiv === false ? null : stand)));
   }
 
   /** Ja oder Nein, mit der Kennung des gezeigten Wortlauts; jederzeit änderbar. */
