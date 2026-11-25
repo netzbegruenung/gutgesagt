@@ -149,6 +149,10 @@ _ZEILE_DER_NEUEN_GEWINNT = {
     ("gesehene_nutzung", "user_id"): (),
     ("art9_ohne_einwilligung", "user_id"): (),
     ("votes", "user_id"): ("content_id",),
+    # Teams: je Person eine Antwort auf "Team oeffentlich am Namen zeigen" und je Team
+    # und Saison eine Mitgliedschaft; die der neuen Kennung bleibt.
+    ("team_oeffentlich", "konto_kennung"): (),
+    ("team_mitgliedschaften", "konto_kennung"): ("team_name", "saison"),
 }
 
 

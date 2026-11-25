@@ -249,6 +249,28 @@ class TeamRepository:
             )
             return ergebnis.rowcount == 1
 
+    def konten_loeschen(self, kennungen: Sequence[str]) -> int:
+        """
+        Loescht alle Mitgliedschaften und die Antwort auf "Team öffentlich am Namen
+        zeigen" dieser Konten, etwa nachdem die Loeschfrist nie benutzte Konten aus dem
+        Realm entfernt hat. Gibt die Zahl der geloeschten Mitgliedschaften zurueck.
+        """
+        if not kennungen:
+            return 0
+        menge = set(kennungen)
+        with self.db.get_session() as session:
+            anzahl = session.execute(
+                delete(TeamMitgliedschaftZeile).where(
+                    TeamMitgliedschaftZeile.konto_kennung.in_(menge)
+                )
+            ).rowcount
+            session.execute(
+                delete(TeamOeffentlichZeile).where(
+                    TeamOeffentlichZeile.konto_kennung.in_(menge)
+                )
+            )
+            return anzahl
+
     # --- Oeffentlich am Namen ------------------------------------------------
 
     def oeffentlich_lesen(self, konto: str) -> Optional[OeffentlichAntwort]:

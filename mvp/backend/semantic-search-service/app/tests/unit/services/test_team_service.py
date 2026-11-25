@@ -110,13 +110,17 @@ class TestSchalter:
         assert _teams(team_repo, AUS).oeffentlich_wirksam() is False
         assert _teams(team_repo, NUR_TEAMS).oeffentlich_wirksam() is False
 
-    def test_ohne_schalter_kein_beitritt_und_keine_liste(self, team_repo):
+    def test_ohne_schalter_kein_beitritt(self, team_repo):
         service = _teams(team_repo, AUS)
         with pytest.raises(TeamsAus):
             service.beitreten("konto-1", TEAM)
-        with pytest.raises(TeamsAus):
-            service.meine("konto-1")
         team_repo.beitreten.assert_not_called()
+
+    def test_eigene_teams_auch_ohne_schalter(self, team_repo):
+        # Zum Verlassen (Widerruf) bleiben sie sichtbar.
+        team_repo.meine.return_value = ["eine"]
+
+        assert _teams(team_repo, AUS).meine("konto-1") == ["eine"]
 
     def test_verlassen_geht_auch_ohne_schalter(self, team_repo):
         team_repo.verlassen.return_value = True
@@ -143,6 +147,23 @@ class TestBeitreten:
             heute=HEUTE,
             code=CODE,
         )
+
+    def test_speichert_die_gezeigte_kennung(self, team_repo, monkeypatch):
+        # Neuer Wortlaut, alte Seite noch offen: gespeichert wird der gezeigte.
+        import domain.teams as domain_teams
+
+        monkeypatch.setitem(domain_teams.EINWILLIGUNG_WORTLAUTE, "team-alt", "alt")
+        _teams(team_repo).beitreten("konto-1", TEAM, einwilligung_kennung="team-alt")
+
+        kw = team_repo.beitreten.call_args.kwargs
+        assert kw["einwilligung_kennung"] == "team-alt"
+
+    def test_unbekannte_kennung_speichert_nichts(self, team_repo):
+        with pytest.raises(UnbekannterWortlaut):
+            _teams(team_repo).beitreten(
+                "konto-1", TEAM, einwilligung_kennung="erfunden"
+            )
+        team_repo.beitreten.assert_not_called()
 
     def test_info_zeigt_mitglieder_und_naechste_nummer(self, team_repo):
         info = _teams(team_repo).info(TEAM)
@@ -325,6 +346,15 @@ class TestEinladungMitTeam:
         service = EinladungService(einladung_repo, None, _teams(team_repo))
 
         assert service.team_info(CODE, heute=HEUTE) is None
+        assert service.team_info(CODE, "konto-1", heute=HEUTE) is None
+
+    def test_team_info_nicht_einloesbar_fuer_mitglied(self, einladung_repo, team_repo):
+        # "Schon dabei" auch nach Ablauf, aber nur fuer ein Mitglied.
+        einladung_repo.nach_code.return_value = _zeile(abgeschaltet=True)
+        team_repo.mitgliedschaft.return_value = SimpleNamespace(nummer=12)
+        service = EinladungService(einladung_repo, None, _teams(team_repo))
+
+        assert service.team_info(CODE, "konto-1", heute=HEUTE).eigene_nummer == 12
 
     def test_team_info_ohne_schalter_leer(self, einladung_repo, team_repo):
         service = EinladungService(einladung_repo, None, _teams(team_repo, AUS))

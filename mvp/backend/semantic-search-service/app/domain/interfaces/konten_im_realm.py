@@ -34,7 +34,13 @@ class IKontenImRealm(Protocol):
 class INieBenutzteKonten(Protocol):
     """Loeschfrist fuer Konten aus Einladungen: services/loeschfristen_service.py."""
 
-    def nie_benutzte_loeschen(self, angelegt_vor: datetime) -> int: ...
+    def nie_benutzte_loeschen(
+        self,
+        angelegt_vor: datetime,
+        bei_geloescht: Optional[Callable[[str], None]] = None,
+    ) -> int:
+        """``bei_geloescht`` bekommt die Kennung jedes Kontos, das danach weg ist."""
+        ...
 
 
 @dataclass

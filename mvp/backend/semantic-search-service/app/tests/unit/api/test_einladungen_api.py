@@ -216,6 +216,8 @@ class TestEinloesen:
             nachname=None,
             team_einwilligung=False,
             team_oeffentlich=False,
+            team_einwilligung_kennung=None,
+            team_oeffentlich_kennung=None,
         )
 
     def test_einloesen_mit_namen(self, client, service):
@@ -237,6 +239,8 @@ class TestEinloesen:
             nachname="O'Beispiel-Muster",
             team_einwilligung=False,
             team_oeffentlich=False,
+            team_einwilligung_kennung=None,
+            team_oeffentlich_kennung=None,
         )
 
     @pytest.mark.parametrize(

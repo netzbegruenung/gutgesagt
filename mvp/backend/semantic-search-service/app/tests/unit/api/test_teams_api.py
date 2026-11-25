@@ -26,7 +26,11 @@ from repositories.team_repository import Mitgliedschaft, OeffentlichAntwort
 from services.beitrag_fuer_aufrufer import BEITRAG, Aufrufer, personen_fuer_aufrufer
 from services.einladung_service import EinladungService
 from services.team_service import TeamService, team_service_setzen
-from utils.rate_limiter import einladung_pruefen_rate_limiter, einladung_rate_limiter
+from utils.rate_limiter import (
+    einladung_pruefen_rate_limiter,
+    einladung_rate_limiter,
+    team_beitreten_rate_limiter,
+)
 from utils.utc_tag import heute_utc
 
 pytestmark = [pytest.mark.unit, pytest.mark.api]
@@ -71,11 +75,16 @@ def _mitgliedschaft(saison="2026", nummer=37):
 
 @pytest.fixture(autouse=True)
 def frische_limits():
-    einladung_rate_limiter._requests.clear()
-    einladung_pruefen_rate_limiter._requests.clear()
+    limiter = (
+        einladung_rate_limiter,
+        einladung_pruefen_rate_limiter,
+        team_beitreten_rate_limiter,
+    )
+    for l in limiter:
+        l._requests.clear()
     yield
-    einladung_rate_limiter._requests.clear()
-    einladung_pruefen_rate_limiter._requests.clear()
+    for l in limiter:
+        l._requests.clear()
 
 
 @pytest.fixture
@@ -321,13 +330,45 @@ class TestPruefen:
 
         assert antwort.json() == {"einloesbar": False, "team": None}
 
+    def test_nicht_einloesbar_fuer_mitglied_schon_dabei(
+        self, einladung_repo, team_repo
+    ):
+        # Aufgebraucht oder abgelaufen: Ein Mitglied sieht trotzdem seine Nummer.
+        einladung_repo.nach_code.return_value = _zeile(einloesungen=50)
+        team_repo.mitgliedschaft.return_value = _mitgliedschaft(nummer=12)
+
+        body = (
+            _client(einladung_repo, team_repo)
+            .post("/api/v1/einladungen/pruefen", json={"code": CODE}, headers=PERSON)
+            .json()
+        )
+
+        assert body["einloesbar"] is False
+        assert body["team"]["eigene_nummer"] == 12
+
+    def test_nicht_einloesbar_angemeldet_ohne_mitgliedschaft_kein_team(
+        self, einladung_repo, team_repo
+    ):
+        einladung_repo.nach_code.return_value = _zeile(abgeschaltet=True)
+
+        antwort = _client(einladung_repo, team_repo).post(
+            "/api/v1/einladungen/pruefen", json={"code": CODE}, headers=PERSON
+        )
+
+        assert antwort.json() == {"einloesbar": False, "team": None}
+
 
 class TestBeitreten:
-    def _beitreten(self, client, **json):
+    def _beitreten(self, client, headers=PERSON, **json):
         return client.post(
             "/api/v1/einladungen/beitreten",
-            json={"code": CODE, "einwilligung": True, **json},
-            headers=PERSON,
+            json={
+                "code": CODE,
+                "einwilligung": True,
+                "einwilligung_kennung": EINWILLIGUNG_KENNUNG,
+                **json,
+            },
+            headers=headers,
         )
 
     def test_neu(self, einladung_repo, team_repo):
@@ -341,6 +382,36 @@ class TestBeitreten:
         }
         kw = team_repo.beitreten.call_args.kwargs
         assert kw["konto"] == "konto-1" and kw["code"] == CODE
+        assert kw["einwilligung_kennung"] == EINWILLIGUNG_KENNUNG
+
+    @pytest.mark.parametrize("kennung", ["team-1999-01-01", None])
+    def test_unbekannter_oder_fehlender_wortlaut_422(
+        self, einladung_repo, team_repo, kennung
+    ):
+        antwort = self._beitreten(
+            _client(einladung_repo, team_repo), einwilligung_kennung=kennung
+        )
+
+        assert antwort.status_code == 422
+        team_repo.beitreten.assert_not_called()
+
+    def test_oeffentlich_ohne_kennung_422(self, einladung_repo, team_repo):
+        antwort = self._beitreten(_client(einladung_repo, team_repo), oeffentlich=True)
+
+        assert antwort.status_code == 422
+        team_repo.beitreten.assert_not_called()
+
+    def test_rate_limit_je_person_nicht_je_anschluss(self, einladung_repo, team_repo):
+        client = _client(einladung_repo, team_repo)
+        for _ in range(team_beitreten_rate_limiter.max_requests):
+            assert self._beitreten(client).status_code == 200
+
+        assert self._beitreten(client).status_code == 429
+        # Andere Person am selben Anschluss (Saal-WLAN): eigenes Budget
+        anders = {"X-User": "konto-2"}
+        assert self._beitreten(client, headers=anders).status_code == 200
+        # Und das Einloesen ohne Konto bleibt unberuehrt
+        assert einladung_rate_limiter._requests == {}
 
     def test_schon_dabei(self, einladung_repo, team_repo):
         team_repo.beitreten.return_value = (_mitgliedschaft(nummer=12), False)
@@ -351,13 +422,21 @@ class TestBeitreten:
         assert antwort.json()["nummer"] == 12
 
     def test_mit_oeffentlich(self, einladung_repo, team_repo):
-        self._beitreten(_client(einladung_repo, team_repo), oeffentlich=True)
+        self._beitreten(
+            _client(einladung_repo, team_repo),
+            oeffentlich=True,
+            oeffentlich_kennung=OEFFENTLICH_KENNUNG,
+        )
 
         args = team_repo.oeffentlich_setzen.call_args.args
         assert args[:3] == ("konto-1", True, OEFFENTLICH_KENNUNG)
 
     def test_oeffentlich_ohne_schalter_nicht(self, einladung_repo, team_repo):
-        self._beitreten(_client(einladung_repo, team_repo, NUR_TEAMS), oeffentlich=True)
+        self._beitreten(
+            _client(einladung_repo, team_repo, NUR_TEAMS),
+            oeffentlich=True,
+            oeffentlich_kennung=OEFFENTLICH_KENNUNG,
+        )
 
         team_repo.oeffentlich_setzen.assert_not_called()
 
@@ -408,11 +487,38 @@ class TestEinloesen:
                 "code": CODE,
                 "email": "neu@example.org",
                 "team_einwilligung": True,
+                "team_einwilligung_kennung": EINWILLIGUNG_KENNUNG,
             },
         )
 
         assert antwort.status_code == 202
-        assert "bei_angelegt" in service._konten.konto_anlegen.call_args.kwargs
+        bei_angelegt = service._konten.konto_anlegen.call_args.kwargs["bei_angelegt"]
+        bei_angelegt("konto-neu")
+        kw = team_repo.beitreten.call_args.kwargs
+        assert kw["konto"] == "konto-neu"
+        assert kw["einwilligung_kennung"] == EINWILLIGUNG_KENNUNG
+
+    @pytest.mark.parametrize("kennung", [None, "team-1999-01-01"])
+    def test_einwilligung_ohne_bekannten_wortlaut_422(
+        self, einladung_repo, team_repo, kennung
+    ):
+        client = _client(einladung_repo, team_repo)
+        service = client.app.dependency_overrides[get_einladung_service]()
+
+        antwort = client.post(
+            "/api/v1/einladungen/einloesen",
+            json={
+                "code": CODE,
+                "email": "neu@example.org",
+                "team_einwilligung": True,
+                "team_einwilligung_kennung": kennung,
+            },
+        )
+
+        assert antwort.status_code == 422
+        assert "team_einwilligung_kennung" in repr(antwort.json()["detail"])
+        service._konten.konto_anlegen.assert_not_called()
+        einladung_repo.einloesung_zaehlen.assert_not_called()
 
     def test_ohne_einwilligung_kein_team(self, einladung_repo, team_repo):
         client = _client(einladung_repo, team_repo)
@@ -460,12 +566,25 @@ class TestMeineTeams:
         assert body["oeffentlich_text"] is None
         team_repo.oeffentlich_lesen.assert_not_called()
 
-    def test_ohne_schalter_404(self, einladung_repo, team_repo):
+    def test_ohne_schalter_und_ohne_teams_404(self, einladung_repo, team_repo):
+        team_repo.meine.return_value = []
         antwort = _client(einladung_repo, team_repo, AUS).get(
             "/api/v1/teams/meine", headers=PERSON
         )
 
         assert antwort.status_code == 404
+
+    def test_ohne_schalter_eigene_teams_zum_verlassen(self, einladung_repo, team_repo):
+        # Widerruf so leicht wie die Einwilligung: auch nach dem Ausschalten sichtbar.
+        body = (
+            _client(einladung_repo, team_repo, AUS)
+            .get("/api/v1/teams/meine", headers=PERSON)
+            .json()
+        )
+
+        assert body["teams_aktiv"] is False
+        assert body["oeffentlich_verfuegbar"] is False
+        assert len(body["teams"]) == 2
 
     def test_ohne_anmeldung_401(self, einladung_repo, team_repo):
         client = _client(einladung_repo, team_repo)

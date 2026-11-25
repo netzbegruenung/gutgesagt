@@ -367,6 +367,9 @@ class Settings(BaseSettings):
     meldung_rate_limit_anfragen: int = Field(default=5, ge=1)
     einladung_rate_limit_anfragen: int = Field(default=30, ge=1)
     einladung_pruefen_rate_limit_anfragen: int = Field(default=60, ge=1)
+    # Angemeldet einem Team beitreten (POST /einladungen/beitreten): je Person, nicht je
+    # Anschluss, damit Beitritte im Saal-WLAN nicht das Budget fuers Einloesen aufbrauchen.
+    team_beitreten_rate_limit_anfragen: int = Field(default=20, ge=1)
 
     # Secret key for the daily search-actor pseudonym (see SearchTrackingService).
     # Set SEMANTIC_SEARCH_ACTOR_HASH_SECRET in production so the daily-active-user

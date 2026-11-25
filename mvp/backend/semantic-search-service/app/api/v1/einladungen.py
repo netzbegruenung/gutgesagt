@@ -16,7 +16,13 @@ from datetime import date, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from core.logging import get_logger
 from dependencies import get_einladung_service, require_admin, require_user
@@ -48,7 +54,11 @@ from services.einladung_service import (
 )
 from services.team_service import Team, TeamsAus
 from utils.client_identity import derive_client_key
-from utils.rate_limiter import einladung_pruefen_rate_limiter, einladung_rate_limiter
+from utils.rate_limiter import (
+    einladung_pruefen_rate_limiter,
+    einladung_rate_limiter,
+    team_beitreten_rate_limiter,
+)
 from utils.utc_tag import heute_utc
 
 logger = get_logger(__name__)
@@ -66,6 +76,8 @@ CODE_MAX = 64
 # Serverfehler statt eines falschen Namens. Dazu "@": Daraus bildete die BFF keinen
 # Anzeigenamen (DisplayNamePolicy). Laenger als 100 Zeichen heisst niemand.
 NAME_MAX = 100
+# Kennung eines Einwilligungswortlauts (domain/teams.py), etwa "team-2026-11-24"
+KENNUNG_MAX = 64
 NAME_VERBOTEN = re.compile(r'[<>&"\v$%!#?§;*~/\\|^=\[\]{}()@\x00-\x1f\x7f]')
 # Teamname und Saison stehen an Namen und in Pillen: keine Steuerzeichen, kein
 # Markup, keine Schraegstriche.
@@ -281,6 +293,38 @@ class EinloesenRequest(CodeRequest):
     # Zweite Frage "Team öffentlich am Namen zeigen"; wirkt nur mit team_einwilligung
     # und wirksamem Schalter teams_oeffentlich.
     team_oeffentlich: bool = False
+    # Kennungen der Wortlaute, die die Seite gezeigt hat (aus /pruefen). Gespeichert
+    # wird die gezeigte Kennung, nicht die aktuelle: Hat sich der Wortlaut inzwischen
+    # geaendert, bleibt nachweisbar, welchem Text die Person zugestimmt hat. Pflicht,
+    # sobald die jeweilige Einwilligung gegeben wird; unbekannt: 422.
+    team_einwilligung_kennung: Optional[str] = Field(
+        None, max_length=KENNUNG_MAX, validate_default=True
+    )
+    team_oeffentlich_kennung: Optional[str] = Field(
+        None, max_length=KENNUNG_MAX, validate_default=True
+    )
+
+    @field_validator("team_einwilligung_kennung")
+    @classmethod
+    def _einwilligung_kennung(
+        cls, wert: Optional[str], info: ValidationInfo
+    ) -> Optional[str]:
+        if info.data.get("team_einwilligung") and wert not in EINWILLIGUNG_WORTLAUTE:
+            raise ValueError("Unbekannter Wortlaut")
+        return wert
+
+    @field_validator("team_oeffentlich_kennung")
+    @classmethod
+    def _oeffentlich_kennung(
+        cls, wert: Optional[str], info: ValidationInfo
+    ) -> Optional[str]:
+        if (
+            info.data.get("team_einwilligung")
+            and info.data.get("team_oeffentlich")
+            and wert not in OEFFENTLICH_WORTLAUTE
+        ):
+            raise ValueError("Unbekannter Wortlaut")
+        return wert
 
     @field_validator("vorname", "nachname")
     @classmethod
@@ -308,8 +352,30 @@ class EinloesenResponse(BaseModel):
 class BeitretenRequest(CodeRequest):
     # Muss true sein: der Knopf "Ja, speichert, dass ich im Team X bin"
     einwilligung: bool
+    # Kennung des gezeigten Wortlauts (aus /pruefen); unbekannt: 422
+    einwilligung_kennung: str = Field(..., max_length=KENNUNG_MAX)
     # Zweite Frage "Team öffentlich am Namen zeigen" (nur bei wirksamem Schalter)
     oeffentlich: bool = False
+    # Kennung ihres gezeigten Wortlauts; Pflicht mit oeffentlich true
+    oeffentlich_kennung: Optional[str] = Field(
+        None, max_length=KENNUNG_MAX, validate_default=True
+    )
+
+    @field_validator("einwilligung_kennung")
+    @classmethod
+    def _einwilligung_kennung(cls, wert: str) -> str:
+        if wert not in EINWILLIGUNG_WORTLAUTE:
+            raise ValueError("Unbekannter Wortlaut")
+        return wert
+
+    @field_validator("oeffentlich_kennung")
+    @classmethod
+    def _oeffentlich_kennung(
+        cls, wert: Optional[str], info: ValidationInfo
+    ) -> Optional[str]:
+        if info.data.get("oeffentlich") and wert not in OEFFENTLICH_WORTLAUTE:
+            raise ValueError("Unbekannter Wortlaut")
+        return wert
 
 
 class TeamKurzResponse(BaseModel):
@@ -414,15 +480,19 @@ async def einladung_pruefen(
     ):
         raise HTTPException(status_code=429, detail="Too many requests.")
     einloesbar = service.ist_einloesbar(request.code)
-    if not einloesbar or not service.teams_wirksam:
+    if not service.teams_wirksam:
         return PruefenResponse(einloesbar=einloesbar)
-    info = service.team_info(request.code, x_user if angemeldet(x_user) else None)
+    konto = x_user if angemeldet(x_user) else None
+    if not einloesbar and konto is None:
+        return PruefenResponse(einloesbar=False)
+    # Nicht mehr einloesbar: das Team nur fuer ein Mitglied ("schon dabei"), sonst nichts.
+    info = service.team_info(request.code, konto)
     if info is None:
         return PruefenResponse(einloesbar=einloesbar)
     oeffentlich = service.teams.oeffentlich_wirksam()
     team = info.team
     return PruefenResponse(
-        einloesbar=True,
+        einloesbar=einloesbar,
         team=TeamPruefenResponse(
             name=team.name,
             motiv=team.motiv,
@@ -470,6 +540,8 @@ async def einladung_einloesen(
             nachname=request.nachname,
             team_einwilligung=request.team_einwilligung,
             team_oeffentlich=request.team_oeffentlich and request.team_einwilligung,
+            team_einwilligung_kennung=request.team_einwilligung_kennung,
+            team_oeffentlich_kennung=request.team_oeffentlich_kennung,
         )
     except EinladungUngueltig:
         raise HTTPException(status_code=410, detail="Invitation not valid")
@@ -483,7 +555,6 @@ async def einladung_einloesen(
 @router.post("/beitreten", response_model=BeitretenResponse)
 async def einladung_beitreten(
     request: BeitretenRequest,
-    http_request: Request,
     user_id: str = Depends(require_user),
     service: EinladungService = Depends(get_einladung_service),
 ):
@@ -491,15 +562,19 @@ async def einladung_beitreten(
     Angemeldet dem Team einer Einladung beitreten, nach dem Knopf "Ja, speichert,
     dass ich im Team X bin" (``einwilligung`` muss true sein). Neu: zaehlt gegen die
     erlaubten Einloesungen. Schon dabei: ``neu`` false mit der vorhandenen Nummer,
-    nichts wird gezaehlt. Ein neues Konto entsteht hier nie.
+    nichts wird gezaehlt. Ein neues Konto entsteht hier nie. Das Rate-Limit zaehlt je
+    Person, nicht je Anschluss (Saal-WLAN).
     """
-    if await einladung_rate_limiter.is_rate_limited(derive_client_key(http_request)):
+    if await team_beitreten_rate_limiter.is_rate_limited(f"user:{user_id}"):
         raise HTTPException(status_code=429, detail="Too many requests.")
     if not request.einwilligung:
         raise HTTPException(status_code=422, detail="Consent required")
     try:
         _, mitgliedschaft, neu = await asyncio.to_thread(
-            service.beitreten, request.code, user_id
+            service.beitreten,
+            request.code,
+            user_id,
+            einwilligung_kennung=request.einwilligung_kennung,
         )
     except TeamsAus:
         raise HTTPException(status_code=404, detail="Not found")
@@ -509,7 +584,10 @@ async def einladung_beitreten(
         raise HTTPException(status_code=409, detail="Invitation has no team")
     if request.oeffentlich and service.teams.oeffentlich_wirksam():
         await asyncio.to_thread(
-            service.teams.oeffentlich_antworten, user_id, True, OEFFENTLICH_KENNUNG
+            service.teams.oeffentlich_antworten,
+            user_id,
+            True,
+            request.oeffentlich_kennung,
         )
     return BeitretenResponse(
         team=TeamKurzResponse(

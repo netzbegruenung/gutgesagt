@@ -100,6 +100,7 @@ from utils.rate_limiter import (
     kuerzungsvorschlag_rate_limiter,
     report_rate_limiter,
     search_query_statement_rate_limiter,
+    team_beitreten_rate_limiter,
     themen_vorschlag_rate_limiter,
 )
 from utils.tagesdeckel import tagesdeckel
@@ -170,6 +171,7 @@ async def lifespan(app: FastAPI):
                     feedback_rate_limiter,
                     einladung_rate_limiter,
                     einladung_pruefen_rate_limiter,
+                    team_beitreten_rate_limiter,
                     gegenlesen_rate_limiter,
                     get_nutzung_rate_limiter(),
                     spracherkennung_rate_limiter,

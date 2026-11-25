@@ -304,6 +304,9 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   address, so operations raise them there. `<LIMIT>` and default: `AEHNLICHE_AUSSAGEN` 60 and
   `SUCHAUSSAGE` 60 (10 min), `FEEDBACK` 5, `MELDUNG` 5, `EINLADUNG` 30, `EINLADUNG_PRUEFEN` 60
   (15 min each). The windows are fixed: the privacy policy names the periods that follow from them.
+  `SEMANTIC_SEARCH_TEAM_BEITRETEN_RATE_LIMIT_ANFRAGEN` (default 20 in 15 min) limits
+  `POST /api/v1/einladungen/beitreten` per logged-in person instead of per Anschluss, so joins in a
+  venue WLAN do not use up the budget for redeeming without an account.
 - `SEMANTIC_SEARCH_DIESELBE_AUSSAGE_NLI` - NLI-Stufe (#387): `aus`, `schatten` (for the
   same-Aussage check the similarity threshold decides and the NLI model only counts along) or
   `an` (default since #575, as on test and production: the NLI model decides whether a new text
@@ -366,7 +369,9 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   addendum and the privacy policy section "Teams"); takes effect only when an admin switches it
   on too (`services/team_service.py`, `domain/teams.py`). While off, team fields of invitations
   are ignored, every invitation is a plain account link, and `POST /api/v1/einladungen/beitreten`
-  and `GET /api/v1/teams/meine` answer 404 (leaving a team and withdrawing still work). While on:
+  answers 404. `GET /api/v1/teams/meine` answers 404 only when the person has no Mitgliedschaft;
+  existing ones are still listed (`teams_aktiv: false`, no public toggle) so that leaving a team
+  stays as easy as joining (Art. 7(3) GDPR). While on:
   - Admin: `GET /api/v1/einladungen` adds `team` `{name, motiv, saison, mitglieder}` per
     invitation (`mitglieder` is only a count; no member list, export or API on other people's
     memberships exists, admins included), plus `teams_aktiv`, `aktuelle_saison`, `motive` and
@@ -374,12 +379,17 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
     characters, requires `team_motiv`), `team_motiv` (one of the Meilenstein motifs) and
     `team_saison` (at most 20, default the current Saison).
   - Redeeming: `POST /api/v1/einladungen/pruefen` returns `team` with the greeting, the next
-    number and the consent wording `team-2026-11-24` plus both button texts;
+    number and the consent wording `team-2026-11-24` plus both button texts. For a logged-in
+    member it returns `team` with `eigene_nummer` even when the invitation is no longer
+    redeemable ("schon dabei"); everyone else gets no team then.
     `POST /api/v1/einladungen/einloesen` stores a Mitgliedschaft only with
-    `team_einwilligung: true` and only when Keycloak creates a new account.
+    `team_einwilligung: true` plus `team_einwilligung_kennung` (the wording id shown; unknown or
+    missing: 422) and only when Keycloak creates a new account. The stored id is the one shown,
+    not the current one.
   - Joining while logged in: `POST /api/v1/einladungen/beitreten` `{code, einwilligung: true,
-    oeffentlich?}` counts against the invitation's limit once; a second join returns the existing
-    number (`neu: false`). Same rate limit as `/einloesen`.
+    einwilligung_kennung, oeffentlich?, oeffentlich_kennung?}` counts against the invitation's
+    limit once; a second join returns the existing number (`neu: false`). Own rate limit per
+    person (see above).
   - Own teams only: `GET /api/v1/teams/meine` (all Saisons, newest first),
     `DELETE /api/v1/teams/meine/{id}` ("Team verlassen", deletes at once, also with the switch
     off; the number is never reassigned) and `PUT /api/v1/teams/oeffentlich` (second consent

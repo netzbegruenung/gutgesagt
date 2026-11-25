@@ -341,3 +341,22 @@ def test_migration_auf_bestehender_einladungstabelle(postgres_url):
 
         assert m.nummer == 1
         assert einladungen.alle()[0].team == TEAM
+
+
+def test_nie_benutztes_konto_nimmt_seine_teamdaten_mit(db):
+    """
+    Die Mitgliedschaft entsteht beim Anlegen des Kontos. Loescht die Frist das nie
+    benutzte Konto im Realm (loeschfristen_service), gehen auch seine Teamdaten.
+    """
+    einladungen, teams = _dienste(db)
+    code = _teamlink(einladungen)
+    einladungen.beitreten(code, "nie-benutzt", heute=HEUTE)
+    einladungen.beitreten(code, "andere-person", heute=HEUTE)
+    teams.oeffentlich_antworten("nie-benutzt", True, OEFFENTLICH_KENNUNG)
+
+    assert TeamRepository(db).konten_loeschen(["nie-benutzt"]) == 1
+
+    assert teams.meine("nie-benutzt") == []
+    assert teams.oeffentlich_stand("nie-benutzt") is None
+    assert len(teams.meine("andere-person")) == 1
+    assert TeamRepository(db).konten_loeschen([]) == 0

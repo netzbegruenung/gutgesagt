@@ -36,6 +36,7 @@ from core.config import Settings
 from core.logging import get_logger, log_pseudonym
 from domain.teams import (
     EINWILLIGUNG_KENNUNG,
+    EINWILLIGUNG_WORTLAUTE,
     OEFFENTLICH_KENNUNG,
     OEFFENTLICH_WORTLAUTE,
     wortlaut_pruefen,
@@ -142,20 +143,25 @@ class TeamService:
         team: Team,
         code: Optional[str] = None,
         heute: Optional[date] = None,
+        einwilligung_kennung: Optional[str] = None,
     ) -> Tuple[Mitgliedschaft, bool]:
         """
-        Speichert die Mitgliedschaft mit Einwilligung (Kennung EINWILLIGUNG_KENNUNG,
-        Zeitpunkt jetzt). Mit ``code`` zaehlt die Einloesung in derselben Transaktion
+        Speichert die Mitgliedschaft mit Einwilligung: Kennung des Wortlauts, den die
+        Person gesehen hat (ohne Angabe der aktuelle, EINWILLIGUNG_KENNUNG), und
+        Zeitpunkt jetzt. Mit ``code`` zaehlt die Einloesung in derselben Transaktion
         (NichtEinloesbar, wenn die Einladung nicht mehr zaehlt).
         """
         if not self.wirksam():
             raise TeamsAus()
+        kennung = wortlaut_pruefen(
+            einwilligung_kennung or EINWILLIGUNG_KENNUNG, EINWILLIGUNG_WORTLAUTE
+        )
         mitgliedschaft, neu = self._repository.beitreten(
             konto=konto,
             team_name=team.name,
             team_motiv=team.motiv,
             saison=team.saison,
-            einwilligung_kennung=EINWILLIGUNG_KENNUNG,
+            einwilligung_kennung=kennung,
             zeitpunkt=self._uhr(),
             heute=heute or heute_utc(),
             code=code,
@@ -165,7 +171,12 @@ class TeamService:
         return mitgliedschaft, neu
 
     def nach_kontoanlage(
-        self, konto: str, team: Team, oeffentlich: bool = False
+        self,
+        konto: str,
+        team: Team,
+        einwilligung_kennung: Optional[str] = None,
+        oeffentlich: bool = False,
+        oeffentlich_kennung: Optional[str] = None,
     ) -> None:
         """
         Beim Einloesen mit Einwilligung, nachdem Keycloak das Konto angelegt hat. Die
@@ -173,9 +184,11 @@ class TeamService:
         Person kann ueber den Link angemeldet beitreten.
         """
         try:
-            self.beitreten(konto, team)
+            self.beitreten(konto, team, einwilligung_kennung=einwilligung_kennung)
             if oeffentlich and self.oeffentlich_wirksam():
-                self.oeffentlich_antworten(konto, True, OEFFENTLICH_KENNUNG)
+                self.oeffentlich_antworten(
+                    konto, True, oeffentlich_kennung or OEFFENTLICH_KENNUNG
+                )
         except Exception as e:
             logger.error(
                 f"Team membership after account creation failed: {type(e).__name__}"
@@ -184,8 +197,11 @@ class TeamService:
     # --- Meine Teams -----------------------------------------------------------
 
     def meine(self, konto: str) -> List[Mitgliedschaft]:
-        if not self.wirksam():
-            raise TeamsAus()
+        """
+        Die eigenen Mitgliedschaften, auch bei ausgeschaltetem Schalter: Der Widerruf
+        ("Team verlassen") muss so leicht bleiben wie die Einwilligung (Art. 7 Abs. 3
+        DSGVO), auch wenn keine neuen Beitritte mehr gehen.
+        """
         return self._repository.meine(konto)
 
     def verlassen(self, konto: str, mitgliedschaft_id: uuid.UUID) -> bool:

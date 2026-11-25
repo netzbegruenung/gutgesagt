@@ -221,16 +221,17 @@ class EinladungService:
     ) -> Optional[TeamInfo]:
         """
         Fuer /pruefen: das Team einer einloesbaren Einladung mit Mitgliederzahl und
-        naechster Nummer; None ohne Team, ohne Schalter oder wenn nicht einloesbar.
+        naechster Nummer; None ohne Team oder ohne Schalter. Ist die Einladung nicht
+        mehr einloesbar, nur fuer ein Mitglied des Teams (``konto``), damit es "schon
+        dabei" sieht; allen anderen verraet sie dann nichts.
         """
         einladung = self.nach_code(code)
-        if (
-            einladung is None
-            or einladung.zustand(heute) is not EinladungZustand.AKTIV
-            or self.team(einladung) is None
-        ):
+        if einladung is None or self.team(einladung) is None:
             return None
-        return self._teams.info(einladung.team, konto)
+        info = self._teams.info(einladung.team, konto)
+        if einladung.zustand(heute) is EinladungZustand.AKTIV:
+            return info
+        return info if konto and info.eigene_nummer is not None else None
 
     def einloesen(
         self,
@@ -241,6 +242,8 @@ class EinladungService:
         nachname: Optional[str] = None,
         team_einwilligung: bool = False,
         team_oeffentlich: bool = False,
+        team_einwilligung_kennung: Optional[str] = None,
+        team_oeffentlich_kennung: Optional[str] = None,
     ) -> None:
         """
         Legt ueber die Einladung ein Konto an. Gibt es zur Adresse schon eines, endet
@@ -250,7 +253,8 @@ class EinladungService:
         Mit ``team_einwilligung`` (Knopf "Ja, speichert ...") und einem Team an der
         Einladung entsteht die Mitgliedschaft, sobald Keycloak das Konto neu angelegt
         hat; ``team_oeffentlich`` gibt dazu die Einwilligung "Team öffentlich am Namen
-        zeigen", wenn deren Schalter wirkt. Ohne Einwilligung: keine Mitgliedschaft.
+        zeigen", wenn deren Schalter wirkt. Gespeichert werden die Kennungen der
+        gezeigten Wortlaute. Ohne Einwilligung: keine Mitgliedschaft.
         """
         if self._konten is None:
             raise EinloesenNichtEingerichtet()
@@ -265,7 +269,13 @@ class EinladungService:
             teams = self._teams
 
             def bei_angelegt(konto_id: str) -> None:
-                teams.nach_kontoanlage(konto_id, team, oeffentlich=team_oeffentlich)
+                teams.nach_kontoanlage(
+                    konto_id,
+                    team,
+                    einwilligung_kennung=team_einwilligung_kennung,
+                    oeffentlich=team_oeffentlich,
+                    oeffentlich_kennung=team_oeffentlich_kennung,
+                )
 
             weitere["bei_angelegt"] = bei_angelegt
         try:
@@ -281,7 +291,11 @@ class EinladungService:
             logger.info("Account created via invitation")
 
     def beitreten(
-        self, code: str, konto: str, heute: Optional[date] = None
+        self,
+        code: str,
+        konto: str,
+        heute: Optional[date] = None,
+        einwilligung_kennung: Optional[str] = None,
     ) -> Tuple[Team, Mitgliedschaft, bool]:
         """
         Angemeldet einem Team beitreten (nach dem Knopf "Ja, speichert ..."). Neu:
@@ -298,7 +312,11 @@ class EinladungService:
             raise EinladungOhneTeam()
         try:
             mitgliedschaft, neu = self._teams.beitreten(
-                konto, team, code=code, heute=heute
+                konto,
+                team,
+                code=code,
+                heute=heute,
+                einwilligung_kennung=einwilligung_kennung,
             )
         except NichtEinloesbar:
             raise EinladungUngueltig()

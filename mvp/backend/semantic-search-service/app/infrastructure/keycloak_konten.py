@@ -360,7 +360,11 @@ class KeycloakKonten:
 
     # --- Nie benutzte Konten loeschen (#538) -------------------------------
 
-    def nie_benutzte_loeschen(self, angelegt_vor: datetime) -> int:
+    def nie_benutzte_loeschen(
+        self,
+        angelegt_vor: datetime,
+        bei_geloescht: Optional[Callable[[str], None]] = None,
+    ) -> int:
         """
         Loescht Konten, die vor ``angelegt_vor`` angelegt und nie benutzt wurden, und
         gibt die Zahl der in diesem Lauf geloeschten zurueck. Nie benutzt: Es gibt kein
@@ -377,6 +381,9 @@ class KeycloakKonten:
 
         Vorab angelegte Konten (#487) sind verknuepft; Beta-Zugaenge (#488) sind
         bestaetigt und tragen "Passwort festlegen" nicht am Konto.
+
+        ``bei_geloescht`` bekommt die Kennung jedes Kontos, das danach nicht mehr im
+        Realm steht (auch bei 404), damit Daten am Konto mitgehen (Teams).
         """
         grenze_ms = int(angelegt_vor.timestamp() * 1000)
         with self._client() as http:
@@ -398,9 +405,13 @@ class KeycloakKonten:
                 # 404: inzwischen von Hand geloescht; das Ziel ist erreicht, gezaehlt
                 # wird es nicht.
                 if antwort.status_code == 404:
+                    if bei_geloescht is not None:
+                        bei_geloescht(konto_id)
                     continue
                 antwort.raise_for_status()
                 geloescht += 1
+                if bei_geloescht is not None:
+                    bei_geloescht(konto_id)
         return geloescht
 
     def _alle_konten(self, sitzung: "_Sitzung") -> List[dict]:

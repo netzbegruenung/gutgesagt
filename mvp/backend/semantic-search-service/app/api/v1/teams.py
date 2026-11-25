@@ -24,7 +24,6 @@ from domain.teams import (
 from services.team_service import (
     OeffentlichAus,
     TeamService,
-    TeamsAus,
     get_team_service,
 )
 
@@ -48,6 +47,9 @@ class MeinTeamResponse(BaseModel):
 
 
 class MeineTeamsResponse(BaseModel):
+    # Schalter teams: false heisst, es gehen keine neuen Beitritte, die vorhandenen
+    # Mitgliedschaften lassen sich aber weiter ansehen und verlassen.
+    teams_aktiv: bool = True
     aktuelle_saison: str
     # Schalter teams_oeffentlich: nur wenn true den Umschalter zeigen
     oeffentlich_verfuegbar: bool
@@ -73,19 +75,23 @@ async def meine_teams(
     user_id: str = Depends(require_user),
     service: TeamService = Depends(_service),
 ):
-    """Die eigenen Teams aller Saisons, neueste zuerst; 404 bei ausgeschaltetem Schalter."""
-    try:
-        teams = await asyncio.to_thread(service.meine, user_id)
-    except TeamsAus:
+    """
+    Die eigenen Teams aller Saisons, neueste zuerst. Bei ausgeschaltetem Schalter teams
+    nur, wenn es eigene gibt (zum Ansehen und Verlassen, ohne Umschalter), sonst 404.
+    """
+    teams = await asyncio.to_thread(service.meine, user_id)
+    aktiv = service.wirksam()
+    if not aktiv and not teams:
         raise HTTPException(status_code=404, detail="Not found")
     saison = service.aktuelle_saison()
-    verfuegbar = service.oeffentlich_wirksam()
+    verfuegbar = aktiv and service.oeffentlich_wirksam()
     antwort = (
         await asyncio.to_thread(service.oeffentlich_stand, user_id)
         if verfuegbar
         else None
     )
     return MeineTeamsResponse(
+        teams_aktiv=aktiv,
         aktuelle_saison=saison,
         oeffentlich_verfuegbar=verfuegbar,
         oeffentlich_zeigen=antwort.zeigen if antwort else None,

@@ -448,6 +448,12 @@ hat, steht weiter nirgends. Ohne Ja zählt die Einladung wie bisher nur.
   nicht neu vergeben (`team_nummern` zählt weiter, ohne Kennung).
 - **Löschung des Kontos:** Alle Mitgliedschaften und die Antwort auf „Team öffentlich am
   Namen zeigen“ gehen sofort mit (Schritt 2, `person_loeschen.sql`).
+- **Nie benutzte Konten (#538):** Die Mitgliedschaft entsteht schon beim Anlegen des Kontos,
+  vor dem ersten Anmelden. Löscht der tägliche Lauf ein nie benutztes Konto im Realm, löscht er
+  danach auch dessen Mitgliedschaften und `team_oeffentlich`
+  (`TeamRepository.konten_loeschen`), auch wenn der Lauf im Realm mittendrin abbricht.
+- **Abgeschalteter Schalter `teams`:** Vorhandene Mitgliedschaften stehen weiter unter „Meine
+  Teams“, mit „Team verlassen“; es kommen nur keine neuen hinzu.
 - **Widerruf der Art.-9-Einwilligung:** erfasst die Mitgliedschaften nicht, denn sie hängen an
   ihrer eigenen Einwilligung; die Person widerruft sie mit „Team verlassen“.
 - **Teams am Namen:** werden nicht gespeichert, sondern beim Ausliefern eines Beitrags aus den

@@ -58,6 +58,10 @@ KNOPF_NEIN = "Nein, ohne Team weiter"
 
 # --- Einwilligung "Team öffentlich am Namen zeigen" ------------------------------
 
+# Wortlaut noch nicht juristisch geprueft: Er wird erst gezeigt, wenn der Schalter
+# teams_oeffentlich wirkt, und der bleibt aus, bis Datenschutzbeauftragte und Jura ihn
+# freigegeben haben (dabei auch den Satz der Datenschutzerklaerung zur Speicherung
+# dieser Antwort mit Kennung und Zeitpunkt vorlegen).
 OEFFENTLICH_KENNUNG = "team-oeffentlich-2026-11-25"
 
 OEFFENTLICH_WORTLAUTE: Dict[str, str] = {
