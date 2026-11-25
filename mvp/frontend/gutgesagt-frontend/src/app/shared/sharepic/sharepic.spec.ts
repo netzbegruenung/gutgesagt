@@ -109,7 +109,8 @@ describe('Sharepic (#756)', () => {
   for (const format of ['quadrat', 'story'] as const) {
     it(`malt ein PNG im Format ${format}`, async () => {
       const lader = testLader();
-      const datei = await sharepicDatei(DATEN, format, lader);
+      // Zeitgrenze unter dem Jasmine-Timeout (5 s): Haengt toBlob, nennt der Fehler den Schritt.
+      const datei = await sharepicDatei(DATEN, format, lader, 3000);
       expect(lader.bild.calls.allArgs()).toEqual([['/marke/icon-192-v3.png'], ['/themen/klima.svg']]);
       expect(datei.type).toBe('image/png');
       expect(datei.size).toBeGreaterThan(1000);
@@ -117,6 +118,14 @@ describe('Sharepic (#756)', () => {
       expect([bild.width, bild.height]).toEqual([SHAREPIC_MASSE[format].breite, SHAREPIC_MASSE[format].hoehe]);
     });
   }
+
+  it('laesst einen rechtzeitigen Schritt der Zeitgrenze unveraendert durch und raeumt die Uhr ab (#819)', async () => {
+    // Ohne jasmine.clock: die Spione umhuellen die echten Timer, nicht die der Test-Uhr
+    const setzen = spyOn(window, 'setTimeout').and.callThrough();
+    const abraeumen = spyOn(window, 'clearTimeout').and.callThrough();
+    await expectAsync(mitZeitgrenze(Promise.resolve('fertig'), 'Test')).toBeResolvedTo('fertig');
+    expect(abraeumen).toHaveBeenCalledWith(setzen.calls.mostRecent().returnValue);
+  });
 
   describe('Zeitgrenze (#819)', () => {
     beforeEach(() => jasmine.clock().install());
@@ -144,10 +153,5 @@ describe('Sharepic (#756)', () => {
       await expectAsync(datei).toBeRejectedWithError(SharepicZeitueberschreitung, /Schriften laden/);
     });
 
-    it('laesst einen rechtzeitigen Schritt unveraendert durch', async () => {
-      await expectAsync(mitZeitgrenze(Promise.resolve('fertig'), 'Test')).toBeResolvedTo('fertig');
-      // Die Uhr ist abgeraeumt: Spaeter wirft nichts mehr.
-      jasmine.clock().tick(SHAREPIC_ZEITGRENZE_MS * 2);
-    });
   });
 });

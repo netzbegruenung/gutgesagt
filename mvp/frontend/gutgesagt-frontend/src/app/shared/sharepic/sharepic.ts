@@ -199,8 +199,11 @@ export const SHAREPIC_ZEITGRENZE_MS = 8000;
 
 /** Ein Schritt brauchte länger als SHAREPIC_ZEITGRENZE_MS. */
 export class SharepicZeitueberschreitung extends Error {
-  constructor(readonly schritt: string) {
-    super(`Sharepic: ${schritt} dauerte länger als ${SHAREPIC_ZEITGRENZE_MS} ms`);
+  constructor(
+    readonly schritt: string,
+    ms = SHAREPIC_ZEITGRENZE_MS,
+  ) {
+    super(`Sharepic: ${schritt} dauerte länger als ${ms} ms`);
     this.name = 'SharepicZeitueberschreitung';
   }
 }
@@ -209,7 +212,7 @@ export class SharepicZeitueberschreitung extends Error {
 export function mitZeitgrenze<T>(versprechen: Promise<T>, schritt: string, ms = SHAREPIC_ZEITGRENZE_MS): Promise<T> {
   let uhr: ReturnType<typeof setTimeout> | undefined;
   const grenze = new Promise<never>((_, reject) => {
-    uhr = setTimeout(() => reject(new SharepicZeitueberschreitung(schritt)), ms);
+    uhr = setTimeout(() => reject(new SharepicZeitueberschreitung(schritt, ms)), ms);
   });
   return Promise.race([versprechen, grenze]).finally(() => clearTimeout(uhr));
 }
@@ -266,6 +269,7 @@ export async function sharepicMalen(
   daten: SharepicDaten,
   format: SharepicFormat,
   lader: SharepicLader = BROWSER_LADER,
+  zeitgrenzeMs = SHAREPIC_ZEITGRENZE_MS,
 ): Promise<HTMLCanvasElement> {
   const { breite, hoehe } = SHAREPIC_MASSE[format];
   const canvas = document.createElement('canvas');
@@ -277,9 +281,9 @@ export async function sharepicMalen(
   }
   const motivSrc = motivAdresse(daten.thema?.motiv);
   const [logo, motiv] = await Promise.all([
-    mitZeitgrenze(lader.bild(LOGO), 'Logo laden'),
-    motivSrc ? mitZeitgrenze(lader.bild(motivSrc), 'Motiv laden') : Promise.resolve(null),
-    mitZeitgrenze(lader.schriften(), 'Schriften laden'),
+    mitZeitgrenze(lader.bild(LOGO), 'Logo laden', zeitgrenzeMs),
+    motivSrc ? mitZeitgrenze(lader.bild(motivSrc), 'Motiv laden', zeitgrenzeMs) : Promise.resolve(null),
+    mitZeitgrenze(lader.schriften(), 'Schriften laden', zeitgrenzeMs),
   ]);
   const messenIn = messerFuer(ctx);
   const innen = breite - 2 * RAND;
@@ -401,18 +405,23 @@ export function motivAdresse(motiv: string | undefined): string | null {
   return motiv.startsWith('/') ? motiv : `/${motiv}`;
 }
 
-/** Das Bild als PNG-Datei zum Teilen oder Herunterladen. */
+/**
+ * Das Bild als PNG-Datei zum Teilen oder Herunterladen. `zeitgrenzeMs` gilt je Schritt; Tests
+ * setzen sie unter ihr eigenes Timeout, damit ein Hänger den Schritt nennt.
+ */
 export async function sharepicDatei(
   daten: SharepicDaten,
   format: SharepicFormat,
   lader: SharepicLader = BROWSER_LADER,
+  zeitgrenzeMs = SHAREPIC_ZEITGRENZE_MS,
 ): Promise<File> {
-  const canvas = await sharepicMalen(daten, format, lader);
+  const canvas = await sharepicMalen(daten, format, lader, zeitgrenzeMs);
   const blob = await mitZeitgrenze(
     new Promise<Blob>((resolve, reject) =>
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Bild nicht erzeugt'))), 'image/png'),
     ),
     'PNG erzeugen',
+    zeitgrenzeMs,
   );
   return new File([blob], `gut-gesagt-${format}.png`, { type: 'image/png' });
 }

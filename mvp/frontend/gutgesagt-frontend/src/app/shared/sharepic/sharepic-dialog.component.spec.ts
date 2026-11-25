@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
@@ -124,7 +124,6 @@ describe('SharepicDialogComponent (#756)', () => {
     expect(meldung()).toBeNull();
 
     tick(1);
-    flushMicrotasks();
     fixture.detectChanges();
     expect(component.laedt).toBeFalse();
     expect(meldung()?.textContent).toContain(SHAREPIC_TEXTE.zuLangsam);
@@ -138,7 +137,6 @@ describe('SharepicDialogComponent (#756)', () => {
     expect(bild).toHaveBeenCalledTimes(2);
 
     tick(SHAREPIC_ZEITGRENZE_MS);
-    flushMicrotasks();
     fixture.detectChanges();
     expect(knopf('sharepic-nochmal')?.textContent).toContain('Noch einmal versuchen');
   }));
