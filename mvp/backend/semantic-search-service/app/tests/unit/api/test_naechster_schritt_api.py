@@ -155,10 +155,37 @@ def test_regel_3_haengt_nicht_an_der_einwilligung_punkte(werte):
             URL, headers=ICH
         )
 
-    assert Settings().punkte_aktiv is False
     assert [v["art"] for v in antwort.json()["vorschlaege"]][0] == "bewerten"
     punkte_einwilligung.eingewilligt.assert_not_called()
     punkte_einwilligung.lesen.assert_not_called()
+
+
+def test_quellen_lesen_stimmen_ohne_punkte_und_ohne_punkte_einwilligung():
+    # Die echten Quellen mit Punkten aus: Die Stimmen kommen trotzdem, und die Klasse der
+    # Einwilligung "Punkte und Meilensteine" wird weder angelegt noch gefragt (Jura 25.11.).
+    quellen = Quellen(Mock(), Settings(punkte_aktiv=False), Mock())
+
+    with patch("api.v1.naechster_schritt.PunkteRepository") as punkte, patch(
+        "repositories.punkte_einwilligung_repository.PunkteEinwilligungRepository"
+    ) as einwilligung:
+        punkte.return_value.bewertungen_je_tag.return_value = {"a": 1}
+        assert asyncio.run(quellen.stimmen("kim-1")) == 1
+
+    einwilligung.assert_not_called()
+
+
+def test_naechster_schritt_kennt_die_punkte_einwilligung_nicht():
+    # Statische Sperre: Weder Abruf noch Regeln lesen die Einwilligung "Punkte und
+    # Meilensteine" oder den Schalter punkte_aktiv.
+    import api.v1.naechster_schritt as abruf
+    import services.naechster_schritt as regeln
+
+    for modul in (abruf, regeln):
+        quelltext = open(modul.__file__, encoding="utf-8").read()
+        code = quelltext.split('"""', 2)[2]  # ohne Modulkopf
+        assert "punkte_einwilligung" not in code
+        assert "PunkteEinwilligung" not in code
+        assert "punkte_aktiv" not in code
 
 
 def test_kurzfassung_aus_eigenen_beitraegen(werte):

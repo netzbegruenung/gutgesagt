@@ -19,7 +19,8 @@ Wegklicken den naechsten):
 3. Weniger als ``stimmen_mindestens`` Stimmen -> bewerten, aber nur, wenn es so viele
    frische Antworten anderer gibt; der Satz nennt die Zahl. Haengt nicht an der
    Einwilligung "Punkte und Meilensteine"; die Art.-9-Einwilligung zur Mitwirkung
-   genuegt (juristische Pruefung 25.11.2026).
+   genuegt (juristische Pruefung 25.11.2026). Eigene Stimmen gibt es nur mit ihr, ein
+   Widerruf loescht sie; der Abruf prueft sie deshalb nicht eigens.
 4. Noch kein Beitrag -> die Aussage, die "Hier fehlt eine Antwort" zuoberst zeigt
    (fuer alle dieselbe, nach Bedarf sortiert). Nach Thema ist hier nicht gebaut; auch
    dafuer genuegte die Art.-9-Einwilligung (Pruefung 25.11.2026).
