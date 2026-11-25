@@ -53,6 +53,12 @@ _STEUERZEICHEN = re.compile(
 # aus "Captured log" und "ERROR:root:" sind Log, keine Fehlerzeilen. Das Praefix ist
 # begrenzt, sonst braucht eine lange Zeile (minifiziertes Bundle) quadratisch lange.
 _FEHLERZEILE = re.compile(r"^(?:\S{0,40}\d:\d\d\S{0,40}\s+)?(?:FAILED|ERROR) \S")
+# Karma (Progress-Reporter): "<Browser> (<System>) <Suite> <Spec> FAILED", darunter mit
+# Tab eingerueckt der Grund und der Stack. Die Fortschrittszeile "Executed 3 of 9 (1 FAILED)
+# (…)" endet nicht auf FAILED. Begrenzt wie oben.
+_KARMA_FEHLER = re.compile(r"^[^\n]{1,80}?\([^()\n]{1,80}\) \S[^\n]* FAILED$")
+# Von den eingerueckten Zeilen darunter nur die ersten, ohne Stack ("at …")
+KARMA_GRUNDZEILEN = 2
 # Was sich von Lauf zu Lauf aendert, ohne dass der Fehler ein anderer ist: Zeitstempel,
 # Uhrzeiten, Laufzeiten, Speicheradressen
 _VERAENDERLICH = re.compile(
@@ -136,8 +142,27 @@ def _nicht_leer(ausgabe: str) -> list[str]:
 
 
 def fehlerzeilen(ausgabe: str) -> list[str]:
-    """Die FAILED/ERROR-Zeilen der pytest-Kurzzusammenfassung."""
-    return [z for z in _nicht_leer(ausgabe) if _FEHLERZEILE.match(z)]
+    """Die FAILED/ERROR-Zeilen der pytest-Kurzzusammenfassung und die roten Specs von
+    Karma, diese mit den ersten Zeilen ihres Grunds (ohne Stack)."""
+    zeilen = _nicht_leer(ausgabe)
+    treffer: list[str] = []
+    for i, zeile in enumerate(zeilen):
+        if _FEHLERZEILE.match(zeile):
+            treffer.append(zeile)
+        elif _KARMA_FEHLER.match(zeile):
+            treffer.append(zeile)
+            grund = []
+            j = i + 1
+            while j < len(zeilen) and len(grund) < KARMA_GRUNDZEILEN:
+                weiter = zeilen[j]
+                if not weiter.startswith("\t"):
+                    break
+                # Karma rueckt den Stack mit Tab und vier Leerzeichen ein ("\t    at …")
+                if not weiter.lstrip("\t").startswith("    at "):
+                    grund.append(weiter)
+                j += 1
+            treffer.extend(grund)
+    return treffer
 
 
 def _abdruck_zeilen(ausgabe: str) -> list[str]:
@@ -211,7 +236,7 @@ def bericht_erstellen(
         teile = [kopf]
         for s in rot:
             ausgabe = bereinigt[s.name]
-            # Ohne FAILED/ERROR-Zeilen die Zusammenfassung von Karma, dotnet, Ruff ...
+            # Ohne Fehlerzeilen die Zusammenfassung von Karma (kein roter Spec), dotnet, Ruff ...
             fehler = fehlerzeilen(ausgabe) or _nicht_leer(ausgabe)[-1:]
             sichtbar = min(FEHLERZEILEN_JE_SCHRITT, zeilen)
             weitere = len(fehler) - sichtbar

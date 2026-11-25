@@ -24,6 +24,11 @@ export class DatenschutzComponent {
   readonly meilensteinMerker = inject(MEILENSTEIN_MERKER);
   /** Merker „Hinweis Home-Bildschirm ausgeblendet“; der Absatz dazu steht nur, wenn er an ist. */
   readonly homeHinweisMerker = inject(HOME_HINWEIS_MERKER);
+  /**
+   * „Ton bei Erfolgen“ (#787) gibt es nur im großen Moment „Lücke zu!“ hinter dem Schalter
+   * luecke_zu_gross; der Absatz zu seinem Eintrag im Browser steht, solange der Schalter an ist
+   * oder der Browser den Eintrag noch hat (Schalter später wieder aus).
+   */
   readonly KONTAKT_MAIL = LEGAL_ENTITY.KONTAKT_MAIL;
 
   // Der Datenschutzbeauftragte ist ueber die Vereinsadresse erreichbar, nicht privat.
