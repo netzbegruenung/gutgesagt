@@ -1,7 +1,8 @@
 <!-- Gartenansicht (#783): je Thema eine Kachel. Hoechstens ein Gartenwort je Bildschirm:
      es steht in der Einleitung, die Kacheln sagen „Antworten“ und „ohne Antwort“. -->
 <section class="garten" aria-labelledby="garten-titel">
-    <h2 id="garten-titel">{{ titel }}</h2>
+    <!-- Der Kopf zeigt den Titel schon; die Ueberschrift bleibt fuer Screenreader -->
+    <h2 id="garten-titel" class="visually-hidden">{{ titel }}</h2>
     <p class="garten-einleitung">
         So viele Antworten gibt es je Thema, und so viele Sprüche warten noch auf eine.
         Jede neue Antwort macht das Netz ein Stück grüner.
