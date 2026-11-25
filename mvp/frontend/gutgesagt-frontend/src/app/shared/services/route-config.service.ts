@@ -17,8 +17,8 @@ export interface RouteConfig {
 export class RouteConfigService {
 
   getRouteConfig(url: string): RouteConfig {
-    // Parse route and query params
-    const urlParts = url.split('?');
+    // Pfad und Query; ein Fragment (etwa /search#suchen) gehoert nicht zur Seite
+    const urlParts = url.split('#')[0].split('?');
     const route = urlParts[0];
     const queryParams = new URLSearchParams(urlParts[1] || '');
 
@@ -147,6 +147,8 @@ export class RouteConfigService {
       case '/einladung':
       case '/einladung/anmelden':
         return { ...defaultConfig, pageTitle: PAGE_TITLES.EINLADUNG };
+      case ROUTES.WILLKOMMEN:
+        return { ...defaultConfig, pageTitle: PAGE_TITLES.WILLKOMMEN };
 
       default:
         return this.getDynamicRouteConfig(route, queryParams, defaultConfig);

@@ -126,9 +126,12 @@
       <ng-container *ngTemplateOutlet="ticket; context: { zeile: beitritt.neu ? 'Neu in deiner Sammlung' : 'Du bist schon dabei', name: beitritt.name, nummer: beitritt.nummer, nummerText: 'Deine Nummer' }"></ng-container>
       <p *ngIf="beitritt.neu">Deine Teams stehen unter „Meine Beiträge“. Nur du siehst sie.</p>
       <p *ngIf="!beitritt.neu">Dieser Link zählt für dich nicht noch einmal. Gib ihn gern weiter.</p>
+      <!-- Erst der leichte erste Schritt (Suchen), dann die Teams (UX-Review 25.11., Vorschlag 5) -->
+      <p data-testid="erster-spruch-satz">{{ ersterSpruch.satz }}</p>
       <div class="team-knoepfe">
-        <a mat-raised-button color="primary" [routerLink]="routen.MEINE_BEITRAEGE">Zu meinen Teams</a>
-        <a mat-stroked-button [routerLink]="routen.SEARCH">Weiter suchen</a>
+        <a mat-raised-button color="primary" data-testid="erster-spruch"
+           [routerLink]="ersterSpruch.ziel" [fragment]="ersterSpruch.fragment">{{ ersterSpruch.knopf }}</a>
+        <a mat-stroked-button data-testid="zu-meinen-teams" [routerLink]="routen.MEINE_BEITRAEGE">Zu meinen Teams</a>
       </div>
     </ng-container>
 

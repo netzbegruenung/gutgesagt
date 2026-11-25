@@ -23,6 +23,7 @@ import { sitzungPruefen } from '../auth/sitzung';
 import { FunktionenService } from '../services/funktionen.service';
 import { teamBegruessungSaetze, teamBegruessungTitel, teamGruppeSatz } from '../shared/team-texte';
 import { teamMerkerAblegen, teamMerkerLesen, teamMerkerLoeschen, teamMerkerNehmen } from './team-merker';
+import { ERSTER_SPRUCH } from './erster-spruch';
 import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 
 /**
@@ -166,6 +167,8 @@ export class EinladungComponent implements OnInit {
   nachname = '';
   readonly nameMax = EINLADUNG_NAME_MAX;
   readonly routen = ROUTES;
+  /** Nach dem Teamergebnis: Satz und Hauptknopf zur ersten Suche. */
+  readonly ersterSpruch = ERSTER_SPRUCH;
 
   /** Begrüßung und Sätze vor der Frage, Wortlaut aus shared/team-texte (Rechtstext). */
   begruessungTitel(team: TeamBeimPruefen): string {
