@@ -22,6 +22,26 @@ const TITEL: Record<string, string> = {
   sharepic: 'Teilen als Bild',
   teams: 'Teams über Einladungen',
   teams_oeffentlich: 'Teams am Anzeigenamen',
+  // Spielgefühl zur BDK (#782 bis #793)
+  saison_ziel: 'Saison und Gemeinschaftsziel',
+  gartenansicht: 'Gartenansicht',
+  kopiert_erfolg: 'Erfolgstext nach dem Kopieren',
+  konter_probe: 'Konter-Probe',
+  luecke_zu_gross: '„Lücke zu!“ als großer Moment',
+  einwilligung_im_gewinn: 'Einwilligung im passenden Moment',
+  naechster_schritt: '„Dein nächster Schritt“',
+  wirkungs_echo: 'Wirkungs-Echo „öffentlich gepostet“',
+  danke_knopf: 'Danke-Knopf',
+  danke_ohne_konto: 'Danke-Knopf ohne Konto',
+  rangliste: 'Rangliste je Saison',
+};
+
+/** Schalter, die nur zusammen mit einem anderen wirken: Name → [Voraussetzung, Anzeige]. */
+const VORAUSSETZUNG: Record<string, [string, string]> = {
+  abzeichen_sichtbar: ['punkte', 'Punkte'],
+  teams_oeffentlich: ['teams', 'Teams'],
+  danke_ohne_konto: ['danke_knopf', 'Danke-Knopf'],
+  rangliste: ['punkte', 'Punkte'],
 };
 
 /** Anzeigenamen der Einstellungen; unbekannte zeigen ihren technischen Namen. */
@@ -181,13 +201,10 @@ export class SchalterComponent implements OnInit {
     if (s.admin_wert && !s.obergrenze) {
       return `${admin} · wirksam: aus (Server erlaubt nicht)`;
     }
-    const punkte = this.liste?.find((p) => p.name === 'punkte');
-    if (s.admin_wert && s.name === 'abzeichen_sichtbar' && punkte && !punkte.wirksam) {
-      return `${admin} · wirksam: aus, weil Punkte aus`;
-    }
-    const teams = this.liste?.find((t) => t.name === 'teams');
-    if (s.admin_wert && s.name === 'teams_oeffentlich' && teams && !teams.wirksam) {
-      return `${admin} · wirksam: aus, weil Teams aus`;
+    const [voraus, anzeige] = VORAUSSETZUNG[s.name] ?? [];
+    const basis = voraus ? this.liste?.find((v) => v.name === voraus) : undefined;
+    if (s.admin_wert && basis && !basis.wirksam) {
+      return `${admin} · wirksam: aus, weil ${anzeige} aus`;
     }
     return `${admin} · wirksam: aus`;
   }
