@@ -379,13 +379,14 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
     characters, requires `team_motiv`), `team_motiv` (one of the Meilenstein motifs) and
     `team_saison` (at most 20, default the current Saison).
   - Redeeming: `POST /api/v1/einladungen/pruefen` returns `team` with the greeting, the next
-    number and the consent wording `team-2026-11-25` plus both button texts. For a logged-in
+    number and the consent wording `team-2026-11-26` plus both button texts. For a logged-in
     member it returns `team` with `eigene_nummer` even when the invitation is no longer
     redeemable ("schon dabei"); everyone else gets no team then.
     `POST /api/v1/einladungen/einloesen` stores a Mitgliedschaft only with
-    `team_einwilligung: true` plus `team_einwilligung_kennung` (the wording id shown; unknown or
-    missing: 422) and only when Keycloak creates a new account. The stored id is the one shown,
-    not the current one.
+    `team_einwilligung: true` plus `team_einwilligung_kennung` (the wording id shown; unknown, earlier
+    or missing: 422) and only when Keycloak creates a new account. New consents accept only the
+    ids in `EINWILLIGUNG_GELTEND` (the current one); earlier ids stay in `EINWILLIGUNG_WORTLAUTE`
+    for existing memberships, which keep them.
   - Joining while logged in: `POST /api/v1/einladungen/beitreten` `{code, einwilligung: true,
     einwilligung_kennung, oeffentlich?, oeffentlich_kennung?}` counts against the invitation's
     limit once; a second join returns the existing number (`neu: false`). Own rate limit per
