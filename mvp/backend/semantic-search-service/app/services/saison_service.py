@@ -224,9 +224,14 @@ class SaisonService:
         saisons = self.alle()
         zahlen = self._zahlen(laufende)
         # Nur daneben (#799): nie in zahlen, damit Ziel und Schwelle Menschen bleiben.
-        ohne_konto = self._ohne_konto_wochenzahlen(
-            min(_ERSTE_WOCHE, laufende), laufende
-        )
+        # Faellt die Abfrage aus, fehlen nur diese Zahlen, nicht die Saison-Seite.
+        try:
+            ohne_konto = self._ohne_konto_wochenzahlen(
+                min(_ERSTE_WOCHE, laufende), laufende
+            )
+        except Exception as e:
+            logger.error(f"Meldungen ohne Konto nicht gelesen: {type(e).__name__}")
+            ohne_konto = {}
         return AdminStand(
             saisons=[
                 SaisonStand(

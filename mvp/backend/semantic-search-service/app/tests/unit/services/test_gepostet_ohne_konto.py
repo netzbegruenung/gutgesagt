@@ -157,3 +157,21 @@ class TestNichtAlsMenschen:
             {"woche": "2026-11-23", "personen": 3, "meldungen_ohne_konto": 0},
             {"woche": "2026-11-30", "personen": 5, "meldungen_ohne_konto": 40},
         ]
+
+
+def test_saison_seite_bleibt_bei_ausfall_der_meldungen_ohne_konto():
+    repository = MagicMock()
+    repository.alle.return_value = []
+
+    def kaputt(von, laufende):
+        raise RuntimeError("weg")
+
+    dienst = SaisonService(
+        repository,
+        lambda von, laufende: {},
+        einstellungen=Settings(),
+        ohne_konto_wochenzahlen=kaputt,
+        wirksam=lambda _s: True,
+    )
+
+    assert dienst.admin_stand(heute=MO).saisons == []

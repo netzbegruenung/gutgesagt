@@ -170,3 +170,15 @@ def test_pfad_enthaelt_keine_art():
     orte = {p["in"] for p in schema[PFAD]["post"].get("parameters", [])}
     assert orte <= {"header"}
     assert route.methods == {"POST"}
+
+
+def test_echte_einbindung_unter_neutralem_pfad():
+    """main.py bindet den Router genau unter /api/v1/ereignis ein, nur POST."""
+    from main import app
+
+    pfade = {
+        r.path: r.methods
+        for r in app.routes
+        if getattr(r, "path", "").startswith("/api/v1/ereignis")
+    }
+    assert pfade == {PFAD: {"POST"}}
