@@ -76,7 +76,14 @@ describe('RanglisteComponent', () => {
     expect(el().querySelector('[data-testid="platz"]')).toBeNull();
   });
 
-  it('zeigt nichts ohne Schalter (404)', () => {
+  it('zeigt nichts ohne Schalter (200 mit aktiv false, kein 404 im Saal)', () => {
+    http.expectOne(URL).flush({ ...stand(), aktiv: false, gefragt: true, voraussetzungen: true });
+    fixture.detectChanges();
+
+    expect(el().querySelector('[data-testid="rangliste"]')).toBeNull();
+  });
+
+  it('zeigt nichts ohne Schalter bei einem älteren Backend (404)', () => {
     http.expectOne(URL).flush('', { status: 404, statusText: 'Not Found' });
     fixture.detectChanges();
 

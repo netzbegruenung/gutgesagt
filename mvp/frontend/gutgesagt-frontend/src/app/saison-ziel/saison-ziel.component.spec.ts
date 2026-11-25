@@ -1,20 +1,39 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { of } from 'rxjs';
 
 import { SAISON_NACHLADEN_MS, SaisonZielComponent } from './saison-ziel.component';
 import { environment } from '../../environments/environment';
+import { FunktionenService } from '../services/funktionen.service';
 
 const URL = `${environment.baseUrl}/api/v1/saisons/aktuell`;
 
 describe('SaisonZielComponent', () => {
   let fixture: ComponentFixture<SaisonZielComponent>;
   let http: HttpTestingController;
+  /** Was FunktionenService zum Schalter saison_ziel meldet; null: unbekannt. */
+  let schalter: boolean | null;
+  let gefragt: string[];
 
   beforeEach(async () => {
+    schalter = true;
+    gefragt = [];
     await TestBed.configureTestingModule({
       imports: [SaisonZielComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: FunktionenService,
+          useValue: {
+            stand$: (name: string) => {
+              gefragt.push(name);
+              return of(schalter);
+            },
+          },
+        },
+      ],
     }).compileComponents();
     fixture = TestBed.createComponent(SaisonZielComponent);
     http = TestBed.inject(HttpTestingController);
@@ -33,7 +52,23 @@ describe('SaisonZielComponent', () => {
     return fixture.nativeElement.querySelector('[data-testid="saison-ziel"]');
   }
 
-  it('zeigt nichts, solange der Schalter aus ist (404)', () => {
+  it('fragt den Endpunkt nicht, solange der Schalter sicher aus ist (Saal, kein 404)', () => {
+    schalter = false;
+    fixture.detectChanges();
+    http.expectNone(URL);
+    expect(gefragt).toEqual(['saison_ziel']);
+    expect(bereich()).toBeNull();
+  });
+
+  it('zeigt nichts, wenn der Server den Schalter als aus meldet (200, aktiv false)', () => {
+    schalter = null;
+    fixture.detectChanges();
+    http.expectOne(URL).flush({ balken: null, aktiv: false });
+    fixture.detectChanges();
+    expect(bereich()).toBeNull();
+  });
+
+  it('zeigt nichts bei einem 404 eines älteren Backends', () => {
     fixture.detectChanges();
     http.expectOne(URL).flush({ detail: 'Nicht gefunden' }, { status: 404, statusText: 'Not Found' });
     fixture.detectChanges();

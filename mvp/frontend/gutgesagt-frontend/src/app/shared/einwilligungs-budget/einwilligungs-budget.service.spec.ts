@@ -10,11 +10,12 @@ describe('EinwilligungsBudgetService.schalterAus', () => {
   const URL = `${environment.baseUrl}/api/v1/usage/users/me/einwilligungs-moment`;
   let service: EinwilligungsBudgetService;
   let http: HttpTestingController;
-
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
-      providers: [{ provide: LoggingService, useValue: jasmine.createSpyObj('LoggingService', ['error']) }],
+      providers: [
+        { provide: LoggingService, useValue: jasmine.createSpyObj('LoggingService', ['error']) },
+      ],
     });
     service = TestBed.inject(EinwilligungsBudgetService);
     http = TestBed.inject(HttpTestingController);
@@ -22,7 +23,16 @@ describe('EinwilligungsBudgetService.schalterAus', () => {
 
   afterEach(() => http.verify());
 
-  it('ist nach einem 404 sicher aus', () => {
+  it('ist mit aktiv false vom Server sicher aus (200 statt 404, Saal)', () => {
+    let antwort: unknown = 'offen';
+    service.moment().subscribe((m) => (antwort = m));
+    http.expectOne(URL).flush({ aktiv: false, abgestimmt: false, beantwortet: 0, konto_seit: null });
+
+    expect(antwort).toBeNull();
+    expect(service.schalterAus).toBeTrue();
+  });
+
+  it('ist nach einem 404 eines älteren Backends sicher aus', () => {
     let antwort: unknown = 'offen';
     service.moment().subscribe((m) => (antwort = m));
     http.expectOne(URL).flush(null, { status: 404, statusText: 'Not Found' });

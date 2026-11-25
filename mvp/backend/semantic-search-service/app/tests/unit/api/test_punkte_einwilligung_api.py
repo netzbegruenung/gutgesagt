@@ -33,8 +33,13 @@ def repo(punkte_einwilligung_ohne_datenbank):
     return punkte_einwilligung_ohne_datenbank
 
 
-def test_ohne_punkte_wird_nichts_angeboten():
-    assert _client(aktiv=False).get(URL, headers=KIM).status_code == 404
+def test_ohne_punkte_wird_nichts_angeboten(repo):
+    # Lesen fragen die Seiten automatisch: 200 mit aktiv false statt 404 (Gateway-fail2ban)
+    antwort = _client(aktiv=False).get(URL, headers=KIM)
+    assert antwort.status_code == 200
+    assert antwort.json()["aktiv"] is False
+    assert antwort.json()["eingewilligt"] is False
+    repo.lesen.assert_not_called()
     antwort = _client(aktiv=False).put(
         URL, headers=KIM, json={"eingewilligt": True, "wortlaut": AKTUELLER_WORTLAUT}
     )
@@ -58,6 +63,7 @@ def test_nie_gefragt_ist_nicht_eingewilligt_und_bringt_den_wortlaut(repo):
             "kennung": AKTUELLER_WORTLAUT,
             "text": WORTLAUTE[AKTUELLER_WORTLAUT],
         },
+        "aktiv": True,
     }
     assert "Ohne diese Einwilligung kann ich genauso beitragen" in (
         antwort.json()["aktueller_wortlaut"]["text"]

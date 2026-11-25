@@ -589,7 +589,7 @@ Empfänger und Ort“.
 - **Risiko und Maßnahmen:** Abschnitt 3 (Sichtbarkeit, Nutzungsnetz, Zweckentfremdung),
   Rechtsgrundlage Abschnitt 4. Schalter `punkte_aktiv`, Standard aus (`ss/core/config.py:238-244`).
 - **Meilensteine, nur für die Person selbst (#615, gemergt am 09.11.2026):** hinter
-  demselben Schalter (ohne `punkte_aktiv` 404, `ss/api/v1/usage.py:478-479`), gleiche Rechtsgrundlage, nicht gespeichert, bei jedem Abruf berechnet
+  demselben Schalter (ohne `punkte_aktiv` leer mit `aktiv: false`, früher 404, `ss/api/v1/usage.py`), gleiche Rechtsgrundlage, nicht gespeichert, bei jedem Abruf berechnet
   (`ss/services/meilensteine_service.py`). Neu gegenüber den Punkten: gezählt wird auch, wie viele
   Einwürfe anderer die Person ausformuliert hat (Ausformulierer an der Verknüpfung,
   `ss/infrastructure/database/models.py:577`, V4), nicht nur

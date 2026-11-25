@@ -730,6 +730,7 @@ OFFEN = {
 
 
 def _gesperrte_routen():
+    from api.v1.usage import gepostet_angeboten
     from main import app
 
     gesperrt = set()
@@ -737,7 +738,8 @@ def _gesperrte_routen():
         if not isinstance(route, APIRoute):
             continue
         if any(
-            d.call is require_art9_einwilligung for d in route.dependant.dependencies
+            d.call in (require_art9_einwilligung, gepostet_angeboten)
+            for d in route.dependant.dependencies
         ):
             gesperrt |= {(methode, route.path) for methode in route.methods}
     return gesperrt

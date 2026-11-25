@@ -140,9 +140,12 @@ def _status_aus(feld):
     return pruefen
 
 
-def _404(pfad, kopf=PERSON):
+def _feld_aus(pfad, feld="aktiv"):
+    """Automatisch abgefragte Endpunkte: 200 mit ``feld`` false statt 404 (Gateway)."""
+
     def pruefen(client, muster, abzeichen):
-        return client.get(pfad, headers=kopf).status_code == 404
+        antwort = client.get(pfad, headers=PERSON)
+        return antwort.status_code == 200 and antwort.json()[feld] is False
 
     return pruefen
 
@@ -181,10 +184,10 @@ def _takt_rechnet_nicht(client, muster, abzeichen):
 
 STELLEN = {
     "status_punkte": (_status_aus("aktiv"), ("punkte",)),
-    "eigene_punkte": (_404("/api/v1/usage/users/me/punkte"), ("punkte",)),
-    "meilensteine": (_404("/api/v1/usage/users/me/meilensteine"), ("punkte",)),
+    "eigene_punkte": (_feld_aus("/api/v1/usage/users/me/punkte"), ("punkte",)),
+    "meilensteine": (_feld_aus("/api/v1/usage/users/me/meilensteine"), ("punkte",)),
     "punkte_einwilligung": (
-        _404("/api/v1/usage/users/me/punkte-einwilligung"),
+        _feld_aus("/api/v1/usage/users/me/punkte-einwilligung"),
         ("punkte",),
     ),
     "muster_hinweise_melden": (_kein_muster_hinweis, ("punkte",)),
@@ -198,17 +201,20 @@ STELLEN = {
         ("abzeichen_sichtbar", "punkte"),
     ),
     "abzeichen_sichtbarkeit": (
-        _404("/api/v1/usage/users/me/abzeichen-sichtbarkeit"),
+        _feld_aus("/api/v1/usage/users/me/abzeichen-sichtbarkeit"),
         ("abzeichen_sichtbar", "punkte"),
     ),
     "abzeichen_am_namen": (_keine_abzeichen, ("abzeichen_sichtbar", "punkte")),
     "abzeichen_takt": (_takt_rechnet_nicht, ("abzeichen_sichtbar", "punkte")),
-    "gepostet_rueckfrage": (_404("/api/v1/usage/users/me/gepostet"), ("gepostet",)),
+    "gepostet_rueckfrage": (
+        _feld_aus("/api/v1/usage/users/me/gepostet", "angeboten"),
+        ("gepostet",),
+    ),
     "gepostet_admin": (_admin_aktiv_aus("/api/v1/metrics/gepostet"), ("gepostet",)),
     "abkuerzungen": (_funktion_aus("abkuerzungen"), ("abkuerzungen",)),
     "sharepic": (_funktion_aus("sharepic"), ("sharepic",)),
     # Rangliste je Saison (#793): wirkt nur zusammen mit den Punkten.
-    "rangliste": (_404("/api/v1/rangliste"), ("rangliste", "punkte")),
+    "rangliste": (_feld_aus("/api/v1/rangliste"), ("rangliste", "punkte")),
 }
 
 FAELLE = [

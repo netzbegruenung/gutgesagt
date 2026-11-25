@@ -5,7 +5,10 @@ bringt, und hoechstens eine je Besuch (GLOSSARY.md "Einwilligungs-Budget").
 
 Die Regel selbst steht im Frontend (shared/einwilligungs-budget); der Server liefert
 nur Fakten zur angemeldeten Person, die er ohnehin hat, und speichert nichts dazu.
-Ohne wirksamen Schalter 404: Dann fragt die App wie bisher.
+Ohne wirksamen Schalter 200 mit ``aktiv: false`` und ohne Datenbankabfrage: Dann fragt
+die App wie bisher. Kein 404, weil die Seite automatisch fragt und das Gateway eine IP
+nach 50 Antworten 404 sperrt (docs/ARCHITECTURE.md); ``aktiv: false`` ist dasselbe
+sichere "Schalter aus" wie zuvor das 404 (#812).
 """
 
 import asyncio
@@ -31,15 +34,16 @@ SCHALTER = "einwilligung_im_gewinn"
 
 
 class EinwilligungsMomentResponse(BaseModel):
-    abgestimmt: bool
-    beantwortet: int
+    # false: Schalter aus, die anderen Felder sind dann ohne Bedeutung
+    aktiv: bool = True
+    abgestimmt: bool = False
+    beantwortet: int = 0
     konto_seit: Optional[datetime] = None
 
 
-def _angeboten(settings: Settings = Depends(get_settings)) -> None:
-    """Ohne wirksamen Schalter 404, vor jeder Datenbankabfrage."""
-    if not schalter_wirksam(SCHALTER, settings):
-        raise HTTPException(status_code=404, detail="Not found")
+def _angeboten(settings: Settings = Depends(get_settings)) -> bool:
+    """Ob der Schalter wirkt; geprueft vor jeder Datenbankabfrage."""
+    return schalter_wirksam(SCHALTER, settings)
 
 
 @router.get(
@@ -47,12 +51,14 @@ def _angeboten(settings: Settings = Depends(get_settings)) -> None:
 )
 async def einwilligungs_moment(
     current_user: str = Depends(require_user),
-    _schalter: None = Depends(_angeboten),
+    angeboten: bool = Depends(_angeboten),
 ) -> EinwilligungsMomentResponse:
     """
     Ob die Person schon abgestimmt hat, wie viele Einwilligungsfragen sie beantwortet
     hat und seit wann es ihr Konto gibt. Die Person kommt aus ``X-User`` (#284).
     """
+    if not angeboten:
+        return EinwilligungsMomentResponse(aktiv=False)
     try:
         moment = await asyncio.to_thread(
             get_einwilligungs_moment_repository().lesen, current_user

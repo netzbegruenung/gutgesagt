@@ -221,6 +221,41 @@ gateway, whose fail2ban bans an IP for 10 minutes after 20 responses 401 in 5 mi
 share one IP (BDK), so a 401 for every visitor would lock out the whole hall. Real 401s stay
 where a login is needed and missing: the auth gate in front of the proxy (`EndpointPolicy`).
 
+### Automatically requested endpoints never answer 401 or 404 in the normal case
+Rule for every endpoint the frontend calls without a user action (page load, start page, cards,
+self-reloading lists): in the normal case it answers 200, never 401 or 404 (the codes the
+fail2ban counts), also while its Schalter is off or there is nothing yet. The empty case is a clear field
+in the 200 answer, e.g. `{"balken": null, "aktiv": false}`, `{"proben": [], "aktiv": false}`,
+`{"teams": [], "teams_aktiv": false}` or `{"angeboten": false}`. Reason: the gateway fail2ban
+above (`haproxy-probing`: 50 × 404 in 5 minutes, `haproxy-auth-flood`: 20 × 401) counts per IP,
+and a hall WLAN is one IP; one 404 per page view of hundreds of phones locks out the hall within
+minutes. Real 404s stay for unknown resources by id (a Beitrag, a Saison) and for actions
+(`PUT`/`POST`) on a building block that is off; real 401 where a page needs a login. A 403
+for missing consent is not counted, but stays the exception (only `gepostet`, and only while
+it is on).
+
+The frontend asks building blocks behind a public Schalter only when the Schalter is not
+surely off, which saves the request: either through `FunktionenService.stand$()` (one shared
+`GET /api/v1/funktionen`, cached 5 minutes; unknown after an error or timeout, then the card
+asks its endpoint and relies on the 200; Saisonbalken, Gartenansicht) or through
+`FunktionenService.an()`, which treats unknown as off (Konter-Probe, Nächster Schritt). Where a
+page treats "off" as a safe signal (#812, Einwilligung im Moment des Gewinns), only the
+endpoint's own `aktiv: false` counts, not a cached `/api/v1/funktionen`; an error or timeout
+stays "unknown". A 404 from an older backend is still read as off. Cards whose Schalter is
+reported off reload every 5 minutes instead of every 30 seconds (`AUS_NACHLADEN_MS`).
+
+| Endpoint | Asked by | Empty or off |
+|----------|----------|--------------|
+| `GET /api/v1/saisons/aktuell` | start page, every 5 min | `balken: null`, `aktiv: false` |
+| `GET /api/v1/konter-probe` | start page, page Konter-Probe | `proben: []`, `aktiv: false` |
+| `GET /api/v1/search/garten` | page Gartenansicht, every 30 s | `beete: []`, `aktiv: false` |
+| `GET /api/v1/usage/users/me/naechster-schritt` | start page (signed in) | `vorschlaege: []`, `aktiv: false` |
+| `GET /api/v1/usage/users/me/einwilligungs-moment` | Meine Beiträge | `aktiv: false` |
+| `GET /api/v1/teams/meine` | Meine Beiträge, every 30 s | `teams: []`, `teams_aktiv: false` |
+| `GET /api/v1/rangliste` | Meine Beiträge, every 30 s | `aktiv: false`, nothing asked |
+| `GET /api/v1/usage/users/me/punkte`, `/meilensteine`, `/abzeichen-sichtbarkeit`, `/punkte-einwilligung` | Meine Beiträge, Einwilligungen | `aktiv: false` |
+| `GET /api/v1/usage/users/me/gepostet` | after a copy, once per signed-in person until reload | `angeboten: false`; consent checked (403) only while on |
+
 ## Deployment Configurations
 
 ### Docker Compose Files
@@ -362,15 +397,17 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   Then the Besuch (`POST /api/v1/usage/users/me/besuch`) also returns
   `antworten_auf_eigene_aussagen` (answers by others to one's own Aussagen, linked in the last
   7 days; `null` while off) and `GET /api/v1/usage/users/me/aussagen` lists one's own Aussagen
-  with their answers (404 while off), `services/antworten_hinweis.py`.
+  with their answers (404 while off; only opened by a click on its tab, which shows only
+  while on), `services/antworten_hinweis.py`.
 - `SEMANTIC_SEARCH_TEAMS_AKTIV` - upper bound of the Schalter `teams` (Teams over
   invitations, GLOSSARY.md "Team", "Teamlink", "Mitgliedschaft", "Saison"; default `false`: a
   Mitgliedschaft may reveal political leaning and place, so it needs its own consent, the DSFA
   addendum and the privacy policy section "Teams"); takes effect only when an admin switches it
   on too (`services/team_service.py`, `domain/teams.py`). While off, team fields of invitations
   are ignored, every invitation is a plain account link, and `POST /api/v1/einladungen/beitreten`
-  answers 404. `GET /api/v1/teams/meine` answers 404 only when the person has no Mitgliedschaft;
-  existing ones are still listed (`teams_aktiv: false`, no public toggle) so that leaving a team
+  answers 404. `GET /api/v1/teams/meine` answers an empty list when the person has no
+  Mitgliedschaft (200, never 404, see "Automatically requested endpoints"); existing ones are
+  still listed (`teams_aktiv: false`, no public toggle) so that leaving a team
   stays as easy as joining (Art. 7(3) GDPR). While on:
   - Admin: `GET /api/v1/einladungen` adds `team` `{name, motiv, saison, art, zustimmung_am,
     mitglieder}` per invitation (`mitglieder` is only a count; no member list, export or API on
@@ -482,7 +519,8 @@ closed weeks of the season; a boundary week shared by two seasons counts only fo
 contains its Monday (`domain.saisons.wochen_der_saison`); nothing new is stored.
 
 - `GET /api/v1/saisons/aktuell` (anonymous at the BFF): `{"balken": {name, ziel, erreicht}}`,
-  `{"balken": null}` without a running season or below the threshold, 404 while the switch is off.
+  `{"balken": null}` without a running season or below the threshold, `{"balken": null,
+  "aktiv": false}` while the switch is off (never 404, the start page asks on every view).
 - `GET|POST /api/v1/moderation/saisons`, `PUT|DELETE /api/v1/moderation/saisons/{id}` (admins):
   list with state, create, change (running: only goal and end), delete (only before the start).
 - Threshold for the public bar: `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_WOCHEN` (default 3) closed
@@ -511,7 +549,8 @@ usage from its first days drops out near its end. Season points of all participa
 in memory once per season for 120 s; one request recomputes (at most 8 people in parallel), the
 others wait for it. Neither points nor places are stored.
 
-- `GET /api/v1/rangliste` (signed in, 404 while `rangliste` is not effective): own answer, random
+- `GET /api/v1/rangliste` (signed in; while `rangliste` is not effective 200 with `aktiv: false`
+  and nothing asked, never 404; the `PUT` answers 404 then): own answer, random
   Ranglistenname, and for participants the top 10 plus the own place (only from 10 participants)
   and past seasons as own sums (only seasons that started within the retention). If the own points
 cannot be computed, the request fails with 500 instead of showing a list without the person.

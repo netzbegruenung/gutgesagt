@@ -8,7 +8,7 @@ import { Subject } from 'rxjs';
 import { filter } from 'rxjs/operators';
 
 import { MeinTeam, MeineTeams, TeamsService } from '../services/teams.service';
-import { nachladeStrom, ohneRechte } from '../shared/selbst-nachladen';
+import { AUS_NACHLADEN_MS, NACHLADEN_MS, nachladeStrom, ohneRechte } from '../shared/selbst-nachladen';
 import { TeamPilleComponent } from '../shared/teams/team-pille.component';
 import {
   MEINE_TEAMS_TITEL,
@@ -45,8 +45,9 @@ export function verlassenFrage(team: MeinTeam): BestaetigungsDialogDaten {
  * Wirkt der Schalter teams_oeffentlich, steht darunter der Umschalter „Öffentlich am Namen
  * zeigen“ mit dem Wortlaut der Einwilligung davor; sonst fehlt er. Ist der Schalter teams
  * aus, stehen die eigenen Teams weiter da, mit „Team verlassen“ (Widerruf so leicht wie die
- * Einwilligung); ohne eigene Teams (404) fehlt die Karte. Die Karte lädt selbst nach, auch
- * nach jeder Handlung.
+ * Einwilligung); ohne eigene Teams (`teams: []`, `teams_aktiv: false`) fehlt die Karte. Die
+ * Karte lädt selbst nach, auch nach jeder Handlung; ohne Schalter und ohne eigene Teams nur
+ * alle AUS_NACHLADEN_MS.
  *
  * Unter einem Team der aktuellen Saison steht, was der Server dazu liefert: der
  * Team-Fortschritt der letzten abgeschlossenen Woche (nur gerundet, unter 5 Mitgliedern
@@ -86,6 +87,7 @@ export class MeineTeamsComponent implements OnInit {
   ngOnInit(): void {
     const abo = nachladeStrom(() => this.teamsService.meine(!this.erstes), {
       sofort: true,
+      ms: () => (this.stand?.teams_aktiv === false && this.stand.teams.length === 0 ? AUS_NACHLADEN_MS : NACHLADEN_MS),
       aufhoerenBei: ohneRechte,
       anstoss$: this.anstoss$,
     }).subscribe((lauf) => {
@@ -94,7 +96,7 @@ export class MeineTeamsComponent implements OnInit {
         this.stand = lauf.daten;
       } else {
         const status = (lauf.fehler as { status?: number } | null)?.status;
-        // Schalter aus oder abgemeldet: keine Karte. Sonst bleibt der letzte Stand stehen.
+        // Schalter aus (älteres Backend: 404) oder abgemeldet: keine Karte. Sonst bleibt der letzte Stand stehen.
         if (status === 404 || status === 401 || status === 403) {
           this.stand = null;
         }

@@ -36,7 +36,30 @@ Einzelne Specs: `npx playwright test tests/04-fangkorb.spec.ts`, ein Projekt:
 | `E2E_SCREENSHOTS` | `e2e/screenshots/` | Ablage der benannten Screenshots |
 | `E2E_DIST` | – | Pfad zu `dist/.../browser` nach `ng build --configuration production`: `13-dunkel-ohne-aufblitzen` prüft dann den Dunkelmodus vor dem Laden des Stylesheets, ohne Stack (alles gemockt); sonst übersprungen |
 | `E2E_TEAMS_STACK` | – | `1` schaltet `16-teams-stack` ein, nur zusammen mit `E2E_BASE_URL` (Teams-Stack, siehe unten; nie gegen den Dev-Stack, die Spec schaltet teams um) |
+| `E2E_SCHALTER_UMSCHALTEN` | – | `1`: `saal-ohne-404` schaltet als Admin alle Schalter aus, dann an, am Ende aus; nur gegen den Saal-Stack (siehe unten) |
+| `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORT` | `admin@example.com`, Passwort des Testkontos | Admin für `E2E_SCHALTER_UMSCHALTEN` |
 | `E2E_PG_CONTAINER` | `gutgesagt-app-postgres-teams` | PostgreSQL-Container, in dem `16-teams-stack` per `docker exec` nachsieht |
+
+### Saal: null 401/404 bei Seitenaufrufen (`saal-ohne-404`)
+
+Ruft als Besucher und angemeldet die Seiten auf, die im Saal-WLAN der BDK alle zugleich öffnen
+(Startseite, Ergebnisse, Gartenansicht, Konter-Probe, Meine Beiträge, Einwilligungen), und
+verlangt, dass keine Antwort an `/api` 401 oder 404 ist: Am Gateway sperrt fail2ban eine IP nach
+20 × 401 oder 50 × 404 in 5 Minuten (`docs/ARCHITECTURE.md`, „Automatically requested
+endpoints“). Je einmal mit allen Schaltern aus und allen an; welche Abrufe es gab, hängt als
+Anhang `api-abrufe` am Report. Gegen den Dev-Stack läuft nur der Fall, der zu dessen Stand passt
+(von Haus aus alle aus); beide Fälle schaltet die Spec selbst um, mit `E2E_SCHALTER_UMSCHALTEN=1`
+gegen den Saal-Stack (alle Obergrenzen an, eigene Ports, Admin `admin@example.com` mit dem
+Passwort des Testkontos; nie gegen den geteilten Dev-Stack, die Spec schaltet als Admin um):
+
+```bash
+cd mvp
+docker compose -p gg-saal -f docker-compose.dev.yml -f docker-compose.saal-stack.yml up -d --build
+cd frontend/gutgesagt-frontend/e2e
+E2E_SCHALTER_UMSCHALTEN=1 E2E_BASE_URL=http://127.0.0.1:48080 npx playwright test --project=saal
+cd ../../..
+docker compose -p gg-saal -f docker-compose.dev.yml -f docker-compose.saal-stack.yml down -v
+```
 
 ### Teams gegen den echten Stack (`16-teams-stack`)
 

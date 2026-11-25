@@ -1,8 +1,9 @@
 """
 Rangliste je Saison (#793, services/rangliste_service.py), unter /api/v1/rangliste,
-nur fuer die angemeldete Person selbst (``X-User``). Beide Endpunkte antworten mit
-404, solange der Schalter ``rangliste`` nicht wirkt; er wirkt nur zusammen mit den
-Punkten (services/schalter_service.py).
+nur fuer die angemeldete Person selbst (``X-User``). Solange der Schalter ``rangliste``
+nicht wirkt (er wirkt nur zusammen mit den Punkten, services/schalter_service.py),
+antwortet ``GET`` mit 200 und ``aktiv: false`` (die Seite laedt selbst nach, ein 404 je
+Abruf sperrte am Gateway ein Saal-WLAN, docs/ARCHITECTURE.md), ``PUT`` mit 404.
 
 - ``GET ""``: Antwort der Person, ihr Ranglistenname und, wenn sie selbst
   teilnimmt, die Rangliste der laufenden Saison (Top 10 und eigener Platz, erst ab
@@ -70,6 +71,8 @@ class VergangeneResponse(BaseModel):
 
 
 class StandResponse(BaseModel):
+    # false: Schalter rangliste aus; dann ist nichts gefragt und nichts zu zeigen
+    aktiv: bool = True
     gefragt: bool
     teilnehmen: Optional[bool]
     mit_anzeigename: bool
@@ -101,6 +104,39 @@ def _dienst(settings: Settings = Depends(get_settings)) -> RanglisteService:
     return get_rangliste_service()
 
 
+def _dienst_oder_aus(
+    settings: Settings = Depends(get_settings),
+) -> Optional[RanglisteService]:
+    """Fuer den Abruf: ohne Schalter None statt 404."""
+    if not schalter_wirksam("rangliste", settings):
+        return None
+    return get_rangliste_service()
+
+
+def _wortlaut() -> WortlautResponse:
+    return WortlautResponse(
+        kennung=AKTUELLER_WORTLAUT, text=WORTLAUTE[AKTUELLER_WORTLAUT]
+    )
+
+
+def _aus() -> StandResponse:
+    """Schalter aus: nichts gefragt, nichts zu zeigen, ohne Datenbankabfrage."""
+    return StandResponse(
+        aktiv=False,
+        gefragt=False,
+        teilnehmen=None,
+        mit_anzeigename=False,
+        voraussetzungen=False,
+        ranglistenname=None,
+        anzeigename=None,
+        saison=None,
+        eigene_punkte=None,
+        rangliste=None,
+        vergangene=[],
+        aktueller_wortlaut=_wortlaut(),
+    )
+
+
 def _platz(platz: Platz) -> PlatzResponse:
     return PlatzResponse(
         platz=platz.platz, name=platz.name, punkte=platz.punkte, ich=platz.ich
@@ -110,8 +146,10 @@ def _platz(platz: Platz) -> PlatzResponse:
 @router.get("", response_model=StandResponse)
 async def stand(
     current_user: str = Depends(require_user),
-    dienst: RanglisteService = Depends(_dienst),
+    dienst: Optional[RanglisteService] = Depends(_dienst_oder_aus),
 ) -> StandResponse:
+    if dienst is None:
+        return _aus()
     try:
         stand = await dienst.stand(current_user)
     except Exception as e:
@@ -148,9 +186,7 @@ async def stand(
         vergangene=[
             VergangeneResponse(name=v.name, punkte=v.punkte) for v in stand.vergangene
         ],
-        aktueller_wortlaut=WortlautResponse(
-            kennung=AKTUELLER_WORTLAUT, text=WORTLAUTE[AKTUELLER_WORTLAUT]
-        ),
+        aktueller_wortlaut=_wortlaut(),
     )
 
 

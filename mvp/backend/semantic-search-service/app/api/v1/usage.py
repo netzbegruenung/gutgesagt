@@ -176,6 +176,9 @@ class PunkteResponse(BaseModel):
     # False fuer Startkonten und ohne Einwilligung "Punkte und Meilensteine": Das
     # Konto hat keine Punkte (GLOSSARY.md "Punkte"), das Frontend zeigt dann keinen Stand.
     sammelt: bool = True
+    # false: Schalter punkte aus (statt 404, docs/ARCHITECTURE.md "Automatisch
+    # abgefragte Endpunkte"); die Zahlen sind dann 0 und ohne Bedeutung
+    aktiv: bool = True
 
 
 class MeilensteinResponse(BaseModel):
@@ -201,6 +204,8 @@ class MeilensteineResponse(BaseModel):
     """Die eigenen Meilensteine; leer fuer Startkonten und ohne Einwilligung zu Punkten."""
 
     meilensteine: list[MeilensteinResponse]
+    # false: Schalter punkte aus
+    aktiv: bool = True
 
 
 class SichtbarkeitWortlaut(BaseModel):
@@ -216,6 +221,8 @@ class AbzeichenSichtbarkeitResponse(BaseModel):
     gefragt: bool
     zeigen: Optional[bool]
     aktueller_wortlaut: SichtbarkeitWortlaut
+    # false: Schalter abzeichen_sichtbar aus; dann wird nicht gefragt
+    aktiv: bool = True
 
 
 class AbzeichenSichtbarkeitRequest(BaseModel):
@@ -237,6 +244,9 @@ class PunkteEinwilligungResponse(BaseModel):
     eingewilligt: bool
     wortlaut: Optional[str] = None
     aktueller_wortlaut: PunkteEinwilligungWortlaut
+    # false: Schalter punkte aus; dann gibt es nichts, wozu man einwilligen koennte,
+    # und das Haekchen wird nicht angeboten
+    aktiv: bool = True
 
 
 class PunkteEinwilligungRequest(BaseModel):
@@ -252,6 +262,9 @@ class GepostetResponse(BaseModel):
     # mit Schalter wirkungs_echo; sonst schickt es keinen, und der Server erfaehrt
     # wie bisher nicht, welcher Beitrag gepostet wurde.
     beitrag_nennen: bool = False
+    # Nur GET: false ohne Schalter gepostet und fuer Startkonten (statt 404); dann
+    # bietet das Frontend "Ja, gepostet" nicht an
+    angeboten: bool = True
 
 
 class GepostetRequest(BaseModel):
@@ -607,11 +620,14 @@ async def eigene_punkte(
     Die Punkte der angemeldeten Person, je Stufe und gesamt (#352). Nur die Person
     selbst sieht sie; Ranglisten kommen spaeter mit eigenem Opt-in.
 
-    Ohne ``punkte_aktiv`` 404: Die Funktion gibt es dann nicht. Die Person kommt aus
-    ``X-User``, nicht aus dem Pfad (#284).
+    Ohne ``punkte_aktiv`` ``aktiv: false``: Die Funktion gibt es dann nicht (kein 404,
+    "Meine Beitraege" fragt automatisch). Die Person kommt aus ``X-User``, nicht aus
+    dem Pfad (#284).
     """
     if not schalter_wirksam("punkte", settings):
-        raise HTTPException(status_code=404, detail="Not found")
+        return PunkteResponse(
+            tun=0, quests=0, wirkung=0, gesamt=0, sammelt=False, aktiv=False
+        )
     try:
         stand = await service.punkte(current_user)
     except Exception as e:
@@ -640,11 +656,12 @@ async def eigene_meilensteine(
     Person selbst sieht sie; ein Abzeichen fuer andere braucht eine eigene Zustimmung
     zur Sichtbarkeit, die es noch nicht gibt (ADR 0004).
 
-    Wie die Punkte hinter ``punkte_aktiv`` (sonst 404): Beide stuetzen sich auf
-    dieselbe Einwilligung und dieselbe DSFA. Die Person kommt aus ``X-User``.
+    Wie die Punkte hinter ``punkte_aktiv`` (sonst leer mit ``aktiv: false``): Beide
+    stuetzen sich auf dieselbe Einwilligung und dieselbe DSFA. Die Person kommt aus
+    ``X-User``.
     """
     if not schalter_wirksam("punkte", settings):
-        raise HTTPException(status_code=404, detail="Not found")
+        return MeilensteineResponse(meilensteine=[], aktiv=False)
     try:
         meilensteine = await service.meilensteine(current_user)
     except Exception as e:
@@ -682,17 +699,43 @@ def _abzeichen_dienst(
     return dienst
 
 
+def _abzeichen_dienst_oder_aus(
+    settings: Settings = Depends(get_settings),
+) -> Optional[AbzeichenService]:
+    """Fuer den Abruf: ohne Schalter None statt 404 (automatisch abgefragt)."""
+    dienst = get_abzeichen_service()
+    if not schalter_wirksam("abzeichen_sichtbar", settings) or dienst is None:
+        return None
+    return dienst
+
+
+def _sichtbarkeit_wortlaut() -> SichtbarkeitWortlaut:
+    return SichtbarkeitWortlaut(
+        kennung=SICHTBARKEIT_WORTLAUT,
+        text=SICHTBARKEIT_WORTLAUTE[SICHTBARKEIT_WORTLAUT],
+        mehr_dazu=SICHTBARKEIT_MEHR_DAZU[SICHTBARKEIT_WORTLAUT],
+    )
+
+
 @router.get(
     "/users/me/abzeichen-sichtbarkeit", response_model=AbzeichenSichtbarkeitResponse
 )
 async def abzeichen_sichtbarkeit(
     current_user: str = Depends(require_user),
-    dienst: AbzeichenService = Depends(_abzeichen_dienst),
+    dienst: Optional[AbzeichenService] = Depends(_abzeichen_dienst_oder_aus),
 ):
     """
     Die Antwort der Person auf die Frage, ob andere Angemeldete ihre
     Meilenstein-Abzeichen sehen (#351, GLOSSARY.md "Zustimmung zur Sichtbarkeit").
+    Ohne Schalter ``aktiv: false``.
     """
+    if dienst is None:
+        return AbzeichenSichtbarkeitResponse(
+            gefragt=False,
+            zeigen=None,
+            aktueller_wortlaut=_sichtbarkeit_wortlaut(),
+            aktiv=False,
+        )
     try:
         antwort = await asyncio.to_thread(dienst.sichtbarkeit, current_user)
     except Exception as e:
@@ -704,11 +747,7 @@ async def abzeichen_sichtbarkeit(
     return AbzeichenSichtbarkeitResponse(
         gefragt=antwort is not None,
         zeigen=antwort.zeigen if antwort else None,
-        aktueller_wortlaut=SichtbarkeitWortlaut(
-            kennung=SICHTBARKEIT_WORTLAUT,
-            text=SICHTBARKEIT_WORTLAUTE[SICHTBARKEIT_WORTLAUT],
-            mehr_dazu=SICHTBARKEIT_MEHR_DAZU[SICHTBARKEIT_WORTLAUT],
-        ),
+        aktueller_wortlaut=_sichtbarkeit_wortlaut(),
     )
 
 
@@ -747,13 +786,22 @@ def _punkte_einwilligung_angeboten(
 @router.get("/users/me/punkte-einwilligung", response_model=PunkteEinwilligungResponse)
 async def punkte_einwilligung(
     current_user: str = Depends(require_user),
-    _angeboten: None = Depends(_punkte_einwilligung_angeboten),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Die Einwilligung "Punkte und Meilensteine" der Person (#351) und der Wortlaut
     fuers Haekchen. Nichts ist vorausgewaehlt: ``eingewilligt`` ist False, bis die
-    Person selbst einwilligt.
+    Person selbst einwilligt. Ohne ``punkte_aktiv`` ``aktiv: false`` ohne
+    Datenbankabfrage (kein 404: "Meine Beitraege" und die Einstellungen fragen
+    automatisch).
     """
+    wortlaut_aktuell = PunkteEinwilligungWortlaut(
+        kennung=PUNKTE_WORTLAUT, text=PUNKTE_WORTLAUTE[PUNKTE_WORTLAUT]
+    )
+    if not schalter_wirksam("punkte", settings):
+        return PunkteEinwilligungResponse(
+            eingewilligt=False, aktueller_wortlaut=wortlaut_aktuell, aktiv=False
+        )
     try:
         stand = await asyncio.to_thread(
             get_punkte_einwilligung_repository().lesen, current_user
@@ -767,9 +815,7 @@ async def punkte_einwilligung(
     return PunkteEinwilligungResponse(
         eingewilligt=stand is not None and stand.gilt,
         wortlaut=stand.wortlaut if stand else None,
-        aktueller_wortlaut=PunkteEinwilligungWortlaut(
-            kennung=PUNKTE_WORTLAUT, text=PUNKTE_WORTLAUTE[PUNKTE_WORTLAUT]
-        ),
+        aktueller_wortlaut=wortlaut_aktuell,
     )
 
 
@@ -1118,18 +1164,40 @@ def _gepostet_dienst(
     return get_gepostet_service()
 
 
+def gepostet_angeboten(
+    current_user: str = Depends(require_user),
+    settings: Settings = Depends(get_settings),
+) -> bool:
+    """
+    Ob "Gepostet?" angeboten wird, und erst dann die Sperre ohne Einwilligung
+    (``require_art9_einwilligung``, 403): Ein ausgeschalteter Schalter fragt die
+    Datenbank nicht und antwortet niemandem 403 (#643). Synchron wie die Sperre selbst.
+    tests/unit/api/test_art9_einwilligung_api.py zaehlt diese Abhaengigkeit als Sperre.
+    """
+    if not schalter_wirksam("gepostet", settings) or settings.ist_startkonto(
+        current_user
+    ):
+        return False
+    require_art9_einwilligung(current_user)
+    return True
+
+
 @router.get("/users/me/gepostet", response_model=GepostetResponse)
 async def gepostet_stand(
     current_user: str = Depends(require_user),
-    dienst: GepostetService = Depends(_gepostet_dienst),
-    _einwilligung: None = Depends(require_art9_einwilligung),
+    angeboten: bool = Depends(gepostet_angeboten),
     settings: Settings = Depends(get_settings),
 ):
     """
-    Ob die Rueckmeldung "Gepostet?" angeboten wird (200) und wie viele Personen diese
-    Woche gemeldet haben. 404 ohne Schalter, 403 ohne Art.-9-Einwilligung; das
-    Frontend zeigt "Ja, gepostet" nur nach einer 200.
+    Ob die Rueckmeldung "Gepostet?" angeboten wird und wie viele Personen diese
+    Woche gemeldet haben. Ohne Schalter und fuer Startkonten ``angeboten: false``
+    (kein 404: das Frontend fragt nach dem Kopieren von selbst, docs/ARCHITECTURE.md),
+    403 ohne Art.-9-Einwilligung nur bei eingeschaltetem Schalter; das Frontend zeigt
+    "Ja, gepostet" nur bei ``angeboten``.
     """
+    if not angeboten:
+        return GepostetResponse(personen_diese_woche=0, angeboten=False)
+    dienst = get_gepostet_service()
     try:
         anzahl = await asyncio.to_thread(dienst.diese_woche)
     except Exception as e:

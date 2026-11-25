@@ -6,6 +6,12 @@ import { finalize } from 'rxjs/operators';
 /** So oft laden Listen nach, solange der Reiter sichtbar ist (Grundsatz 13.11.2026). */
 export const NACHLADEN_MS = 30_000;
 
+/**
+ * So oft laden Karten nach, deren Schalter der Server als aus gemeldet hat (200 mit
+ * `aktiv: false`): seltener, ein Einschalten kommt trotzdem ohne Neuladen an.
+ */
+export const AUS_NACHLADEN_MS = 5 * 60_000;
+
 /** Nach Fehlern wartet der naechste Versuch laenger: Takt mal 1, 2, 4 (30 → 60 → 120 s). */
 export const BACKOFF_STUFEN = 2;
 
