@@ -78,6 +78,19 @@ die die App selbst einholt, nicht Keycloak (Entscheidung Maintainer, 05.11.2026,
   keine Meilensteine, gefragt je Abruf). `PUNKTE_EINWILLIGUNG_GEBAUT` in `core/config.py` steht
   seit #668 auf `True`; auf `False` verhindert `punkte_schalter_pruefen`, dass der Suchdienst mit
   `punkte_aktiv` startet.
+- **Teams:** Die Mitgliedschaft in einem Team (GLOSSARY „Mitgliedschaft“) hängt nicht an dieser
+  Einwilligung, sondern an einer eigenen, ausdrücklichen je Team (Art. 6 Abs. 1 lit. a und
+  Art. 9 Abs. 2 lit. a DSGVO), gegeben mit dem Knopf „Ja, speichert, dass ich im Team X bin“,
+  gleichwertig daneben „Nein, ohne Team weiter“. Die Anzeige der Teams am Namen ist eine zweite,
+  eigene Einwilligung, gefragt nur mit dem Schalter `teams_oeffentlich`. Beide Wortlaute stehen
+  mit Kennung an einer Stelle, `EINWILLIGUNG_WORTLAUTE` (aktuell `team-2026-11-24`) und
+  `OEFFENTLICH_WORTLAUTE` (aktuell `team-oeffentlich-2026-11-25`) in `domain/teams.py`; das
+  Frontend zeigt, was `POST /api/v1/einladungen/pruefen` und `GET /api/v1/teams/meine` liefern
+  (`einwilligung_text`, `knopf_ja`, `knopf_nein`, `oeffentlich_text`), und hat keinen eigenen
+  Text. Wie hier bleibt jede frühere Kennung bekannt; ein geänderter Wortlaut bekommt eine neue.
+  Beitreten und die Antwort zur Anzeige gehen ohne diese Einwilligung (`OFFEN` in
+  `tests/unit/api/test_art9_einwilligung_api.py`); ein Widerruf hier lässt die Teams stehen,
+  verlassen geht unter „Meine Teams“ („Team verlassen“, `docs/LOESCHKONZEPT.md`, „Teams“).
 - **Abzeichen (#351):** Ohne geltende Einwilligung kein Abzeichen am Anzeigenamen. Ein Widerruf nimmt das Abzeichen sofort weg und hält ein
   früheres Ja zur Sichtbarkeit als Nein fest, damit es nach einer neuen Einwilligung nicht
   ohne neue Frage wieder erscheint (`AbzeichenService.zuruecknehmen`). Die Antwort zur
