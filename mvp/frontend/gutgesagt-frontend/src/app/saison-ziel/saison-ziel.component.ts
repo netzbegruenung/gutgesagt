@@ -14,7 +14,9 @@ const zahl = (wert: number): string => wert.toLocaleString('de-DE');
  * Für alle, auch ohne Konto, aber erst ab der Schwelle (das entscheidet der Server). Gezählt
  * werden Widerspruchs-Wochen: je Woche jede Person einmal, die nach dem Kopieren „Ja,
  * gepostet“ meldet. Darum heißt es „N-mal widersprochen“, nie „N Menschen“. Kein Ende, keine
- * Frist: Die Saison nennt nur ihren Namen. Kommt nichts, gibt es den Bereich nicht.
+ * Frist: Die Saison nennt nur ihren Namen. Kommt nichts, gibt es den Bereich nicht. Steht die
+ * Zahl noch bei 0 (Saisonstart; die Schwelle kann aus Wochen vor der Saison stammen), lädt ein
+ * Startsatz ein statt „0-mal“ und leerem Balken.
  */
 @Component({
   selector: 'app-saison-ziel',
@@ -24,25 +26,37 @@ const zahl = (wert: number): string => wert.toLocaleString('de-DE');
     @if (balken; as b) {
       <section class="saison-ziel" aria-labelledby="saison-ziel-titel" data-testid="saison-ziel">
         <h2 id="saison-ziel-titel">Gemeinsam widersprechen, Antwort für Antwort</h2>
-        <p class="satz" data-testid="saison-ziel-satz">
-          Saison {{ b.name }}: Woche für Woche zusammen <strong>{{ zahl(b.erreicht) }}-mal</strong> öffentlich widersprochen.
-        </p>
-        <progress
-          [max]="b.ziel"
-          [value]="gefuellt(b)"
-          [attr.aria-label]="'Gemeinschaftsziel der Saison ' + b.name"
-          aria-describedby="saison-ziel-stand"
-        ></progress>
-        <p id="saison-ziel-stand" class="stand" data-testid="saison-ziel-stand">
-          @if (b.erreicht >= b.ziel) {
-            Gemeinsames Ziel geschafft: {{ zahl(b.ziel) }} Widerspruchs-Wochen. Danke an alle, die mitmachen!
-          } @else {
-            {{ zahl(b.erreicht) }} von {{ zahl(b.ziel) }} Widerspruchs-Wochen, unser gemeinsames Ziel.
-          }
-        </p>
+        @if (b.erreicht > 0) {
+          <p class="satz" data-testid="saison-ziel-satz">
+            Saison {{ b.name }}: Woche für Woche zusammen <strong>{{ zahl(b.erreicht) }}-mal</strong> öffentlich
+            widersprochen.
+          </p>
+          <progress
+            [max]="b.ziel"
+            [value]="gefuellt(b)"
+            [attr.aria-label]="'Gemeinschaftsziel der Saison ' + b.name"
+            aria-describedby="saison-ziel-stand"
+          ></progress>
+          <p id="saison-ziel-stand" class="stand" data-testid="saison-ziel-stand">
+            @if (b.erreicht >= b.ziel) {
+              Gemeinsames Ziel geschafft: {{ zahl(b.ziel) }} Widerspruchs-Wochen. Danke an alle, die mitmachen!
+            } @else {
+              {{ zahl(b.erreicht) }} von {{ zahl(b.ziel) }} Widerspruchs-Wochen, unser gemeinsames Ziel.
+            }
+          </p>
+        } @else {
+          <!-- Saisonstart: kein „0-mal“ und kein leerer Balken, sondern eine Einladung (Review 25.11., Vorschlag 4) -->
+          <p class="satz" data-testid="saison-ziel-satz">
+            Saison {{ b.name }} hat begonnen: Jede gepostete Antwort zeigt öffentlich, dass jemand widerspricht.
+          </p>
+          <p class="stand" data-testid="saison-ziel-stand">
+            Wer nach dem Kopieren mit Konto „Ja, gepostet“ meldet, zählt diese Woche fürs gemeinsame Ziel:
+            {{ zahl(b.ziel) }} Widerspruchs-Wochen.
+          </p>
+        }
         <p class="erklaerung">
-          Jede Woche zählt jede Person einmal, die nach dem Kopieren „Ja, gepostet“ meldet. Wer mehrere Wochen
-          dabei ist, zählt mehrmals.
+          Jede Woche zählt jede Person einmal, die nach dem Kopieren mit Konto „Ja, gepostet“ meldet. Wer mehrere
+          Wochen dabei ist, zählt mehrmals.
         </p>
       </section>
     }
