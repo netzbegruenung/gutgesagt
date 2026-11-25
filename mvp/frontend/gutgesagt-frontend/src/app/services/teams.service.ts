@@ -5,6 +5,34 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { stillerKontext } from '../shared/selbst-nachladen';
 
+/**
+ * Team-Fortschritt der letzten abgeschlossenen Woche (nie der laufenden). Nur gerundete
+ * Texte vom Server („weniger als 10“, „rund 45“), nie die genaue Zahl; unter 5 Mitgliedern
+ * mit Einwilligung nur `waechst_noch`.
+ */
+export interface TeamWirkung {
+  /** Montag der abgeschlossenen Woche, ISO-Datum. */
+  woche: string;
+  waechst_noch: boolean;
+  gesamt: string | null;
+  beitraege: string | null;
+  bewertungen: string | null;
+  gepostet: string | null;
+}
+
+/** Team-Quest: das Ziel der laufenden Woche ohne Stand und ob die vorige geschafft ist. */
+export interface TeamQuest {
+  /** Montag der laufenden Woche; null, wenn es keine Quest gibt. */
+  woche: string | null;
+  ziel: number | null;
+  thema: string | null;
+  thema_name: string | null;
+  /** Pfad des Motivs unter public/, rein dekorativ; der Name steht daneben. */
+  thema_motiv: string | null;
+  vorige_geschafft: boolean;
+  vorige_thema_name: string | null;
+}
+
 /** Eine eigene Mitgliedschaft (GET /api/v1/teams/meine). */
 export interface MeinTeam {
   /** Zum Verlassen: DELETE /api/v1/teams/meine/{id}. */
@@ -18,6 +46,10 @@ export interface MeinTeam {
   eingetreten_am: string;
   /** Gehört zur aktuellen Saison; sonst ein Abzeichen einer vergangenen. */
   aktuelle_saison: boolean;
+  /** Nur mit Schalter team_fortschritt; fehlt oder null: nichts zeigen. */
+  wirkung?: TeamWirkung | null;
+  /** Nur mit Schalter team_quests und ab 5 Mitgliedern; fehlt oder null: nichts zeigen. */
+  quest?: TeamQuest | null;
 }
 
 export interface MeineTeams {

@@ -398,6 +398,13 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   - Admin setting `aktuelle_saison` (table `einstellungen`, default the current UTC year):
     `GET /api/v1/moderation/schalter` lists it under `einstellungen`,
     `PUT /api/v1/moderation/schalter/einstellungen/{name}` `{wert}` changes it.
+- `SEMANTIC_SEARCH_TEAM_FORTSCHRITT_AKTIV` / `SEMANTIC_SEARCH_TEAM_QUESTS_AKTIV` - upper bounds
+  of the Schalter `team_fortschritt` (#784) and `team_quests` (#792), default `false`; switch on
+  only after DSFA addendum V29 and the legal OK. `team_fortschritt` works only with `teams`,
+  `team_quests` only with `team_fortschritt`. While on, the endpoints for Beiträge, Stimmen and
+  "Ja, gepostet" raise the weekly counter `team_wochen` (team, Saison, week, no Kennung), and
+  `GET /api/v1/teams/meine` carries `wirkung` (last closed week, rounded texts, from 5 members)
+  and `quest` per own team (`services/team_fortschritt_service.py`).
 - `SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV` - upper bound of the Schalter `teams_oeffentlich`
   (default `false`; stays off on production until the data protection officer has advised).
   Own bound, deliberately not coupled to `SEMANTIC_SEARCH_ABZEICHEN_SICHTBAR_AKTIV`; works only

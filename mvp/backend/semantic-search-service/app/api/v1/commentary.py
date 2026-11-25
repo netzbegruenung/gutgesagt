@@ -19,6 +19,8 @@ from dtos.commentary import (
 )
 from dtos.beitrag import VorhandenDto
 from services.dublette import Dublette, VorhandenWeg, entscheidung_anwenden
+from domain.team_fortschritt import Art as TeamArt
+from services.team_fortschritt_service import team_zaehlen_async
 from repositories.varianten_repository import (
     VariantenRepository,
     get_varianten_repository,
@@ -217,6 +219,10 @@ async def add_commentary(
         # Original. Bei einer Dublette ist nichts entstanden, was darauf beruhen
         # koennte - die Person entscheidet erst; speichert sie trotzdem, kommt
         # beruht_auf mit derselben Anfrage wieder.
+        # Neu angelegt: zaehlt fuer die Teams der Person (Team-Fortschritt, #784).
+        if pruefung.vorhanden is None:
+            await team_zaehlen_async(x_user, TeamArt.BEITRAG, str(commentary_id))
+
         if request.beruht_auf is not None and dublette is None:
             await beruht_auf_festhalten(
                 varianten, commentary_id, request.beruht_auf, commentary_service.get

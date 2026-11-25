@@ -10,7 +10,14 @@ import { filter } from 'rxjs/operators';
 import { MeinTeam, MeineTeams, TeamsService } from '../services/teams.service';
 import { nachladeStrom, ohneRechte } from '../shared/selbst-nachladen';
 import { TeamPilleComponent } from '../shared/teams/team-pille.component';
-import { MEINE_TEAMS_TITEL, TEAM_VERLASSEN } from '../shared/team-texte';
+import {
+  MEINE_TEAMS_TITEL,
+  TEAM_QUEST_GESCHAFFT,
+  TEAM_VERLASSEN,
+  TEAM_WAECHST_NOCH,
+  teamQuestZiel,
+  teamWocheTitel,
+} from '../shared/team-texte';
 import {
   BestaetigungsDialogComponent,
   BestaetigungsDialogDaten,
@@ -40,6 +47,11 @@ export function verlassenFrage(team: MeinTeam): BestaetigungsDialogDaten {
  * aus, stehen die eigenen Teams weiter da, mit „Team verlassen“ (Widerruf so leicht wie die
  * Einwilligung); ohne eigene Teams (404) fehlt die Karte. Die Karte lädt selbst nach, auch
  * nach jeder Handlung.
+ *
+ * Unter einem Team der aktuellen Saison steht, was der Server dazu liefert: der
+ * Team-Fortschritt der letzten abgeschlossenen Woche (nur gerundet, unter 5 Mitgliedern
+ * „Euer Team wächst noch …“) und die Team-Quest (Ziel der Woche ohne Stand, nach
+ * Wochenende nur „geschafft“). Ohne die Schalter fehlen beide.
  */
 @Component({
   selector: 'app-meine-teams',
@@ -59,6 +71,10 @@ export class MeineTeamsComponent implements OnInit {
   ansage = '';
   readonly titel = MEINE_TEAMS_TITEL;
   readonly verlassenText = TEAM_VERLASSEN;
+  readonly waechstNoch = TEAM_WAECHST_NOCH;
+  readonly questGeschafft = TEAM_QUEST_GESCHAFFT;
+  readonly wocheTitel = teamWocheTitel;
+  readonly questZiel = teamQuestZiel;
 
   private readonly teamsService = inject(TeamsService);
   private readonly dialog = inject(MatDialog);
