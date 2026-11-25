@@ -91,13 +91,23 @@ const ANSAGE: Record<Stand, string> = {
  * 422 wegen des Namens oder eines inzwischen geänderten Wortlauts statt der Adresse: FastAPI
  * nennt das Feld in detail[].loc.
  */
-function fehlerBei422(e: HttpErrorResponse): Fehler {
+function felderBei422(e: HttpErrorResponse): unknown[] {
   const details: unknown = e.error?.detail;
-  const felder = Array.isArray(details) ? details.flatMap((d) => (Array.isArray(d?.loc) ? d.loc : [])) : [];
+  return Array.isArray(details) ? details.flatMap((d) => (Array.isArray(d?.loc) ? d.loc : [])) : [];
+}
+
+function fehlerBei422(e: HttpErrorResponse): Fehler {
+  const felder = felderBei422(e);
   if (felder.includes('team_einwilligung_kennung') || felder.includes('team_oeffentlich_kennung')) {
     return 'wortlaut';
   }
   return felder.includes('vorname') || felder.includes('nachname') ? 'name' : 'adresse';
+}
+
+/** 422 beim Beitreten, weil die gezeigte Kennung nicht mehr gilt (neuer Wortlaut). */
+function wortlautBeimBeitretenVeraltet(e: HttpErrorResponse): boolean {
+  const felder = felderBei422(e);
+  return e.status === 422 && (felder.includes('einwilligung_kennung') || felder.includes('oeffentlich_kennung'));
 }
 
 /** Zeichen eines Codes: secrets.token_urlsafe im Backend, hoechstens CODE_MAX (api/v1/einladungen.py). */
@@ -192,6 +202,11 @@ export class EinladungComponent implements OnInit {
    * Nie automatisch: Auf einem geteilten Gerät könnte jemand anderes angemeldet sein.
    */
   nochmalGefragt = false;
+  /**
+   * Der gezeigte Wortlaut galt beim Absenden nicht mehr (inzwischen neu): Die Seite hat den
+   * neuen selbst geholt und fragt noch einmal, gespeichert ist nichts.
+   */
+  wortlautNeu = false;
   /** Nach einer Handlung: Fokus auf die Überschrift des neuen Stands. */
   private ueberschriftFokussieren = false;
 
@@ -256,6 +271,7 @@ export class EinladungComponent implements OnInit {
     this.teamWahl = null;
     this.teamOeffentlich = false;
     this.nochmalGefragt = false;
+    this.wortlautNeu = false;
     forkJoin({
       // Pruefen ist nur Komfort: Im Zweifel das Formular zeigen, Einloesen prueft erneut.
       antwort: this.einladungService.pruefen(code).pipe(catchError(() => of<PruefenAntwort | null>(null))),
@@ -358,6 +374,8 @@ export class EinladungComponent implements OnInit {
         this.ueberschriftFokussieren = true;
         if (e.status === 410) {
           this.stand = 'ungueltig';
+        } else if (wortlautBeimBeitretenVeraltet(e)) {
+          this.wortlautNeuHolen();
         } else if (e.status === 404 || e.status === 409) {
           // Schalter inzwischen aus oder das Team an der Einladung entfernt
           this.team = null;
@@ -444,9 +462,19 @@ export class EinladungComponent implements OnInit {
           return;
         }
         this.fehler = e.status === 422 ? fehlerBei422(e) : (FEHLER_NACH_STATUS[e.status] ?? 'unbekannt');
+        if (this.fehler === 'wortlaut') {
+          this.wortlautNeuHolen();
+          return;
+        }
         this.stand = 'fehler';
       },
     });
+  }
+
+  /** Neuen Wortlaut holen und noch einmal fragen, ohne dass jemand die Seite neu laden muss. */
+  private wortlautNeuHolen() {
+    this.pruefen(this.code);
+    this.wortlautNeu = true;
   }
 
   get ansage(): string {

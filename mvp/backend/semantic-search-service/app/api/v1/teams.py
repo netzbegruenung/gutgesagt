@@ -15,11 +15,17 @@ from pydantic import BaseModel, Field
 
 from core.logging import get_logger
 from dependencies import require_user
+from domain.themen import NACH_SCHLUESSEL as THEMEN_NACH_SCHLUESSEL
 from domain.teams import (
     MOTIVE,
     OEFFENTLICH_KENNUNG,
     OEFFENTLICH_WORTLAUTE,
     UnbekannterWortlaut,
+)
+from services.team_fortschritt_service import (
+    TeamFortschrittService,
+    TeamStand,
+    get_team_fortschritt_service,
 )
 from services.team_service import (
     OeffentlichAus,
@@ -30,6 +36,37 @@ from services.team_service import (
 logger = get_logger(__name__)
 
 router = APIRouter()
+
+
+class TeamWirkungResponse(BaseModel):
+    """
+    Team-Fortschritt (#784) der letzten abgeschlossenen Woche, nie der laufenden. Nur
+    gerundete Texte ("weniger als 10", "rund 45"), nie die genaue Zahl; unter 5
+    Mitgliedern mit Einwilligung nur ``waechst_noch``.
+    """
+
+    # Montag der abgeschlossenen Woche
+    woche: date
+    waechst_noch: bool
+    beitraege: Optional[str] = None
+    bewertungen: Optional[str] = None
+    gepostet: Optional[str] = None
+
+
+class TeamQuestResponse(BaseModel):
+    """
+    Team-Quest (#792): das Ziel der laufenden Woche ohne Stand (nie live) und ob das
+    Ziel der Vorwoche geschafft ist. Ein verfehltes Ziel kommt nicht vor.
+    """
+
+    # Laufende Woche; null, wenn es (noch) keine Quest gibt
+    woche: Optional[date] = None
+    ziel: Optional[int] = None
+    thema: Optional[str] = None
+    thema_name: Optional[str] = None
+    thema_motiv: Optional[str] = None
+    vorige_geschafft: bool = False
+    vorige_thema_name: Optional[str] = None
 
 
 class MeinTeamResponse(BaseModel):
@@ -44,6 +81,10 @@ class MeinTeamResponse(BaseModel):
     eingetreten_am: date
     # Ob das Team zur aktuellen Saison gehoert (sonst ein Abzeichen vergangener Saisons)
     aktuelle_saison: bool
+    # Nur mit Schalter team_fortschritt und deckender Einwilligung, sonst null
+    wirkung: Optional[TeamWirkungResponse] = None
+    # Nur mit Schalter team_quests und ab der Schwelle, sonst null
+    quest: Optional[TeamQuestResponse] = None
 
 
 class MeineTeamsResponse(BaseModel):
@@ -70,14 +111,51 @@ def _service() -> TeamService:
     return get_team_service()
 
 
+def _fortschritt() -> TeamFortschrittService:
+    return get_team_fortschritt_service()
+
+
+def _thema_name(schluessel: Optional[str]) -> Optional[str]:
+    thema = THEMEN_NACH_SCHLUESSEL.get(schluessel or "")
+    return thema.name if thema else None
+
+
+def _quest_response(stand: Optional[TeamStand]) -> Optional[TeamQuestResponse]:
+    if stand is None or stand.quest is None:
+        return None
+    laufende = stand.quest.laufende
+    thema = THEMEN_NACH_SCHLUESSEL.get(laufende.thema or "") if laufende else None
+    return TeamQuestResponse(
+        woche=laufende.woche if laufende else None,
+        ziel=laufende.ziel if laufende else None,
+        thema=thema.schluessel if thema else None,
+        thema_name=thema.name if thema else None,
+        thema_motiv=thema.motiv if thema else None,
+        vorige_geschafft=stand.quest.vorige_geschafft,
+        vorige_thema_name=_thema_name(stand.quest.vorige_thema),
+    )
+
+
+async def _staende(fortschritt: TeamFortschrittService, user_id: str):
+    """Fortschritt und Quests; scheitert das, fehlen sie, die Teams bleiben."""
+    try:
+        return await fortschritt.staende(user_id)
+    except Exception as e:
+        logger.error(f"Team progress not loaded: {type(e).__name__}")
+        return {}
+
+
 @router.get("/meine", response_model=MeineTeamsResponse)
 async def meine_teams(
     user_id: str = Depends(require_user),
     service: TeamService = Depends(_service),
+    fortschritt: TeamFortschrittService = Depends(_fortschritt),
 ):
     """
     Die eigenen Teams aller Saisons, neueste zuerst. Bei ausgeschaltetem Schalter teams
     nur, wenn es eigene gibt (zum Ansehen und Verlassen, ohne Umschalter), sonst 404.
+    Je Team mit Schalter team_fortschritt die Wirkung der letzten abgeschlossenen
+    Woche und mit team_quests die Quest; nur fuer die eigenen Teams.
     """
     teams = await asyncio.to_thread(service.meine, user_id)
     aktiv = service.wirksam()
@@ -90,6 +168,7 @@ async def meine_teams(
         if verfuegbar
         else None
     )
+    staende = await _staende(fortschritt, user_id) if teams else {}
     return MeineTeamsResponse(
         teams_aktiv=aktiv,
         aktuelle_saison=saison,
@@ -109,6 +188,14 @@ async def meine_teams(
                 nummer=t.nummer,
                 eingetreten_am=t.eingetreten_am,
                 aktuelle_saison=t.saison == saison,
+                wirkung=(
+                    TeamWirkungResponse(
+                        **vars(staende[(t.team_name, t.saison)].wirkung)
+                    )
+                    if (t.team_name, t.saison) in staende
+                    else None
+                ),
+                quest=_quest_response(staende.get((t.team_name, t.saison))),
             )
             for t in teams
         ],

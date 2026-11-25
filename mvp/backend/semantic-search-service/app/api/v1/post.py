@@ -32,6 +32,8 @@ from services.antwort_auf import als_antwort_verknuepfen
 from services.aussage_themen_service import AussageThemenService
 from services.content.statement_service import StatementService
 from core.fehler import INTERNER_FEHLER, UNGUELTIGE_ANFRAGE, Validierungsfehler
+from domain.team_fortschritt import Art as TeamArt
+from services.team_fortschritt_service import team_zaehlen_async
 
 router = APIRouter()
 
@@ -139,6 +141,8 @@ async def add_post(
             entry.text = entry.title
 
         post_id = await post_service.add(entry)
+        # Zaehlt fuer die Teams der Person (Team-Fortschritt, #784).
+        await team_zaehlen_async(x_user, TeamArt.BEITRAG, str(post_id))
         # Mit Aussage haengt der Post danach als Antwort an ihr (#619); scheitert das,
         # bleibt er gespeichert, und verknuepft ist False.
         antwort_auf = await als_antwort_verknuepfen(

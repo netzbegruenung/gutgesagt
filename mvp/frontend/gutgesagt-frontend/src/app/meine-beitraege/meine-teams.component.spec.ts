@@ -186,4 +186,86 @@ describe('MeineTeamsComponent', () => {
     expect(knopf.textContent!.trim()).toBe('Team verlassen');
     expect(knopf.getAttribute('aria-label')).toBe('Team verlassen: BDK 26 Berlin, Saison 2026');
   });
+  describe('Team-Fortschritt und Team-Quest', () => {
+    const wirkung = {
+      woche: '2026-11-16',
+      waechst_noch: false,
+      beitraege: 'rund 15',
+      bewertungen: 'weniger als 10',
+      gepostet: 'rund 40',
+    };
+    const quest = {
+      woche: '2026-11-23',
+      ziel: 4,
+      thema: 'energie-heizen',
+      thema_name: 'Energie und Heizen',
+      thema_motiv: 'themen/energie-heizen.svg',
+      vorige_geschafft: false,
+      vorige_thema_name: null,
+    };
+
+    function mit(teil: Partial<MeinTeam>): MeineTeams {
+      return stand({ teams: [team({ id: 'm1', ...teil })] });
+    }
+
+    it('zeigt die abgeschlossene Woche mit den gerundeten Texten des Servers', () => {
+      laden(mit({ wirkung }));
+
+      const block = el().querySelector('[data-testid="team-fortschritt"]')!;
+      expect(block.textContent).toContain('Letzte Woche gemeinsam (16.11. bis 22.11.)');
+      const zahlen = block.querySelector('[data-testid="team-zahlen"]')!;
+      expect(zahlen.textContent).toContain('Beiträge');
+      expect(zahlen.textContent).toContain('rund 15');
+      expect(zahlen.textContent).toContain('weniger als 10');
+      expect(zahlen.textContent).toContain('„Ja, gepostet“');
+      expect(zahlen.textContent).toContain('rund 40');
+      expect(zahlen.getAttribute('aria-labelledby')).toBe('wirkung-m1');
+      expect(el().querySelector('#wirkung-m1')).not.toBeNull();
+    });
+
+    it('sagt unter 5 Mitgliedern nur, dass das Team noch wächst', () => {
+      laden(mit({ wirkung: { ...wirkung, waechst_noch: true, beitraege: null, bewertungen: null, gepostet: null } }));
+
+      expect(el().querySelector('[data-testid="team-waechst"]')!.textContent).toContain(
+        'Euer Team wächst noch, ab 5 zeigen wir eure gemeinsame Wirkung.',
+      );
+      expect(el().querySelector('[data-testid="team-zahlen"]')).toBeNull();
+    });
+
+    it('zeigt das Wochenziel ohne Stand, mit Motiv und Namen des Themas', () => {
+      laden(mit({ wirkung, quest }));
+
+      const ziel = el().querySelector('[data-testid="quest-ziel"]')!;
+      expect(ziel.textContent).toContain('Euer Wochenziel: gemeinsam 4-mal beitragen, bewerten oder „Ja, gepostet“ melden.');
+      expect(ziel.textContent).toContain('Gern im Beet');
+      expect(ziel.textContent).toContain('Energie und Heizen');
+      const motiv = ziel.querySelector('img')!;
+      expect(motiv.getAttribute('src')).toBe('themen/energie-heizen.svg');
+      expect(motiv.getAttribute('alt')).toBe('');
+      expect(ziel.querySelector('a')!.getAttribute('href')).toBe('/hier-fehlt-eine-antwort');
+      expect(el().querySelector('[data-testid="quest-geschafft"]')).toBeNull();
+    });
+
+    it('sagt nach Wochenende nur „geschafft“, ein verfehltes Ziel nie', () => {
+      laden(mit({ quest: { ...quest, vorige_geschafft: true, vorige_thema_name: 'Klima' } }));
+      expect(el().querySelector('[data-testid="quest-geschafft"]')!.textContent).toContain(
+        'Euer Wochenziel letzte Woche im Beet Klima ist geschafft. Danke, dass du dabei bist.',
+      );
+      expect(el().textContent).not.toContain('verfehlt');
+      expect(el().textContent).not.toContain('nicht geschafft');
+    });
+
+    it('fehlt ohne Schalter (Felder null) und bei vergangenen Saisons', () => {
+      laden(
+        stand({
+          teams: [
+            team({ id: 'm1', wirkung: null, quest: null }),
+            team({ id: 'm2', saison: '2025', aktuelle_saison: false, wirkung, quest }),
+          ],
+        }),
+      );
+
+      expect(el().querySelector('[data-testid="team-fortschritt"]')).toBeNull();
+    });
+  });
 });
