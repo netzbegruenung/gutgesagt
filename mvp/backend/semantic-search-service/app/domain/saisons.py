@@ -250,3 +250,21 @@ def saison_fuer_teams(saisons: Iterable[Saison], heute: date) -> Optional[Saison
         return laufend
     vorbei = [s for s in saisons if s.ende < heute]
     return max(vorbei, key=lambda s: s.ende) if vorbei else None
+
+
+def naechste_saison(saisons: Iterable[Saison], heute: date) -> Optional[Saison]:
+    """Die geplante Saison, die als naechste beginnt; None, wenn keine geplant ist."""
+    geplant = [s for s in saisons if s.beginn > heute]
+    return min(geplant, key=lambda s: s.beginn) if geplant else None
+
+
+def saison_fuer_vorschlag(saisons: Iterable[Saison], heute: date) -> Optional[Saison]:
+    """
+    Die Saison, die neue Teamlinks als Vorschlag bekommen: die laufende, sonst die
+    naechste geplante. Ein Team nach Anlass, das vor dem Saisonbeginn angelegt wird
+    (etwa fuer die BDK), traegt so schon den Namen der Saison, in die es faellt, und
+    landet mit ihrem Beginn nicht unter "Vergangene Saisons". None ohne beides (dann
+    gilt die aktuelle Saison).
+    """
+    saisons = list(saisons)
+    return laufende_saison(saisons, heute) or naechste_saison(saisons, heute)

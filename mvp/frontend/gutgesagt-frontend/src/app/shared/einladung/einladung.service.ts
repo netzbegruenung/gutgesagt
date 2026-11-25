@@ -67,8 +67,10 @@ export interface EinladungListe {
   einladungen: Einladung[];
   /** Schalter teams wirkt: nur dann der Block „Team (optional)“ im Formular. */
   teams_aktiv?: boolean;
-  /** Vorschlag für die Saison neuer Teamlinks (Admin-Einstellung). */
+  /** Aktuelle Saison der Teams (laufende Saison, vor der ersten die Admin-Einstellung). */
   aktuelle_saison?: string | null;
+  /** Vorschlag für die Saison neuer Teamlinks: laufende oder nächste angelegte Saison, sonst die aktuelle. */
+  saison_vorschlag?: string | null;
   motive?: { schluessel: string; name: string }[];
   /** Hinweis zum Teamnamen fürs Formular. */
   teamname_hinweis?: string | null;

@@ -101,7 +101,10 @@ export class EinladungenComponent implements OnInit {
   get heute(): string {
     return new Date().toISOString().slice(0, 10);
   }
-  /** Vorschlag aus der Admin-Einstellung „aktuelle Saison“, bis jemand selbst etwas einträgt. */
+  /**
+   * Vorschlag vom Server, bis jemand selbst etwas einträgt: die laufende oder nächste angelegte
+   * Saison (Schalter → Saisons), ohne angelegte Saison die Einstellung „Aktuelle Saison“.
+   */
   teamSaison = '';
   private saisonVorschlag = '';
 
@@ -138,7 +141,7 @@ export class EinladungenComponent implements OnInit {
       this.motive = bekannt.length ? bekannt : TEAM_MOTIVE;
     }
     this.teamnameHinweis = liste.teamname_hinweis || TEAMNAME_HINWEIS;
-    const vorschlag = liste.aktuelle_saison ?? '';
+    const vorschlag = liste.saison_vorschlag ?? liste.aktuelle_saison ?? '';
     // Das Formular bleibt unberuehrt: nur ein unveraenderter Vorschlag folgt dem Server
     if (this.teamSaison === this.saisonVorschlag) {
       this.teamSaison = vorschlag;

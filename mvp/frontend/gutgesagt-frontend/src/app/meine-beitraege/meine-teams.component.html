@@ -12,7 +12,7 @@
             <ng-container *ngIf="oeffentlich">Andere Angemeldete sehen an deinem Namen deine Teams der Saison {{ stand.aktuelle_saison }}; vergangene Saisons und deine Nummern siehst nur du.</ng-container>
         </p>
 
-        <ul *ngIf="aktuelle.length" class="team-liste" role="list" [attr.aria-label]="'Teams der Saison ' + stand.aktuelle_saison">
+        <ul *ngIf="aktuelle.length" class="team-liste" role="list" aria-label="Teams der aktuellen Saison">
             <li *ngFor="let team of aktuelle" class="team" data-testid="team">
                 <ng-container *ngTemplateOutlet="eintrag; context: { $implicit: team }"></ng-container>
             </li>
