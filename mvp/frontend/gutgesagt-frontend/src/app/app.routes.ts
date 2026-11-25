@@ -132,6 +132,14 @@ export const routes: Routes = [
         data: { parent: '/search' }
     },
     {
+        // Konter-Probe (#786): ohne Konto spielbar; ist der Schalter aus, sagt die Seite,
+        // dass es gerade keinen Spruch gibt.
+        path: 'konter-probe',
+        loadComponent: () => import('./konter-probe/konter-probe.component').then(m => m.KonterProbeComponent),
+        canActivate: [PublicGuard],
+        data: { parent: '/search' }
+    },
+    {
         path: 'hier-fehlt-eine-antwort',
         loadComponent: () => import('./hier-fehlt-eine-antwort/hier-fehlt-eine-antwort.component').then(m => m.HierFehltEineAntwortComponent),
         canActivate: [AuthGuard],

@@ -1,0 +1,210 @@
+/* Mobil zuerst (360 px): alles untereinander in der Lesespalte, ab 752 px mittig. */
+.konter-probe {
+  max-width: var(--lesespalte, 720px);
+  margin: 0 auto;
+  padding-bottom: var(--spacing-xl, 32px);
+}
+
+.einleitung,
+.hinweis {
+  color: var(--text-leise);
+  line-height: 1.5;
+}
+
+.laden {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-xl, 32px);
+}
+
+.spruch-marke {
+  margin: var(--spacing-md, 16px) 0 4px;
+  font-size: 14px;
+  color: var(--text-leise);
+}
+
+/* Die Aussage im Stil des Kopfbands einer Aussagekarte: eingelassen, mit Randstrich */
+.spruch {
+  margin: 0;
+  padding: 12px 16px;
+  border-left: 4px solid var(--linie-tanne);
+  border-radius: 4px;
+  background: var(--mulde);
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+}
+
+.spruch:focus-visible,
+.ergebnis:focus-visible {
+  outline: 2px solid var(--akzent-tanne);
+  outline-offset: 2px;
+}
+
+.frage {
+  margin: var(--spacing-lg, 24px) 0 var(--spacing-md, 16px);
+  font-size: 20px;
+  line-height: 1.3;
+  color: var(--akzent-schrift);
+}
+
+.antworten,
+.aufloesung {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Jede Antwort ein grosser Knopf: ganze Flaeche antippbar, mindestens 44 px hoch */
+.antwort {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 16px;
+  border: 2px solid var(--feldrand);
+  border-radius: 12px;
+  background: var(--flaeche);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast, 0.2s), background-color var(--transition-fast, 0.2s);
+}
+
+.antwort:hover {
+  border-color: var(--linie-tanne);
+  background: var(--karte-kommentar, var(--flaeche));
+}
+
+.antwort:focus-visible {
+  outline: 2px solid var(--akzent-tanne);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .antwort {
+    transition: none;
+  }
+}
+
+/* Name der Tonlage als Marke, immer ausgeschrieben */
+.stil {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 1px solid var(--feldrand);
+  border-radius: 999px;
+  color: var(--akzent-schrift);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.antwort-titel {
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: break-word;
+}
+
+.antwort-text {
+  line-height: 1.45;
+  overflow-wrap: break-word;
+  white-space: pre-line;
+}
+
+.ergebnis {
+  margin: 0 0 var(--spacing-md, 16px);
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--primaer-tint);
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.zeile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  border: 1px solid var(--linie);
+  border-radius: 12px;
+  background: var(--flaeche);
+}
+
+.zeile.beste {
+  border: 2px solid var(--linie-tanne);
+}
+
+.zeile-kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.marke {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.marke-beste {
+  color: var(--akzent-schrift);
+}
+
+.zeile-titel {
+  line-height: 1.35;
+  overflow-wrap: break-word;
+}
+
+.zeile-nutzung {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.balken {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--mulde);
+  overflow: hidden;
+}
+
+.balken > span {
+  display: block;
+  height: 100%;
+  background: var(--akzent-tanne);
+}
+
+.zahl {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.kopieren-titel {
+  margin: var(--spacing-lg, 24px) 0 var(--spacing-sm, 8px);
+  font-size: 18px;
+  color: var(--akzent-schrift);
+}
+
+.weiter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm, 8px);
+  margin-top: var(--spacing-lg, 24px);
+}
+
+.ladefehler {
+  margin-top: var(--spacing-md, 16px);
+}
