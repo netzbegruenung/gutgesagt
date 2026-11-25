@@ -1,0 +1,55 @@
+<!-- Gartenansicht (#783): je Thema eine Kachel. Hoechstens ein Gartenwort je Bildschirm:
+     es steht in der Einleitung, die Kacheln sagen „Antworten“ und „ohne Antwort“. -->
+<section class="garten" aria-labelledby="garten-titel">
+    <h2 id="garten-titel">{{ titel }}</h2>
+    <p class="garten-einleitung">
+        So viele Antworten gibt es je Thema, und so viele Sprüche warten noch auf eine.
+        Jede neue Antwort macht das Netz ein Stück grüner.
+    </p>
+
+    @if (aus()) {
+        <p class="garten-hinweis">Diese Übersicht ist gerade nicht eingeschaltet.</p>
+    } @else if (beete()) {
+        @let liste = beete()!;
+        <ul class="beete">
+            @for (beet of liste; track beet.schluessel) {
+                <li class="beet" [class.hat-luecken]="beet.ohne_antwort > 0">
+                    <a class="beet-link" [routerLink]="ergebnisse" [queryParams]="{ searchQuery: beet.name }">
+                        <span class="beet-kopf">
+                            @if (beet.motiv) {
+                                <img class="beet-motiv" [src]="beet.motiv" alt="" width="32" height="32">
+                            }
+                            <span class="beet-name">{{ beet.name }}</span>
+                        </span>
+                        <span class="beet-zahl">{{ antwortenText(beet.antworten) }}</span>
+                        @if (beet.ohne_antwort > 0) {
+                            <span class="beet-ohne">{{ ohneAntwortText(beet.ohne_antwort) }}</span>
+                        }
+                    </a>
+                    @if (beet.ohne_antwort > 0 && (angemeldet$ | async)) {
+                        <a class="beet-antworten" [routerLink]="hierFehlt" [queryParams]="{ thema: beet.schluessel }">
+                            Jetzt antworten<span class="visually-hidden"> im Thema {{ beet.name }}</span>
+                        </a>
+                    }
+                </li>
+            }
+        </ul>
+        @if ((angemeldet$ | async) === false) {
+            <p class="garten-konto">
+                Den Wortlaut der Sprüche ohne Antwort siehst du mit Konto.
+                <a [routerLink]="mitKonto" [queryParams]="mitKontoParams">Das erwartet dich mit Konto</a>
+            </p>
+        }
+    } @else {
+        <div class="garten-laedt">
+            <mat-spinner diameter="32" aria-label="Themen werden geladen"></mat-spinner>
+        </div>
+    }
+
+    <!-- Ein Satz, solange ein Ladefehler offen ist; die Seite versucht es selbst weiter -->
+    <p class="garten-fehler" role="status">
+        @if (fehler() && !aus()) {
+            Die Zahlen kommen gerade nicht an. Wir versuchen es gleich noch einmal.
+        }
+    </p>
+</section>

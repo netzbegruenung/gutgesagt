@@ -420,6 +420,14 @@ _Avoid_: Duplikat, Doppelung
 Eine Aussage ohne Kommentar, auch eine, nach der mindestens zwei Personen ohne Treffer gesucht haben; stammt sie aus einer noch unbeantworteten Suchanfrage, erst nach Freigabe in der Vormoderation. Mitwirkende sehen sie in „Hier fehlt eine Antwort“ und dürfen dort Aussagen auch vorab anlegen. Sobald ein sichtbarer Kommentar an ihr hängt, ist sie beantwortet und verschwindet von der Liste, auch wenn ihre Suchen ohne Treffer noch gezählt sind; ein gesperrter oder gelöschter Kommentar zählt nicht.
 _Avoid_: Offene Aussage (offen ist eine Stufe eines Einwurfs), Wunsch, Anfrage
 
+**Gartenansicht**:
+Die Seite „Themen im Überblick“ (#783): je Thema eine Kachel mit Motiv und Name, der Zahl der Antworten und der Zahl der unbeantworteten Aussagen, für alle. Besucher sehen nur Zahlen; den Wortlaut zeigt weiter nur „Hier fehlt eine Antwort“. Im Bild des Gartens ist ein Thema ein Beet und eine unbeantwortete Aussage eine Brachfläche; in der Oberfläche steht das höchstens einmal je Bildschirm, sonst „Antworten“ und „ohne Antwort“. Schalter `gartenansicht`.
+_Avoid_: Lagekarte, Karte, Dashboard
+
+**Nächster Schritt**:
+Die Karte „Dein nächster Schritt“ auf der Startseite (#789): genau ein Vorschlag aus dem eigenen Stand (suchen, einwerfen, bewerten, eine unbeantwortete Aussage beantworten, eine Kurzfassung ergänzen), ohne Frist und ohne Zähler. Wegklicken zeigt den nächsten Vorschlag; das merkt sich nur der Browser für sieben Tage. Schalter `naechster_schritt`.
+_Avoid_: Tagesaufgabe, Quest (eine Quest ist eine gestellte Aufgabe mit Punkten), Mission
+
 **Suchanfrage**:
 Der Text, mit dem jemand nach passenden Beiträgen sucht. Keine Aussage, aber häufige Suchanfragen ohne Treffer zeigen, welche Aussagen noch Antworten brauchen.
 _Avoid_: Query, Suchbegriff

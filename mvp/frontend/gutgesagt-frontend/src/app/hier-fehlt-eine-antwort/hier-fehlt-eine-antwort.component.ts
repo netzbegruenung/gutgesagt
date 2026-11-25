@@ -1,8 +1,8 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { Subject, Subscription } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -206,9 +206,18 @@ export class HierFehltEineAntwortComponent implements OnInit, OnDestroy {
       });
   }
 
+  /** ?thema= aus der Gartenansicht (#783): gefiltert, sobald die Themenliste das Thema kennt. */
+  private readonly route = inject(ActivatedRoute, { optional: true });
+
   ngOnInit(): void {
+    const vorgewaehlt = this.route?.snapshot.queryParamMap.get('thema') ?? null;
     this.themenService.liste().subscribe({
-      next: (themen) => (this.themen = themen),
+      next: (themen) => {
+        this.themen = themen;
+        if (vorgewaehlt && this.aktivesThema === null && themen.some((t) => t.schluessel === vorgewaehlt)) {
+          this.filtern(vorgewaehlt);
+        }
+      },
       error: () => (this.themen = []),
     });
     this.laden();

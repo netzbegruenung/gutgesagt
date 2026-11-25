@@ -5,6 +5,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { RouterModule } from '@angular/router';
 import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
+import { FunktionenService } from '../services/funktionen.service';
 
 @Component({
   selector: 'app-datenschutz',
@@ -24,6 +25,8 @@ export class DatenschutzComponent {
   readonly meilensteinMerker = inject(MEILENSTEIN_MERKER);
   /** Merker „Hinweis Home-Bildschirm ausgeblendet“; der Absatz dazu steht nur, wenn er an ist. */
   readonly homeHinweisMerker = inject(HOME_HINWEIS_MERKER);
+  /** Karte „Dein nächster Schritt“ (#789): ihre zwei Absätze stehen, solange der Schalter an ist. */
+  readonly naechsterSchritt = inject(FunktionenService).an('naechster_schritt');
   readonly KONTAKT_MAIL = LEGAL_ENTITY.KONTAKT_MAIL;
 
   // Der Datenschutzbeauftragte ist ueber die Vereinsadresse erreichbar, nicht privat.

@@ -88,6 +88,13 @@ export class RouteConfigService {
           showContributeButton: true
         };
 
+      case ROUTES.GARTEN:
+        return {
+          pageTitle: PAGE_TITLES.GARTEN,
+          showBackButton: true,
+          showContributeButton: true
+        };
+
       case ROUTES.SHARE_TARGET:
         return {
           pageTitle: PAGE_TITLES.SHARE_TARGET,
