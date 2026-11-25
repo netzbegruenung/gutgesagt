@@ -50,8 +50,11 @@ def test_logo_im_kopf_mit_neuem_namen_und_vorhanden():
     pfade = {m for v in vorlagen for m in re.findall(r'src="(marke/[^"]+)"', v.read_text(encoding="utf-8"))}
     assert "marke/logo-v2.svg" in pfade
     assert "marke/logo.svg" not in pfade
-    # Das SVG-Favicon ist seit "-v3" das Logo auf dem App-Gelb, nicht mehr das freistehende Logo
-    assert "marke/favicon-v3.svg" in _verweise_index()
+    # Das SVG-Favicon ist seit "-v3" das Logo auf dem App-Gelb, seit "-v4" mit runden Ecken
+    assert "marke/favicon-v4.svg" in _verweise_index()
+    favicon = (PUBLIC / "marke/favicon-v4.svg").read_text(encoding="utf-8")
+    assert 'rx="112"' in favicon
+    assert "FLUENT-EMOJI-LIZENZ.txt" in favicon
     fehlend = sorted(p for p in pfade if not (PUBLIC / p).is_file())
     assert not fehlend, f"genannt, aber nicht unter public/: {fehlend}"
 
@@ -81,11 +84,20 @@ def test_symbolgrund_ist_das_app_gelb():
     theme = (FRONTEND / "src/theme/custom-theme.scss").read_text(encoding="utf-8")
     kopf = re.search(r"--kopf:\s*(#[0-9a-fA-F]{6});", theme).group(1).lower()
     assert json.loads(MANIFEST.read_text(encoding="utf-8"))["background_color"].lower() == kopf
-    for name in ("icon-192-v3", "icon-512-v3", "icon-maskable-512-v3", "apple-touch-icon-180-v3",
-                 "favicon-32-v3", "favicon-64-v3"):
+    for name in ("icon-192-v3", "icon-512-v3", "icon-maskable-512-v3", "apple-touch-icon-180-v3"):
         bild = Image.open(PUBLIC / f"marke/{name}.png").convert("RGB")
         r, g, b = bild.getpixel((0, 0))
         assert f"#{r:02x}{g:02x}{b:02x}" == kopf, name
+    # Die Favicons sind abgerundet: Gelb an der Kante, die Ecken durchsichtig
+    for groesse in (32, 64):
+        name = f"favicon-{groesse}-v4"
+        bild = Image.open(PUBLIC / f"marke/{name}.png").convert("RGBA")
+        assert bild.size == (groesse, groesse), name
+        breite, hoehe = bild.size
+        r, g, b, a = bild.getpixel((breite // 2, 0))
+        assert (f"#{r:02x}{g:02x}{b:02x}", a) == (kopf, 255), name
+        for ecke in ((0, 0), (breite - 1, 0), (0, hoehe - 1), (breite - 1, hoehe - 1)):
+            assert bild.getpixel(ecke)[3] == 0, (name, ecke)
 
 
 def test_manifest_startet_ohne_browserleiste():
