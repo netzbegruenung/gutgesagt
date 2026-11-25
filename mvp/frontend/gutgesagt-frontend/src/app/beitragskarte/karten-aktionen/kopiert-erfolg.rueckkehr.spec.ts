@@ -110,6 +110,15 @@ describe('Erfolgskasten - Rückkehr-Moment', () => {
     expect(fixture.componentInstance.frageText).toBe(GEPOSTET_FRAGE);
   }));
 
+  it('nach einem gescheiterten Melden nichts (Dankzeile mit Fehlerhinweis steht)', fakeAsync(() => {
+    kopieren();
+    setzen({ gepostetDank: 'Danke! Zählen hat gerade nicht geklappt.' } as never);
+    tick(RUECKKEHR_AB_MS);
+    zurueck();
+    expect(frage()).toBe(GEPOSTET_FRAGE);
+    expect(leuchtet()).toBeFalse();
+  }));
+
   it('ohne Frage (nicht angeboten) nichts', fakeAsync(() => {
     kopieren();
     setzen({ gepostet: 'aus' });
@@ -161,6 +170,7 @@ describe('Erfolgskasten - Rückkehr-Moment', () => {
     zurueck();
     expect(frage()).toBe(GEPOSTET_RUECKKEHR_OHNE_KONTO);
     expect(frage()).not.toContain('zählt');
+    expect(frage()).not.toContain('Ziel');
     tick(RUECKKEHR_LEUCHTEN_MS);
   }));
 

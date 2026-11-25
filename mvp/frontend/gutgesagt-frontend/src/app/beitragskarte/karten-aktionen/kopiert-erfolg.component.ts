@@ -1,6 +1,7 @@
 import {
   AfterViewChecked,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   EventEmitter,
@@ -12,7 +13,6 @@ import {
   SimpleChanges,
   ViewChild,
   inject,
-  ChangeDetectorRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -31,8 +31,9 @@ import {
 } from './gepostet-texte';
 
 /**
- * So lange nach dem Kopieren gilt das Zurückkommen erst als Rückkehr: Ein kurzer Blick in
- * einen anderen Tab soll den Kasten nicht flackern lassen.
+ * So lange nach dem Kopieren gilt das Zurückkommen erst als Rückkehr: Wer kurz nach dem
+ * Kopieren in einen anderen Tab schaut und gleich zurückkommt, sieht kein Flackern. Gemessen
+ * wird ab dem Kopieren, nicht die Dauer der Abwesenheit.
  */
 export const RUECKKEHR_AB_MS = 3000;
 /** So lange leuchtet „Ja, gepostet“ bei der Rückkehr auf (die Animation dauert 1,6 s). */
@@ -269,10 +270,15 @@ export class KopiertErfolgComponent implements OnChanges, AfterViewChecked, OnDe
 
   /**
    * Zurück auf der Seite: nur einmal je Kopieren, nur mit offener Frage im offenen Kasten
-   * und frühestens nach RUECKKEHR_AB_MS. Zu früh zählt nicht als verbraucht.
+   * und frühestens nach RUECKKEHR_AB_MS. Zu früh zählt nicht als verbraucht. Nach einem
+   * gescheiterten Melden (Dankzeile steht) nicht: Die Person hat schon getippt, die
+   * Fehlerzeile lädt selbst zum zweiten Tippen ein.
    */
   private zurueckgekommen(): void {
     if (this.rueckkehrGezeigt || !this.sichtbar || this.gepostet !== 'frage' || !this.kopierLauf) {
+      return;
+    }
+    if (this.gepostetDank !== null) {
       return;
     }
     if (Date.now() - this.kopiertUm < RUECKKEHR_AB_MS) {
