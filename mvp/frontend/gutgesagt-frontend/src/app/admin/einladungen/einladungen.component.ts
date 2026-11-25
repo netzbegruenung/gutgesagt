@@ -1,8 +1,8 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { selbstNachladen } from '../../shared/selbst-nachladen';
 import { NachladeHinweisComponent } from '../../shared/components/nachlade-hinweis/nachlade-hinweis.component';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -107,6 +107,9 @@ export class EinladungenComponent implements OnInit {
 
   private readonly destroyRef = inject(DestroyRef);
 
+  /** Das Formular „Einladung anlegen“: nach dem Anlegen ohne Fehleranzeige zurueckgesetzt. */
+  @ViewChild('formular') private formular?: NgForm;
+
   constructor(private einladungService: EinladungService) {}
 
   /** Die Liste laedt selbst nach, solange der Reiter sichtbar ist; das Formular bleibt unberuehrt. */
@@ -198,17 +201,35 @@ export class EinladungenComponent implements OnInit {
     this.einladungService.anlegen(this.notiz.trim(), this.erlaubteEinloesungen, this.gueltigBis, team).subscribe({
       next: (neu) => {
         this.einladungen = [neu, ...(this.einladungen ?? [])];
-        this.notiz = '';
-        this.teamName = '';
-        this.teamArt = 'anlass';
-        this.teamZustimmungAm = '';
         this.speichert = false;
+        this.zuruecksetzen();
       },
       error: () => {
         this.anlegenFehler = true;
         this.speichert = false;
       },
     });
+  }
+
+  /**
+   * Alles wieder auf Standard (persoenlicher Link, zwei Wochen, Saison-Vorschlag, erstes Motiv).
+   * resetForm nimmt auch "abgeschickt" und "beruehrt" zurueck: Sonst stand die geleerte
+   * Pflicht-Notiz sofort rot im Fehlerzustand. Felder ohne Steuerelement (Teamblock aus)
+   * bekommen den Wert direkt.
+   */
+  private zuruecksetzen() {
+    const standard = {
+      notiz: '',
+      erlaubteEinloesungen: 1,
+      gueltigBis: inTagen(14),
+      teamName: '',
+      teamArt: 'anlass' as TeamArt,
+      teamZustimmungAm: '',
+      teamSaison: this.saisonVorschlag,
+      teamMotiv: this.motive[0]?.schluessel ?? TEAM_MOTIVE[0].schluessel,
+    };
+    this.formular?.resetForm(standard);
+    Object.assign(this, standard);
   }
 
   schalten(einladung: Einladung) {

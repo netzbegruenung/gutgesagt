@@ -42,7 +42,10 @@ import { motivBild } from './teams';
       box-shadow: inset 0 0 0 2px var(--akzent-tanne);
     }
     .medaillon img { display: block; width: 15px; height: 15px; }
-    .name { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+    /* break-word statt anywhere: bricht nur, wenn der Platz wirklich fehlt. Mit anywhere
+       rechnete eine Tabellenspalte die Pille auf einen Buchstaben Breite herunter
+       („Sel / bstt / est“ in den Einladungen). */
+    .name { font-weight: 700; min-width: 0; overflow-wrap: break-word; }
     .nr { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--primaer-text); }
     .saison { flex: none; color: var(--text-leise); font-variant-numeric: tabular-nums; }
     .klein { gap: 4px; padding: 1px 8px 1px 1px; font-size: 0.75rem; }

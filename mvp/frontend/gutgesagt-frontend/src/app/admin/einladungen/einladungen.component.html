@@ -14,7 +14,7 @@
       Konten anlegen ist auf diesem Server noch nicht eingerichtet: Links funktionieren erst danach.
     </p>
 
-    <form class="anlegen" (ngSubmit)="anlegen()">
+    <form class="anlegen" #formular="ngForm" (ngSubmit)="anlegen()">
       <mat-form-field appearance="outline" class="notiz" subscriptSizing="dynamic">
         <mat-label>Notiz</mat-label>
         <input matInput name="notiz" [(ngModel)]="notiz" [maxlength]="NOTIZ_MAX" required />
@@ -99,7 +99,9 @@
     </p>
 
     <ng-container *ngIf="einladungen">
-      <table *ngIf="einladungen.length > 0; else leer">
+      <!-- Wird es doch zu eng (Tablet), scrollt nur die Tabelle, nicht die Seite -->
+      <div class="tabelle-rahmen" *ngIf="einladungen.length > 0; else leer">
+      <table>
         <thead>
           <tr>
             <th scope="col">Notiz</th>
@@ -129,11 +131,14 @@
             <td class="eng" data-label="Gültig bis">{{ tag(e.gueltig_bis) }}</td>
             <td class="eng" data-label="Zustand">{{ e.zustand | titlecase }}</td>
             <td class="link" data-label="Link">
-              <code>{{ link(e) }}</code>
-              <button mat-icon-button type="button" (click)="kopieren(e)"
-                      [attr.aria-label]="'Link kopieren: ' + e.notiz">
-                <mat-icon>{{ kopiert === e.id ? 'check' : 'content_copy' }}</mat-icon>
-              </button>
+              <!-- Link gekuerzt in einer Zeile, ganz im Titel und beim Markieren; der Knopf daneben, nie darueber -->
+              <div class="link-zeile">
+                <code class="link-text" [title]="link(e)" data-testid="link-text">{{ link(e) }}</code>
+                <button mat-icon-button type="button" class="kopieren" data-testid="kopieren" (click)="kopieren(e)"
+                        [attr.aria-label]="'Link kopieren: ' + e.notiz">
+                  <mat-icon>{{ kopiert === e.id ? 'check' : 'content_copy' }}</mat-icon>
+                </button>
+              </div>
             </td>
             <td class="eng">
               <button mat-stroked-button type="button" data-testid="schalten" (click)="schalten(e)">
@@ -143,6 +148,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
       <ng-template #ohneTeam><span class="hinweis"><span aria-hidden="true">–</span><span class="unsichtbar">kein Team</span></span></ng-template>
       <ng-template #leer>
         <p class="hinweis">Noch keine Einladungen.</p>
