@@ -16,6 +16,8 @@ zaehlt ein Beitrag einmal, eine Stimme je Person und Beitrag einmal je Woche (au
 wenn sie umgedreht wird), "Ja, gepostet" je Person einmal je Woche. Der Preis wie bei
 "Ja, gepostet" (services/gepostet_service.py): Nach einem Neustart kann dasselbe in
 derselben Woche ein zweites Mal zaehlen; das setzt einen uvicorn-Worker voraus.
+Bekannte Grenze: Doppelzaehlung nach Neustart oder bei mehreren Workern zaehlt zu
+hoch, nie zu niedrig.
 
 Wer nicht zaehlt: Startkonten; ohne geltende Art.-9-Einwilligung keine Meldung "Ja,
 gepostet" (Bedingung des Nordsterns, docs/DSFA.md V9a; Beitraege und Stimmen

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Collection, Dict, Iterable, List, Optional, Tuple
 
-from sqlalchemy import func, select, tuple_
+from sqlalchemy import delete, func, select, tuple_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from domain.team_fortschritt import Art, Wochenzaehlung
@@ -226,6 +226,26 @@ class TeamFortschrittRepository:
                 Quest(z.team_name, z.saison, z.woche, z.thema, z.ziel)
                 for z in session.execute(abfrage).scalars().all()
             ]
+
+    # --- Team loeschen ---------------------------------------------------------
+
+    def team_loeschen(self, team_name: str, saison: str) -> int:
+        """
+        Wochenzaehler und Quests eines Teams loeschen ("entfallen mit dem Team",
+        docs/LOESCHKONZEPT.md). Eine Team-Loeschung gibt es noch nicht; wer sie baut
+        (etwa ueber team_nummern oder die Einladungen), ruft dies in derselben
+        Transaktion auf. tests/unit/test_team_loeschung_nimmt_zaehler_mit.py erinnert
+        daran. Gibt die Zahl der geloeschten Zeilen zurueck.
+        """
+        with self.db.get_session() as session:
+            n = 0
+            for zeile in (TeamWocheZeile, TeamQuestZeile):
+                n += session.execute(
+                    delete(zeile).where(
+                        zeile.team_name == team_name, zeile.saison == saison
+                    )
+                ).rowcount
+            return n
 
 
 _repository: Optional[TeamFortschrittRepository] = None

@@ -245,3 +245,14 @@ def test_verlassen_und_loeschen_lassen_nur_die_summe(datenbank):  # noqa: F811
         )
     for kennung in ("konto-0", "person-die-loescht", "b-1", "b-2"):
         assert kennung not in inhalt
+
+
+def test_team_loeschen_nimmt_nur_dieses_team_mit(datenbank):  # noqa: F811
+    repo = TeamFortschrittRepository(datenbank)
+    repo.erhoehen([SCHLUESSEL, (TEAM.name, "2025")], LAUFENDE, Art.BEITRAG)
+    repo.quest_anlegen(Quest(TEAM.name, TEAM.saison, LAUFENDE, "klima", 3))
+
+    assert repo.team_loeschen(TEAM.name, TEAM.saison) == 2
+
+    assert _zeilen(datenbank, "team_quests") == []
+    assert [z["saison"] for z in _zeilen(datenbank, "team_wochen")] == ["2025"]
