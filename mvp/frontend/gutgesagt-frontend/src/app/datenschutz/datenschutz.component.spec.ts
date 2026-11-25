@@ -286,6 +286,11 @@ describe('DatenschutzComponent', () => {
 
       expect(text).toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
       expect(text).toContain('nichts ist vorausgewählt');
+      // Mit Schalter einwilligung_im_gewinn auch als Frage mit zwei Knöpfen (#788, Jura 25.11.)
+      expect(text).toContain(
+        'Du gibst sie selbst unter „Meine Beiträge“ (Häkchen oder Frage mit zwei gleichwertigen Knöpfen) ' +
+          'oder mit einem eigenen Häkchen in den „Datenschutz-Einstellungen“',
+      );
       expect(text).toContain('Ohne sie kannst du genauso beitragen und bewerten');
       expect(text).toContain('jederzeit in den „Datenschutz-Einstellungen“ widerrufen; danach wird nichts mehr berechnet');
       expect(text).not.toContain('Bevor wir Punkte einschalten');
@@ -541,6 +546,15 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('Sagst du nein, speichern wir nichts davon');
       expect(text).toContain('Deine Teams siehst nur du, unter „Meine Teams“.');
       expect(text).toContain('sehen je Team nur, wie viele dabei sind, keine Namen und keine Liste');
+    });
+
+    it('Teams: auch nach einer Gruppe, die zugestimmt hat; die Gruppe bekommt keine Daten', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Manche Einladungen gehören zu einem Team, etwa einem Treffen, einem Ort oder einer Gruppe, die zugestimmt hat. Die Gruppe bekommt keine Daten über dich.'
+      );
+      expect(text).not.toContain('etwa einem Treffen oder einem Ort.');
     });
 
     it('Teams: eigene Einwilligung nach Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a, getrennt von den anderen', () => {

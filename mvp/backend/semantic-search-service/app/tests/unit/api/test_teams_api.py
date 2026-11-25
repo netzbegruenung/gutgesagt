@@ -142,12 +142,18 @@ class TestAdmin:
         assert body["teams_aktiv"] is True
         assert body["aktuelle_saison"] == "2026"
         assert {m["schluessel"] for m in body["motive"]} >= {"vogel", "laufschuh"}
-        assert "Personen" in body["teamname_hinweis"]
+        assert body["teamname_hinweis"] == (
+            "Anlass, Ort, Saison oder öffentliche Gruppe mit schriftlicher "
+            "Zustimmung; keine Namen zu Religion, Gesundheit, sexueller "
+            "Orientierung, Herkunft oder Gewerkschaft."
+        )
         mit_team, ohne_team = body["einladungen"]
         assert mit_team["team"] == {
             "name": "BDK 26 Berlin",
             "motiv": "vogel",
             "saison": "2026",
+            "art": "anlass",
+            "zustimmung_am": None,
             "mitglieder": 36,
         }
         assert ohne_team["team"] is None
@@ -184,7 +190,44 @@ class TestAdmin:
         assert werte["team_name"] == "Netzfeuerwehr Vorhut"
         assert werte["team_motiv"] == "laufschuh"
         assert werte["team_saison"] == "2026"
+        # Ohne Angabe ein Team nach Anlass, Ort oder Saison, ohne Datum
+        assert werte["team_art"] == "anlass"
+        assert werte["team_zustimmung_am"] is None
         assert antwort.json()["team"]["mitglieder"] == 36
+        assert antwort.json()["team"]["art"] == "anlass"
+
+    def test_anlegen_team_nach_gruppe_mit_datum(self, einladung_repo, team_repo):
+        tag = (heute_utc() - timedelta(days=3)).isoformat()
+        antwort = _client(einladung_repo, team_repo).post(
+            "/api/v1/einladungen",
+            headers=ADMIN,
+            json={
+                "notiz": "Gruppe",
+                "erlaubte_einloesungen": 30,
+                "gueltig_bis": (heute_utc() + timedelta(days=14)).isoformat(),
+                "team_name": "Die grüne Welle",
+                "team_motiv": "vogel",
+                "team_art": "gruppe",
+                "team_zustimmung_am": tag,
+            },
+        )
+
+        assert antwort.status_code == 201
+        werte = einladung_repo.anlegen.call_args.kwargs
+        assert werte["team_art"] == "gruppe"
+        assert werte["team_zustimmung_am"].isoformat() == tag
+        # Admin-Antwort: Art und Datum als Nachweis, weiter nur die Zahl der Mitglieder
+        team = antwort.json()["team"]
+        assert team["art"] == "gruppe"
+        assert team["zustimmung_am"] == tag
+        assert set(team) == {
+            "name",
+            "motiv",
+            "saison",
+            "art",
+            "zustimmung_am",
+            "mitglieder",
+        }
 
     def test_anlegen_ohne_schalter_ignoriert_teamfelder(
         self, einladung_repo, team_repo
@@ -213,6 +256,30 @@ class TestAdmin:
             {"team_name": "<b>Vorhut</b>", "team_motiv": "vogel"},
             {"team_motiv": "vogel"},
             {"team_name": "Vorhut", "team_motiv": "vogel", "team_saison": "x" * 21},
+            # Team nach Gruppe ohne Datum der Zustimmung
+            {"team_name": "Netzfeuerwehr", "team_motiv": "vogel", "team_art": "gruppe"},
+            # Datum in der Zukunft
+            {
+                "team_name": "Netzfeuerwehr",
+                "team_motiv": "vogel",
+                "team_art": "gruppe",
+                "team_zustimmung_am": (heute_utc() + timedelta(days=1)).isoformat(),
+            },
+            # Datum nur bei Team nach Gruppe
+            {
+                "team_name": "Bayreuth",
+                "team_motiv": "vogel",
+                "team_zustimmung_am": "2026-11-20",
+            },
+            {
+                "team_name": "Bayreuth",
+                "team_motiv": "vogel",
+                "team_art": "anlass",
+                "team_zustimmung_am": "2026-11-20",
+            },
+            # Unbekannte Art, Art ohne Teamname
+            {"team_name": "Bayreuth", "team_motiv": "vogel", "team_art": "verein"},
+            {"team_art": "gruppe", "team_zustimmung_am": "2026-11-20"},
         ],
     )
     def test_ungueltige_teamfelder(self, einladung_repo, team_repo, felder):
@@ -244,7 +311,37 @@ class TestAdmin:
             "team_name": "Bayreuth",
             "team_motiv": "waage",
             "team_saison": "26",
+            "team_art": "anlass",
+            "team_zustimmung_am": None,
         }
+
+        antwort = client.patch(
+            url,
+            headers=ADMIN,
+            json={
+                "team_name": "Netzfeuerwehr",
+                "team_motiv": "waage",
+                "team_saison": "26",
+                "team_art": "gruppe",
+                "team_zustimmung_am": "2026-11-20",
+            },
+        )
+        assert antwort.status_code == 200
+        assert einladung_repo.aendern.call_args.kwargs["team_art"] == "gruppe"
+        assert einladung_repo.aendern.call_args.kwargs["team_zustimmung_am"] == date(
+            2026, 11, 20
+        )
+
+        antwort = client.patch(
+            url,
+            headers=ADMIN,
+            json={
+                "team_name": "Netzfeuerwehr",
+                "team_motiv": "waage",
+                "team_art": "gruppe",
+            },
+        )
+        assert antwort.status_code == 422
 
         antwort = client.patch(url, headers=ADMIN, json={"team_name": None})
         assert antwort.status_code == 200
@@ -252,6 +349,8 @@ class TestAdmin:
             "team_name": None,
             "team_motiv": None,
             "team_saison": None,
+            "team_art": None,
+            "team_zustimmung_am": None,
         }
 
         antwort = client.patch(url, headers=ADMIN, json={"abgeschaltet": True})
@@ -275,6 +374,7 @@ class TestPruefen:
         assert team["name"] == "BDK 26 Berlin"
         assert team["motiv"] == "vogel"
         assert team["saison"] == "2026"
+        assert team["art"] == "anlass"
         assert team["mitglieder"] == 36
         assert team["naechste_nummer"] == 37
         assert team["eigene_nummer"] is None
@@ -296,6 +396,25 @@ class TestPruefen:
         # Schalter teams_oeffentlich aus: keine zweite Frage
         assert team["oeffentlich_kennung"] is None
         assert team["oeffentlich_text"] is None
+
+    def test_team_nach_gruppe_liefert_art_ohne_datum(self, einladung_repo, team_repo):
+        einladung_repo.nach_code.return_value = _zeile(
+            team_name="Netzfeuerwehr",
+            team_art="gruppe",
+            team_zustimmung_am=date(2026, 11, 20),
+        )
+
+        team = (
+            _client(einladung_repo, team_repo)
+            .post("/api/v1/einladungen/pruefen", json={"code": CODE})
+            .json()["team"]
+        )
+
+        assert team["name"] == "Netzfeuerwehr"
+        assert team["art"] == "gruppe"
+        # Das Datum der Zustimmung ist nur fuer Admins
+        assert "zustimmung_am" not in team
+        assert "2026-11-20" not in repr(team)
 
     def test_zweite_frage_nur_mit_schalter(self, einladung_repo, team_repo):
         team = (

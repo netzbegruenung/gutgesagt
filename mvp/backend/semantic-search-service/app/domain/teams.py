@@ -30,11 +30,20 @@ MOTIVE: Dict[str, str] = {
     "lautsprecher": "Lautsprecher",
 }
 
+# Teamart an der Einladung (GLOSSARY.md "Team"). Ein Team nach Gruppe traegt den
+# Namen einer Gruppe, die oeffentlich unter diesem Namen auftritt und vorher
+# schriftlich und widerruflich zugestimmt hat; das Datum dieser Zustimmung steht an
+# der Einladung, nur als Nachweis fuer Admins. Die Gruppe bekommt nie Namen, Listen
+# oder eigene Zahlen und steuert nichts (GLOSSARY.md "Team", Bedingungen).
+# Beschriftungen im Admin-Formular: TEAM_ARTEN in frontend shared/teams/teams.ts.
+TEAM_ART_ANLASS = "anlass"
+TEAM_ART_GRUPPE = "gruppe"
+
 # Hinweis fuer das Admin-Formular (Teamname).
 TEAMNAME_HINWEIS = (
-    "Nur nach Anlass, Ort oder Saison benennen, etwa „BDK 26 Berlin“ oder "
-    "„Bayreuth“. Nie nach Personen und nie nach weiteren sensiblen Merkmalen "
-    "(Gesundheit, Religion, Orientierung)."
+    "Anlass, Ort, Saison oder öffentliche Gruppe mit schriftlicher Zustimmung; "
+    "keine Namen zu Religion, Gesundheit, sexueller Orientierung, Herkunft oder "
+    "Gewerkschaft."
 )
 
 # --- Einwilligung zur Mitgliedschaft -------------------------------------------

@@ -40,6 +40,9 @@ public static class EndpointPolicy
         // Balken der laufenden Saison (#782): nur Summen, ohne Person. Nur dieser Pfad;
         // die Pflege unter /api/v1/moderation/saisons bleibt hinter dem Gate.
         "/api/v1/saisons/aktuell",
+        // Konter-Probe (#786): Proben fuer das Spiel ohne Konto, nur lesend; der Tipp
+        // bleibt im Browser. Hinter dem Schalter konter_probe, aus antwortet sie mit 404.
+        "/api/v1/konter-probe",
         "/api/v1/moderation/report",     // anonyme Meldung (DSA Art. 16)
         // Feedback an das Team, auch von Besuchern. Nur das Senden: die Liste unter
         // /api/v1/feedback ist admin-only und bleibt hinter dem Gate.

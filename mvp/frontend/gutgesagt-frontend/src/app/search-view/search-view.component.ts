@@ -15,6 +15,7 @@ import { map } from 'rxjs/operators';
 import { RundgangBandComponent } from '../rundgang/rundgang-band.component';
 import { SeitLetztemBesuchComponent } from '../seit-letztem-besuch/seit-letztem-besuch.component';
 import { SaisonZielComponent } from '../saison-ziel/saison-ziel.component';
+import { KonterProbeEinstiegComponent } from '../konter-probe/konter-probe-einstieg.component';
 
 /**
  * Am Desktop mit Maus springt der Fokus beim Laden ins Suchfeld; auf Touch-Geraeten
@@ -38,6 +39,7 @@ export const AUTOFOKUS_MEDIEN = '(min-width: 960px) and (hover: hover) and (poin
     RundgangBandComponent,
     SeitLetztemBesuchComponent,
     SaisonZielComponent,
+    KonterProbeEinstiegComponent,
   ],
   templateUrl: './search-view.component.html',
   styleUrls: ['./search-view.component.scss']

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { catchError, distinctUntilChanged, map, shareReplay, switchMap, tap } from 'rxjs/operators';
@@ -28,6 +28,7 @@ function noch(seit: number | null): boolean {
   return seit !== null && Date.now() - seit < SCHALTER_AUS_MERKEN_MS;
 }
 import type { Fassung } from '../shared/fassung';
+import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 
 export interface TrackUsageRequest {
   /** Die kopierte Fassung eines Kommentars (#355); fehlt bei anderen Beitragstypen. */
@@ -171,6 +172,8 @@ export class UsageTrackingService {
   /** Der Schalter-Status, einmal abgefragt und geteilt; mit dem Zeitpunkt der Abfrage. */
   private status$?: Observable<PunkteStatus>;
   private statusSeit: number | null = null;
+
+  private readonly budget = inject(EinwilligungsBudgetService);
 
   constructor(
     private http: HttpClient,
@@ -460,6 +463,8 @@ export class UsageTrackingService {
    */
   gepostetMelden(kennung: string): Observable<number | null | typeof GEPOSTET_NICHT_ANGEBOTEN> {
     return this.http.post<GepostetAntwort>(`${this.apiUrl}/users/me/gepostet`, {}).pipe(
+      // Ein Gewinn mit Dank: Danach wartet jede Einwilligungsfrage (#788).
+      tap(() => this.budget.gewinn()),
       map((antwort) => antwort.personen_diese_woche),
       catchError((error) => {
         if (error?.status === 403 || error?.status === 404) {

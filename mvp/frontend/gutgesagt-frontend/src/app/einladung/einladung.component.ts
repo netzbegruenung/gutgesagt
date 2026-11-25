@@ -21,8 +21,9 @@ import {
 import { ROUTES } from '../shared/constants/app.constants';
 import { sitzungPruefen } from '../auth/sitzung';
 import { FunktionenService } from '../services/funktionen.service';
-import { teamBegruessungSaetze, teamBegruessungTitel } from '../shared/team-texte';
+import { teamBegruessungSaetze, teamBegruessungTitel, teamGruppeSatz } from '../shared/team-texte';
 import { teamMerkerAblegen, teamMerkerLesen, teamMerkerLoeschen, teamMerkerNehmen } from './team-merker';
+import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 
 /**
  * Stände der Seite. Ohne Konto: eingeben … gesendet, bei einer Einladung mit Team mit dem
@@ -174,6 +175,11 @@ export class EinladungComponent implements OnInit {
   begruessungSaetze(team: TeamBeimPruefen): readonly string[] {
     return teamBegruessungSaetze(team.name);
   }
+
+  /** Nur bei einem Team nach Gruppe: der Satz direkt über der Frage, sonst null. */
+  gruppeSatz(team: TeamBeimPruefen): string | null {
+    return team.art === 'gruppe' ? teamGruppeSatz(team.name) : null;
+  }
   /** Der eingefuegte Link, solange die Seite ohne Code aufgerufen wurde. */
   link = '';
   linkFalsch = false;
@@ -322,6 +328,8 @@ export class EinladungComponent implements OnInit {
     // Mitgliedschaft. Gefragt wird noch einmal; der Merker sendet nie selbst eine Einwilligung.
     this.nochmalGefragt = mitJa;
     this.stand = 'team_frage';
+    // Gehört zum Beitreten und kommt immer, verbraucht aber den Besuch (#788).
+    this.injector.get(EinwilligungsBudgetService).gezeigt('team');
   }
 
   /** Angemeldet und eine Einladung ohne Team: Hinweis statt Formular, nur bei wirksamem Schalter teams. */

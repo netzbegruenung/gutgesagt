@@ -9,6 +9,9 @@ import { EinwilligungComponent, WIDERRUF_FRAGE } from './einwilligung.component'
 import { Art9EinwilligungService, Art9EinwilligungStand } from '../services/art9-einwilligung.service';
 import { environment } from '../../environments/environment';
 import { PUNKTE_EINWILLIGUNG_AUS } from '../shared/punkte-einwilligung/punkte-einwilligung.testing';
+import { signal } from '@angular/core';
+import { FunktionenService } from '../services/funktionen.service';
+import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 
 const URL = `${environment.baseUrl}/api/v1/art9-einwilligung`;
 const WORTLAUT = { kennung: '2026-11-05', text: 'Ich willige ausdrücklich ein, dass …' };
@@ -32,6 +35,9 @@ describe('EinwilligungComponent', () => {
   let dialog: jasmine.SpyObj<MatDialog>;
   /** Was die Rueckfrage vor dem Widerruf antwortet (B3). */
   let rueckfrage: boolean | undefined;
+  /** Schalter einwilligung_im_gewinn (#788). */
+  const imGewinn = signal(false);
+  afterEach(() => imGewinn.set(false));
 
   function starten(returnUrl: string | null = '/einwerfen') {
     rueckfrage = true;
@@ -44,6 +50,7 @@ describe('EinwilligungComponent', () => {
         provideHttpClientTesting(),
         provideNoopAnimations(),
         PUNKTE_EINWILLIGUNG_AUS,
+        { provide: FunktionenService, useValue: { frisch: () => of(imGewinn()) } },
         provideRouter([]),
         {
           provide: ActivatedRoute,
@@ -556,5 +563,33 @@ describe('EinwilligungComponent', () => {
     fixture.detectChanges();
 
     expect(el().querySelector('[role=alert]')).not.toBeNull();
+  });
+
+  describe('Einwilligung im Moment des Gewinns (#788)', () => {
+    it('ohne Schalter steht das Häkchen „Punkte und Meilensteine“ auch neben der Frage', () => {
+      starten();
+      standLiefern(stand());
+
+      expect(el().querySelector('app-punkte-einwilligung')).not.toBeNull();
+    });
+
+    it('mit Schalter keine zweite Frage neben der Art.-9-Einwilligung, und der Besuch ist verbraucht', () => {
+      imGewinn.set(true);
+      starten();
+      const budget = TestBed.inject(EinwilligungsBudgetService);
+      spyOn(budget, 'gezeigt');
+      standLiefern(stand());
+
+      expect(el().querySelector('app-punkte-einwilligung')).toBeNull();
+      expect(budget.gezeigt).toHaveBeenCalledWith('art9');
+    });
+
+    it('mit Schalter bleibt das Häkchen in der Übersicht nach der Einwilligung', () => {
+      imGewinn.set(true);
+      starten();
+      standLiefern(stand({ eingewilligt: true, wortlaut: WORTLAUT.kennung, eingewilligt_am: '2026-11-20T10:00:00Z' }));
+
+      expect(el().querySelector('app-punkte-einwilligung')).not.toBeNull();
+    });
   });
 });

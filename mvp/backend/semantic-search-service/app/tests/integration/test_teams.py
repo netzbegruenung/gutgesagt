@@ -45,6 +45,15 @@ LOESCHSKRIPT = (
     postgres.REPO_WURZEL / "mvp" / "scripts" / "manual" / "person_loeschen.sql"
 )
 MIGRATION = postgres.MIGRATIONEN / "2026-11-25-teams.sql"
+UMBENENNEN = postgres.REPO_WURZEL / "mvp" / "scripts" / "manual" / "team_umbenennen.sql"
+MIGRATION_NACH_GRUPPE = postgres.MIGRATIONEN / "2026-11-26-teams-nach-gruppe.sql"
+GRUPPE = Team(
+    "Netzfeuerwehr",
+    "handschlag",
+    "2026",
+    art="gruppe",
+    zustimmung_am=date(2026, 11, 20),
+)
 
 TABELLEN = [
     EinladungZeile.__table__,
@@ -334,6 +343,7 @@ def test_migration_auf_bestehender_einladungstabelle(postgres_url):
         postgres.migration(db, postgres.MIGRATIONEN / "2026-10-30-429-einladungen.sql")
         postgres.migration(db, MIGRATION)
         postgres.migration(db, MIGRATION)
+        postgres.migration(db, MIGRATION_NACH_GRUPPE)
 
         einladungen, teams = _dienste(db)
         code = _teamlink(einladungen)
@@ -360,3 +370,133 @@ def test_nie_benutztes_konto_nimmt_seine_teamdaten_mit(db):
     assert teams.oeffentlich_stand("nie-benutzt") is None
     assert len(teams.meine("andere-person")) == 1
     assert TeamRepository(db).konten_loeschen([]) == 0
+
+
+def test_teamart_und_zustimmung_stehen_an_der_einladung(db):
+    einladungen, teams = _dienste(db)
+    anlass = _teamlink(einladungen)
+    gruppe = _teamlink(einladungen, team=GRUPPE)
+
+    nach_code = {e.code: e for e in einladungen.alle()}
+    assert nach_code[anlass].team_art == "anlass"
+    assert nach_code[anlass].team_zustimmung_am is None
+    assert nach_code[gruppe].team_art == "gruppe"
+    assert nach_code[gruppe].team_zustimmung_am == date(2026, 11, 20)
+    assert nach_code[gruppe].team.art == "gruppe"
+    assert einladungen.team_info(gruppe, heute=HEUTE).team.art == "gruppe"
+
+    # Die Mitgliedschaft traegt weder Art noch Datum: nur Name, Motiv, Saison
+    _, m, _ = einladungen.beitreten(gruppe, "konto-a", heute=HEUTE)
+    assert (m.team_name, m.saison) == ("Netzfeuerwehr", "2026")
+    with db.engine.connect() as c:
+        spalten = {s["name"] for s in inspect(c).get_columns("team_mitgliedschaften")}
+    assert "team_art" not in spalten and "team_zustimmung_am" not in spalten
+
+
+def test_teamart_aendern_und_zurueck_auf_anlass_leert_das_datum(db):
+    einladungen, _ = _dienste(db)
+    code = _teamlink(einladungen, team=GRUPPE)
+    [e] = einladungen.alle()
+
+    einladungen.aendern(e.id, team=Team("Netzfeuerwehr", "handschlag", "2026"))
+
+    [e] = einladungen.alle()
+    assert e.team_art == "anlass"
+    assert e.team_zustimmung_am is None
+    assert einladungen.nach_code(code).team.art == "anlass"
+
+
+def test_migration_nach_gruppe_setzt_vorhandene_teams_auf_anlass(postgres_url):
+    with postgres.schema(postgres_url, "itest_teams") as db:
+        postgres.migration(db, postgres.MIGRATIONEN / "2026-10-30-429-einladungen.sql")
+        postgres.migration(db, MIGRATION)
+        with db.engine.begin() as c:
+            c.execute(
+                text(
+                    "INSERT INTO einladungen (id, code, notiz, erlaubte_einloesungen,"
+                    " einloesungen, gueltig_bis, abgeschaltet, angelegt_am, team_name,"
+                    " team_motiv, team_saison) VALUES (gen_random_uuid(), 'mit-team',"
+                    " 'alt', 5, 0, '2026-12-31', false, '2026-11-25', 'Bayreuth',"
+                    " 'vogel', '2026'), (gen_random_uuid(), 'ohne-team', 'alt', 5, 0,"
+                    " '2026-12-31', false, '2026-11-25', NULL, NULL, NULL)"
+                )
+            )
+        postgres.migration(db, MIGRATION_NACH_GRUPPE)
+        postgres.migration(db, MIGRATION_NACH_GRUPPE)
+
+        with db.engine.connect() as c:
+            zeilen = dict(
+                c.execute(
+                    text("SELECT code, team_art FROM einladungen ORDER BY code")
+                ).all()
+            )
+        assert zeilen == {"mit-team": "anlass", "ohne-team": None}
+
+
+def _umbenennen(db, alt: str, neu: str, art: str = "anlass") -> None:
+    """Das Skript Anweisung fuer Anweisung, wie psql mit -v art=... -v alt=... -v neu=..."""
+    skript = UMBENENNEN.read_text(encoding="utf-8")
+    werte = {"alt": alt, "neu": neu, "art": art}
+    with db.engine.connect().execution_options(isolation_level="AUTOCOMMIT") as c:
+        for anweisung in postgres.anweisungen(skript):
+            for name in werte:
+                anweisung = anweisung.replace(f":'{name}'", f":{name}")
+            assert ":'" not in anweisung and "\\" not in anweisung, anweisung
+            c.execute(text(anweisung), werte)
+
+
+def test_umbenennen_nach_widerruf_an_allen_drei_stellen(db):
+    einladungen, teams = _dienste(db)
+    gruppe = _teamlink(einladungen, team=GRUPPE)
+    andere = _teamlink(einladungen)
+    einladungen.beitreten(gruppe, "konto-a", heute=HEUTE)
+    einladungen.beitreten(gruppe, "konto-b", heute=HEUTE)
+    einladungen.beitreten(andere, "konto-a", heute=HEUTE)
+
+    _umbenennen(db, "Netzfeuerwehr", "Team Herbst 2026")
+    _umbenennen(db, "Netzfeuerwehr", "Team Herbst 2026")
+
+    e = einladungen.nach_code(gruppe)
+    assert (e.team_name, e.team_art, e.team_zustimmung_am) == (
+        "Team Herbst 2026",
+        "anlass",
+        None,
+    )
+    namen = sorted(m.team_name for m in teams.meine("konto-a"))
+    assert namen == ["BDK 26 Berlin", "Team Herbst 2026"]
+    [b] = teams.meine("konto-b")
+    assert (b.team_name, b.nummer) == ("Team Herbst 2026", 2)
+    # Der Zaehler zieht mit: die naechste Nummer setzt fort, nichts wird neu vergeben
+    _, c, _ = einladungen.beitreten(gruppe, "konto-c", heute=HEUTE)
+    assert c.nummer == 3
+    # Das andere Team bleibt unberuehrt
+    assert einladungen.nach_code(andere).team_name == "BDK 26 Berlin"
+    with db.engine.connect() as c:
+        assert (
+            c.execute(
+                text(
+                    "SELECT count(*) FROM team_nummern WHERE team_name = 'Netzfeuerwehr'"
+                )
+            ).scalar()
+            == 0
+        )
+
+
+@pytest.mark.parametrize("art", ["gruppe", "", "Anlass"])
+def test_umbenennen_in_eine_gruppe_bricht_ohne_aenderung_ab(db, art):
+    """Nur in einen neutralen Namen; eine andere Gruppe braucht neue Einwilligungen."""
+    einladungen, teams = _dienste(db)
+    code = _teamlink(einladungen, team=GRUPPE)
+    einladungen.beitreten(code, "konto-a", heute=HEUTE)
+
+    with pytest.raises(Exception, match="neutralen Namen"):
+        _umbenennen(db, "Netzfeuerwehr", "Die grüne Welle", art=art)
+
+    e = einladungen.nach_code(code)
+    assert (e.team_name, e.team_art) == ("Netzfeuerwehr", "gruppe")
+    assert e.team_zustimmung_am == date(2026, 11, 20)
+    assert [m.team_name for m in teams.meine("konto-a")] == ["Netzfeuerwehr"]
+    with db.engine.connect() as c:
+        assert c.execute(
+            text("SELECT team_name FROM team_nummern")
+        ).scalars().all() == ["Netzfeuerwehr"]
