@@ -14,7 +14,9 @@ from api.v1 import usage as usage_module
 from api.v1.usage import router as usage_router
 from core.config import Settings
 from dependencies import get_beitrag_laden, get_nutzung_rate_limiter, get_settings
+from domain.team_fortschritt import Art
 from services import gepostet_service as gepostet_modul
+from services.team_fortschritt_service import team_fortschritt_service_setzen
 from services.beitrag_laden import BeitragUnlesbar
 
 pytestmark = pytest.mark.unit
@@ -130,6 +132,32 @@ class TestWirkungsEcho:
 
         assert antwort.status_code == 200
         assert antwort.json()["personen_diese_woche"] == 7
+
+    @pytest.mark.parametrize("scheitert", [None, "team", "echo"])
+    def test_team_zaehler_und_echo_beide_ohne_einander_zu_stoeren(
+        self, gepostet, wirkung, scheitert
+    ):
+        """
+        "Ja, gepostet" hakt den Team-Wochenzaehler (#784) und das Wirkungs-Echo (#790)
+        ein: beide laufen, und ein Fehler des einen kostet den anderen nicht.
+        """
+        team = Mock()
+        if scheitert == "team":
+            team.zaehlen.side_effect = RuntimeError("weg")
+        if scheitert == "echo":
+            wirkung.gepostet_melden.side_effect = RuntimeError("weg")
+        team_fortschritt_service_setzen(team)
+        try:
+            antwort = _client(wirkungs_echo_aktiv=True).post(
+                GEPOSTET, json={"content_id": BEITRAG_ID}, headers=KIM
+            )
+        finally:
+            team_fortschritt_service_setzen(None)
+
+        assert antwort.status_code == 200
+        assert antwort.json()["personen_diese_woche"] == 7
+        team.zaehlen.assert_called_once_with("kim-1", Art.GEPOSTET, "")
+        wirkung.gepostet_melden.assert_called_once()
 
     def test_startkonto_wie_bisher_404(self, gepostet, wirkung):
         antwort = _client(wirkungs_echo_aktiv=True).post(
