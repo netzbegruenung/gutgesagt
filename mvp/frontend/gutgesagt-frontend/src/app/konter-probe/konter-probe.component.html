@@ -56,7 +56,8 @@
                                 </span>
                                 <span class="zeile-titel">{{ antwort.karte.titel || antwort.vorschau }}</span>
                                 <span class="zeile-nutzung">
-                                    <span class="balken" aria-hidden="true"><span [style.width.%]="balken(antwort)"></span></span>
+                                    <!-- Bei 0 kein leerer Balken; der Platz bleibt, damit die Zahlen untereinander stehen -->
+                                    <span class="balken" aria-hidden="true" [class.balken--leer]="antwort.nutzung <= 0"><span [style.width.%]="balken(antwort)"></span></span>
                                     <span class="zahl">{{ nutzungText(antwort.nutzung) }}</span>
                                 </span>
                             </li>

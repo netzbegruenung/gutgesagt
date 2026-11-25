@@ -180,6 +180,10 @@
   overflow: hidden;
 }
 
+.balken--leer {
+  visibility: hidden;
+}
+
 .balken > span {
   display: block;
   height: 100%;

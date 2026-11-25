@@ -21,7 +21,7 @@ import {
 import { ROUTES } from '../shared/constants/app.constants';
 import { sitzungPruefen } from '../auth/sitzung';
 import { FunktionenService } from '../services/funktionen.service';
-import { teamBegruessungSaetze, teamBegruessungTitel, teamGruppeSatz } from '../shared/team-texte';
+import { teamBegruessungSaetze, teamBegruessungTitel, teamDabeiSatz, teamGruppeSatz } from '../shared/team-texte';
 import { teamMerkerAblegen, teamMerkerLesen, teamMerkerLoeschen, teamMerkerNehmen } from './team-merker';
 import { ERSTER_SPRUCH } from './erster-spruch';
 import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
@@ -173,6 +173,10 @@ export class EinladungComponent implements OnInit {
   /** Begrüßung und Sätze vor der Frage, Wortlaut aus shared/team-texte (Rechtstext). */
   begruessungTitel(team: TeamBeimPruefen): string {
     return teamBegruessungTitel(team.name, team.naechste_nummer);
+  }
+
+  dabeiSatz(team: TeamBeimPruefen): string {
+    return teamDabeiSatz(team.mitglieder);
   }
 
   begruessungSaetze(team: TeamBeimPruefen): readonly string[] {

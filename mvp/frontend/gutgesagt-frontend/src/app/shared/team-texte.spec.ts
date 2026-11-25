@@ -4,6 +4,7 @@ import {
   TEAM_VERLASSEN,
   teamBegruessungSaetze,
   teamBegruessungTitel,
+  teamDabeiSatz,
   teamGruppeSatz,
 } from './team-texte';
 
@@ -12,6 +13,17 @@ describe('Texte der Teams', () => {
     expect(teamBegruessungTitel('BDK 26 Berlin', 37)).toBe(
       'Herzlich willkommen im Team BDK 26 Berlin! Du wärst Nr. 37.'
     );
+  });
+
+  it('Wie viele dabei sind: bis 3 nach Anfang, Einzahl und Mehrzahl sauber, ab 4 die Zahl', () => {
+    expect(teamDabeiSatz(0)).toBe('Mit dir fängt das Team an.');
+    expect(teamDabeiSatz(1)).toBe('Die erste Person ist schon dabei.');
+    expect(teamDabeiSatz(2)).toBe('Die ersten 2 sind schon dabei.');
+    expect(teamDabeiSatz(3)).toBe('Die ersten 3 sind schon dabei.');
+    expect(teamDabeiSatz(4)).toBe('Schon 4 dabei.');
+    expect(teamDabeiSatz(36)).toBe('Schon 36 dabei.');
+    expect(teamDabeiSatz(-1)).toBe('Mit dir fängt das Team an.');
+    expect(teamDabeiSatz(Number.NaN)).toBe('Mit dir fängt das Team an.');
   });
 
   it('Begrüßung: was gespeichert wird, wer es sieht, Rückschluss und Widerruf', () => {

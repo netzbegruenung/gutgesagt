@@ -21,15 +21,24 @@ export interface AndereTonlage {
 }
 
 /**
- * Die Nutzung, wie die Karte sie zeigt (GLOSSARY „Nutzung“): Kopiervorgaenge, nie
- * Menschen. Null bei 0 oder unbekannt, dann steht nur der Erfolgssatz da.
+ * Die Nutzung vor dieser Kopie (GLOSSARY „Nutzung“): Kopiervorgaenge, nie Menschen. Die
+ * Karte gibt den Stand von vor dem Kopieren mit (karten-aktionen, `nutzungBeimKopieren`).
+ * Bei 0 ist diese Kopie die erste, bei 1 die zweite: ein Anfang, kein ironisches „schon
+ * 1-mal“ (Leerzustaende 26.11.). Am eigenen Beitrag zaehlt die Kopie nicht (api/v1/usage.py),
+ * dort bei 0 kein Satz. Null bei unbekannter Nutzung, dann steht nur der Erfolgssatz da.
  */
-export function nutzungSatz(nutzung: number | null | undefined): string | null {
-  if (nutzung === null || nutzung === undefined || !Number.isFinite(nutzung) || nutzung < 1) {
+export function nutzungSatz(nutzung: number | null | undefined, eigen = false): string | null {
+  if (nutzung === null || nutzung === undefined || !Number.isFinite(nutzung) || nutzung < 0) {
     return null;
   }
-  const zahl = Math.floor(nutzung).toLocaleString('de-DE');
-  return `Schon ${zahl}-mal genutzt.`;
+  const vorher = Math.floor(nutzung);
+  if (vorher === 0) {
+    return eigen ? null : 'Mit dir geht diese Antwort zum ersten Mal raus.';
+  }
+  if (vorher === 1) {
+    return eigen ? 'Einmal genutzt.' : 'Deine Kopie ist die zweite.';
+  }
+  return `Schon ${vorher.toLocaleString('de-DE')}-mal genutzt.`;
 }
 
 /** Die Frage vor dem Link, je Stil der anderen Antwort. */

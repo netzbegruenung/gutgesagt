@@ -120,7 +120,7 @@ describe('MeineTeamsComponent', () => {
   it('sagt ohne Teams in einem Satz, woher Teams kommen', () => {
     laden(stand({ teams: [] }));
 
-    expect(el().querySelector('[data-testid="leer"]')!.textContent).toContain('Noch in keinem Team');
+    expect(el().querySelector('[data-testid="leer"]')!.textContent).toBe('Teams entstehen über Einladungslinks, zum Beispiel am Stand. Sobald du einem beitrittst, steht es hier.');
     expect(el().querySelector('ul')).toBeNull();
   });
 

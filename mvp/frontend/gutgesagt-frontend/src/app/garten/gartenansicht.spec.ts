@@ -11,7 +11,7 @@ import { FunktionenService } from '../services/funktionen.service';
 import { SUCHTEXT_PARAM } from '../shared/formular-adresse';
 import { GartenansichtComponent } from './gartenansicht.component';
 import { GartenHinweisComponent } from './garten-hinweis.component';
-import { Beet, antwortenText, ohneAntwortText } from './garten.service';
+import { Beet, antwortenText, beeteGruppieren, ohneAntwortText } from './garten.service';
 
 const URL = `${environment.baseUrl}/api/v1/search/garten`;
 
@@ -23,10 +23,18 @@ const BEETE: Beet[] = [
 
 describe('Gartenansicht (#783)', () => {
   it('nennt Zahlen ehrlich in Einzahl und Mehrzahl', () => {
-    expect([antwortenText(0), antwortenText(1), antwortenText(12)]).toEqual(['noch keine Antwort', '1 Antwort', '12 Antworten']);
+    expect([antwortenText(0), antwortenText(1), antwortenText(12)]).toEqual(['wartet auf die erste Antwort', '1 Antwort', '12 Antworten']);
     expect([ohneAntwortText(0), ohneAntwortText(1), ohneAntwortText(3)]).toEqual(['', '1 Spruch ohne Antwort', '3 Sprüche ohne Antwort']);
     // Ueber der Grenze der Liste „Hier fehlt eine Antwort“ wie dort „50+“
     expect([ohneAntwortText(50), ohneAntwortText(51)]).toEqual(['50 Sprüche ohne Antwort', '50+ Sprüche ohne Antwort']);
+  });
+
+  it('sammelt Themen ohne Antwort unter den anderen, je in der Reihenfolge des Servers', () => {
+    const umwelt: Beet = { schluessel: 'umwelt', name: 'Umwelt', antworten: 0, ohne_antwort: 0 };
+    const { mitAntworten, nochPlatz } = beeteGruppieren([BEETE[2], BEETE[0], umwelt, BEETE[1]]);
+    expect(mitAntworten.map((b) => b.schluessel)).toEqual(['klima', 'verkehr']);
+    expect(nochPlatz.map((b) => b.schluessel)).toEqual(['europa', 'umwelt']);
+    expect(beeteGruppieren([])).toEqual({ mitAntworten: [], nochPlatz: [] });
   });
 
   describe('Seite', () => {
@@ -82,8 +90,33 @@ describe('Gartenansicht (#783)', () => {
       expect(verkehr.querySelector('.beet-ohne')).toBeNull();
       expect(europa.querySelector('img')).toBeNull();
       expect(europa.textContent).toContain('Europa');
+      expect(europa.textContent).toContain('wartet auf die erste Antwort');
       expect(fixture.nativeElement.querySelector('.beet-antworten')).toBeNull();
       expect(fixture.nativeElement.querySelector('.garten-konto')).not.toBeNull();
+    });
+
+    it('zeigt leere Themen gesammelt unten unter „Hier ist noch Platz“', () => {
+      const fixture = starten(false);
+      http.expectOne(URL).flush({ beete: [BEETE[2], BEETE[0], BEETE[1]] });
+      fixture.detectChanges();
+
+      expect(beete(fixture).map((b) => b.querySelector('.beet-name')!.textContent)).toEqual(['Klima', 'Verkehr', 'Europa']);
+      const listen = Array.from(fixture.nativeElement.querySelectorAll('ul.beete')) as HTMLElement[];
+      expect(listen.length).toBe(2);
+      const platz = fixture.nativeElement.querySelector('[data-testid="noch-platz"]') as HTMLElement;
+      expect(platz.textContent!.trim()).toBe('Hier ist noch Platz');
+      // Die Überschrift steht direkt vor der Liste der leeren Themen
+      expect(platz.nextElementSibling).toBe(listen[1]);
+      expect(listen[1].textContent).toContain('Europa');
+    });
+
+    it('ohne leere Themen keine Überschrift „Hier ist noch Platz“', () => {
+      const fixture = starten(false);
+      http.expectOne(URL).flush({ beete: [BEETE[0], BEETE[1]] });
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="noch-platz"]')).toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('ul.beete').length).toBe(1);
     });
 
     it('führt mit dem Namen des Themas zur Suche, also zu „Alles zum Thema“', () => {

@@ -198,11 +198,14 @@ export function stilAuswahl(eintraege: AlbumEintrag[]): Auswahl<Stil>[] {
     .filter((a) => a.anzahl > 0);
 }
 
-/** „5 von 25 genutzt“ für den Abschnittskopf; ohne Nutzung „noch keiner genutzt“. */
+/**
+ * „5 von 25 genutzt“ für den Abschnittskopf; ohne Nutzung nur „3 Beiträge“, ohne
+ * „noch keiner genutzt“ und ohne leeren Balken (Leerzustände 26.11.).
+ */
 export function abschnittStand(abschnitt: AlbumAbschnitt): string {
   const anzahl = abschnitt.eintraege.length;
   const beitraege = anzahl === 1 ? '1 Beitrag' : `${anzahl} Beiträge`;
-  return abschnitt.genutzt ? `${abschnitt.genutzt} von ${anzahl} genutzt` : `${beitraege} · noch keiner genutzt`;
+  return abschnitt.genutzt ? `${abschnitt.genutzt} von ${anzahl} genutzt` : beitraege;
 }
 
 /**

@@ -187,6 +187,16 @@ describe('AboutComponent', () => {
     });
   });
 
+  it('sagt unter „Heute“, was jede neue Antwort bringt, ohne kleinlaut und ohne Zahl (Leerzustände 26.11.)', () => {
+    const heute = Array.from(seite.querySelectorAll('.timeline-item')).find(
+      (punkt) => punkt.querySelector('h3')?.textContent?.trim() === 'Heute',
+    )!;
+    const text = einzeilig(heute.querySelector('p')!);
+    expect(text).toContain('Jede neue Antwort hilft allen, die danach suchen.');
+    expect(text).not.toContain('noch klein');
+    expect(text).not.toMatch(/\d/);
+  });
+
   it('ordnet die Zeitleiste unter ihre h2 ein, ohne Stufe zu überspringen', () => {
     expect(seite.querySelectorAll('.timeline h4').length).toBe(0);
     expect(seite.querySelectorAll('.timeline-item > h3').length).toBe(3);
@@ -232,7 +242,7 @@ describe('AboutComponent', () => {
       svg.getAttribute('aria-label'),
     );
     expect(beispiele.length).toBe(12);
-    expect(beispiele[0]).toBe('Siegel: neu, noch keine Güte');
+    expect(beispiele[0]).toBe('Siegel: neu, sammelt gerade erste Stimmen');
     expect(beispiele[10]).toBe('Siegel: Güte 10 von 10');
     // Glanz als Beispiel (#351); eine Krone gibt es am Siegel nicht mehr
     expect(seite.querySelectorAll('.siegel-beispiele .siegel-glanz').length).toBe(1);

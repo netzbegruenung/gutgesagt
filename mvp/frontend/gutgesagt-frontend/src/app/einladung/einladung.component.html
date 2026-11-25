@@ -64,8 +64,7 @@
         gab es schon ein Konto. Entscheide bitte hier mit deinem angemeldeten Konto.
       </p>
       <p class="team-leise">
-        <ng-container *ngIf="team.mitglieder > 0; else erstePerson">Schon {{ team.mitglieder }} dabei.</ng-container>
-        <ng-template #erstePerson>Noch ist niemand dabei.</ng-template>
+        {{ dabeiSatz(team) }}
         <ng-container *ngIf="!angemeldet">
           Die Nummer steht erst fest, wenn dein Konto angelegt ist. Ist jemand schneller, bekommst du die nächste.
         </ng-container>
