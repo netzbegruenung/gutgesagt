@@ -100,8 +100,12 @@ visit at most one card that points the person somewhere new (review Spielgefühl
 
 Cards 3 and 4 are never shown together: own news wins (it is what the person caused), otherwise
 the single suggestion wins and the general numbers (new Einwürfe of others, Aussagen waiting,
-new Beiträge) step back. Card 4 reports whether it has a suggestion through
-`SeitLetztemBesuchService.naechsterSchrittDa$`; both react without reloading.
+new Beiträge) step back (proposal, open as Fachfrage in #829). One place decides:
+`SeitLetztemBesuchService.start$` (rule in `seit-letztem-besuch/neues-liste.ts`, `startVorrang`);
+both cards only read it, card 4 reports whether it has a suggestion through `naechsterSchrittDa$`.
+Until both answers (Besuch, suggestions) are in, neither card shows, at most `START_WARTEZEIT_MS`
+(1.5 s), so no card appears and vanishes under the finger. Back on the start page the last
+answers apply at once (kept in the service) and are refreshed silently; nothing needs a reload.
 
 ### BFF (Backend-for-Frontend)
 - **Technology**: .NET 9.0, YARP reverse proxy

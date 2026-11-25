@@ -3,235 +3,32 @@ import { AsyncPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { Observable, combineLatest, of } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 
 import { AuthService } from '../auth/auth.service';
-import { BesuchResponse, UsageTrackingService } from '../services/usage-tracking.service';
-import { MEINE_TAB_PARAM } from '../services/navigation.service';
-import { PAGE_TITLES, ROUTES } from '../shared/constants/app.constants';
-import { EIGENES_NEUES, NeuesArt, SeitLetztemBesuchService } from './seit-letztem-besuch.service';
-import { LUECKE } from '../shared/luecke-texte';
-import { MENUE_ICONS } from '../shared/fangkorb-texte';
+import { SeitLetztemBesuchService } from './seit-letztem-besuch.service';
+import { NeuesEintrag } from './neues-liste';
 
-/** Hoechstens so viele Kacheln nebeneinander (Entscheidung 20.11.). */
-export const MAX_KACHELN = 4;
-
-/**
- * Zeitraum der Kacheln ohne Zaehlerstand, wie BESUCH_ZEITRAUM_TAGE im Backend
- * (api/v1/usage.py): Dafuer wird nichts gespeichert, deshalb nennt die Kachel ihn.
- */
-export const ZEITRAUM = 'letzte 7 Tage';
-
-/** Eine Kachel im Block: was neu ist und wohin es fuehrt. */
-export interface NeuesEintrag {
-  /** Grosse Zahl auf der Kachel, an der Grenze der Lueckenliste etwa „50+“. */
-  zahl: string;
-  /** Kurzer sichtbarer Text unter der Zahl. */
-  wort: string;
-  /** Nur bei Zahlen ueber einen Zeitraum statt seit dem letzten Besuch: welcher. */
-  zeitraum?: string;
-  /**
-   * Der ganze Satz fuer Screenreader (aria-label). Er enthaelt Zahl, Wort und Zeitraum so,
-   * wie sie sichtbar sind, damit auch Sprachsteuerung die Kachel unter ihrem Text findet.
-   */
-  satz: string;
-  /** Ist sie allein, eine breite Zeile: der Satz nach der Zahl … */
-  zeile: string;
-  /** … und der Knopf zum Ziel. */
-  knopf: string;
-  /** Material-Icon links neben der Zahl. */
-  icon: string;
-  ziel: string;
-  queryParams?: Record<string, string>;
-  fragment?: string;
-  /** Fuer Tests und Styles, und welche Kachel nach dem Klick verschwindet. */
-  art: NeuesArt;
-}
-
-/** Die Zahlen aus der Antwort des Besuchs, die der Block braucht. */
-export type NeuesStand = Partial<BesuchResponse>;
-
-/** Nur echte positive Zahlen; alles andere (null, fehlend, negativ) zaehlt als 0. */
-const positiv = (wert: number | null | undefined): number => (wert && wert > 0 ? wert : 0);
-
-/**
- * Alle Kacheln mit Neuem (Zahl groesser 0), in der Reihenfolge, in der sie stehen und
- * in der sie bei mehr als MAX_KACHELN wegfallen: zuerst, was die eigenen Aussagen, Beitraege
- * und Einwuerfe betrifft, zuletzt die neuen Beitraege, die „Frisch aus der Community“ direkt
- * darunter ohnehin zeigt.
- */
-export function neuesListe(stand: NeuesStand): NeuesEintrag[] {
-  const liste: NeuesEintrag[] = [];
-
-  // Antworten auf eigene Aussagen (#760): zuerst, sie betreffen die Person am meisten
-  const antworten = positiv(stand.antworten_auf_eigene_aussagen);
-  if (antworten) {
-    const eine = antworten === 1;
-    const wort = eine ? 'neue Antwort auf deine Aussagen' : 'neue Antworten auf deine Aussagen';
-    liste.push({
-      art: 'antworten',
-      ziel: ROUTES.MEINE_BEITRAEGE,
-      queryParams: { [MEINE_TAB_PARAM]: 'aussagen' },
-      icon: 'forum',
-      zahl: `${antworten}`,
-      wort,
-      zeitraum: ZEITRAUM,
-      satz: `${antworten} ${wort}, ${ZEITRAUM}`,
-      zeile: eine
-        ? 'neue Antwort auf deine Aussagen in den letzten 7 Tagen.'
-        : 'neue Antworten auf deine Aussagen in den letzten 7 Tagen.',
-      knopf: 'Meine Aussagen',
-    });
-  }
-
-  const nutzung = positiv(stand.nutzung_seit_letztem_besuch);
-  if (nutzung) {
-    const wort = nutzung === 1 ? 'Nutzung deiner Beiträge' : 'Nutzungen deiner Beiträge';
-    liste.push({
-      art: 'nutzung',
-      ziel: ROUTES.MEINE_BEITRAEGE,
-      icon: 'trending_up',
-      zahl: `${nutzung}`,
-      wort,
-      satz: `${nutzung} ${wort}`,
-      zeile: `${wort}. Sieh nach, welche genutzt werden.`,
-      knopf: PAGE_TITLES.MEINE_BEITRAEGE,
-    });
-  }
-
-  // Wirkungs-Echo (#790): nur der Zuwachs seit dem letzten Besuch, als Zaehlerstand wie die
-  // Nutzung; ohne Neues keine Kachel. Nur mit Schalter.
-  const echo = positiv(stand.neu_oeffentlich_gepostet);
-  if (echo) {
-    const wort = 'mal öffentlich gepostet';
-    liste.push({
-      art: 'echo',
-      ziel: ROUTES.MEINE_BEITRAEGE,
-      icon: 'campaign',
-      zahl: `${echo}`,
-      wort,
-      satz: `${echo} ${wort}`,
-      zeile: 'mal wurden deine Beiträge öffentlich gepostet.',
-      knopf: PAGE_TITLES.MEINE_BEITRAEGE,
-    });
-  }
-
-  const ausformuliert = positiv(stand.ausformulierte_einwuerfe);
-  if (ausformuliert) {
-    const eins = ausformuliert === 1;
-    const wort = eins ? 'Einwurf von dir ausformuliert' : 'Einwürfe von dir ausformuliert';
-    liste.push({
-      art: 'ausformuliert',
-      ziel: ROUTES.MEINE_BEITRAEGE,
-      queryParams: { [MEINE_TAB_PARAM]: 'einwuerfe' },
-      icon: 'task_alt',
-      zahl: `${ausformuliert}`,
-      wort,
-      zeitraum: ZEITRAUM,
-      satz: `${ausformuliert} ${wort}, ${ZEITRAUM}`,
-      zeile: eins
-        ? 'Einwurf von dir hat jemand in den letzten 7 Tagen ausformuliert.'
-        : 'Einwürfe von dir haben andere in den letzten 7 Tagen ausformuliert.',
-      knopf: 'Meine Einwürfe',
-    });
-  }
-
-  const einwuerfe = positiv(stand.neue_einwuerfe);
-  if (einwuerfe) {
-    const eins = einwuerfe === 1;
-    const wort = eins ? 'neuer Einwurf im Fangkorb' : 'neue Einwürfe im Fangkorb';
-    liste.push({
-      art: 'einwuerfe',
-      ziel: ROUTES.RAW_INPUT_LIST,
-      icon: MENUE_ICONS.einwerfen,
-      zahl: `${einwuerfe}`,
-      wort,
-      satz: `${einwuerfe} ${wort}`,
-      zeile: eins ? 'neuer Einwurf wartet im Fangkorb.' : 'neue Einwürfe warten im Fangkorb.',
-      knopf: `Zum ${PAGE_TITLES.RAW_INPUT_LIST}`,
-    });
-  }
-
-  const aussagen = positiv(stand.unbeantwortete_aussagen);
-  if (aussagen) {
-    const mehr = stand.unbeantwortete_aussagen_mehr ?? false;
-    const zahl = mehr ? `${aussagen}+` : `${aussagen}`;
-    const eine = aussagen === 1 && !mehr;
-    const wort = eine ? 'Aussage ohne Antwort' : 'Aussagen ohne Antwort';
-    liste.push({
-      art: 'aussagen',
-      ziel: ROUTES.HIER_FEHLT_EINE_ANTWORT,
-      icon: 'question_answer',
-      zahl,
-      wort,
-      // Beginnt mit dem sichtbaren Text, damit Sprachsteuerung ihn trifft (WCAG 2.5.3)
-      satz: `${zahl} ${wort}: ${eine ? LUECKE.einzahl : LUECKE.mehrzahl} in „${PAGE_TITLES.HIER_FEHLT_EINE_ANTWORT}“`,
-      zeile: eine ? 'Aussage wartet auf eine Antwort.' : 'Aussagen warten auf eine Antwort.',
-      knopf: PAGE_TITLES.HIER_FEHLT_EINE_ANTWORT,
-    });
-  }
-
-  const beitraege = positiv(stand.neue_beitraege);
-  if (beitraege) {
-    const wort = beitraege === 1 ? 'neuer Beitrag' : 'neue Beiträge';
-    liste.push({
-      art: 'beitraege',
-      // Die Startseite ist /search; '/' leitet um und verliert dabei den Anker
-      ziel: ROUTES.SEARCH,
-      fragment: 'recent-content',
-      icon: 'feed',
-      zahl: `${beitraege}`,
-      wort,
-      zeitraum: ZEITRAUM,
-      satz: `${beitraege} ${wort}, ${ZEITRAUM}`,
-      zeile: `${wort} aus der Community in den letzten 7 Tagen.`,
-      knopf: 'Frisch aus der Community',
-    });
-  }
-
-  return liste;
-}
-
-/**
- * Ob der Block Neues ueber die eigenen Beitraege zeigt (EIGENES_NEUES), nach den Klicks
- * dieses App-Starts. Dann tritt „Dein nächster Schritt“ zurueck. Beim ersten Besuch nie.
- */
-export function eigenesNeuesSichtbar(stand: NeuesStand | null, erledigt: ReadonlySet<NeuesArt>): boolean {
-  if (!stand || stand.erster_besuch) {
-    return false;
-  }
-  return neuesListe(stand).some((e) => EIGENES_NEUES.has(e.art) && !erledigt.has(e.art));
-}
-
-/**
- * Was der Block zeigt (Review Spielgefühl 25.11., Reihenfolge in docs/ARCHITECTURE.md):
- * beim allerersten Besuch nichts, denn es gibt keinen letzten Besuch; neben einem
- * Vorschlag von „Dein nächster Schritt“ nur, wenn es Neues ueber die eigenen Beitraege
- * gibt. Sonst stuenden zwei Karten mit zwei Richtungen untereinander.
- */
-export function startKacheln(
-  stand: NeuesStand | null,
-  erledigt: ReadonlySet<NeuesArt>,
-  naechsterSchrittDa: boolean,
-): NeuesEintrag[] {
-  if (!stand || stand.erster_besuch) {
-    return [];
-  }
-  if (naechsterSchrittDa && !eigenesNeuesSichtbar(stand, erledigt)) {
-    return [];
-  }
-  return neuesListe(stand)
-    .filter((e) => !erledigt.has(e.art))
-    .slice(0, MAX_KACHELN);
-}
+// Die reinen Funktionen stehen in neues-liste.ts; hier weiter erreichbar fuer bestehende Importe.
+export {
+  EIGENES_NEUES,
+  MAX_KACHELN,
+  ZEITRAUM,
+  eigenesNeuesSichtbar,
+  neuesListe,
+  startKacheln,
+  startVorrang,
+} from './neues-liste';
+export type { NeuesArt, NeuesEintrag, NeuesStand, StartVorrang } from './neues-liste';
 
 /**
  * „Seit deinem letzten Besuch“ auf der Startseite, nur fuer Angemeldete (Nutzerfuehrung
  * 13.11.): bis zu vier kleine Kacheln mit Zahl im Stil der Mitmachen-Kacheln, die ganze
  * Kachel ist der Link (Entscheidungen 18.11. und 20.11.). Bleibt nur eine, wird sie eine
  * breite Zeile mit Satz und Knopf. Ohne Neues steht nichts da, beim ersten Besuch auch
- * nicht, und neben „Dein nächster Schritt“ nur mit eigenem Neuem (startKacheln). Kein roter Zaehler,
+ * nicht, und neben „Dein nächster Schritt“ nur mit eigenem Neuem (Vorrang im
+ * SeitLetztemBesuchService, neues-liste.ts). Kein roter Zaehler,
  * nichts, das verfaellt. Alle Zahlen stammen aus der Antwort des Besuchs beim App-Start
  * (RueckmeldungService), ohne eigenen Abruf.
  */
@@ -287,7 +84,6 @@ export function startKacheln(
   styleUrls: ['./seit-letztem-besuch.component.css'],
 })
 export class SeitLetztemBesuchComponent {
-  private readonly usage = inject(UsageTrackingService);
   protected readonly neues = inject(SeitLetztemBesuchService);
 
   /** Je Konto: Wechselt die Kennung, kommt ein neuer Besuch und die Klicks gelten nicht mehr. */
@@ -299,9 +95,7 @@ export class SeitLetztemBesuchComponent {
         return of([]);
       }
       this.neues.fuer(kennung);
-      return combineLatest([this.usage.besuchStand$, this.neues.erledigt$, this.neues.naechsterSchrittDa$]).pipe(
-        map(([stand, erledigt, naechsterSchrittDa]) => startKacheln(stand, erledigt, naechsterSchrittDa)),
-      );
+      return this.neues.start$.pipe(map((start) => start.kacheln));
     }),
   );
 }

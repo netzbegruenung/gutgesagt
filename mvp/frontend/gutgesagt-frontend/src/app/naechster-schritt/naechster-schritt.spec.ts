@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -8,7 +8,7 @@ import { BehaviorSubject } from 'rxjs';
 import { AuthService, UserInfo } from '../auth/auth.service';
 import { FunktionenService } from '../services/funktionen.service';
 import { BesuchResponse, UsageTrackingService } from '../services/usage-tracking.service';
-import { SeitLetztemBesuchService } from '../seit-letztem-besuch/seit-letztem-besuch.service';
+import { START_WARTEZEIT_MS, SeitLetztemBesuchService } from '../seit-letztem-besuch/seit-letztem-besuch.service';
 import { NAECHSTER_SCHRITT_URL, NaechsterSchrittComponent } from './naechster-schritt.component';
 import {
   Vorschlag,
@@ -138,7 +138,8 @@ describe('Dein nächster Schritt (#789)', () => {
     function starten(angemeldet: boolean, schalter: boolean) {
       nutzer = new BehaviorSubject<UserInfo | null>({ isAuthenticated: angemeldet, userId: angemeldet ? 'kim' : null, userName: null, claims: null });
       an = signal(schalter);
-      besuch = new BehaviorSubject<BesuchResponse | null>(null);
+      // Der Besuch ist gemeldet, ohne Neues: Sonst wartet die Karte bis START_WARTEZEIT_MS
+      besuch = new BehaviorSubject<BesuchResponse | null>({ nutzung_seit_letztem_besuch: 0 });
       TestBed.configureTestingModule({
         imports: [NaechsterSchrittComponent],
         providers: [
@@ -207,16 +208,69 @@ describe('Dein nächster Schritt (#789)', () => {
     });
 
     describe('nie zugleich mit „Seit deinem letzten Besuch“ (Review Spielgefühl 25.11.)', () => {
-      it('meldet dem Block, ob es einen Vorschlag gibt, und beim Verlassen keinen mehr', () => {
+      it('meldet dem Block erst mit der Antwort, ob es einen Vorschlag gibt, und behält es beim Verlassen', () => {
         const fixture = starten(true, true);
         const neues = TestBed.inject(SeitLetztemBesuchService);
-        expect(neues.naechsterSchrittDa$.value).toBeFalse();
+        // Vor der Antwort: unbekannt, nicht „kein Vorschlag“, sonst zeigte der Block kurz seine Kacheln
+        expect(neues.naechsterSchrittDa$.value).toBeNull();
         http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [{ art: 'suchen' }] });
         fixture.detectChanges();
         expect(neues.naechsterSchrittDa$.value).toBeTrue();
 
         fixture.destroy();
-        expect(neues.naechsterSchrittDa$.value).toBeFalse();
+        expect(neues.naechsterSchrittDa$.value).toBeTrue();
+      });
+
+      it('zeigt bei der Rückkehr auf die Startseite sofort den letzten Vorschlag und fragt still neu', () => {
+        const erste = starten(true, true);
+        http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [{ art: 'einwerfen' }] });
+        erste.detectChanges();
+        erste.destroy();
+
+        const zweite = TestBed.createComponent(NaechsterSchrittComponent);
+        zweite.detectChanges();
+        expect(zweite.nativeElement.querySelector('.naechster-schritt')?.textContent).toContain('Wirf ihn ein');
+        http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [] });
+        zweite.detectChanges();
+        expect(zweite.nativeElement.querySelector('.naechster-schritt')).toBeNull();
+        expect(TestBed.inject(SeitLetztemBesuchService).naechsterSchrittDa$.value).toBeFalse();
+      });
+
+      it('meldet Besuchern sofort „kein Vorschlag“, damit der Block nicht wartet', () => {
+        starten(false, true);
+        expect(TestBed.inject(SeitLetztemBesuchService).naechsterSchrittDa$.value).toBeFalse();
+      });
+
+      it('wartet auf den Besuch, statt zu erscheinen und gleich wieder zu verschwinden', fakeAsync(() => {
+        const fixture = starten(true, true);
+        besuch.next(null);
+        http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [{ art: 'einwerfen' }] });
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.naechster-schritt')).toBeNull();
+
+        // Eigenes Neues kommt: Die Karte war nie zu sehen
+        besuch.next({ nutzung_seit_letztem_besuch: 2 });
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.naechster-schritt')).toBeNull();
+
+        // Kommt keine Antwort zum Besuch, steht die Karte nach der Wartezeit da
+        besuch.next(null);
+        tick(START_WARTEZEIT_MS);
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.naechster-schritt')).not.toBeNull();
+        fixture.destroy();
+      }));
+
+      it('sagt beim Ausblenden an, dass darüber Neues steht', () => {
+        const fixture = starten(true, true);
+        besuch.next({ nutzung_seit_letztem_besuch: 0, neue_einwuerfe: 3 });
+        http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [{ art: 'einwerfen' }] });
+        fixture.detectChanges();
+        (fixture.nativeElement.querySelector('.naechster-schritt-weg') as HTMLButtonElement).click();
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('[aria-live]').textContent).toContain(
+          'Vorschlag ausgeblendet. Neues seit deinem letzten Besuch steht darüber.',
+        );
       });
 
       it('tritt hinter Neues zu eigenen Beiträgen zurück und kommt nach dessen Klick wieder', () => {

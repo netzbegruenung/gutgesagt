@@ -1,16 +1,34 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { BehaviorSubject, Observable, combineLatest, of, timer } from 'rxjs';
+import { distinctUntilChanged, map, shareReplay, startWith, switchMap } from 'rxjs/operators';
 
-/** Ein Link, der nach dem Klick fuer diesen App-Start verschwindet. */
-export type NeuesArt = 'antworten' | 'nutzung' | 'echo' | 'ausformuliert' | 'einwuerfe' | 'aussagen' | 'beitraege';
+import { UsageTrackingService } from '../services/usage-tracking.service';
+import { NeuesArt, NeuesEintrag, StartVorrang, startKacheln, startVorrang } from './neues-liste';
+import type { Vorschlag } from '../naechster-schritt/naechster-schritt';
+
+export type { NeuesArt } from './neues-liste';
 
 /**
- * Kacheln mit Neuem über die eigenen Beiträge, Aussagen und Einwürfe. Nur sie gehen
- * „Dein nächster Schritt“ vor; die übrigen (neue Einwürfe anderer, wartende Aussagen,
- * neue Beiträge) treten hinter dessen einen Vorschlag zurück (Review Spielgefühl 25.11.,
- * Reihenfolge der Startseite in docs/ARCHITECTURE.md).
+ * Wie lange Block und Karte auf der Startseite hoechstens auf die jeweils andere Antwort
+ * (Besuch, Vorschlaege) warten, bevor sie ohne sie entscheiden. Kommt beides schneller,
+ * zeigt nichts eine Karte, die gleich wieder verschwindet.
  */
-export const EIGENES_NEUES: ReadonlySet<NeuesArt> = new Set<NeuesArt>(['antworten', 'nutzung', 'echo', 'ausformuliert']);
+export const START_WARTEZEIT_MS = 1500;
+
+/** Was Block und Karte aus einer Quelle lesen: wer Vorrang hat, und die Kacheln des Blocks. */
+export interface StartStand {
+  vorrang: StartVorrang;
+  kacheln: NeuesEintrag[];
+}
+
+/** Liefert den Wert sofort; steht er noch aus (null), erst undefined und nach der Wartezeit null. */
+function mitZeitgrenze<T>(wert$: Observable<T | null>): Observable<T | null | undefined> {
+  return wert$.pipe(
+    switchMap((wert) =>
+      wert === null ? timer(START_WARTEZEIT_MS).pipe(map(() => null), startWith(undefined)) : of(wert),
+    ),
+  );
+}
 
 /**
  * Vorgaenger-Staende im Browser aus der Entwicklung von #672; nie in einem Release, aber
@@ -45,11 +63,35 @@ export class SeitLetztemBesuchService {
   private kennung: string | null = null;
   readonly erledigt$ = new BehaviorSubject<ReadonlySet<NeuesArt>>(new Set());
   /**
-   * Ob „Dein nächster Schritt“ gerade einen Vorschlag hat (gesetzt von dessen Karte).
-   * Ohne eigenes Neues tritt „Seit deinem letzten Besuch“ dann zurück: höchstens eine
-   * Karte mit einer Richtung (Review Spielgefühl 25.11.).
+   * Ob „Dein nächster Schritt“ einen Vorschlag hat, gemeldet von dessen Karte, sobald ihre
+   * Antwort da ist; null, solange noch keine kam. Bleibt beim Verlassen der Startseite
+   * stehen: Bei der Rückkehr gilt der letzte Stand, bis die neue Antwort ihn bestätigt.
    */
-  readonly naechsterSchrittDa$ = new BehaviorSubject<boolean>(false);
+  readonly naechsterSchrittDa$ = new BehaviorSubject<boolean | null>(null);
+  /**
+   * Die letzten Vorschläge der Karte in diesem App-Start; null, solange keine kamen. Die
+   * Karte zeigt sie bei der Rückkehr sofort und fragt im Hintergrund neu.
+   */
+  naechsterSchrittGemerkt: Vorschlag[] | null = null;
+
+  /**
+   * Die eine Stelle, die über den Vorrang auf der Startseite entscheidet (Review
+   * Spielgefühl 25.11., Reihenfolge in docs/ARCHITECTURE.md). Block und Karte lesen beide
+   * nur hier, damit die Regel nicht an zwei Orten auseinanderläuft.
+   */
+  readonly start$: Observable<StartStand> = combineLatest([
+    mitZeitgrenze(inject(UsageTrackingService).besuchStand$),
+    this.erledigt$,
+    mitZeitgrenze(this.naechsterSchrittDa$).pipe(map((da) => (da === null ? false : da))),
+  ]).pipe(
+    map(([stand, erledigt, da]) => {
+      const vorrang = startVorrang(stand, erledigt, da);
+      return { vorrang, kacheln: startKacheln(stand, erledigt, vorrang) };
+    }),
+    distinctUntilChanged((a, b) => a.vorrang === b.vorrang && gleicheKacheln(a.kacheln, b.kacheln)),
+    shareReplay({ bufferSize: 1, refCount: true }),
+  );
+
   private aufgeraeumt = false;
 
   /** Einmal je App-Start die alten Merker entfernen; bei neuer Kennung die Klicks vergessen. */
@@ -68,4 +110,8 @@ export class SeitLetztemBesuchService {
   erledigen(art: NeuesArt): void {
     this.erledigt$.next(new Set([...this.erledigt$.value, art]));
   }
+}
+
+function gleicheKacheln(a: NeuesEintrag[], b: NeuesEintrag[]): boolean {
+  return a.length === b.length && a.every((e, i) => e.art === b[i].art && e.zahl === b[i].zahl);
 }
