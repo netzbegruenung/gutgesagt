@@ -24,9 +24,9 @@ V10) und #779 (Besucher ohne 401; berührt keine Verarbeitung dieser DSFA). Neu 
 Konfiguration des Betreibers belegen lassen, die Haken in Abschnitt 7 und 9 und die Verarbeitung
 „Teams“ (nicht im Betrieb) (V23, R10, Frage 8). Fundstellen `Salt:<Datei>` zeigen auf die
 Konfiguration des Betreibers (nicht öffentlich, Stand 24.11.2026); die Zeilenbelege liegen
-beim Betreiber. In `main` enthalten, in diesem Stand nicht geprüft (**offen**): #746
-(Linkvorschau), #765 (Herkunft prüfen, ausgehende Abrufe), #767 (Teilen als Bild) und #778
-(Tagesdeckel).
+beim Betreiber. In `main` enthalten, nicht in `v0.9.11` und damit nicht im Betrieb, geprüft als V24 bis V27:
+#746 (Linkvorschau), #765 (Herkunft prüfen), #767 (Teilen als Bild) und #778 (Tagesdeckel).
+Fundstellen dort auf `34f8b1fb`.
 
 **Stand 13.11.2026:** Code `main` @ `5816e358`, Tag `v0.8.4` (Release-PR #656);
 eingearbeitet sind #622, #643, #651 und #655 (Tagespseudonym
@@ -243,7 +243,7 @@ Admin den Löschauftrag ausführt, höchstens sieben Tage (#658 löscht die Stim
 den Auftrag an; V2, R9); das
 Tagespseudonym angemeldeter Personen ist am laufenden Tag mit dem Schlüssel aus der Konfiguration
 nachrechenbar, weil er in Produktion gesetzt ist (V7, F5); für die Container-Logs ist die Frist von 14 Tagen
-Voraussetzung für den Livebetrieb ab 27.11.2026 (V16, F6). Nach der Methode in 8.4 liegt R9 mit dem Löschauftrag (#661) in der mittleren Klasse
+Voraussetzung für den Livebetrieb (V16, F6). Nach der Methode in 8.4 liegt R9 mit dem Löschauftrag (#661) in der mittleren Klasse
 „Risiko“, ebenso R2, R3, R4 und R6. Ob die Ausführung von Hand binnen sieben Tagen genügt oder
 erst der vollautomatische Ablauf, ist eine Frage an die Datenschutzbeauftragte (Frage 7;
 Folgerung in 8.4). **Erst wenn die vier Lücken geschlossen
@@ -746,8 +746,8 @@ Empfänger und Ort“.
   gekürzter Kennung (`DSE:896-899`, `LK:398-406`).
 - **Frist, vorgelagerter Webserver:** 14 Tage, täglich umgebrochen, 14 Dateien; lesbar nur für
   `root` (`DSE:872-873`; Zählung des Betreibers am 25.11.2026).
-- **Frist, Container (Anwendung und Frontend-nginx):** **Voraussetzung für den Livebetrieb ab
-  27.11.2026:** Frist 14 Tage für die Container-Logs (Salt#5653).
+- **Frist, Container (Anwendung und Frontend-nginx):** **Voraussetzung für den Livebetrieb:**
+  Frist 14 Tage für die Container-Logs (Salt#5653).
   Die Datenschutzerklärung nennt für diese Protokolle noch „keine Löschfrist“ (`DSE:889-891`,
   `DSE:910-911`).
 - **Altbestand auf den Hosts gutgesagt\*:** keiner. Die Container laufen seit dem 20.11.2026,
@@ -758,7 +758,10 @@ Empfänger und Ort“.
   Uhrzeit. Der Suchtext steht darin nur, wenn jemand die Ergebnisseite direkt aufruft (Neuladen,
   geteilter Link); normale Suchen laufen per POST, und der Referrer trägt nur den Ursprung
   (`mvp/frontend/gutgesagt-frontend/src/index.html:7`). Gezählt am 25.11.2026: 30 solche Zeilen
-  in 14 Tagen. Das Log-Pseudonym der Anwendung ist ungesalzen und bei bekannten Kennungen
+  in 14 Tagen. Mit der Linkvorschau (V24, nicht im Betrieb) ruft auch der Crawler eines
+  Messengers einen geteilten Link auf die Ergebnisseite auf; dann steht der Suchtext mit der
+  IP des Crawlers in diesem Protokoll. Das ist von der Entscheidung unten gedeckt. Das
+  Log-Pseudonym der Anwendung ist ungesalzen und bei bekannten Kennungen
   zurückrechenbar (`LK:402-404`).
 - **Bewusst akzeptiert (Entscheidung Maintainer, 25.11.2026):** die Suchtexte in den Zeilen des
   vorgelagerten Webservers bei direktem Aufruf der Ergebnisseite. Begründung: wenige Zeilen,
@@ -921,6 +924,90 @@ nicht enthalten. Bedingung für das Einschalten: diese Prüfung am gebauten Stan
 - **Rest:** Risiko (mittlere Klasse, R10, 8.4), hinnehmbar, solange die Zugehörigkeit nur für die
   Person selbst sichtbar ist; mit öffentlicher Anzeige neu zu prüfen.
 
+#### V24 Linkvorschau für geteilte Links (#746; in `main`, nicht im Betrieb)
+
+- **Stand:** gemergt am 22.11.2026 (`71ae9b2e`), nicht in `v0.9.11` und damit nicht in
+  Produktion; ohne eigenen Schalter.
+- **Zweck:** Ein geteilter Link auf einen Beitrag oder die Ergebnisseite zeigt im Messenger
+  Titel und Textanfang statt der allgemeinen Vorschau.
+- **Rechtsgrundlage (Vorschlag, nicht juristisch geprüft, #296):** Art. 6 Abs. 1 lit. f
+  (Teilen mit lesbarer Vorschau).
+- **Daten:** Für `/beitrag/<id>` Titel und Anfang des Texts eines sichtbaren Beitrags, für
+  `/result` „Antworten auf:“ mit dem gekürzten Suchtext aus der Adresse; kein Name, kein
+  Anzeigename (`ss/services/linkvorschau.py:9-11`, `:106-112`). Gesperrte, gelöschte und
+  unbekannte Beiträge liefern nichts (`ss/api/v1/linkvorschau.py:8-10`).
+- **Weg:** Der Frontend-nginx setzt das Stück per SSI ein und fragt den Suchdienst nur im
+  internen Netz, ohne Header und Cookies der Anfrage; der Suchtext geht im Header
+  `X-Suchtext`, die interne Anfrage steht in keinem Protokoll
+  (`mvp/frontend/gutgesagt-frontend/nginx.docker.conf:93-120`). Der Suchdienst loggt den
+  Suchtext nicht (`ss/api/v1/linkvorschau.py:12-13`). Es gibt keinen Abruf fremder Server.
+- **Empfänger:** wer den Link aufruft, auch Crawler von Messengern; sie bekommen nur öffentliche
+  Beitragsinhalte bzw. den Suchtext, der schon in der geteilten Adresse steht.
+- **Frist:** keine Speicherung; die Seite wird nicht gecacht
+  (`nginx.docker.conf:88-90`, `:100-102`). Protokoll des vorgelagerten Webservers wie V16.
+- **Risiko:** gering. Folge für V16: Der Suchtext steht bei geteilten Links auf die
+  Ergebnisseite mit der IP des Crawlers im Protokoll des vorgelagerten Webservers (dort
+  bewusst akzeptiert).
+
+#### V25 Herkunft prüfen (#765; in `main`, nicht im Betrieb, Schalter aus)
+
+- **Stand:** gemergt am 23.11.2026 (`7b7e9dd0`), nicht in `v0.9.11`; Schalter
+  `herkunft_pruefen`, wirksam nur mit Obergrenze und Admin-Wert, ohne Admin-Wert aus
+  (`ss/services/schalter_service.py:6-8`, `ss/core/config.py:298`).
+- **Zweck:** tote und umgezogene Links unter „Herkunft“ finden (Qualität des Bestands).
+- **Rechtsgrundlage (Vorschlag, nicht juristisch geprüft, #296):** Art. 6 Abs. 1 lit. f.
+- **Abruf fremder Server:** Ausgelöst nachts vom Dienst oder von einem Admin per Knopf, nie von
+  einem Aufruf durch Nutzende (`ss/services/herkunft_pruefen.py:1-21`). An den fremden Server
+  gehen die IP-Adresse des Servers, die öffentliche Adresse der Herkunft und die Kopfzeilen
+  `Host`, `User-Agent` (`GutGesagt-Herkunftspruefung/1.0`, nur das Werkzeug) und `Accept`;
+  keine Cookies, kein Referrer, nichts von Nutzenden (`ss/utils/sicherer_abruf.py:20`, `:38`,
+  `:228-234`). Gelesen wird nur der Kopf der Antwort, nie der Inhalt
+  (`ss/utils/sicherer_abruf.py:18-19`). Ein Schutz gegen Abrufe ins interne Netz ist
+  vorhanden (`ss/utils/sicherer_abruf.py:1-15`).
+- **Daten:** Tabelle `herkunft_pruefung`: Herkunft, Adresse, Ergebnis, Status, Ziel einer
+  Weiterleitung, Zeitpunkte; keine Kennung einer Person
+  (`mvp/backend/postgres-app/migrations/2026-11-22-759-herkunft-pruefung.sql:19-28`).
+- **Empfänger:** Admins (Admin, Übersicht).
+- **Frist:** Zeilen zu gelöschten oder gesperrten Herkünften entfernt der nächste Lauf; mit
+  dem Schalter aus leert der Dienst die Tabelle (`ss/services/herkunft_pruefen.py:13-19`, `:179`).
+- **Risiko:** gering. Herkunftsadressen können Dritte nennen (Profil-Links); das ist R3.
+
+#### V26 Teilen als Bild (#767; in `main`, nicht im Betrieb, Schalter aus)
+
+- **Stand:** gemergt am 23.11.2026 (`1cb93c23`), nicht in `v0.9.11`; Schalter `sharepic`,
+  wirksam nur mit Obergrenze und Admin-Wert, ohne Admin-Wert aus
+  (`ss/services/schalter_service.py:6-8`, `ss/core/config.py:313`).
+- **Zweck:** einen Beitrag als Bild teilen.
+- **Rechtsgrundlage (Vorschlag, nicht juristisch geprüft, #296):** keine Verarbeitung auf dem
+  Server; das Teilen ist eine eigene Handlung der Person.
+- **Daten:** Das Bild entsteht nur im Browser auf einem Canvas aus Thema, Aussage, Titel, Text
+  und Adresse des Beitrags; kein Anzeigename, keine fremden Bilder
+  (`mvp/frontend/gutgesagt-frontend/src/app/shared/sharepic/sharepic.ts:1-35`). Der Server
+  speichert nichts. Er beantwortet nur `GET /api/v1/funktionen` ohne Anmeldung und ohne
+  Personenbezug mit dem Stand öffentlicher Schalter (`ss/api/v1/funktionen.py:1-31`).
+- **Empfänger:** nur wem die Person das Bild über das Teilen-Menü ihres Geräts gibt.
+- **Frist:** keine Speicherung.
+- **Risiko:** gering.
+
+#### V27 Tagesdeckel (#778; in `main`, nicht im Betrieb)
+
+- **Stand:** gemergt am 23.11.2026 (`23b211b7`), nicht in `v0.9.11`; ohne Schalter, Grenze
+  `SEMANTIC_SEARCH_TAGESDECKEL_BEITRAEGE` (Standard 20, `ss/core/config.py:345-348`).
+- **Zweck:** Spamschutz: je Person höchstens so viele neue Beiträge, Aussagen und Einwürfe je
+  UTC-Tag.
+- **Rechtsgrundlage (Vorschlag, nicht juristisch geprüft, #296):** Art. 6 Abs. 1 lit. f.
+- **Daten:** je Kennung eine Zahl für den laufenden UTC-Tag, nur im Arbeitsspeicher
+  (`ss/utils/tagesdeckel.py:1-10`, `:28-30`); Admins und Startkonten ausgenommen
+  (`ss/middleware/tagesdeckel.py:78-91`). Im Log nur das Log-Pseudonym
+  (`ss/middleware/tagesdeckel.py:96-97`).
+- **Frist:** höchstens bis zum Ende des UTC-Tags; Zähler vergangener Tage räumt der Takt der
+  Rate-Limiter ab (`ss/utils/tagesdeckel.py:66-70`, `ss/main.py:177-178`), ein Neustart setzt
+  alle zurück.
+- **Empfänger:** niemand; die Person sieht nur die Meldung am Deckel.
+- **Risiko:** gering.
+
+Keine der Verarbeitungen V24 bis V27 braucht eine Einwilligung oder hebt ein Risiko aus 8.3.
+
 #### Nicht gebaut
 
 Ranglisten, Quests, Level, Krone und Wochenthema (`docs/VISION.md:99-103`,
@@ -937,7 +1024,7 @@ empfiehlt sie schon vor dem Einschalten der Punkte.
 | R2 | **Zuordnung pseudonymer Daten**: Tagespseudonym der Angemeldeten am laufenden Tag nachrechenbar, der Schlüssel ist in Produktion gesetzt (V7, F5), Uhrzeiten im vorgelagerten Webserver (V16) | Tag statt Uhrzeit, Verdichten am Tagesende, Schlüssel der Besucher nur im Speicher, Besucher ohne User-Agent; für Angemeldete am laufenden Tag **offen** | Risiko; geringes Risiko, sobald V7 umgestellt ist |
 | R3 | **Daten Dritter** in Beiträgen, Einwürfen und Suchtexten, auch deren politische Zuordnung (V3, V4, V6), darunter „Gepostet von“ am Post | Hinweise im Formular und in der Erklärung; „Gepostet von“ freiwillig; Melden; Einzelfall-Löschung | Risiko, hinnehmbar |
 | R4 | **Datenpanne oder Zugriff durch Admins**: Kennungen, Meldungen mit Name und E-Mail-Adresse, Muster-Hinweise | Fristen (`LK:150-164`), Kennungen nur gekürzt im Log, keine Weitergabe (`DSE:74-75`); Host nur für benannte Gruppen mit Schlüssel, Datenbanken ohne Port nach außen, kleiner Kreis von Admins in der App (F4, Stand 25.11.); AV-Rahmenvertrag liegt vor, ob er Gut gesagt erfasst, ist offen (F1); Verschlüsselung der Kopie der Sicherungen nicht belegt, bewusst akzeptiert (F3, V17) | Risiko unter Vorbehalt von 8.6; **hoch**, wenn der bestehende AV-Vertrag Gut gesagt nicht erfasst |
-| R5 | **Protokolle**: Container-Logs ohne Frist, Suchtexte im vorgelagerten Webserver bei direktem Aufruf der Ergebnisseite (V16) | Container-Logs ohne Suchtext und ohne Altbestand (Zählung 25.11.); Frist 14 Tage Voraussetzung für den Livebetrieb ab 27.11. (Salt#5653); vorgelagerter Webserver 14 Tage, nur `root`, bewusst akzeptiert | geringes Risiko mit der Frist für die Container-Logs |
+| R5 | **Protokolle**: Container-Logs ohne Frist, Suchtexte im vorgelagerten Webserver bei direktem Aufruf der Ergebnisseite (V16) | Container-Logs ohne Suchtext und ohne Altbestand (Zählung 25.11.); Frist 14 Tage Voraussetzung für den Livebetrieb (Salt#5653); vorgelagerter Webserver 14 Tage, nur `root`, bewusst akzeptiert | geringes Risiko mit der Frist für die Container-Logs |
 | R6 | **Löschung von Hand, nie an echten Daten erprobt** (`LK:3-13`, `DSE:1161-1163`) | Skript getestet gegen Testdaten (`LK:531-532`); Backup und Protokoll beim ersten Lauf | Risiko; geringes Risiko nach dem ersten belegten Lauf |
 | R7 | **Scoring und Zweckentfremdung** durch Punkte (V11) | Abschnitt 3 | Risiko (wie Risiko 3) |
 | R8 | **Rückschluss auf einzelne Stimmen** über kleine Zähler oder die Güte (V5) | M5: Summen und Stimmenanteil der Güte erst ab drei verschiedenen Stimmenden, darunter keine Zahl in der Antwort; ohne Startkonten und eigene Stimme; Gewicht der Stimmen gedeckelt (#427) | geringes Risiko |
@@ -1024,7 +1111,7 @@ Abschnitt 5 prüft das für die Punkte. Für den Grundbetrieb ohne Punkte:
   von einem täglichen Task. Ohne Frist und begründet: Beiträge (Zweck ist der Bestand, bei
   Kontolöschung anonymisiert), offene Meldungen und aktive Sperren (laufende Arbeit), der
   Anzeigename (solange das Konto besteht). Für die Protokolle der Anwendung und des
-  Frontend-nginx ist die Frist von 14 Tagen Voraussetzung für den Livebetrieb ab 27.11.2026
+  Frontend-nginx ist die Frist von 14 Tagen Voraussetzung für den Livebetrieb
   (V16, R5, F6).
 - **Angemessenheit:** Mitwirkung, aus der eine politische Meinung folgt, nur mit ausdrücklicher
   Einwilligung (V2), die Sperre ist durch einen Test abgesichert. Unter den Angemeldeten sind
@@ -1059,7 +1146,7 @@ Konfiguration des Betreibers (`Salt:…`, Stand 24.11.2026) oder aus Tickets die
 | F3 | **Sicherungen**: Verschlüsselung, Ablage außerhalb des Hosts, Zugriff. | Sicherungen halten alles bis zu 28 Tage, auch Gelöschtes. | **belegt:** Ablage auf dem Host und als Kopie beim Betreiber im selben Rechenzentrum, innerhalb der Frist der Datenschutzerklärung (`Salt:states/gutgesagt/init.sls`, `Salt:states/backup/files/config.yml.j2`). **Verschlüsselung der Kopie:** nicht belegt, bewusst akzeptiert (V17). | V17, R4 |
 | F4 | **Rollen und Zugriff**: wer Admin ist, wer an Host, Datenbank, Konfiguration und die Datei der Beta-Zugänge kommt, wie Zugänge vergeben und entzogen werden. | Admins sehen Kennungen, Meldungen mit Name und E-Mail-Adresse, Muster-Hinweise. | **belegt:** Admins in Produktion ein kleiner Kreis, nur über die Liste, die Realm-Vorlage setzt keinen Claim; Host nur für das Betriebsteam von verdigado und eine kleine Gruppe für gutgesagt*, Anmeldung nur mit Schlüssel; Datenbank und Konfiguration nur über `root`; Datei der Beta-Zugänge entfernt. **offen:** Admin-Claim im laufenden Realm, Mitglieder der Passbolt-Gruppe, Ablauf für Vergabe und Entzug. | „Für alle“, R4, V19 |
 | F5 | **Schlüssel des Tagespseudonyms** der Angemeldeten (`SEMANTIC_SEARCH_ACTOR_HASH_SECRET`): in Produktion gesetzt? | Davon hängt ab, ob das Pseudonym am laufenden Tag nachrechenbar ist. | **belegt: ja** (`Salt:states/gutgesagt/files/docker-compose.yml`, aus Passbolt). Folge: V7 und R2 gelten wie beschrieben; Abhilfe ist Abschnitt 9, Punkt 3. | V7, R2 |
-| F6 | **Frist der Protokolle** am Host: 14 Tage ausgerollt, Altbestand gelöscht? | Speicherbegrenzung, Altbestand mit Suchtexten. | **Container-Logs:** Frist 14 Tage Voraussetzung für den Livebetrieb ab 27.11. (Salt#5653); kein Altbestand, kein Suchtext (Zählung des Betreibers 25.11.). **Vorgelagerter Webserver:** 14 Tage, 14 Dateien, nur `root`. | V16, R5 |
+| F6 | **Frist der Protokolle** am Host: 14 Tage ausgerollt, Altbestand gelöscht? | Speicherbegrenzung, Altbestand mit Suchtexten. | **Container-Logs:** Frist 14 Tage Voraussetzung für den Livebetrieb (Salt#5653); kein Altbestand, kein Suchtext (Zählung des Betreibers 25.11.). **Vorgelagerter Webserver:** 14 Tage, 14 Dateien, nur `root`. | V16, R5 |
 
 ## 9. Offene Entscheidungen für den Maintainer
 
@@ -1076,7 +1163,7 @@ Konfiguration des Betreibers (`Salt:…`, Stand 24.11.2026) oder aus Tickets die
    offen.** Der Code nimmt weiter den Schlüssel aus der Konfiguration
    (`ss/services/search_tracking_service.py`), und er ist in Produktion gesetzt (F5).
 4. **Frist für Protokolle** (V16, `LK` „Protokolle“, #485, #336): Frist 14 Tage für die
-   Container-Logs ist Voraussetzung für den Livebetrieb ab 27.11.2026 (Salt#5653), Betrieb
+   Container-Logs ist Voraussetzung für den Livebetrieb (Salt#5653), Betrieb
    am Host, nicht Code. Altbestand auf den Hosts gutgesagt*: keiner (Zählung des Betreibers,
    25.11.2026, F6). Suchtexte im vorgelagerten Webserver bei direktem Aufruf der Ergebnisseite:
    bewusst akzeptiert (V16).
