@@ -59,7 +59,7 @@ describe('SaisonZielComponent', () => {
     const balken: HTMLProgressElement = fixture.nativeElement.querySelector('progress');
     expect(balken.max).toBe(1000);
     expect(balken.value).toBe(312);
-    expect(balken.getAttribute('aria-labelledby')).toBe('saison-ziel-titel');
+    expect(balken.getAttribute('aria-label')).toBe('Gemeinschaftsziel der Saison Frühjahr 27');
     expect(balken.getAttribute('aria-describedby')).toBe('saison-ziel-stand');
   });
 

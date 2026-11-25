@@ -30,7 +30,7 @@ const zahl = (wert: number): string => wert.toLocaleString('de-DE');
         <progress
           [max]="b.ziel"
           [value]="gefuellt(b)"
-          aria-labelledby="saison-ziel-titel"
+          [attr.aria-label]="'Gemeinschaftsziel der Saison ' + b.name"
           aria-describedby="saison-ziel-stand"
         ></progress>
         <p id="saison-ziel-stand" class="stand" data-testid="saison-ziel-stand">
