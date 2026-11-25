@@ -229,23 +229,30 @@ class TeamFortschrittRepository:
 
     # --- Team loeschen ---------------------------------------------------------
 
-    def team_loeschen(self, team_name: str, saison: str) -> int:
+    def team_loeschen(self, team_name: str, saison: str, session=None) -> int:
         """
         Wochenzaehler und Quests eines Teams loeschen ("entfallen mit dem Team",
         docs/LOESCHKONZEPT.md). Eine Team-Loeschung gibt es noch nicht; wer sie baut
-        (etwa ueber team_nummern oder die Einladungen), ruft dies in derselben
-        Transaktion auf. tests/unit/test_team_loeschung_nimmt_zaehler_mit.py erinnert
-        daran. Gibt die Zahl der geloeschten Zeilen zurueck.
+        (etwa ueber team_nummern oder die Einladungen), uebergibt seine ``session``,
+        damit alles in einer Transaktion geht; ohne sie eine eigene.
+        tests/unit/test_team_loeschung_nimmt_zaehler_mit.py erinnert daran. Gibt die
+        Zahl der geloeschten Zeilen zurueck.
         """
-        with self.db.get_session() as session:
-            n = 0
-            for zeile in (TeamWocheZeile, TeamQuestZeile):
-                n += session.execute(
-                    delete(zeile).where(
-                        zeile.team_name == team_name, zeile.saison == saison
-                    )
-                ).rowcount
-            return n
+        if session is not None:
+            return self._team_loeschen(session, team_name, saison)
+        with self.db.get_session() as eigene:
+            return self._team_loeschen(eigene, team_name, saison)
+
+    @staticmethod
+    def _team_loeschen(session, team_name: str, saison: str) -> int:
+        n = 0
+        for zeile in (TeamWocheZeile, TeamQuestZeile):
+            n += session.execute(
+                delete(zeile).where(
+                    zeile.team_name == team_name, zeile.saison == saison
+                )
+            ).rowcount
+        return n
 
 
 _repository: Optional[TeamFortschrittRepository] = None

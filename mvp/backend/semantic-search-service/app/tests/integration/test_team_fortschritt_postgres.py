@@ -256,3 +256,16 @@ def test_team_loeschen_nimmt_nur_dieses_team_mit(datenbank):  # noqa: F811
 
     assert _zeilen(datenbank, "team_quests") == []
     assert [z["saison"] for z in _zeilen(datenbank, "team_wochen")] == ["2025"]
+
+
+def test_team_loeschen_in_der_transaktion_des_aufrufers(datenbank):  # noqa: F811
+    repo = TeamFortschrittRepository(datenbank)
+    repo.erhoehen([SCHLUESSEL], LAUFENDE, Art.BEITRAG)
+
+    with pytest.raises(RuntimeError):
+        with datenbank.get_session() as session:
+            assert repo.team_loeschen(TEAM.name, TEAM.saison, session=session) == 1
+            raise RuntimeError("Team-Loeschung scheitert danach")
+
+    # Zurueckgerollt mit der Transaktion des Aufrufers
+    assert len(_zeilen(datenbank, "team_wochen")) == 1

@@ -410,9 +410,11 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   (as "Ja, gepostet" does); a restart mid-week can count something twice (too high, never too
   low). `team_wochen` and `team_quests` go with the team (docs/LOESCHKONZEPT.md). Deleting a
   team does not exist yet (invitations can only be switched off or changed, memberships go one
-  by one); when it comes, the rows must go with it via `TeamFortschrittRepository.team_loeschen`.
-  `tests/unit/test_team_loeschung_nimmt_zaehler_mit.py` fails on any code that deletes
-  `einladungen` or `team_nummern` without them.
+  by one); when it comes, the rows must go with it via `TeamFortschrittRepository.team_loeschen`
+  (pass the caller's session to keep one transaction).
+  `tests/unit/test_team_loeschung_nimmt_zaehler_mit.py` fails on Python, SQL and shell code that
+  deletes `einladungen` or `team_nummern` in the usual forms without them (not on table names
+  built at run time).
 - `SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV` - upper bound of the Schalter `teams_oeffentlich`
   (default `false`; stays off on production until the data protection officer has advised).
   Own bound, deliberately not coupled to `SEMANTIC_SEARCH_ABZEICHEN_SICHTBAR_AKTIV`; works only
