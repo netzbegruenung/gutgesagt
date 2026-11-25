@@ -105,9 +105,13 @@ describe('SaisonZielComponent', () => {
 
     expect(bereich()).not.toBeNull();
     expect(text()).toContain(
-      'Saison Winter 26/27 hat begonnen: Jedes „Ja, gepostet“ nach dem Kopieren zählt für unser gemeinsames Ziel.',
+      'Saison Winter 26/27 hat begonnen: Jede gepostete Antwort zeigt öffentlich, dass jemand widerspricht.',
     );
-    expect(text()).toContain('Ziel: 500 Widerspruchs-Wochen.');
+    // Ehrlich: ohne Konto zählt nichts, und je Person nur einmal je Woche
+    expect(text()).toContain(
+      'Wer nach dem Kopieren mit Konto „Ja, gepostet“ meldet, zählt diese Woche fürs gemeinsame Ziel: 500 Widerspruchs-Wochen.',
+    );
+    expect(text()).not.toMatch(/Jedes „Ja, gepostet“/);
     expect(text()).not.toMatch(/\b0-mal|\b0 von/);
     expect(text()).not.toMatch(/verfehlt|noch \d+ Tage|bis zum|endet/);
     expect(fixture.nativeElement.querySelector('progress')).toBeNull();
