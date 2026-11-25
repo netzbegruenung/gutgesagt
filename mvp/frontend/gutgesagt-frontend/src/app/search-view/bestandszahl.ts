@@ -10,13 +10,14 @@
  */
 
 /** Darunter bleibt die Unterzeile ohne Zahl: „3 bewährte Antworten“ zeigt noch keinen Gewinn. */
-export const BESTAND_MINDEST_ANTWORTEN = 10;
+export const BESTAND_MINDEST_KOMMENTARE = 10;
 
+/** Im Code die Glossarbegriffe; die Oberfläche schreibt bewusst „Antworten“ und „Sprüche“. */
 export interface Bestandszahl {
   /** Kommentare, abgerundet */
-  antworten: number;
+  kommentare: number;
   /** Aussagen, abgerundet */
-  sprueche: number;
+  aussagen: number;
 }
 
 /**
@@ -31,8 +32,8 @@ export function abgerundet(wert: number): number {
 
 /** null: zu wenig Bestand oder eine Zählung fehlt (0 heißt bei /getMetrics auch „Fehler“). */
 export function bestandszahl(kommentare: number | undefined, aussagen: number | undefined): Bestandszahl | null {
-  if (kommentare === undefined || aussagen === undefined || !(kommentare >= BESTAND_MINDEST_ANTWORTEN) || !(aussagen >= 1)) {
+  if (kommentare === undefined || aussagen === undefined || !(kommentare >= BESTAND_MINDEST_KOMMENTARE) || !(aussagen >= 1)) {
     return null;
   }
-  return { antworten: abgerundet(kommentare), sprueche: abgerundet(aussagen) };
+  return { kommentare: abgerundet(kommentare), aussagen: abgerundet(aussagen) };
 }

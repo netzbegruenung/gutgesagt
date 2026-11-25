@@ -41,8 +41,8 @@ describe('HeroUnterzeileComponent', () => {
   it('zeigt die Bestandszahl abgerundet, ohne Personen', () => {
     fixture.detectChanges();
     const anfrage = http.expectOne(METRICS);
-    // Hintergrund-Abfrage: frisch statt aus dem Cache, nie Umleitung
-    expect(anfrage.request.context.get(STILLE_ABFRAGE)).toBeTrue();
+    // Erster Abruf darf aus dem Frontend-Cache kommen (Rückkehr auf die Startseite)
+    expect(anfrage.request.context.get(STILLE_ABFRAGE)).toBeFalse();
     anfrage.flush(BESTAND);
     fixture.detectChanges();
     expect(text()).toBe('800 bewährte Antworten auf 250 Sprüche – aus der Community.');
@@ -74,7 +74,14 @@ describe('HeroUnterzeileComponent', () => {
     fixture.detectChanges();
     http.expectOne(METRICS).flush(BESTAND);
     tick(BESTAND_NACHLADEN_MS);
-    http.expectOne(METRICS).flush({ ...BESTAND, commentary_count: 0 });
+    const nachladen = http.expectOne(METRICS);
+    // Nachladen: still und frisch
+    expect(nachladen.request.context.get(STILLE_ABFRAGE)).toBeTrue();
+    nachladen.flush({ ...BESTAND, commentary_count: 0 });
+    fixture.detectChanges();
+    expect(text()).toContain('800 bewährte Antworten');
+    tick(BESTAND_NACHLADEN_MS);
+    http.expectOne(METRICS).flush({ ...BESTAND, statement_count: 0 });
     fixture.detectChanges();
     expect(text()).toContain('800 bewährte Antworten');
     tick(BESTAND_NACHLADEN_MS);

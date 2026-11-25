@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { MetricsService } from '../services/metrics.service';
 import { selbstNachladen } from '../shared/selbst-nachladen';
@@ -16,7 +17,7 @@ const zahl = (wert: number): string => wert.toLocaleString('de-DE');
 
 /** „800 bewährte Antworten auf 250 Sprüche – aus der Community.“ */
 export function unterzeileMitZahl(z: Bestandszahl): string {
-  return `${zahl(z.antworten)} bewährte Antworten auf ${zahl(z.sprueche)} ${z.sprueche === 1 ? 'Spruch' : 'Sprüche'} – aus der Community.`;
+  return `${zahl(z.kommentare)} bewährte Antworten auf ${zahl(z.aussagen)} ${z.aussagen === 1 ? 'Spruch' : 'Sprüche'} – aus der Community.`;
 }
 
 /**
@@ -28,7 +29,8 @@ export function unterzeileMitZahl(z: Bestandszahl): string {
  * 401/404). Eine gescheiterte Zählung (Fehler oder 0, so meldet /getMetrics einen Ausfall) behält
  * die letzte Zahl; ohne letzte Zahl bleibt die bisherige Unterzeile.
  *
- * Die Schrift kommt von der Startseite: Das Element trägt dort die Klasse `hero-subtitle`.
+ * Die Schrift kommt von der Startseite: Das Element trägt dort die Klasse `hero-subtitle`; mobil
+ * hält sie zwei Zeilen frei, damit das Suchfeld nicht springt, wenn die Zahl kommt.
  */
 @Component({
   selector: 'app-hero-unterzeile',
@@ -54,12 +56,14 @@ export class HeroUnterzeileComponent implements OnInit {
         this.cdr.markForCheck();
       },
     };
-    this.laden().subscribe(folgen);
-    selbstNachladen(() => this.laden(), this.destroyRef, folgen, BESTAND_NACHLADEN_MS);
+    // Erster Abruf über den Frontend-Cache: Bei der Rückkehr auf die Startseite steht die Zahl
+    // sofort da, statt erst die Zeile ohne Zahl zu zeigen. Das Nachladen fragt still und frisch.
+    this.laden(false).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(folgen);
+    selbstNachladen(() => this.laden(true), this.destroyRef, folgen, BESTAND_NACHLADEN_MS);
   }
 
-  private laden(): Observable<Bestandszahl | null> {
-    return this.metrics.getMetrics(true).pipe(
+  private laden(still: boolean): Observable<Bestandszahl | null> {
+    return this.metrics.getMetrics(still).pipe(
       map((m) =>
         m?.commentary_count && m?.statement_count ? bestandszahl(m.commentary_count, m.statement_count) : this.bestand,
       ),

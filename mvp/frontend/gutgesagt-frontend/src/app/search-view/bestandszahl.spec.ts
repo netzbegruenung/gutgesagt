@@ -1,4 +1,4 @@
-import { BESTAND_MINDEST_ANTWORTEN, abgerundet, bestandszahl } from './bestandszahl';
+import { BESTAND_MINDEST_KOMMENTARE, abgerundet, bestandszahl } from './bestandszahl';
 
 describe('Bestandszahl', () => {
   it('rundet nach unten auf runde Stufen, nie nach oben', () => {
@@ -24,13 +24,13 @@ describe('Bestandszahl', () => {
   });
 
   it('zeigt nichts bei zu wenig Bestand oder fehlender Zählung', () => {
-    expect(bestandszahl(BESTAND_MINDEST_ANTWORTEN - 1, 5)).toBeNull();
+    expect(bestandszahl(BESTAND_MINDEST_KOMMENTARE - 1, 5)).toBeNull();
     expect(bestandszahl(800, 0)).toBeNull();
     expect(bestandszahl(Number.NaN, 5)).toBeNull();
-    expect(bestandszahl(BESTAND_MINDEST_ANTWORTEN, 1)).toEqual({ antworten: 10, sprueche: 1 });
+    expect(bestandszahl(BESTAND_MINDEST_KOMMENTARE, 1)).toEqual({ kommentare: 10, aussagen: 1 });
   });
 
   it('liefert beide Zahlen abgerundet', () => {
-    expect(bestandszahl(812, 263)).toEqual({ antworten: 800, sprueche: 250 });
+    expect(bestandszahl(812, 263)).toEqual({ kommentare: 800, aussagen: 250 });
   });
 });

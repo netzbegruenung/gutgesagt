@@ -270,6 +270,7 @@ reported off reload every 5 minutes instead of every 30 seconds (`AUS_NACHLADEN_
 | Endpoint | Asked by | Empty or off |
 |----------|----------|--------------|
 | `GET /api/v1/saisons/aktuell` | start page, every 5 min | `balken: null`, `aktiv: false` |
+| `GET /api/v1/metrics/getMetrics` | start page (Bestandszahl in the subtitle), every 5 min | always 200 with counts; 0 on a failed count (the last number stays) |
 | `GET /api/v1/konter-probe` | start page, page Konter-Probe | `proben: []`, `aktiv: false` |
 | `GET /api/v1/search/garten` | page Gartenansicht, every 30 s | `beete: []`, `aktiv: false` |
 | `GET /api/v1/usage/users/me/naechster-schritt` | start page (signed in) | `vorschlaege: []`, `aktiv: false` |
