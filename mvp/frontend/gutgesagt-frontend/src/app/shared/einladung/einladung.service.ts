@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { stillerKontext } from '../selbst-nachladen';
 import { BeitretenAntwort, PruefenAntwort, TeamAntwort } from './team-einladung';
+import { TeamArt } from '../teams/teams';
 
 // Grenzen wie im Backend (services/einladung_service.py).
 export const EINLADUNG_NOTIZ_MAX = 200;
@@ -42,14 +43,23 @@ export interface EinladungTeam {
   name: string;
   motiv: string | null;
   saison: string;
+  /** Teamart; ältere Server schicken keine, dann gilt „anlass“. */
+  art?: TeamArt;
+  /** Bei „gruppe“: Tag der schriftlichen Zustimmung der Gruppenleitung (JJJJ-MM-TT), nur für Admins. */
+  zustimmung_am?: string | null;
   mitglieder: number;
 }
 
-/** Team für eine neue Einladung (POST): Name nur nach Anlass, Ort oder Saison. */
+/**
+ * Team für eine neue Einladung (POST). Bei „gruppe“ ist ``team_zustimmung_am`` Pflicht,
+ * bei „anlass“ geht kein Datum mit.
+ */
 export interface EinladungTeamFelder {
   team_name: string;
   team_motiv: string;
   team_saison: string;
+  team_art: TeamArt;
+  team_zustimmung_am?: string;
 }
 
 export interface EinladungListe {

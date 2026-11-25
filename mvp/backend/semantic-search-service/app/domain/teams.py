@@ -14,7 +14,7 @@ laesst die alte stehen (wie domain/art9_einwilligung.py).
 """
 
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Collection, Dict, Optional
 
 TEAM_NAME_MAX = 40
 SAISON_MAX = 20
@@ -30,18 +30,29 @@ MOTIVE: Dict[str, str] = {
     "lautsprecher": "Lautsprecher",
 }
 
+# Teamart an der Einladung (GLOSSARY.md "Team"). Ein Team nach Gruppe traegt den
+# Namen einer Gruppe, die oeffentlich unter diesem Namen auftritt und vorher
+# schriftlich und widerruflich zugestimmt hat; das Datum dieser Zustimmung steht an
+# der Einladung, nur als Nachweis fuer Admins. Die Gruppe bekommt nie Namen, Listen
+# oder eigene Zahlen und steuert nichts (GLOSSARY.md "Team", Bedingungen).
+# Beschriftungen im Admin-Formular: TEAM_ARTEN in frontend shared/teams/teams.ts.
+TEAM_ART_ANLASS = "anlass"
+TEAM_ART_GRUPPE = "gruppe"
+
 # Hinweis fuer das Admin-Formular (Teamname).
 TEAMNAME_HINWEIS = (
-    "Nur nach Anlass, Ort oder Saison benennen, etwa „BDK 26 Berlin“ oder "
-    "„Bayreuth“. Nie nach Personen und nie nach weiteren sensiblen Merkmalen "
-    "(Gesundheit, Religion, Orientierung)."
+    "Anlass, Ort, Saison oder öffentliche Gruppe mit schriftlicher Zustimmung; "
+    "keine Namen zu Religion, Gesundheit, sexueller Orientierung, Herkunft oder "
+    "Gewerkschaft."
 )
 
 # --- Einwilligung zur Mitgliedschaft -------------------------------------------
 
-EINWILLIGUNG_KENNUNG = "team-2026-11-25"
+EINWILLIGUNG_KENNUNG = "team-2026-11-26"
 
-# {team} steht fuer den Namen des Teams.
+# {team} steht fuer den Namen des Teams. Fruehere Wortlaute bleiben stehen, damit
+# vorhandene Nachweise (Kennung an der Mitgliedschaft) lesbar bleiben; fuer neue
+# Einwilligungen gilt nur, was in EINWILLIGUNG_GELTEND steht.
 EINWILLIGUNG_WORTLAUTE: Dict[str, str] = {
     "team-2026-11-25": (
         "Ich willige ausdrücklich ein, dass Gut gesagt an meinem Konto speichert, "
@@ -52,7 +63,22 @@ EINWILLIGUNG_WORTLAUTE: Dict[str, str] = {
         "Einwilligung jederzeit unter „Meine Teams“ mit „Team verlassen“ widerrufen; "
         "dann wird der Eintrag sofort gelöscht."
     ),
+    "team-2026-11-26": (
+        "Ich willige ausdrücklich ein, dass Gut gesagt an meinem Konto speichert, "
+        "dass ich im Team {team} bin, mit meiner Nummer und dem Tag des Beitritts, "
+        "und dass die Zahl meiner Beiträge, Bewertungen und Kommentare und meiner "
+        "Meldungen „Ja, gepostet“ in eine Summe meines Teams eingeht (Art. 9 Abs. 2 "
+        "lit. a DSGVO). Meine Teams sehe nur ich, die Summe nur Mitglieder des "
+        "Teams, nie mit einzelnen Namen. Ich kann die Einwilligung jederzeit unter "
+        "„Meine Teams“ mit „Team verlassen“ widerrufen; dann wird der Eintrag "
+        "sofort gelöscht."
+    ),
 }
+
+# Kennungen, die neue Einwilligungen tragen duerfen. Eine fruehere Kennung wird bei
+# neuen Anfragen abgelehnt wie eine unbekannte; bestehende Mitgliedschaften mit ihr
+# bleiben unangetastet.
+EINWILLIGUNG_GELTEND = frozenset({EINWILLIGUNG_KENNUNG})
 
 # Die Knoepfe tragen die Erklaerung, gleichwertig nebeneinander.
 KNOPF_JA = "Ja, speichert, dass ich im Team {team} bin"
@@ -95,7 +121,8 @@ class UnbekannterWortlaut(ValueError):
     """Die Kennung gehoert zu keinem bekannten Wortlaut."""
 
 
-def wortlaut_pruefen(kennung: str, wortlaute: Dict[str, str]) -> str:
+def wortlaut_pruefen(kennung: str, wortlaute: Collection[str]) -> str:
+    """Kennung zurueck, wenn sie in ``wortlaute`` steht, sonst UnbekannterWortlaut."""
     if kennung not in wortlaute:
         raise UnbekannterWortlaut(kennung)
     return kennung

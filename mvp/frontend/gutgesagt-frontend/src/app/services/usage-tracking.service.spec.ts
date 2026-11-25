@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 
 import { environment } from '../../environments/environment';
 import { PUNKTE_NICHT_GELADEN, SCHALTER_AUS_MERKEN_MS, UsageTrackingService } from './usage-tracking.service';
+import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 import { AuthService } from '../auth/auth.service';
 import { LoggingService } from './logging.service';
 
@@ -350,6 +351,19 @@ describe('UsageTrackingService', () => {
       anfrage.flush({ personen_diese_woche: 7 });
 
       expect(ergebnis).toBe(7);
+    });
+
+    it('„Ja, gepostet“ ist ein Gewinn fürs Einwilligungs-Budget, ein Fehler nicht (#788)', () => {
+      const budget = TestBed.inject(EinwilligungsBudgetService);
+      spyOn(budget, 'gewinn');
+
+      service.gepostetMelden('kim-1').subscribe();
+      http.expectOne(GEPOSTET).flush('kaputt', { status: 500, statusText: 'Server Error' });
+      expect(budget.gewinn).not.toHaveBeenCalled();
+
+      service.gepostetMelden('kim-1').subscribe();
+      http.expectOne(GEPOSTET).flush({ personen_diese_woche: 3 });
+      expect(budget.gewinn).toHaveBeenCalledTimes(1);
     });
 
     it('vergisst nach einem 403 beim Melden das gemerkte Angebot', () => {

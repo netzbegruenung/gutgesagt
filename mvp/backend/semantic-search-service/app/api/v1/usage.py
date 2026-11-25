@@ -60,6 +60,8 @@ from repositories.punkte_einwilligung_repository import (
 from services.gepostet_service import GepostetService, get_gepostet_service
 from services.wirkung_service import get_wirkung_service
 from domain.content_registry import BEITRAGSTYPEN_WERTE
+from domain.team_fortschritt import Art as TeamArt
+from services.team_fortschritt_service import team_zaehlen_async
 from services import antworten_hinweis
 from services.art9_einwilligung_service import get_art9_einwilligung_service
 from services.usage_tracking_service import get_usage_service
@@ -1152,6 +1154,9 @@ async def gepostet_melden(
     """
     try:
         anzahl = await asyncio.to_thread(dienst.melden, current_user)
+        # Fuer die Teams der Person (Team-Fortschritt, #784), nur mit Art.-9-
+        # Einwilligung (prueft der Dienst selbst noch einmal); Fehler nur im Log.
+        await team_zaehlen_async(current_user, TeamArt.GEPOSTET)
     except Exception as e:
         logger.error(
             f"Gepostet von {log_pseudonym(current_user)} nicht gemerkt: {type(e).__name__}",

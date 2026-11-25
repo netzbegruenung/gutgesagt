@@ -15,16 +15,22 @@ import { expect, test } from './fixtures';
  * - angemeldet beitreten, zweimal = „Du bist schon dabei“ ohne zweiten Beitritt;
  * - „Team verlassen“ mit Rückfrage löscht sofort, die Karte lädt selbst nach;
  * - Schalter teams aus: die Seite wie vor den Teams, ohne Teamfelder in der Anfrage;
- * - Schalter teams_oeffentlich aus: keine zweite Frage, kein Umschalter in „Meine Teams“.
+ *   vorhandene Mitgliedschaften stehen weiter unter „Meine Teams“ und lassen sich verlassen;
+ * - Schalter teams_oeffentlich aus: keine zweite Frage, kein Umschalter in „Meine Teams“;
+ * - Team nach Gruppe: der Satz zur Zustimmung der Gruppe direkt über der Frage, neu und
+ *   angemeldet; bei einem Team nach Anlass, Ort oder Saison nicht.
  */
 const CODE = 'E2eTeamCode_42';
 const TEAM = { name: 'BDK 26 Berlin', motiv: 'vogel', saison: '2026' };
-const KENNUNG = 'team-2026-11-25';
+const KENNUNG = 'team-2026-11-26';
 const KNOPF_JA = `Ja, speichert, dass ich im Team ${TEAM.name} bin`;
 const KNOPF_NEIN = 'Nein, ohne Team weiter';
 const MERKER = 'gutgesagt-einladung-team';
 /** Schon im Team, bevor der Test beginnt (andere Konten): die nächste Nummer ist 4. */
 const ANDERE = 3;
+/** Team nach Gruppe (Teamart „gruppe“): Name der Gruppe und der Satz über der Frage. */
+const GRUPPE = 'Netzfeuerwehr';
+const GRUPPE_SATZ = `Dieses Team ist mit Zustimmung von ${GRUPPE} nach ihr benannt. Verantwortlich für Gut gesagt ist allein die Netzbegrünung; ${GRUPPE} bekommt keine Daten über dich.`;
 
 interface Mitgliedschaft {
   id: string;
@@ -36,6 +42,8 @@ interface Mitgliedschaft {
 interface Stand {
   /** Schalter teams wirkt (Admin-Wert und Env-Obergrenze). */
   teamsAn: boolean;
+  /** Teamart an der Einladung; bei „gruppe“ heißt das Team GRUPPE. */
+  art: 'anlass' | 'gruppe';
   /** Angemeldetes Konto oder null (Besucherin). */
   konto: string | null;
   mitgliedschaften: Mitgliedschaft[];
@@ -59,14 +67,17 @@ function mitgliedWerden(stand: Stand, konto: string): Mitgliedschaft {
 
 /** Das Team in der Antwort von /pruefen, wie api/v1/einladungen.py es baut (teams_oeffentlich aus). */
 function teamBeimPruefen(stand: Stand) {
+  const name = stand.art === 'gruppe' ? GRUPPE : TEAM.name;
   return {
     ...TEAM,
+    name,
+    art: stand.art,
     mitglieder: stand.mitgliedschaften.length,
     naechste_nummer: stand.letzteNummer + 1,
     eigene_nummer: stand.konto ? (eigene(stand)?.nummer ?? null) : null,
     einwilligung_kennung: KENNUNG,
-    einwilligung_text: `Ich willige ausdrücklich ein, dass Gut gesagt an meinem Konto speichert, dass ich im Team ${TEAM.name} bin (Testwortlaut).`,
-    knopf_ja: KNOPF_JA,
+    einwilligung_text: `Ich willige ausdrücklich ein, dass Gut gesagt an meinem Konto speichert, dass ich im Team ${name} bin (Testwortlaut).`,
+    knopf_ja: `Ja, speichert, dass ich im Team ${name} bin`,
     knopf_nein: KNOPF_NEIN,
     oeffentlich_kennung: null,
     oeffentlich_text: null,
@@ -76,6 +87,7 @@ function teamBeimPruefen(stand: Stand) {
 async function ohneStack(page: Page, start: Partial<Stand> = {}): Promise<Stand> {
   const stand: Stand = {
     teamsAn: true,
+    art: 'anlass',
     konto: null,
     mitgliedschaften: Array.from({ length: ANDERE }, (_, i) => ({
       id: `m-${i + 1}`,
@@ -154,10 +166,13 @@ async function ohneStack(page: Page, start: Partial<Stand> = {}): Promise<Stand>
     }
     if (pfad === '/api/v1/teams/meine' && methode === 'GET') {
       if (!angemeldet) return anfrage.fulfill({ status: 401, json: {} });
-      if (!stand.teamsAn) return anfrage.fulfill({ status: 404, json: {} });
       const m = eigene(stand);
+      // Schalter aus: 404 nur ohne eigene Mitgliedschaft; vorhandene bleiben sichtbar und
+      // lassen sich verlassen (docs/ARCHITECTURE.md, SEMANTIC_SEARCH_TEAMS_AKTIV)
+      if (!stand.teamsAn && !m) return anfrage.fulfill({ status: 404, json: {} });
       return anfrage.fulfill({
         json: {
+          teams_aktiv: stand.teamsAn,
           aktuelle_saison: TEAM.saison,
           oeffentlich_verfuegbar: false,
           oeffentlich_zeigen: null,
@@ -231,6 +246,8 @@ test.describe('Teams über Einladungslinks', () => {
     await expect(kasten).toContainText('mit „Team verlassen“ widerrufen');
     // teams_oeffentlich aus: keine zweite Frage
     await expect(page.getByTestId('team-oeffentlich')).toHaveCount(0);
+    // Team nach Anlass, Ort oder Saison: kein Satz zur Zustimmung einer Gruppe
+    await expect(page.getByTestId('team-gruppe')).toHaveCount(0);
 
     // Gleichwertig, nichts vorausgewählt
     const ja = kasten.getByRole('button', { name: KNOPF_JA });
@@ -399,6 +416,26 @@ test.describe('Teams über Einladungslinks', () => {
     expect(stand.mitgliedschaften).toHaveLength(ANDERE);
   });
 
+  test('Team nach Gruppe: der Satz direkt über der Frage, neu und angemeldet', async ({ page, bild }) => {
+    const stand = await ohneStack(page, { art: 'gruppe' });
+    await page.goto(`/einladung#${CODE}`);
+
+    const kasten = page.getByTestId('team-kasten');
+    const satz = kasten.getByTestId('team-gruppe');
+    await expect(satz).toHaveText(GRUPPE_SATZ);
+    // direkt über der Frage: danach die Sätze vor den Knöpfen
+    await expect(satz.locator('xpath=following-sibling::*[1]')).toHaveAttribute('id', 'team-erklaerung');
+    await expect(kasten.locator('.team-knoepfe[role="group"]')).toHaveAttribute('aria-describedby', 'team-gruppe team-erklaerung');
+    await keinQuerscrollen(page);
+    await bild('teams-nach-gruppe-kasten', true);
+
+    stand.konto = 'e2e-konto';
+    await page.goto('/');
+    await page.goto(`/einladung#${CODE}`);
+    await expect(page.getByTestId('team-kasten').getByTestId('team-gruppe')).toHaveText(GRUPPE_SATZ);
+    await expect(page.getByTestId('team-kasten').getByRole('button', { name: `Ja, speichert, dass ich im Team ${GRUPPE} bin` })).toBeVisible();
+  });
+
   test('Schalter teams aus: die Seite wie vor den Teams', async ({ page, bild }) => {
     const stand = await ohneStack(page, { teamsAn: false });
     await page.goto(`/einladung#${CODE}`);
@@ -423,6 +460,28 @@ test.describe('Teams über Einladungslinks', () => {
 
     // Ohne Schalter keine Karte „Meine Teams“
     await page.goto('/contributions');
+    await expect(page.locator('app-meine-teams')).toBeAttached();
+    await expect(page.getByTestId('meine-teams')).toHaveCount(0);
+  });
+
+  test('Schalter teams aus mit eigener Mitgliedschaft: „Meine Teams“ mit Verlassen', async ({ page, bild }) => {
+    const stand = await ohneStack(page, { teamsAn: false, konto: 'e2e-konto' });
+    const m = mitgliedWerden(stand, 'e2e-konto');
+    await page.goto('/contributions');
+    const meine = page.getByTestId('meine-teams');
+    await expect(meine.getByTestId('teams-aus')).toBeVisible();
+    await expect(meine.getByTestId('team')).toHaveCount(1);
+    await expect(meine.getByTestId('team')).toContainText(`Nr. ${m.nummer}`);
+    await bild('teams-schalter-aus-meine-teams', true);
+
+    await meine.getByRole('button', { name: `Team verlassen: ${TEAM.name}, Saison ${TEAM.saison}` }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Team verlassen' }).click();
+    // Die Karte entfernt das Team selbst; ohne Team und bei Schalter aus fehlt sie
+    await expect(page.getByTestId('meine-teams')).toHaveCount(0);
+    expect(stand.verlassen).toEqual([m.id]);
+    expect(stand.mitgliedschaften.some((x) => x.konto === 'e2e-konto')).toBe(false);
+    // Neu geladen: der Server antwortet ohne eigene Mitgliedschaft mit 404, die Karte bleibt weg
+    await page.reload();
     await expect(page.locator('app-meine-teams')).toBeAttached();
     await expect(page.getByTestId('meine-teams')).toHaveCount(0);
   });

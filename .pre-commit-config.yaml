@@ -35,5 +35,12 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        exclude: ^mvp/docker-compose\.teams-stack\.yml$
+      # Compose-Tag !override (eigene Ports neben dem Dev-Stack) kennt der YAML-Lader nicht:
+      # fuer diese Datei nur die Syntax pruefen.
+      - id: check-yaml
+        name: check yaml (compose tags)
+        args: ['--unsafe']
+        files: ^mvp/docker-compose\.teams-stack\.yml$
       - id: check-added-large-files
         args: ['--maxkb=600']

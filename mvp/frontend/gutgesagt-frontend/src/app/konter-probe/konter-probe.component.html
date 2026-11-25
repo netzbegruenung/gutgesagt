@@ -1,0 +1,84 @@
+<div class="component-box konter-probe">
+    <p class="einleitung">
+        Ein Spruch, drei echte Antworten aus der Community. Tipp an, welche bei Mitlesenden
+        am besten wirkt, und sieh, wie oft jede genutzt wurde. Dein Tipp bleibt in deinem Browser.
+    </p>
+
+    @if (ladefehler() && proben() === null) {
+        <!-- Nie "neu laden": Die Seite versucht es selbst wieder (LadeWiederholung). -->
+        <div class="ladefehler" role="status">
+            <p class="hinweis">Die Konter-Probe konnte gerade nicht geladen werden. Die Seite versucht es weiter.</p>
+            <button mat-stroked-button type="button" (click)="laden()">Erneut versuchen</button>
+        </div>
+    } @else if (proben() === null) {
+        <div class="laden" role="status">
+            <mat-spinner diameter="32" aria-hidden="true"></mat-spinner>
+            <span class="cdk-visually-hidden">Lädt …</span>
+        </div>
+    } @else {
+        @if (probe(); as p) {
+            <section class="probe" aria-labelledby="konter-probe-frage">
+                <p class="spruch-marke">Jemand schreibt:</p>
+                <!-- tabindex -1: Nach „Nächster Spruch“ geht der Fokus hierher -->
+                <blockquote class="spruch" #spruch tabindex="-1" data-testid="spruch">
+                    {{ p.spruch }}
+                </blockquote>
+
+                <h2 id="konter-probe-frage" class="frage">Welche Antwort wirkt am besten?</h2>
+
+                @if (!tipp()) {
+                    <ul class="antworten">
+                        @for (antwort of p.antworten; track antwort.karte.id) {
+                            <li>
+                                <button type="button" class="antwort" data-testid="tipp" (click)="tippen(antwort)">
+                                    <span class="stil">{{ antwort.stilName }}</span>
+                                    @if (antwort.karte.titel) {
+                                        <span class="antwort-titel">{{ antwort.karte.titel }}</span>
+                                    }
+                                    <span class="antwort-text">{{ antwort.vorschau }}</span>
+                                </button>
+                            </li>
+                        }
+                    </ul>
+                } @else {
+                    <h3 class="ergebnis" #ergebnis tabindex="-1" data-testid="ergebnis">{{ satz() }}</h3>
+                    <ul class="aufloesung" aria-label="So oft wurden die drei Antworten genutzt">
+                        @for (antwort of p.antworten; track antwort.karte.id) {
+                            <li class="zeile" [class.beste]="istBeste(antwort)" data-testid="aufloesung">
+                                <span class="zeile-kopf">
+                                    <span class="stil">{{ antwort.stilName }}</span>
+                                    @if (antwort === tipp()) {
+                                        <span class="marke">Dein Tipp</span>
+                                    }
+                                    @if (istBeste(antwort)) {
+                                        <span class="marke marke-beste">läuft am besten</span>
+                                    }
+                                </span>
+                                <span class="zeile-titel">{{ antwort.karte.titel || antwort.vorschau }}</span>
+                                <span class="zeile-nutzung">
+                                    <span class="balken" aria-hidden="true"><span [style.width.%]="balken(antwort)"></span></span>
+                                    <span class="zahl">{{ nutzungText(antwort.nutzung) }}</span>
+                                </span>
+                            </li>
+                        }
+                    </ul>
+
+                    <h3 class="kopieren-titel">Gleich selbst nutzen</h3>
+                    <app-kartenliste [daten]="karten()" [raster]="true" [titelEbene]="4" [antwortAufZeigen]="false" [schlank]="true"></app-kartenliste>
+
+                    <div class="weiter">
+                        @if (hatWeitere()) {
+                            <button mat-flat-button color="primary" type="button" data-testid="naechste" (click)="naechste()">Nächster Spruch</button>
+                        }
+                        <a mat-stroked-button [routerLink]="suche">Zur Suche</a>
+                    </div>
+                }
+            </section>
+        } @else {
+            <p class="hinweis" data-testid="leer">
+                Gerade gibt es keinen Spruch für die Konter-Probe. In der Suche findest du Antworten auf viele Sprüche.
+            </p>
+            <a mat-stroked-button [routerLink]="suche">Zur Suche</a>
+        }
+    }
+</div>

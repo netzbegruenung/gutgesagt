@@ -316,6 +316,12 @@ class Settings(BaseSettings):
     # Mitgliedschaft ist im Zweifel ein Art.-9-Datum; erst mit DSFA-Nachtrag,
     # Loeschkonzept und Abschnitt "Teams" in der Datenschutzerklaerung einschalten.
     teams_aktiv: bool = False
+    # Team-Fortschritt (#784) und Team-Quests (#792), services/team_fortschritt_service.py:
+    # eigene Obergrenzen, Standard aus; erst nach DSFA-Nachtrag V29 und Jura-OK
+    # einschalten. team_fortschritt wirkt nur mit teams, team_quests nur mit
+    # team_fortschritt.
+    team_fortschritt_aktiv: bool = False
+    team_quests_aktiv: bool = False
     # Teams oeffentlich am Namen (eigene Einwilligung, domain/teams.py). Eigene
     # Obergrenze, bewusst nicht an abzeichen_sichtbar_aktiv gekoppelt: Auf Prod bleibt
     # sie aus, bis die Datenschutzbeauftragte geraten hat. Wirkt nur mit teams_aktiv.

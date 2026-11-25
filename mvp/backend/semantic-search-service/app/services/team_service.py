@@ -1,8 +1,9 @@
 """
 Teams ueber Einladungen (GLOSSARY.md "Team").
 
-Ein Admin gibt einer Einladung einen Teamnamen (nur Anlass, Ort oder Saison), ein
-Motiv und eine Saison. Wer den Link oeffnet, sieht das Team und die voraussichtliche
+Ein Admin gibt einer Einladung einen Teamnamen (nach Anlass, Ort oder Saison oder, als
+Team nach Gruppe, nach einer Gruppe mit schriftlicher Zustimmung), ein Motiv und eine
+Saison. Wer den Link oeffnet, sieht das Team und die voraussichtliche
 Nummer. Gespeichert wird die Mitgliedschaft erst nach dem Knopf "Ja, speichert, dass
 ich im Team X bin" (Einwilligung, domain/teams.py), mit Kennung des Wortlauts und
 Zeitpunkt; bei Nein bleibt es beim Zaehlen an der Einladung wie bisher:
@@ -28,7 +29,7 @@ Schalter ``teams`` aus: Teamfelder werden ignoriert, Einladungen wie bisher.
 """
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
@@ -36,8 +37,9 @@ from core.config import Settings
 from core.logging import get_logger, log_pseudonym
 from domain.teams import (
     EINWILLIGUNG_KENNUNG,
-    EINWILLIGUNG_WORTLAUTE,
+    EINWILLIGUNG_GELTEND,
     OEFFENTLICH_KENNUNG,
+    TEAM_ART_ANLASS,
     OEFFENTLICH_WORTLAUTE,
     wortlaut_pruefen,
 )
@@ -77,6 +79,11 @@ class Team:
     name: str
     motiv: Optional[str]
     saison: str
+    # Teamart und Tag der schriftlichen Zustimmung der Gruppenleitung stehen an der
+    # Einladung, nicht an der Mitgliedschaft; sie zaehlen nicht zur Identitaet des
+    # Teams (Name und Saison). Das Datum ist nur ein Nachweis fuer Admins.
+    art: str = field(default=TEAM_ART_ANLASS, compare=False)
+    zustimmung_am: Optional[date] = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)
@@ -148,13 +155,14 @@ class TeamService:
         """
         Speichert die Mitgliedschaft mit Einwilligung: Kennung des Wortlauts, den die
         Person gesehen hat (ohne Angabe der aktuelle, EINWILLIGUNG_KENNUNG), und
-        Zeitpunkt jetzt. Mit ``code`` zaehlt die Einloesung in derselben Transaktion
-        (NichtEinloesbar, wenn die Einladung nicht mehr zaehlt).
+        Zeitpunkt jetzt. Nur geltende Kennungen (EINWILLIGUNG_GELTEND); eine fruehere
+        wird abgelehnt wie eine unbekannte. Mit ``code`` zaehlt die Einloesung in
+        derselben Transaktion (NichtEinloesbar, wenn die Einladung nicht mehr zaehlt).
         """
         if not self.wirksam():
             raise TeamsAus()
         kennung = wortlaut_pruefen(
-            einwilligung_kennung or EINWILLIGUNG_KENNUNG, EINWILLIGUNG_WORTLAUTE
+            einwilligung_kennung or EINWILLIGUNG_KENNUNG, EINWILLIGUNG_GELTEND
         )
         mitgliedschaft, neu = self._repository.beitreten(
             konto=konto,

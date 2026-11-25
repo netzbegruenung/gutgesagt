@@ -436,6 +436,12 @@ class EinladungZeile(Base):
     team_name = Column(String(40), nullable=True)
     team_motiv = Column(String(32), nullable=True)
     team_saison = Column(String(20), nullable=True)
+    # Teamart ("anlass" oder "gruppe", domain/teams.py; leer heisst "anlass") und bei
+    # "gruppe" der Tag, an dem die schriftliche Zustimmung der Gruppenleitung vorlag:
+    # nur ein Nachweis fuer Admins, kein Name. Spalten aus
+    # postgres-app/migrations/2026-11-26-teams-nach-gruppe.sql.
+    team_art = Column(String(16), nullable=True)
+    team_zustimmung_am = Column(Date, nullable=True)
 
 
 class TeamMitgliedschaftZeile(Base):
@@ -506,6 +512,46 @@ class TeamOeffentlichZeile(Base):
     zeigen = Column(Boolean, nullable=False)
     einwilligung_kennung = Column(String(64), nullable=False)
     beantwortet_am = Column(DateTime(timezone=True), nullable=False)
+
+
+class TeamWocheZeile(Base):
+    """
+    Der Wochenzaehler eines Teams (Team-Fortschritt, #784): je Team, Saison und Woche
+    nur die Zahl der Beitraege, Bewertungen und Meldungen "Ja, gepostet" seiner
+    Mitglieder mit Einwilligung. Bewusst ohne Kennung, ohne Beitrag und ohne
+    Zeitpunkt: Wer gezaehlt hat, steht nirgends, auch nicht ueber einen Pruefwert in
+    der Datenbank (entdoppelt wird im Arbeitsspeicher,
+    services/team_fortschritt_service.py). Bleibt deshalb bei "Team verlassen" und
+    bei der Loeschung eines Kontos stehen.
+    """
+
+    __tablename__ = "team_wochen"
+
+    team_name = Column(String(40), primary_key=True)
+    saison = Column(String(20), primary_key=True)
+    # Der Montag der Kalenderwoche (UTC).
+    woche = Column(Date, primary_key=True)
+    beitraege = Column(Integer, nullable=False, server_default=text("0"))
+    bewertungen = Column(Integer, nullable=False, server_default=text("0"))
+    gepostet = Column(Integer, nullable=False, server_default=text("0"))
+
+
+class TeamQuestZeile(Base):
+    """
+    Die Team-Quest einer Woche (#792): Thema und Ziel, festgelegt beim ersten Abruf in
+    der Woche aus dem Bedarf. Erreicht ist sie, wenn der Wochenzaehler (team_wochen)
+    nach Wochenende das Ziel erreicht; das steht nicht hier, sondern wird gerechnet.
+    Nichts zur Person.
+    """
+
+    __tablename__ = "team_quests"
+
+    team_name = Column(String(40), primary_key=True)
+    saison = Column(String(20), primary_key=True)
+    woche = Column(Date, primary_key=True)
+    # Schluessel aus domain/themen.py; leer, wenn es keinen Bedarf gab.
+    thema = Column(String(64), nullable=True)
+    ziel = Column(Integer, nullable=False)
 
 
 class VarianteZeile(Base):

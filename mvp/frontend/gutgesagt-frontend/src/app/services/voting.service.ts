@@ -1,10 +1,11 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { nurLesend } from '../auth/cache.interceptor';
 import { LoggingService } from './logging.service';
+import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 
 export interface VoteRequest {
   content_id: string;
@@ -22,6 +23,8 @@ export interface VoteResponse {
 })
 export class VotingService {
   private apiUrl = `${environment.baseUrl}/api/v1/voting`;
+  /** Eine Stimme ist ein Gewinn mit Sofort-Dank: Danach wartet jede Einwilligungsfrage (#788). */
+  private readonly budget = inject(EinwilligungsBudgetService);
 
   constructor(
     private http: HttpClient,
@@ -36,6 +39,7 @@ export class VotingService {
 
     return this.http.put<VoteResponse>(`${this.apiUrl}/content/${contentId}/like`, {}).pipe(
       tap(response => {
+        this.budget.gewinn();
         this.loggingService.logInteraction('like_set', {
           contentId,
           message: response.message
@@ -76,6 +80,7 @@ export class VotingService {
 
     return this.http.put<VoteResponse>(`${this.apiUrl}/content/${contentId}/dislike`, {}).pipe(
       tap(response => {
+        this.budget.gewinn();
         this.loggingService.logInteraction('dislike_set', {
           contentId,
           message: response.message
