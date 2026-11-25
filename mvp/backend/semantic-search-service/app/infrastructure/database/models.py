@@ -489,6 +489,46 @@ class TeamOeffentlichZeile(Base):
     beantwortet_am = Column(DateTime(timezone=True), nullable=False)
 
 
+class TeamWocheZeile(Base):
+    """
+    Der Wochenzaehler eines Teams (Team-Fortschritt, #784): je Team, Saison und Woche
+    nur die Zahl der Beitraege, Bewertungen und Meldungen "Ja, gepostet" seiner
+    Mitglieder mit Einwilligung. Bewusst ohne Kennung, ohne Beitrag und ohne
+    Zeitpunkt: Wer gezaehlt hat, steht nirgends, auch nicht ueber einen Pruefwert in
+    der Datenbank (entdoppelt wird im Arbeitsspeicher,
+    services/team_fortschritt_service.py). Bleibt deshalb bei "Team verlassen" und
+    bei der Loeschung eines Kontos stehen.
+    """
+
+    __tablename__ = "team_wochen"
+
+    team_name = Column(String(40), primary_key=True)
+    saison = Column(String(20), primary_key=True)
+    # Der Montag der Kalenderwoche (UTC).
+    woche = Column(Date, primary_key=True)
+    beitraege = Column(Integer, nullable=False, server_default=text("0"))
+    bewertungen = Column(Integer, nullable=False, server_default=text("0"))
+    gepostet = Column(Integer, nullable=False, server_default=text("0"))
+
+
+class TeamQuestZeile(Base):
+    """
+    Die Team-Quest einer Woche (#792): Thema und Ziel, festgelegt beim ersten Abruf in
+    der Woche aus dem Bedarf. Erreicht ist sie, wenn der Wochenzaehler (team_wochen)
+    nach Wochenende das Ziel erreicht; das steht nicht hier, sondern wird gerechnet.
+    Nichts zur Person.
+    """
+
+    __tablename__ = "team_quests"
+
+    team_name = Column(String(40), primary_key=True)
+    saison = Column(String(20), primary_key=True)
+    woche = Column(Date, primary_key=True)
+    # Schluessel aus domain/themen.py; leer, wenn es keinen Bedarf gab.
+    thema = Column(String(64), nullable=True)
+    ziel = Column(Integer, nullable=False)
+
+
 class VarianteZeile(Base):
     """Die Verknuepfung "beruht auf" (Glossar "Variante", #356).
 
