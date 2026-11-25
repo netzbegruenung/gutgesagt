@@ -14,7 +14,6 @@ export interface TeamWirkung {
   /** Montag der abgeschlossenen Woche, ISO-Datum. */
   woche: string;
   waechst_noch: boolean;
-  gesamt: string | null;
   beitraege: string | null;
   bewertungen: string | null;
   gepostet: string | null;

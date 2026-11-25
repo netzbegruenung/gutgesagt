@@ -190,7 +190,6 @@ describe('MeineTeamsComponent', () => {
     const wirkung = {
       woche: '2026-11-16',
       waechst_noch: false,
-      gesamt: 'rund 65',
       beitraege: 'rund 15',
       bewertungen: 'weniger als 10',
       gepostet: 'rund 40',
@@ -225,7 +224,7 @@ describe('MeineTeamsComponent', () => {
     });
 
     it('sagt unter 5 Mitgliedern nur, dass das Team noch wächst', () => {
-      laden(mit({ wirkung: { ...wirkung, waechst_noch: true, gesamt: null, beitraege: null, bewertungen: null, gepostet: null } }));
+      laden(mit({ wirkung: { ...wirkung, waechst_noch: true, beitraege: null, bewertungen: null, gepostet: null } }));
 
       expect(el().querySelector('[data-testid="team-waechst"]')!.textContent).toContain(
         'Euer Team wächst noch, ab 5 zeigen wir eure gemeinsame Wirkung.',
@@ -250,7 +249,7 @@ describe('MeineTeamsComponent', () => {
     it('sagt nach Wochenende nur „geschafft“, ein verfehltes Ziel nie', () => {
       laden(mit({ quest: { ...quest, vorige_geschafft: true, vorige_thema_name: 'Klima' } }));
       expect(el().querySelector('[data-testid="quest-geschafft"]')!.textContent).toContain(
-        'Euer Wochenziel letzte Woche ist geschafft. Danke, dass du dabei bist.',
+        'Euer Wochenziel letzte Woche im Beet Klima ist geschafft. Danke, dass du dabei bist.',
       );
       expect(el().textContent).not.toContain('verfehlt');
       expect(el().textContent).not.toContain('nicht geschafft');

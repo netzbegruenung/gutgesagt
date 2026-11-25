@@ -48,7 +48,6 @@ class TeamWirkungResponse(BaseModel):
     # Montag der abgeschlossenen Woche
     woche: date
     waechst_noch: bool
-    gesamt: Optional[str] = None
     beitraege: Optional[str] = None
     bewertungen: Optional[str] = None
     gepostet: Optional[str] = None

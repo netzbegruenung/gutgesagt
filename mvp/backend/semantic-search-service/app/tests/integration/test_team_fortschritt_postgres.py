@@ -63,6 +63,7 @@ def _dienst(db, settings=AN, heute=HEUTE, art9=lambda k: True):
         art9=art9,
         bedarf=bedarf,
         heute=lambda: heute,
+        saison=lambda: "2026",
     )
 
 
@@ -141,12 +142,11 @@ def test_nur_abgeschlossene_woche_gerundet_und_nur_fuer_mitglieder(
     # In derselben Woche: noch nichts zu sehen (nie live)
     live = asyncio.run(diese_woche.staende("konto-0"))[SCHLUESSEL].wirkung
     assert live.woche == VORIGE - timedelta(days=7)
-    assert live.gesamt == "weniger als 10"
+    assert (live.beitraege, live.gepostet) == ("weniger als 10",) * 2
 
     danach = _dienst(datenbank)
     wirkung = asyncio.run(danach.staende("konto-0"))[SCHLUESSEL].wirkung
     assert wirkung.woche == VORIGE
-    assert wirkung.gesamt == "rund 20"  # 18
     assert wirkung.beitraege == "rund 10"  # 12
     assert wirkung.gepostet == "weniger als 10"  # 6
     assert asyncio.run(danach.staende("fremd")) == {}

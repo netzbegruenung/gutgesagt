@@ -24,6 +24,14 @@ verlangen sie an ihren Endpunkten ohnehin); Teams unter der Schwelle
 spaeter sichtbar wird. Schalter ``team_fortschritt`` aus: Es wird nichts gezaehlt und
 nichts gezeigt, und die Datenbank wird nicht gefragt.
 
+Nur Teams der aktuellen Saison zaehlen und werden gezeigt; Quest-Punkte aus frueheren
+Saisons bleiben (``quest_tage`` liest alle Saisons).
+
+Was Mitglieder trotz Rundung erfahren (fuer DSFA V29 benannt): "geschafft" sagt, dass
+die Woche mindestens das Ziel erreicht hat (mindestens 3, auch wenn jede Art "weniger
+als 10" zeigt), und das Ziel verraet grob die Zahl der Mitglieder mit Einwilligung
+(aufgerundet ein Drittel). Beides verlangt #792.
+
 Zeigen (``staende``): nur die Teams der aufrufenden Person (eigene Kennung, nie fremde
 Mitgliedschaften), nur die letzte abgeschlossene Woche (nie die laufende), erst ab der
 Schwelle und nur gerundet; darunter nur, dass das Team noch waechst.
@@ -97,6 +105,8 @@ class WochenPruefwerte:
     mit einem Schluessel je Woche, der nur hier liegt; mit dem Wochenwechsel
     verfallen Schluessel und Werte. Eine Anfrage, die noch zur Vorwoche gehoert,
     zaehlt nicht: Die Vorwoche ist abgeschlossen und darf sich nicht mehr aendern.
+    Die Menge waechst mit jedem gezaehlten Ereignis bis zum Wochenwechsel (je Wert 64
+    Zeichen; bei einigen tausend Ereignissen je Woche unerheblich).
     """
 
     def __init__(self):
@@ -134,7 +144,8 @@ class TeamWirkung:
 
     woche: date
     waechst_noch: bool
-    gesamt: Optional[str] = None
+    # Bewusst keine Gesamtsumme neben den Arten: Aus zwei getrennt gerundeten Zahlen
+    # liesse sich eine Art unter 10 zurueckrechnen (Review zu #813).
     beitraege: Optional[str] = None
     bewertungen: Optional[str] = None
     gepostet: Optional[str] = None
@@ -185,6 +196,7 @@ class TeamFortschrittService:
         bedarf: Bedarf = _kein_bedarf,
         heute: Callable[[], date] = heute_utc,
         pruefwerte: Optional[WochenPruefwerte] = None,
+        saison: Optional[Callable[[], str]] = None,
     ):
         self._repository = repository
         self._settings = settings
@@ -194,6 +206,9 @@ class TeamFortschrittService:
         self._bedarf = bedarf
         self._heute = heute
         self._pruefwerte = pruefwerte or WochenPruefwerte()
+        # Gezaehlt und gezeigt wird nur fuer Teams der aktuellen Saison; vergangene
+        # Saisons sind Abzeichen (GLOSSARY.md "Saison"). Ohne Angabe die Einstellung.
+        self._saison = saison or _aktuelle_saison
         self._bedarf_je_woche: Dict[date, Tuple[Optional[str], int]] = {}
 
     @property
@@ -207,6 +222,10 @@ class TeamFortschrittService:
 
     def quests_wirksam(self) -> bool:
         return schalter_wirksam("team_quests", self._settings)
+
+    def _aktuelle(self, teams):
+        saison = self._saison()
+        return [t for t in teams if t.saison == saison]
 
     # --- Zaehlen ---------------------------------------------------------------
 
@@ -222,7 +241,7 @@ class TeamFortschrittService:
             return 0
         if art == Art.GEPOSTET and not self._art9(kennung):
             return 0
-        teams = self._repository.eigene_teams(kennung, SUMME_GEDECKT)
+        teams = self._aktuelle(self._repository.eigene_teams(kennung, SUMME_GEDECKT))
         if not teams:
             return 0
         groessen = self._repository.einwilligende_je_team(
@@ -250,8 +269,10 @@ class TeamFortschrittService:
         """
         if not self.zaehlt():
             return {}
-        teams = await asyncio.to_thread(
-            self._repository.eigene_teams, kennung, SUMME_GEDECKT
+        teams = self._aktuelle(
+            await asyncio.to_thread(
+                self._repository.eigene_teams, kennung, SUMME_GEDECKT
+            )
         )
         if not teams:
             return {}
@@ -281,7 +302,6 @@ class TeamFortschrittService:
                 TeamWirkung(
                     woche=vorige,
                     waechst_noch=False,
-                    gesamt=anzeige(z.gesamt),
                     beitraege=anzeige(z.beitraege),
                     bewertungen=anzeige(z.bewertungen),
                     gepostet=anzeige(z.gepostet),
@@ -300,8 +320,9 @@ class TeamFortschrittService:
         vorige = laufende - WOCHE
         laufend = await asyncio.to_thread(self._repository.quests, grosse, laufende)
         fehlend = [s for s in grosse if s not in laufend]
-        if fehlend:
-            thema, brachflaechen = await self._bedarf_der_woche(laufende)
+        bedarf = await self._bedarf_der_woche(laufende) if fehlend else None
+        if bedarf is not None:
+            thema, brachflaechen = bedarf
             for s in fehlend:
                 laufend[s] = await asyncio.to_thread(
                     self._repository.quest_anlegen,
@@ -329,14 +350,20 @@ class TeamFortschrittService:
             )
         return staende
 
-    async def _bedarf_der_woche(self, woche: date) -> Tuple[Optional[str], int]:
-        """Einmal je Woche und Prozess; fuer alle Teams derselbe Bedarf."""
+    async def _bedarf_der_woche(
+        self, woche: date
+    ) -> Optional[Tuple[Optional[str], int]]:
+        """
+        Einmal je Woche und Prozess; fuer alle Teams derselbe Bedarf. None, wenn er sich
+        nicht lesen laesst: Dann entsteht noch keine Quest, der naechste Abruf versucht
+        es wieder (sonst stuende die Woche fest auf dem Mindestziel).
+        """
         if woche not in self._bedarf_je_woche:
             try:
                 ergebnis = await self._bedarf()
             except Exception as e:
                 logger.warning(f"Team quest demand not read: {type(e).__name__}")
-                return None, 0
+                return None
             self._bedarf_je_woche = {woche: ergebnis}
         return self._bedarf_je_woche[woche]
 
@@ -375,6 +402,12 @@ class TeamFortschrittService:
             if beigetragen:
                 tage[ende] = tage.get(ende, 0) + 1
         return tage
+
+
+def _aktuelle_saison() -> str:
+    from services.einstellungen_service import aktuelle_saison
+
+    return aktuelle_saison()
 
 
 def _art9_eingewilligt(kennung: str) -> bool:

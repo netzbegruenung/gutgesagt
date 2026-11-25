@@ -131,6 +131,7 @@ def _dienst(speicher, settings=AN, art9=lambda k: True, heute=HEUTE, bedarf=None
         art9=art9,
         bedarf=bedarf or kein_bedarf,
         heute=lambda: heute,
+        saison=lambda: "2026",
     )
 
 
@@ -180,6 +181,7 @@ class TestZaehlen:
             art9=lambda k: True,
             heute=lambda: next(tage),
             pruefwerte=pruefwerte,
+            saison=lambda: "2026",
         )
 
         dienst.zaehlen(f"{TEAM[0]}-0", Art.GEPOSTET)
@@ -269,6 +271,29 @@ class TestZaehlen:
         assert "beitrag-geheim" not in repr(repository.erhoehen.call_args)
 
 
+class TestSaison:
+    def test_vergangene_saison_zaehlt_nicht_und_zeigt_nichts(self):
+        alt = ("BDK 26 Berlin", "2025")
+        speicher = Speicher(_team(5, alt))
+        dienst = _dienst(speicher)
+
+        assert dienst.zaehlen(f"{alt[0]}-0", Art.BEITRAG, "b-1") == 0
+        assert _staende(dienst, f"{alt[0]}-0") == {}
+        assert speicher.zaehler == {}
+
+    def test_quest_punkte_frueherer_saison_bleiben(self):
+        alt = ("BDK 26 Berlin", "2025")
+        speicher = Speicher(_team(5, alt))
+        speicher.quest_zeilen[(alt, VORIGE)] = Quest(*alt, VORIGE, "klima", 3)
+        speicher.zaehler[(alt, VORIGE)] = {"beitraege": 3}
+        tage = _dienst(speicher).quest_tage(
+            f"{alt[0]}-0",
+            [datetime(2026, 11, 17, tzinfo=timezone.utc)],
+            datetime(2026, 11, 22, tzinfo=timezone.utc),
+        )
+        assert tage == {LAUFENDE: 1}
+
+
 class TestWochenPruefwerte:
     def test_kein_klartext_im_speicher(self):
         werte = WochenPruefwerte()
@@ -309,7 +334,8 @@ class TestZeigen:
         assert stand.wirkung.beitraege == "rund 15"
         assert stand.wirkung.bewertungen == "weniger als 10"
         assert stand.wirkung.gepostet == "rund 40"
-        assert stand.wirkung.gesamt == "rund 65"
+        # Keine Gesamtsumme: aus zwei gerundeten Zahlen liesse sich zurueckrechnen
+        assert not hasattr(stand.wirkung, "gesamt")
         assert stand.quest is None
 
     def test_live_gezaehltes_erscheint_erst_nach_wochenende(self):
@@ -326,8 +352,7 @@ class TestZeigen:
             f"{TEAM[0]}-0",
         )[TEAM].wirkung
 
-        assert heute.gesamt == "weniger als 10"
-        assert naechste_woche.gesamt == "rund 20"
+        assert (heute.beitraege, heute.gepostet) == ("weniger als 10",) * 2
         assert naechste_woche.beitraege == "rund 15"
         assert naechste_woche.gepostet == "weniger als 10"
 
@@ -335,7 +360,10 @@ class TestZeigen:
         stand = _staende(
             _dienst(Speicher(_team(5)), settings=OHNE_QUESTS), f"{TEAM[0]}-0"
         )
-        assert stand[TEAM].wirkung.gesamt == "weniger als 10"
+        wirkung = stand[TEAM].wirkung
+        assert (wirkung.beitraege, wirkung.bewertungen, wirkung.gepostet) == (
+            "weniger als 10",
+        ) * 3
 
     def test_unter_fuenf_waechst_noch_ohne_zahlen(self):
         speicher = Speicher(_team(4))
@@ -345,11 +373,10 @@ class TestZeigen:
 
         assert wirkung.waechst_noch
         assert (
-            wirkung.gesamt,
             wirkung.beitraege,
             wirkung.bewertungen,
             wirkung.gepostet,
-        ) == (None,) * 4
+        ) == (None,) * 3
 
     def test_nur_eigene_teams(self):
         speicher = Speicher(_team(5) + _team(5, KLEIN))
@@ -398,14 +425,22 @@ class TestQuests:
         assert quest.laufende.ziel == 3
         assert quest.laufende.thema is None
 
-    def test_bedarf_scheitert_mindestziel(self):
-        async def kaputt():
-            raise RuntimeError("weg")
+    def test_bedarf_scheitert_keine_quest_naechster_abruf_versucht_es_wieder(self):
+        speicher = Speicher(_team(5))
+        antworten = iter([RuntimeError("weg"), ("klima", 20)])
 
-        quest = _staende(_dienst(Speicher(_team(5)), bedarf=kaputt), f"{TEAM[0]}-0")[
-            TEAM
-        ].quest
-        assert quest.laufende.ziel == 3
+        async def bedarf():
+            antwort = next(antworten)
+            if isinstance(antwort, Exception):
+                raise antwort
+            return antwort
+
+        dienst = _dienst(speicher, bedarf=bedarf)
+        erste = _staende(dienst, f"{TEAM[0]}-0")[TEAM].quest
+        zweite = _staende(dienst, f"{TEAM[0]}-0")[TEAM].quest
+
+        assert erste.laufende is None
+        assert zweite.laufende == Quest(*TEAM, LAUFENDE, "klima", 3)
 
     def test_geschafft_erst_nach_wochenende(self):
         speicher = Speicher(_team(5))

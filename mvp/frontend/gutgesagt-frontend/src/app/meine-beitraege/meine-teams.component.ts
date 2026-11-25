@@ -12,9 +12,9 @@ import { nachladeStrom, ohneRechte } from '../shared/selbst-nachladen';
 import { TeamPilleComponent } from '../shared/teams/team-pille.component';
 import {
   MEINE_TEAMS_TITEL,
-  TEAM_QUEST_GESCHAFFT,
   TEAM_VERLASSEN,
   TEAM_WAECHST_NOCH,
+  teamQuestGeschafft,
   teamQuestZiel,
   teamWocheTitel,
 } from '../shared/team-texte';
@@ -72,7 +72,7 @@ export class MeineTeamsComponent implements OnInit {
   readonly titel = MEINE_TEAMS_TITEL;
   readonly verlassenText = TEAM_VERLASSEN;
   readonly waechstNoch = TEAM_WAECHST_NOCH;
-  readonly questGeschafft = TEAM_QUEST_GESCHAFFT;
+  readonly questGeschafft = teamQuestGeschafft;
   readonly wocheTitel = teamWocheTitel;
   readonly questZiel = teamQuestZiel;
 

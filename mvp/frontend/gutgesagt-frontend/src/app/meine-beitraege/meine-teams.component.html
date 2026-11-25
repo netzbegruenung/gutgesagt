@@ -55,7 +55,7 @@
             </ng-container>
             <ng-container *ngIf="team.quest as quest">
                 <p *ngIf="quest.vorige_geschafft" class="team-quest-geschafft" data-testid="quest-geschafft">
-                    <span class="team-stempel" aria-hidden="true">✓</span>{{ questGeschafft }}
+                    <span class="team-stempel" aria-hidden="true">✓</span>{{ questGeschafft(quest.vorige_thema_name) }}
                 </p>
                 <p *ngIf="quest.ziel" class="team-quest" data-testid="quest-ziel">
                     {{ questZiel(quest.ziel) }}

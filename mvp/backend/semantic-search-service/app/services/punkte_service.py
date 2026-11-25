@@ -45,10 +45,13 @@ from typing import (
 )
 
 from core.config import Settings
+from core.logging import get_logger
 from domain.punkte import Punktegewichte, Punktestand, Wirkungsdaten, punkte_berechnen
 from repositories.punkte_einwilligung_repository import (
     get_punkte_einwilligung_repository,
 )
+
+logger = get_logger(__name__)
 
 BEITRAG_WARTEZEIT = timedelta(days=3)
 """
@@ -129,6 +132,18 @@ class PunkteService:
         # Team-Quests (#792); ohne Angabe keine Quest-Punkte.
         self._quest_tage = quest_tage
 
+    async def _quests(self, user_id, beitraege, grenze) -> Dict[date, int]:
+        """Quest-Punkte der Team-Quests; scheitert das, fehlen nur sie (Fehler im Log)."""
+        if self._quest_tage is None:
+            return {}
+        try:
+            return await asyncio.to_thread(
+                self._quest_tage, user_id, [b.created for b in beitraege], grenze
+            )
+        except Exception as e:
+            logger.error(f"Team quest points not read: {type(e).__name__}")
+            return {}
+
     async def punkte(self, user_id: str) -> Punktestand:
         gewichte = gewichte_aus(self._settings)
         if self._settings.ist_startkonto(user_id):
@@ -163,13 +178,7 @@ class PunkteService:
             for b in beitraege
             if b.created.astimezone(timezone.utc) <= grenze
         ]
-        quests = (
-            await asyncio.to_thread(
-                self._quest_tage, user_id, [b.created for b in beitraege], grenze
-            )
-            if self._quest_tage is not None
-            else {}
-        )
+        quests = await self._quests(user_id, beitraege, grenze)
         daten = Wirkungsdaten(
             nutzungen=nutzung,
             zustimmungen=zustimmungen,

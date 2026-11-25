@@ -63,7 +63,12 @@ def _client(speicher, settings=AN, meine=None):
         return ("energie-heizen", 40)
 
     fortschritt = TeamFortschrittService(
-        speicher, settings, art9=lambda k: True, bedarf=bedarf, heute=lambda: HEUTE
+        speicher,
+        settings,
+        art9=lambda k: True,
+        bedarf=bedarf,
+        heute=lambda: HEUTE,
+        saison=lambda: "2026",
     )
     app = FastAPI()
     app.include_router(teams_router, prefix="/api/v1/teams")
@@ -92,7 +97,6 @@ def test_wirkung_der_abgeschlossenen_woche_gerundet():
     assert team["wirkung"] == {
         "woche": VORIGE.isoformat(),
         "waechst_noch": False,
-        "gesamt": "rund 70",
         "beitraege": "rund 25",
         "bewertungen": "weniger als 10",
         "gepostet": "rund 40",
@@ -134,7 +138,7 @@ def test_unter_fuenf_waechst_noch():
     team = _team_json(_client(Speicher(_team(4))))
 
     assert team["wirkung"]["waechst_noch"] is True
-    assert team["wirkung"]["gesamt"] is None
+    assert team["wirkung"]["beitraege"] is None
     assert team["quest"] is None
 
 
@@ -216,12 +220,20 @@ class TestQuestPunkte:
         assert not stand.sammelt
         quest_tage.assert_not_called()
 
+    def test_fehler_bei_den_quests_laesst_die_uebrigen_punkte(self):
+        stand = self._punkte(Mock(side_effect=RuntimeError("weg")))
+
+        assert stand.sammelt
+        assert stand.quests == 0
+
     def test_mit_echtem_dienst(self):
         speicher = Speicher(_team(5))
         speicher.mitglieder[0].konto = "konto"
         speicher.quest_zeilen[(TEAM, VORIGE)] = Quest(*TEAM, VORIGE, "klima", 3)
         speicher.zaehler[(TEAM, VORIGE)] = {"beitraege": 3}
-        fortschritt = TeamFortschrittService(speicher, AN, heute=lambda: HEUTE)
+        fortschritt = TeamFortschrittService(
+            speicher, AN, heute=lambda: HEUTE, saison=lambda: "2026"
+        )
 
         assert self._punkte(fortschritt.quest_tage).quests == 4
 
@@ -229,10 +241,10 @@ class TestQuestPunkte:
 def test_staende_als_datenklassen():
     # Die Antwort baut aus den Feldern der Datenklasse; neue Felder brauchen das Modell.
     stand = TeamStand(
-        TeamWirkung(
-            VORIGE, False, "rund 10", "rund 10", "weniger als 10", "weniger als 10"
-        ),
+        TeamWirkung(VORIGE, False, "rund 10", "weniger als 10", "weniger als 10"),
         TeamQuestStand(Quest(*TEAM, LAUFENDE, None, 3), False),
     )
-    assert teams_module.TeamWirkungResponse(**vars(stand.wirkung)).gesamt == "rund 10"
+    assert (
+        teams_module.TeamWirkungResponse(**vars(stand.wirkung)).beitraege == "rund 10"
+    )
     assert teams_module._quest_response(stand).thema is None

@@ -404,7 +404,10 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   `team_quests` only with `team_fortschritt`. While on, the endpoints for Beiträge, Stimmen and
   "Ja, gepostet" raise the weekly counter `team_wochen` (team, Saison, week, no Kennung), and
   `GET /api/v1/teams/meine` carries `wirkung` (last closed week, rounded texts, from 5 members)
-  and `quest` per own team (`services/team_fortschritt_service.py`).
+  and `quest` per own team of the current Saison (`services/team_fortschritt_service.py`). The
+  first `GET /api/v1/teams/meine` of a week writes that week's quest (`team_quests`). The weekly
+  check values for deduplication live in process memory, so this assumes one uvicorn worker
+  (as "Ja, gepostet" does); a restart mid-week can count something twice.
 - `SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV` - upper bound of the Schalter `teams_oeffentlich`
   (default `false`; stays off on production until the data protection officer has advised).
   Own bound, deliberately not coupled to `SEMANTIC_SEARCH_ABZEICHEN_SICHTBAR_AKTIV`; works only

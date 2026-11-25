@@ -62,4 +62,7 @@ export function teamQuestZiel(ziel: number): string {
 }
 
 /** Nach Wochenende, nur wenn geschafft; ein verfehltes Ziel erwähnt nichts. */
-export const TEAM_QUEST_GESCHAFFT = 'Euer Wochenziel letzte Woche ist geschafft. Danke, dass du dabei bist.';
+export function teamQuestGeschafft(thema: string | null): string {
+  const ort = thema ? ` im Beet ${thema}` : '';
+  return `Euer Wochenziel letzte Woche${ort} ist geschafft. Danke, dass du dabei bist.`;
+}
