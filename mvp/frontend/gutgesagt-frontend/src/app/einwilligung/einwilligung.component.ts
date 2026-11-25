@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckbox, MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   Art9EinwilligungService,
   Art9EinwilligungStand,
@@ -19,6 +20,9 @@ import { ROUTES } from '../shared/constants/app.constants';
 import { EINE_SEITE_TEXTE } from './einwilligung-texte';
 import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { PunkteEinwilligungComponent } from '../shared/punkte-einwilligung/punkte-einwilligung.component';
+import { PunkteEinwilligungService } from '../shared/punkte-einwilligung/punkte-einwilligung.service';
+import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
+import { FunktionenService } from '../services/funktionen.service';
 import { HILFE_PARAM } from '../help-dialog/help-dialog.component';
 import {
   BestaetigungsDialogComponent,
@@ -85,13 +89,21 @@ export class EinwilligungComponent implements OnInit {
   nbFehler = false;
   readonly texte = EINE_SEITE_TEXTE;
   @ViewChild('nbHaekchen') private nbHaekchen?: MatCheckbox;
+  private readonly budget = inject(EinwilligungsBudgetService);
+  /** Schalter einwilligung_im_gewinn (#788): keine zweite Frage neben der Art.-9-Einwilligung. */
+  private readonly imGewinn = inject(FunktionenService).an('einwilligung_im_gewinn');
+  private punkteEingewilligt = false;
 
   constructor(
     private einwilligung: Art9EinwilligungService,
     private route: ActivatedRoute,
     private router: Router,
     private dialog: MatDialog,
-  ) {}
+  ) {
+    inject(PunkteEinwilligungService)
+      .stand$.pipe(takeUntilDestroyed())
+      .subscribe((stand) => (this.punkteEingewilligt = !!stand?.eingewilligt));
+  }
 
   /** Label am Haekchen: der erste Satz des aktuellen Wortlauts, unveraendert (#620). */
   get labelSatz(): string {
@@ -126,6 +138,16 @@ export class EinwilligungComponent implements OnInit {
   }
 
   /**
+   * Das Häkchen „Punkte und Meilensteine“. Mit dem Schalter einwilligung_im_gewinn steht es
+   * nicht neben der Frage nach der Art.-9-Einwilligung, sondern nur in der Übersicht
+   * (Datenschutz-Einstellungen); wer schon eingewilligt hat, sieht es immer, um zu widerrufen.
+   */
+  get punkteHaekchenZeigen(): boolean {
+    if (!this.imGewinn() || this.punkteEingewilligt) return true;
+    return this.zustand === 'eingewilligt' || this.zustand === 'widerruft';
+  }
+
+  /**
    * Zurueck im Tab: den Stand neu holen, damit eine Einwilligung oder ein Widerruf aus
    * einem anderen Tab hier ankommt (Review zu #670). Nicht mitten im Senden und nicht,
    * wenn das Haekchen schon gesetzt ist.
@@ -147,6 +169,8 @@ export class EinwilligungComponent implements OnInit {
         this.nbAngehakt = false;
         this.nbFehler = false;
         this.zustand = beitragenFrei(stand) ? 'eingewilligt' : 'frage';
+        // Gehört zum Beitreten und kommt immer, verbraucht aber den Besuch (#788).
+        if (this.zustand === 'frage') this.budget.gezeigt('art9');
       },
       error: () => (this.zustand = 'fehler'),
     });

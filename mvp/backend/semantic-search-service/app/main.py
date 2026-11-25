@@ -37,6 +37,7 @@ from api.v1.image import router as image_router
 from api.v1.einwurf import router as einwurf_router
 from api.v1.seeding import router as seeding_router
 from api.v1.usage import router as usage_router
+from api.v1.einwilligungs_moment import router as einwilligungs_moment_router
 from api.v1.voting import router as voting_router
 from api.v1.moderation import router as moderation_router
 from api.v1.vormoderation import router as vormoderation_router
@@ -372,6 +373,7 @@ app.include_router(image_router, prefix="/api/v1/image", tags=["image"])
 app.include_router(einwurf_router, prefix="/api/v1/rawinput", tags=["rawinput"])
 app.include_router(seeding_router, prefix="/api/v1", tags=["seeding"])
 app.include_router(usage_router, prefix="/api/v1/usage", tags=["usage"])
+app.include_router(einwilligungs_moment_router, prefix="/api/v1/usage", tags=["usage"])
 app.include_router(voting_router, prefix="/api/v1/voting", tags=["voting"])
 app.include_router(moderation_router, prefix="/api/v1/moderation", tags=["moderation"])
 app.include_router(

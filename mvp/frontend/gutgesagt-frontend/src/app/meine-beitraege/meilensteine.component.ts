@@ -10,7 +10,12 @@ import { AuthService } from '../auth/auth.service';
 import { gesehenMerken } from './meilenstein-merker';
 import { MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
 import { PunkteEinwilligungComponent } from '../shared/punkte-einwilligung/punkte-einwilligung.component';
-import { PunkteEinwilligungService } from '../shared/punkte-einwilligung/punkte-einwilligung.service';
+import {
+  PunkteEinwilligungService,
+  PunkteEinwilligungStand,
+} from '../shared/punkte-einwilligung/punkte-einwilligung.service';
+import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
+import { EinwilligungsMoment } from '../shared/einwilligungs-budget/einwilligungs-budget';
 
 /**
  * Die eigenen Meilensteine in „Meine Beiträge“ (#351): je einer mit Medaillon (Motiv
@@ -29,6 +34,13 @@ import { PunkteEinwilligungService } from '../shared/punkte-einwilligung/punkte-
  * Meilensteine“ (#351). Fehlt sie, steht hier eine kurze Einladung mit dem Häkchen;
  * nach dem Haken laden die Meilensteine selbst nach. Ohne eingeschaltete Punkte oder
  * für ein Startkonto zeigt die Komponente nichts.
+ *
+ * Mit dem Schalter einwilligung_im_gewinn (#788) entscheidet das Einwilligungs-Budget
+ * (shared/einwilligungs-budget): Die Einladung kommt dann als Frage mit zwei
+ * gleichwertigen Knöpfen und unverändertem Wortlaut, erst nach dem ersten Gewinn und
+ * höchstens eine Frage je Besuch; danach fragt die Seite nicht mehr, das Häkchen bleibt
+ * in den Datenschutz-Einstellungen. Auch die Frage nach der Sichtbarkeit wartet, wenn
+ * im Besuch schon eine andere kam.
  */
 @Component({
   selector: 'app-meilensteine',
@@ -51,6 +63,20 @@ export class MeilensteineComponent implements OnInit, OnDestroy {
   einladen = false;
   private eingewilligt: boolean | null = null;
   private destroy$ = new Subject<void>();
+  /** Antwort vom Einwilligungs-Moment ist da (auch null: Schalter aus). */
+  momentGeladen = false;
+  /** Fakten fürs Einwilligungs-Budget; null: Schalter aus, die Seite fragt wie bisher. */
+  moment: EinwilligungsMoment | null = null;
+  private punkteStand: PunkteEinwilligungStand | null = null;
+  /** Mit Schalter: Die Frage nach Punkten und Meilensteinen steht in diesem Besuch. */
+  punkteFrageZeigen = false;
+  /** Mit Schalter: Die Frage nach der Sichtbarkeit darf in diesem Besuch kommen. */
+  sichtbarkeitErlaubt = false;
+  punkteSpeichert = false;
+  punkteFehler = false;
+  /** Gerade beantwortet: Satz zum neuen Stand, per role="status" angesagt. */
+  punkteAntwort: 'ja' | 'nein' | null = null;
+  @ViewChild('punkteStatus', { read: ElementRef }) punkteStatus?: ElementRef<HTMLElement>;
 
   constructor(
     private usageTrackingService: UsageTrackingService,
@@ -58,6 +84,7 @@ export class MeilensteineComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     @Inject(MEILENSTEIN_MERKER) private merkerAktiv: boolean,
     private punkteEinwilligung: PunkteEinwilligungService,
+    private budget: EinwilligungsBudgetService,
   ) {}
 
   ngOnInit(): void {
@@ -69,7 +96,9 @@ export class MeilensteineComponent implements OnInit, OnDestroy {
         return;
       }
       const eingewilligt = stand?.eingewilligt ?? null;
+      this.punkteStand = stand;
       this.einladen = stand !== null && !stand.eingewilligt;
+      this.entscheiden();
       if (this.eingewilligt !== null && eingewilligt !== this.eingewilligt) {
         this.laden();
       }
@@ -77,6 +106,76 @@ export class MeilensteineComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
     });
     this.punkteEinwilligung.laden().pipe(takeUntil(this.destroy$)).subscribe();
+    this.budget
+      .moment()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((moment) => {
+        this.moment = moment;
+        this.momentGeladen = true;
+        this.entscheiden();
+        this.cdr.markForCheck();
+      });
+  }
+
+  /**
+   * Mit Schalter: einmal je Besuch entscheiden, welche Frage kommen darf. Eine Frage,
+   * die steht, bleibt stehen, bis sie beantwortet ist.
+   */
+  private entscheiden(): void {
+    const moment = this.moment;
+    if (!moment) {
+      return;
+    }
+    const stand = this.punkteStand;
+    if (!this.punkteFrageZeigen && stand && !stand.eingewilligt && !stand.wortlaut && this.budget.punkteFaellig(moment)) {
+      this.punkteFrageZeigen = true;
+      this.budget.gezeigt('punkte');
+    }
+    if (
+      !this.sichtbarkeitErlaubt &&
+      this.sichtbarkeit &&
+      !this.sichtbarkeit.gefragt &&
+      this.erreichteFuersAbzeichen > 0 &&
+      this.budget.darf('sichtbarkeit', moment)
+    ) {
+      this.sichtbarkeitErlaubt = true;
+      this.budget.gezeigt('sichtbarkeit');
+    }
+  }
+
+  /** Die alte Einladung mit Häkchen: nur ohne Schalter einwilligung_im_gewinn. */
+  get haekchenEinladung(): boolean {
+    return this.einladen && this.momentGeladen && !this.moment;
+  }
+
+  /** Text der Frage: der Wortlaut vom Server, unverändert. */
+  get punkteWortlaut(): string {
+    return this.punkteStand?.aktueller_wortlaut.text ?? '';
+  }
+
+  /** Einer der beiden gleichwertigen Knöpfe der Frage nach Punkten und Meilensteinen. */
+  punkteAntworten(ja: boolean): void {
+    if (this.punkteSpeichert) {
+      return;
+    }
+    this.punkteSpeichert = true;
+    this.punkteFehler = false;
+    this.punkteEinwilligung
+      .setzen(ja)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((ok) => {
+        this.punkteSpeichert = false;
+        if (ok) {
+          this.punkteFrageZeigen = false;
+          this.punkteAntwort = ja ? 'ja' : 'nein';
+        } else {
+          this.punkteFehler = true;
+        }
+        this.cdr.detectChanges();
+        if (ok) {
+          this.punkteStatus?.nativeElement.focus();
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -93,6 +192,7 @@ export class MeilensteineComponent implements OnInit, OnDestroy {
       .subscribe(({ meilensteine, sichtbarkeit }) => {
         this.meilensteine = meilensteine;
         this.sichtbarkeit = sichtbarkeit;
+        this.entscheiden();
         // Was hier steht, ist angezeigt: Kein späterer Hinweis nennt es noch einmal.
         if (this.merkerAktiv) {
           gesehenMerken(this.authService.getCurrentUserId(), meilensteine);
@@ -132,7 +232,12 @@ export class MeilensteineComponent implements OnInit, OnDestroy {
     if (!this.sichtbarkeit) {
       return false;
     }
-    return this.frageOffen || (!this.sichtbarkeit.gefragt && this.erreichteFuersAbzeichen > 0);
+    if (this.frageOffen) {
+      return true;
+    }
+    // Mit Schalter einwilligung_im_gewinn nur, wenn das Budget sie in diesem Besuch erlaubt.
+    const budgetFrei = this.momentGeladen && (!this.moment || this.sichtbarkeitErlaubt);
+    return budgetFrei && !this.sichtbarkeit.gefragt && this.erreichteFuersAbzeichen > 0;
   }
 
   /** Andere Angemeldete sehen das Abzeichen. */

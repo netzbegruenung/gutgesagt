@@ -23,6 +23,7 @@ import { sitzungPruefen } from '../auth/sitzung';
 import { FunktionenService } from '../services/funktionen.service';
 import { teamBegruessungSaetze, teamBegruessungTitel } from '../shared/team-texte';
 import { teamMerkerAblegen, teamMerkerLesen, teamMerkerLoeschen, teamMerkerNehmen } from './team-merker';
+import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 
 /**
  * Stände der Seite. Ohne Konto: eingeben … gesendet, bei einer Einladung mit Team mit dem
@@ -306,6 +307,8 @@ export class EinladungComponent implements OnInit {
     // Mitgliedschaft. Gefragt wird noch einmal; der Merker sendet nie selbst eine Einwilligung.
     this.nochmalGefragt = mitJa;
     this.stand = 'team_frage';
+    // Gehört zum Beitreten und kommt immer, verbraucht aber den Besuch (#788).
+    this.injector.get(EinwilligungsBudgetService).gezeigt('team');
   }
 
   /** Angemeldet und eine Einladung ohne Team: Hinweis statt Formular, nur bei wirksamem Schalter teams. */
