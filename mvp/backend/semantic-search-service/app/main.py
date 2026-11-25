@@ -43,6 +43,8 @@ from api.v1.vormoderation import router as vormoderation_router
 from api.v1.loeschauftraege import router as loeschauftraege_router
 from api.v1.schalter import router as schalter_router
 from api.v1.funktionen import router as funktionen_router
+from api.v1.saisons import admin_router as saisons_admin_router
+from api.v1.saisons import router as saisons_router
 from api.v1.sperren import router as sperren_router
 from api.v1.health import router as health_router
 from api.v1.feedback import router as feedback_router
@@ -389,6 +391,11 @@ app.include_router(
 )
 # Welche Funktionen hinter einem Schalter an sind (#756), ohne Anmeldung
 app.include_router(funktionen_router, prefix="/api/v1/funktionen", tags=["schalter"])
+# Saisons mit Gemeinschaftsziel (#782): Balken ohne Anmeldung, Pflege nur Admins
+app.include_router(saisons_router, prefix="/api/v1/saisons", tags=["saisons"])
+app.include_router(
+    saisons_admin_router, prefix="/api/v1/moderation/saisons", tags=["moderation"]
+)
 app.include_router(sperren_router, prefix="/api/v1/sperren", tags=["moderation"])
 app.include_router(health_router, prefix="/api/v1", tags=["monitoring"])
 app.include_router(feedback_router, prefix="/api/v1/feedback", tags=["feedback"])

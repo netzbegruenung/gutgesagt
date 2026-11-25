@@ -668,6 +668,9 @@ OFFEN = {
     ("POST", "/api/v1/moderation/loeschauftraege/{auftrag_id}/ausfuehren"),
     # Schalter setzen (Admin, #708): keine Daten von Nutzenden
     ("PUT", "/api/v1/moderation/schalter/{name}"),
+    # Saisons pflegen (Admin, #782): keine Daten von Nutzenden
+    ("POST", "/api/v1/moderation/saisons"),
+    ("PUT", "/api/v1/moderation/saisons/{saison_id}"),
     # Herkunft pruefen anstossen (Admin, #759): keine Daten von Nutzenden
     ("POST", "/api/v1/herkunft-pruefen/lauf"),
     ("POST", "/api/v1/sperren/{sperre_id}/widerspruch"),

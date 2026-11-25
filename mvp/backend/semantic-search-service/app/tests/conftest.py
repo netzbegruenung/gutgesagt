@@ -175,6 +175,22 @@ def einstellungen_ohne_datenbank():
 
 
 @pytest.fixture(autouse=True)
+def saisons_ohne_datenbank():
+    """
+    Saisons (services/saison_service.py, #782) ohne Datenbank: keine Saison, keine
+    Wochenzahlen. Die aktuelle Saison der Teams fragt sie bei wirksamem Schalter;
+    Tests mit Saisons setzen einen eigenen Dienst (saison_service_setzen).
+    """
+    from services.saison_service import SaisonService, saison_service_setzen
+
+    repository = MagicMock()
+    repository.alle.return_value = []
+    saison_service_setzen(SaisonService(repository, lambda von, laufende: {}))
+    yield repository
+    saison_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
 def teams_ohne_datenbank():
     """
     Der TeamService haengt an Antworten mit Anzeigenamen (Teams am Namen). Ohne Ersatz

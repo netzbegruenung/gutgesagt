@@ -1,8 +1,10 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { SchalterComponent } from './schalter.component';
+import { SaisonsComponent } from '../saisons/saisons.component';
 import { Einstellung, Schalter } from '../../services/moderation.service';
 import { environment } from '../../../environments/environment';
 
@@ -20,6 +22,10 @@ function schalter(teil: Partial<Schalter> & { name: string }): Schalter {
   };
 }
 
+/** Die Saisons haben eine eigene Spec; hier ohne eigene Abrufe. */
+@Component({ selector: 'app-saisons', standalone: true, template: '' })
+class SaisonsStubComponent {}
+
 const DSFA = 'Vor dem Einschalten auf Prod: DSFA beschlossen (docs/DSFA.md Abschnitt 7)';
 
 describe('SchalterComponent', () => {
@@ -30,7 +36,12 @@ describe('SchalterComponent', () => {
     await TestBed.configureTestingModule({
       imports: [SchalterComponent],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()],
-    }).compileComponents();
+    })
+      .overrideComponent(SchalterComponent, {
+        remove: { imports: [SaisonsComponent] },
+        add: { imports: [SaisonsStubComponent] },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(SchalterComponent);
     http = TestBed.inject(HttpTestingController);
@@ -186,6 +197,17 @@ describe('SchalterComponent', () => {
       expect((karten()[1].querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim()).toBe(
         'Admin: an · wirksam: aus, weil Teams aus',
       );
+    });
+
+    it('sagt, wenn eine laufende Saison die Einstellung ersetzt (#782)', () => {
+      const hinweis = 'Gilt gerade nicht: Die laufende Saison „Winter 26“ ist die aktuelle Saison der Teams (Abschnitt Saisons).';
+      mitEinstellungen([schalter({ name: 'teams' })], [{ ...SAISON, hinweis }]);
+      expect(einstellung().querySelector('[data-testid="einstellung-hinweis"]')!.textContent).toContain(hinweis);
+    });
+
+    it('ohne laufende Saison kein Hinweis an der Einstellung', () => {
+      mitEinstellungen([schalter({ name: 'teams' })]);
+      expect(einstellung().querySelector('[data-testid="einstellung-hinweis"]')).toBeNull();
     });
 
     it('zeigt die aktuelle Saison als Textfeld mit Standard und Grenze', async () => {

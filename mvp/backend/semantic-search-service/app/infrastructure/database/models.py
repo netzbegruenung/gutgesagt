@@ -1073,6 +1073,35 @@ class EinstellungZeile(Base):
     geaendert_von = Column(String(255), nullable=True)
 
 
+class SaisonZeile(Base):
+    """
+    Eine Saison mit Gemeinschaftsziel (#782, domain/saisons.py): Name, erster und
+    letzter Tag (UTC, beide eingeschlossen) und das Ziel in Widerspruchs-Wochen.
+    Saisons ueberschneiden sich nie (prueft repositories/saison_repository.py unter
+    einer Tabellensperre), deshalb laeuft an jedem Tag hoechstens eine. Nichts zur
+    Person, auch nicht, welcher Admin sie angelegt hat.
+
+    Teamlinks und Mitgliedschaften tragen den Namen als Kopie (Spalte saison), keinen
+    Fremdschluessel: Teams gab es vor den Saisons, und vergangene Teams bleiben, auch
+    wenn es zu ihrem Saisonnamen keine Zeile hier gibt.
+    """
+
+    __tablename__ = "saisons"
+
+    id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(20), nullable=False)
+    beginn = Column(Date, nullable=False)
+    ende = Column(Date, nullable=False)
+    ziel = Column(Integer, nullable=False)
+    angelegt_am = Column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("name", name="uq_saisons_name"),
+        CheckConstraint("ende >= beginn", name="ck_saisons_ende_nach_beginn"),
+        CheckConstraint("ziel > 0", name="ck_saisons_ziel_positiv"),
+    )
+
+
 class HerkunftPruefungZeile(Base):
     """
     Ergebnis von "Herkunft pruefen" (#759) je Herkunft mit Link: zuletzt gesehener

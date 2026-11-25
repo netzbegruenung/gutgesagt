@@ -335,6 +335,12 @@ class Settings(BaseSettings):
     danke_knopf_aktiv: bool = False
     danke_ohne_konto_aktiv: bool = False
     rangliste_aktiv: bool = False
+    # Saison und Gemeinschaftsziel (#782, domain/saisons.py): Den Balken sehen alle erst,
+    # wenn es einmal so viele abgeschlossene Wochen hintereinander mit je mindestens so
+    # vielen verschiedenen Menschen gab, die "Ja, gepostet" gemeldet haben; vorher nur
+    # Admins.
+    saison_ziel_schwelle_menschen: int = Field(default=25, ge=0)
+    saison_ziel_schwelle_wochen: int = Field(default=3, ge=0)
     # Gewichte und Deckel der drei Stufen (domain/punkte.py): Tun klein und je Tag
     # gedeckelt, Quests mehr, Wirkung bei anderen am meisten.
     punkte_nutzung: int = Field(default=10, ge=0)

@@ -626,8 +626,16 @@ Der Eintrag, dass ein Konto in einem Team ist: Kennung, Teamname, Motiv, Saison,
 _Avoid_: Mitglied (ohne Zusatz meint es die Netzbegrünung), Membership
 
 **Saison**:
-Der Zeitraum, zu dem ein Team gehört, frei benannt, höchstens 20 Zeichen, in der Regel das Jahr, etwa „2026“. Pflicht an jedem Teamlink und jeder Mitgliedschaft; lässt der Admin sie beim Anlegen eines Teamlinks leer, trägt der Dienst die aktuelle Saison ein. Die **aktuelle Saison** setzt ein Admin auf der Admin-Seite „Schalter“ (Standard: das laufende Jahr); sie ist der Vorschlag für neue Teamlinks und entscheidet, welche Teams am Anzeigenamen erscheinen. „Meine Teams“ zeigt alle Saisons, vergangene als Abzeichen.
+Der Zeitraum, zu dem ein Team gehört, frei benannt, höchstens 20 Zeichen, etwa „Frühjahr 27“ oder das Jahr „2026“. Pflicht an jedem Teamlink und jeder Mitgliedschaft; lässt der Admin sie beim Anlegen eines Teamlinks leer, trägt der Dienst die aktuelle Saison ein. Ein Admin kann Saisons auf der Admin-Seite „Schalter“ anlegen, mit Name, erstem und letztem Tag und einem Gemeinschaftsziel (#782); sie überschneiden sich nie, es läuft also höchstens eine. Solange der Schalter `saison_ziel` an ist, ist die laufende Saison die **aktuelle Saison**; sonst, oder wenn keine läuft, gilt die Einstellung „Aktuelle Saison“ auf derselben Seite (Standard: das laufende Jahr). Die aktuelle Saison ist der Vorschlag für neue Teamlinks und entscheidet, welche Teams am Anzeigenamen erscheinen. Name und erster Tag stehen fest, sobald eine Saison läuft, weil Teamlinks und Mitgliedschaften den Namen als Kopie tragen; löschen lässt sie sich nur vor ihrem Beginn. „Meine Teams“ zeigt alle Saisons, vergangene als Abzeichen.
 _Avoid_: Season, Staffel, Spielzeit
+
+**Gemeinschaftsziel**:
+Das Ziel aller zusammen in einer Saison, gezählt in Widerspruchs-Wochen und auf der Startseite als Fortschrittsbalken gezeigt, auch ohne Konto. Für alle sichtbar erst, wenn es einmal drei abgeschlossene Wochen hintereinander mit je mindestens 25 verschiedenen Menschen gab, die „Ja, gepostet“ gemeldet haben (Stellschrauben `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_WOCHEN` und `_MENSCHEN`); vorher sehen nur Admins den Stand. Kein Ende und keine Frist im Balken, nichts verfällt. Nur mit dem Schalter `saison_ziel`.
+_Avoid_: Challenge, Quest (die bringt Punkte)
+
+**Widerspruchs-Woche**:
+Die Einheit der Saisonzahl: je Kalenderwoche eine Person, die öffentlich gekontert hat. Die Saisonzahl ist die Summe der Wochenzahlen von „Öffentlich gekontert“ über die abgeschlossenen Wochen der Saison, angebrochene Wochen am Rand eingeschlossen; die laufende Woche zählt erst nach ihrem Ende. Wer drei Wochen dabei ist, zählt dreimal, deshalb heißt es „Woche für Woche zusammen N-mal widersprochen“, nie „N Menschen“: Verschiedene Menschen über die ganze Saison lassen sich ohne neue Datenspur nicht zählen. Hat nichts mit dem Widerspruch gegen eine Sperre zu tun.
+_Avoid_: Menschen, Teilnehmende, Widerspruch (das ist der Einwand gegen eine Sperre)
 
 **Startbeispiel**:
 Die Aussage, die das leere Suchfeld auf der Startseite als erste vortippt und hinter „Beispiel ausprobieren“ sucht; danach tippt es weitere Aussagen des Startbestands vor (im Code `HOT_TAKES`) und bleibt am Ende beim Startbeispiel stehen. Der Rundgang „Antwort finden“ füllt sie in Schritt 1 ins Suchfeld und zeigt ihre Treffer. Sie steht wörtlich im Startbestand und in den Testdaten des Dev-Stacks (`mvp/data/seed`), damit die Suche sicher Kommentare findet.

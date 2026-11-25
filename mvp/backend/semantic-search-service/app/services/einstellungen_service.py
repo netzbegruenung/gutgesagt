@@ -167,4 +167,13 @@ def einstellungen_service_setzen(service: Optional[EinstellungenService]) -> Non
 
 
 def aktuelle_saison() -> str:
-    return get_einstellungen_service().wert(AKTUELLE_SAISON)
+    """
+    Die aktuelle Saison der Teams: die laufende Saison, solange der Schalter
+    ``saison_ziel`` wirkt und eine laeuft (services/saison_service.py, #782), sonst
+    die Einstellung.
+    """
+    from services.saison_service import get_saison_service
+
+    return get_saison_service().saison_fuer_teams() or get_einstellungen_service().wert(
+        AKTUELLE_SAISON
+    )
