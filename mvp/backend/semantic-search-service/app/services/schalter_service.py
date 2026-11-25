@@ -121,6 +121,7 @@ SPIEL_SCHALTER = (
             "Karte „Dein nächster Schritt“ auf der Startseite: ein Vorschlag aus den "
             "eigenen Beiträgen, ohne Frist; speichert auf dem Server nichts zusätzlich."
         ),
+        einschalt_hinweis=("Einschalten erst nach dem DSFA-Nachtrag Spielgefühl (V10)"),
         oeffentlich=True,
     ),
     Schalterart(
@@ -258,7 +259,11 @@ SCHALTER: Dict[str, Schalterart] = {
                 "eigener Einwilligung und „Meine Teams“. Aus: Einladungen wie bisher, "
                 "Teamfelder werden ignoriert."
             ),
-            dsfa_hinweis=True,
+            einschalt_hinweis=(
+                "Rechtlich freigegeben (25.11.): darf vor dem Beschluss der DSFA "
+                "eingeschaltet werden. Die Anzeige am Namen (teams_oeffentlich) "
+                "bleibt aus."
+            ),
             oeffentlich=True,
         ),
         Schalterart(

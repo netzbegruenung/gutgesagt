@@ -85,6 +85,19 @@ describe('SchalterComponent', () => {
     expect(knopf(gepostet).disabled).toBeTrue();
   });
 
+  it('zeigt einen eigenen Einschalt-Hinweis des Servers statt des allgemeinen DSFA-Hinweises', () => {
+    const teams = 'Rechtlich freigegeben (25.11.): darf vor dem Beschluss der DSFA eingeschaltet werden. Die Anzeige am Namen (teams_oeffentlich) bleibt aus.';
+    laden([
+      schalter({ name: 'teams', dsfa_hinweis: teams }),
+      schalter({ name: 'teams_oeffentlich', dsfa_hinweis: DSFA }),
+    ]);
+
+    const [t, oeffentlich] = karten();
+    expect(t.querySelector('[data-testid="dsfa-hinweis"]')!.textContent).toContain(teams);
+    expect(t.querySelector('[data-testid="dsfa-hinweis"]')!.textContent).not.toContain('DSFA beschlossen');
+    expect(oeffentlich.querySelector('[data-testid="dsfa-hinweis"]')!.textContent).toContain('DSFA beschlossen');
+  });
+
   it('setzt beim Umschalten den Admin-Wert und zeigt den neuen Stand ohne Neuladen', () => {
     laden([schalter({ name: 'punkte' })]);
 

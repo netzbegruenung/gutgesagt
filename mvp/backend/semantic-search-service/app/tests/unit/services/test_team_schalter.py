@@ -76,3 +76,16 @@ def test_stand_listet_beide():
     namen = [s.name for s in _dienst(ALLE_AN).stand(OBERGRENZEN_AN)]
     assert "team_fortschritt" in namen
     assert "team_quests" in namen
+
+
+def test_einschalt_hinweise_teams():
+    # Teams sind rechtlich freigegeben (25.11.), die Anzeige am Namen nicht
+    from services.schalter_service import DSFA_HINWEIS
+
+    stand = {s.name: s for s in _dienst({}).stand(OBERGRENZEN_AN)}
+
+    assert "Rechtlich freigegeben (25.11.)" in stand["teams"].dsfa_hinweis
+    assert "teams_oeffentlich" in stand["teams"].dsfa_hinweis
+    assert stand["teams_oeffentlich"].dsfa_hinweis == DSFA_HINWEIS
+    assert stand["team_fortschritt"].dsfa_hinweis == DSFA_HINWEIS
+    assert stand["team_quests"].dsfa_hinweis == DSFA_HINWEIS
