@@ -38,6 +38,12 @@ td {
   overflow-wrap: anywhere;
 }
 
+/* Kopfzellen nie mitten im Wort umbrechen: Bei den engen Spalten (width 1 %) stand
+   "Mitglieder" sonst einen Buchstaben je Zeile, "Zustand" in zwei Stuecken. */
+th {
+  overflow-wrap: normal;
+}
+
 .eng {
   white-space: nowrap;
   width: 1%;
