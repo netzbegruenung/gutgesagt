@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, AfterViewInit, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, AfterViewInit, Injector, afterNextRender, inject } from '@angular/core';
 import { SearchComponent } from '../search/search.component';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,6 +18,7 @@ import { NaechsterSchrittComponent } from '../naechster-schritt/naechster-schrit
 import { GartenHinweisComponent } from '../garten/garten-hinweis.component';
 import { SaisonZielComponent } from '../saison-ziel/saison-ziel.component';
 import { KonterProbeEinstiegComponent } from '../konter-probe/konter-probe-einstieg.component';
+import { SUCHFELD_FOKUS_FRAGMENT, SUCHFELD_ID } from '../naechster-schritt/naechster-schritt';
 
 /**
  * Am Desktop mit Maus springt der Fokus beim Laden ins Suchfeld; auf Touch-Geraeten
@@ -53,6 +54,7 @@ export class SearchViewComponent implements AfterViewInit {
   readonly autofokus = typeof window !== 'undefined' && !!window.matchMedia?.(AUTOFOKUS_MEDIEN).matches;
   /** Erst wenn feststeht, dass niemand angemeldet ist: kein Aufblitzen fuer Angemeldete. */
   readonly anonym$ = inject(AuthService).userInfo$.pipe(map((info) => info?.isAuthenticated === false));
+  private readonly injector = inject(Injector);
 
   constructor(
     private logger: LoggingService,
@@ -96,6 +98,14 @@ export class SearchViewComponent implements AfterViewInit {
     this.route.fragment.subscribe(fragment => {
       const fragTimestamp = new Date().toISOString();
       this.logger.debug(`[${fragTimestamp}] Fragment received:`, fragment);
+
+      // „Ersten Spruch suchen“ nach einer Einladung: Fokus ins Suchfeld, auch am Handy,
+      // denn die Person hat genau das angetippt.
+      if (fragment === SUCHFELD_FOKUS_FRAGMENT) {
+        // Ohne preventScroll: Der Browser scrollt nur, wenn das Feld nicht zu sehen ist.
+        afterNextRender(() => document.getElementById(SUCHFELD_ID)?.focus(), { injector: this.injector });
+        return;
+      }
 
       if (fragment === 'recent-content') {
         this.logger.info('Will scroll to recent-content after minimal delay for DOM rendering');
