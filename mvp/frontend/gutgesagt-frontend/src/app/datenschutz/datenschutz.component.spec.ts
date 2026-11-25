@@ -1,4 +1,3 @@
-import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
@@ -6,7 +5,6 @@ import { abschnitt as abschnittIn, istTagesdatum, normalisiert, stand } from '..
 import { DatenschutzComponent } from './datenschutz.component';
 import { SUCHANFRAGEN_ABSCHNITT } from '../search/search.component';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
-import { FunktionenService } from '../services/funktionen.service';
 import { FEIER_TON_SCHLUESSEL } from '../shared/feier/feier-ton.service';
 
 /** Der Satz zu Widerrufen vor dem Einspielen: mit Platzhalter oder mit Datum („1. Dezember 2026“). */
@@ -1009,41 +1007,18 @@ describe('DatenschutzComponent', () => {
     });
   });
 
-  describe('Ton bei Erfolgen (#787, Schalter luecke_zu_gross)', () => {
-    function mitSchalter(an: boolean): string {
+  describe('Ton bei Erfolgen (#787)', () => {
+    it('steht immer unter „Speicherung auf deinem Gerät“, unabhängig von Schalter und Browserzustand', () => {
+      localStorage.removeItem(FEIER_TON_SCHLUESSEL);
       TestBed.resetTestingModule();
-      TestBed.configureTestingModule({
-        imports: [DatenschutzComponent],
-        providers: [
-          provideRouter([]),
-          { provide: FunktionenService, useValue: { an: (name: string) => signal(an && name === 'luecke_zu_gross') } },
-        ],
-      });
+      TestBed.configureTestingModule({ imports: [DatenschutzComponent], providers: [provideRouter([])] });
       const fixture = TestBed.createComponent(DatenschutzComponent);
       fixture.detectChanges();
-      return abschnittIn(fixture.nativeElement as HTMLElement, 'Weitere Einträge');
-    }
-
-    it('Schalter an: Schlüssel, Inhalt und Dauer unter „Speicherung auf deinem Gerät“', () => {
-      const text = mitSchalter(true);
+      const text = abschnittIn(fixture.nativeElement as HTMLElement, 'Weitere Einträge');
       expect(text).toContain(`unter dem Schlüssel „${FEIER_TON_SCHLUESSEL}“`);
       expect(text).toContain('Der Eintrag enthält nur, dass der Ton an ist, und keine Angaben über dich');
-      expect(text).toContain('schaltest du ihn dort wieder aus, löschen wir den Eintrag');
+      expect(text).toContain('schaltest du ihn wieder aus, löschen wir den Eintrag');
       expect(text).toContain('bis du ihn änderst');
-    });
-
-    it('Schalter aus: kein Absatz', () => {
-      localStorage.removeItem(FEIER_TON_SCHLUESSEL);
-      expect(mitSchalter(false)).not.toContain('Ton bei Erfolgen');
-    });
-
-    it('Schalter aus, Eintrag aber noch im Browser: der Absatz bleibt', () => {
-      localStorage.setItem(FEIER_TON_SCHLUESSEL, '1');
-      try {
-        expect(mitSchalter(false)).toContain(`unter dem Schlüssel „${FEIER_TON_SCHLUESSEL}“`);
-      } finally {
-        localStorage.removeItem(FEIER_TON_SCHLUESSEL);
-      }
     });
   });
 });

@@ -5,8 +5,6 @@ import { MatDividerModule } from '@angular/material/divider';
 import { RouterModule } from '@angular/router';
 import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
-import { FunktionenService } from '../services/funktionen.service';
-import { FeierTonService } from '../shared/feier/feier-ton.service';
 
 @Component({
   selector: 'app-datenschutz',
@@ -31,8 +29,6 @@ export class DatenschutzComponent {
    * luecke_zu_gross; der Absatz zu seinem Eintrag im Browser steht, solange der Schalter an ist
    * oder der Browser den Eintrag noch hat (Schalter später wieder aus).
    */
-  readonly tonBeiErfolgen = inject(FunktionenService).an('luecke_zu_gross');
-  readonly feierTon = inject(FeierTonService);
   readonly KONTAKT_MAIL = LEGAL_ENTITY.KONTAKT_MAIL;
 
   // Der Datenschutzbeauftragte ist ueber die Vereinsadresse erreichbar, nicht privat.
