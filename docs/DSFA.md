@@ -13,14 +13,14 @@ Verarbeitungen des Dienstes (#374). Das Verzeichnis der Verarbeitungstätigkeite
 steht in [`docs/VERARBEITUNGSVERZEICHNIS.md`](./VERARBEITUNGSVERZEICHNIS.md) und verweist je
 Tätigkeit hierher.
 
-**Stand 25.11.2026:** Code `main` @ `23b211b7` (einschließlich #778), letzter Tag `v0.9.11` (20.11.2026,
+**Stand 25.11.2026:** Code `main` @ `34f8b1fb` (einschließlich #779), letzter Tag `v0.9.11` (20.11.2026,
 auf `088ac0bf`). Seit dem Stand vom 13.11. in diese DSFA eingearbeitet: #657 (Nacharbeit,
 Verzeichnis), #661 (Löschauftrag, R9b), #670 (Wortlaut ohne Spielelemente), #672 und #741
 (Rückmeldung „Seit deinem letzten Besuch“, V10), #686 (Vormoderation der Suchanfragen, V6;
 Meilensteine nur mit eigener Einwilligung, Abschnitt 1), #691 (Schleifensperre, V21), #711
 (Admin-Schalter mit Obergrenze, #708, Abschnitt 7), #713 und #734 (Gegenlesen, V20), #718 (Wortlaut `2026-11-19`), #739 (Punkte
-fürs Bewerten, Sofort-Dank, V11), #748 (Themen am Einwurf, V4) und #770 (Antworten-Hinweis,
-V10). Neu an diesem Stand: die offenen Fakten F1 bis F6 (8.6), soweit sie sich in der
+fürs Bewerten, Sofort-Dank, V11), #748 (Themen am Einwurf, V4), #770 (Antworten-Hinweis,
+V10) und #779 (Besucher ohne 401; berührt keine Verarbeitung dieser DSFA). Neu an diesem Stand: die offenen Fakten F1 bis F6 (8.6), soweit sie sich in der
 Konfiguration des Betreibers belegen lassen, die Haken in Abschnitt 7 und 9 und die Verarbeitung
 „Teams“ (nicht im Betrieb) (V23, R10, Frage 8). Fundstellen `Salt:<Datei>` zeigen auf die
 Konfiguration des Betreibers (nicht öffentlich, Stand 24.11.2026); die Zeilenbelege liegen
@@ -876,7 +876,7 @@ unten unter „Nicht gebaut“.
 
 #### V23 Teams über Einladungslinks (Schalter `teams` aus, nicht im Betrieb)
 
-Nachtrag vom 25.11.2026, geprüft an der Ausgestaltung vom 24.11.2026; in `main` @ `23b211b7`
+Nachtrag vom 25.11.2026, geprüft an der Ausgestaltung vom 24.11.2026; in `main` @ `34f8b1fb`
 nicht enthalten. Bedingung für das Einschalten: diese Prüfung am gebauten Stand wiederholen.
 
 - **Zweck:** Eine Einladung kann zu einem Team gehören, etwa einem Treffen, einem Ort oder einer
