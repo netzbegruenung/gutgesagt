@@ -197,7 +197,7 @@ Die Stelle in eckigen Klammern im Text eines Beitrags, „[Hier …]“, die die
 _Avoid_: Lücke (das ist eine unbeantwortete Aussage), Vorlagen-Lücke, Leerstelle
 
 **Lücke**:
-Eine Aussage in „Hier fehlt eine Antwort“, auf die noch keine Antwort passt. Wer sie beantwortet, schließt die Lücke: Die Ergebnisseite sagt dann „Lücke zu“ mit der Zahl der Personen, die ohne Treffer danach gesucht haben, und bietet die nächste an. Die Startseite nennt Angemeldeten unter „Seit deinem letzten Besuch“, wie viele Lücken warten. Im Code steht das Wort nur in `shared/luecke-texte.ts`. Bis 13.11. hieß so der Platzhalter.
+Eine Aussage in „Hier fehlt eine Antwort“, auf die noch keine Antwort passt. Wer sie beantwortet, schließt die Lücke: Die Ergebnisseite sagt dann „Lücke zu“ mit der Zahl der Personen, die ohne Treffer danach gesucht haben, und bietet die nächste an; mit dem Schalter `luecke_zu_gross` (#787) steht das einmal je Antwort groß als „Lücke zu!“. Die Startseite nennt Angemeldeten unter „Seit deinem letzten Besuch“, wie viele Lücken warten. Im Code steht das Wort nur in `shared/luecke-texte.ts`. Bis 13.11. hieß so der Platzhalter.
 _Avoid_: Platzhalter (das ist die Stelle „[Hier …]“ im Text), offene Frage
 
 **Schreibhilfe**:

@@ -1,4 +1,4 @@
-import { Component, Input, Type, forwardRef } from '@angular/core';
+import { Component, Input, Type, forwardRef, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
@@ -8,7 +8,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { TEILEN_LINK_KOPIERT, TEILEN_NAVIGATOR, TeilenNavigator } from '../../shared/teilen.service';
 
 import { BeitragGespeichertComponent, EINWURF_NICHT_MIT_NEUEM_VERKNUEPFT, beitragLink } from './beitrag-gespeichert.component';
-import { GespeichertZustand, gespeichertEltern } from './gespeichert-adresse';
+import { GespeichertZustand, gespeichertEltern, lueckeZuMomentSatz, mitLueckeZuGezeigt } from './gespeichert-adresse';
+import { FunktionenService } from '../../services/funktionen.service';
 import { CommentaryService } from '../../services/commentary.service';
 import { GenericTextService } from '../../services/generic-text.service';
 import { PostService } from '../../services/post.service';
@@ -54,9 +55,12 @@ describe('BeitragGespeichertComponent', () => {
   let nav: TeilenNavigator;
   /** Was statt der echten Karte gerendert wird. */
   let karteStub: Type<unknown>;
+  /** Schalter luecke_zu_gross laut /api/v1/funktionen; Standard aus. */
+  let lueckeZuGrossAn: boolean;
 
   beforeEach(() => {
     nav = {};
+    lueckeZuGrossAn = false;
     karteStub = BeitragskarteStubComponent;
     geladenerEinwurf = of({ id: 'e-1', ist_eigener_einwurf: true } as Einwurf);
   });
@@ -107,6 +111,10 @@ describe('BeitragGespeichertComponent', () => {
           useValue: { userInfo$: of({ isAuthenticated: true, userId: 'u-1', userName: null, claims: null }) },
         },
         { provide: TEILEN_NAVIGATOR, useFactory: () => nav },
+        {
+          provide: FunktionenService,
+          useFactory: () => ({ an: (name: string) => signal(name === 'luecke_zu_gross' && lueckeZuGrossAn) }),
+        },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -292,6 +300,88 @@ describe('BeitragGespeichertComponent', () => {
       TestBed.resetTestingModule();
       await oeffnen({ gesucht: '3' }, aussage);
       expect(seite().querySelector('.luecke-zu')).toBeNull();
+    });
+  });
+
+  describe('„Lücke zu!“ als großer Moment (#787)', () => {
+    const aussage = { aussage: { id: 'a-1', text: 'Windkraft tötet Vögel' }, verknuepft: true };
+    const vonDort = { von: 'hier-fehlt-eine-antwort', gesucht: '4' };
+
+    beforeEach(() => (lueckeZuGrossAn = true));
+
+    it('zeigt den Moment mit der Zahl, Überschrift im Fokus und „Nächste Lücke“', async () => {
+      await oeffnen(vonDort, aussage);
+      await fixture.whenStable();
+      const navigieren = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+
+      const moment = seite().querySelector('.luecke-zu-moment')!;
+      expect(moment).not.toBeNull();
+      const titel = moment.querySelector('h2.luecke-zu-moment-titel') as HTMLElement;
+      expect(titel.textContent!.trim()).toBe('Lücke zu!');
+      expect(moment.querySelector('.luecke-zu-moment-satz')!.textContent!.trim()).toBe(
+        '4 Personen haben nach diesem Spruch gesucht und nichts gefunden. Ab jetzt finden sie deine Antwort.',
+      );
+      // Text im role="status", der Knopf daneben
+      const status = moment.querySelector('[role="status"]')!;
+      expect(status.contains(titel)).toBeTrue();
+      expect(status.querySelector('button')).toBeNull();
+      expect(document.activeElement).toBe(titel);
+      // Der kleine Satz und ein zweiter Knopf "Nächste Lücke" entfallen
+      expect(seite().querySelector('.luecke-zu')).toBeNull();
+      expect(seite().querySelectorAll('.naechste-luecke').length).toBe(1);
+      expect(knoepfe()).not.toContain('Noch einen Kommentar');
+
+      (moment.querySelector('.naechste-luecke') as HTMLButtonElement).click();
+      expect(navigieren).toHaveBeenCalledOnceWith(['/hier-fehlt-eine-antwort']);
+    });
+
+    it('sagt ohne Zahl einen ruhigen Satz ohne Zahl und bei einer Person den Singular', async () => {
+      await oeffnen({ von: 'hier-fehlt-eine-antwort' }, aussage);
+      expect(seite().querySelector('.luecke-zu-moment-satz')!.textContent!.trim()).toBe(
+        'Wer nach diesem Spruch sucht, findet ab jetzt deine Antwort.',
+      );
+      expect(lueckeZuMomentSatz(0)).not.toMatch(/\d/);
+      expect(lueckeZuMomentSatz(1)).toBe(
+        '1 Person hat nach diesem Spruch gesucht und nichts gefunden. Ab jetzt findet sie deine Antwort.',
+      );
+    });
+
+    it('bleibt beim kleinen Satz, wenn der Schalter aus ist', async () => {
+      lueckeZuGrossAn = false;
+      await oeffnen(vonDort, aussage);
+      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
+      expect(seite().querySelector('.luecke-zu-titel')!.textContent!.trim()).toBe('Lücke zu.');
+    });
+
+    it('steht einmal je Antwort: nicht nach dem Neuladen und nicht nach „Zurück“', async () => {
+      // Neuladen: kein Router-State
+      await oeffnen(vonDort);
+      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
+      expect(seite().querySelector('.luecke-zu')).not.toBeNull();
+
+      // Zurück: der Router-State traegt den Vermerk
+      TestBed.resetTestingModule();
+      await oeffnen(vonDort, { ...aussage, lueckeZuGezeigt: true });
+      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
+      expect(seite().querySelector('.luecke-zu')).not.toBeNull();
+    });
+
+    it('nicht, wenn die Verknüpfung scheiterte oder es nicht von dort kam', async () => {
+      await oeffnen(vonDort, { ...aussage, verknuepft: false });
+      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
+
+      TestBed.resetTestingModule();
+      await oeffnen({ gesucht: '4' }, aussage);
+      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
+    });
+
+    it('der Vermerk ergänzt den Verlaufseintrag, ohne ihn zu ersetzen', () => {
+      expect(mitLueckeZuGezeigt({ navigationId: 3, aussage: 1 })).toEqual({
+        navigationId: 3,
+        aussage: 1,
+        lueckeZuGezeigt: true,
+      });
+      expect(mitLueckeZuGezeigt(null)).toEqual({ lueckeZuGezeigt: true });
     });
   });
 

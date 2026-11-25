@@ -1,4 +1,20 @@
 <div class="gespeichert">
+    <!-- "Luecke zu!" als grosser Moment (#787, Schalter luecke_zu_gross). Im role="status" steht nur
+         der Text, der Knopf daneben; der Fokus geht auf die Ueberschrift. -->
+    <section *ngIf="lueckeZuGross; else kopf" class="luecke-zu-moment" aria-labelledby="luecke-zu-moment-titel">
+        <div role="status" class="luecke-zu-moment-text">
+            <mat-icon class="luecke-zu-moment-icon" aria-hidden="true">task_alt</mat-icon>
+            <h2 #lueckeZuMomentTitel id="luecke-zu-moment-titel" tabindex="-1" class="luecke-zu-moment-titel">
+                {{ lueckeZuAusruf }}
+            </h2>
+            <p class="luecke-zu-moment-satz">{{ lueckeZuMomentSatz }}</p>
+        </div>
+        <button mat-raised-button type="button" class="primaer naechste-luecke" (click)="naechsteLuecke()">
+            {{ naechsteLueckeText }}
+        </button>
+    </section>
+
+    <ng-template #kopf>
     <div class="gespeichert-kopf" role="status">
         <mat-icon class="gespeichert-icon" aria-hidden="true">check_circle</mat-icon>
         <!-- Aus "Hier fehlt eine Antwort": die Luecke ist zu, mit der Nachfrage (Nutzerfuehrung 13.11.) -->
@@ -7,6 +23,7 @@
         </p>
         <ng-template #allgemein><p class="gespeichert-satz">{{ texte.gespeichert }}</p></ng-template>
     </div>
+    </ng-template>
 
     <p *ngIf="zustand.verknuepft === false" class="gespeichert-warnung verknuepfung-fehlgeschlagen" role="alert">
         {{ verknuepfungFehlgeschlagen }}
@@ -54,7 +71,9 @@
                 (click)="zurueckZurSuche()">
             Zurück zur Suche
         </button>
+        <!-- Im grossen Moment steht "Naechste Luecke" schon oben -->
         <ng-container *ngSwitchDefault>
+            <ng-container *ngIf="!lueckeZuGross">
             <button *ngIf="lueckeZu; else nochEinerKnopf" mat-raised-button type="button" class="primaer naechste-luecke"
                     (click)="naechsteLuecke()">
                 {{ naechsteLueckeText }}
@@ -64,6 +83,7 @@
                     {{ texte.nochEiner }}
                 </button>
             </ng-template>
+            </ng-container>
         </ng-container>
 
         <!-- Weiter zur Aussage und ihren Treffern, und den Beitrag teilen (#617) -->

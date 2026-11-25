@@ -41,6 +41,99 @@
     color: var(--akzent-schrift);
 }
 
+/* "Luecke zu!" als grosser Moment (#787), Gegenstueck zum Meilenstein-Moment */
+.luecke-zu-moment {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 16px;
+    border: 1px solid var(--akzent-tanne);
+    border-radius: 12px;
+    background: var(--primaer-tint);
+    text-align: center;
+}
+
+.luecke-zu-moment-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.luecke-zu-moment-icon {
+    width: 56px;
+    height: 56px;
+    font-size: 56px;
+    color: var(--primaer-text);
+}
+
+.luecke-zu-moment-titel {
+    margin: 0;
+    font-family: GrueneType, Roboto, sans-serif;
+    font-weight: 400;
+    font-size: 2.25rem;
+    line-height: 1.1;
+    color: var(--akzent-schrift);
+}
+
+/* Wie in der Einladung: Rahmen nur bei Tastaturbedienung */
+.luecke-zu-moment-titel:focus {
+    outline: none;
+}
+
+.luecke-zu-moment-titel:focus-visible {
+    outline: 2px solid var(--primaer-text);
+    outline-offset: 4px;
+}
+
+.luecke-zu-moment-satz {
+    margin: 0;
+    max-width: 32em;
+    font-size: 1.1rem;
+}
+
+.luecke-zu-moment .naechste-luecke {
+    min-height: 48px;
+}
+
+@media (max-width: 599px) {
+    .luecke-zu-moment .naechste-luecke {
+        align-self: stretch;
+    }
+}
+
+/* Bewegung nur, wer sie nicht abgeschaltet hat */
+@media (prefers-reduced-motion: no-preference) {
+    .luecke-zu-moment {
+        animation: luecke-zu-auftauchen 400ms ease-out both;
+    }
+
+    .luecke-zu-moment-icon {
+        animation: luecke-zu-ploppen 600ms cubic-bezier(0.34, 1.56, 0.64, 1) 150ms both;
+    }
+}
+
+@keyframes luecke-zu-auftauchen {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes luecke-zu-ploppen {
+    from {
+        transform: scale(0.4);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+
 .gespeichert-laedt {
     display: flex;
     justify-content: center;
