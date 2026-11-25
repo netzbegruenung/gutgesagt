@@ -1,13 +1,19 @@
 /**
- * Die Texte der Rückmeldung „Gepostet?“ nach dem Kopieren (#643), an einer Stelle.
+ * Die Texte der Rückmeldung „Gepostet?“ im Erfolgskasten nach dem Kopieren (#643), an einer Stelle.
  * Der Dank nennt eine echte Zahl: verschiedene Personen dieser Kalenderwoche, wie der
  * Server sie gezählt hat (CODING_STANDARDS.md „Visible numbers are real“).
  */
-export const KOPIERT_GEPOSTET_FRAGE = 'Kopiert. Gepostet?';
+/**
+ * Die Frage im Erfolgskasten nach dem Kopieren. Sie steht ohne Frist da, bis die Person
+ * den Kasten schließt oder eine andere Karte kopiert: Posten dauert länger als eine
+ * Snackbar (Review Spielgefühl 25.11., WCAG 2.2.1).
+ */
+export const GEPOSTET_FRAGE = 'Gepostet? Dann zählt dein Konter mit.';
 export const JA_GEPOSTET = 'Ja, gepostet';
-/** So lange bleibt die Frage stehen: Zeit, den Knopf zu lesen und zu treffen. */
-export const GEPOSTET_FRAGE_MS = 8000;
-export const GEPOSTET_NICHT_GEZAEHLT = 'Danke! Zählen hat gerade nicht geklappt.';
+/** Der Knopf nach dem Tippen: Er bleibt stehen (Fokus), tut aber nichts mehr. */
+export const GEPOSTET_GEMELDET = 'Gepostet';
+/** Melden nicht angekommen: Der Knopf steht wieder bereit (Review 25.11.). */
+export const GEPOSTET_NICHT_GEZAEHLT = 'Danke! Zählen hat gerade nicht geklappt. Versuch es gleich noch einmal.';
 /**
  * Der Dank ohne Konto (#799): ohne Zahl, denn gezählt werden dort nur Meldungen, keine
  * Menschen; und ohne Aufforderung, sich anzumelden.

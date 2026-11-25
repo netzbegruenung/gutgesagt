@@ -185,15 +185,11 @@ describe('KartenAktionenComponent - Danke an die Autorin', () => {
   });
 
   it('Ja, gepostet nimmt die ID mit; ob sie gesendet wird, entscheidet der Dienst', () => {
-    const aktion = new Subject<void>();
-    (TestBed.inject(MatSnackBar) as jasmine.SpyObj<MatSnackBar>).open.and.returnValue({
-      onAction: () => aktion.asObservable(),
-    } as any);
     usage.gepostetBekannt.and.returnValue(true);
     usage.gepostetMelden.and.returnValue(of(3));
     kopieren();
 
-    aktion.next();
+    (fixture.nativeElement.querySelector('.ja-gepostet') as HTMLButtonElement).click();
 
     expect(usage.gepostetMelden).toHaveBeenCalledOnceWith('kim', INHALT_ID);
   });
