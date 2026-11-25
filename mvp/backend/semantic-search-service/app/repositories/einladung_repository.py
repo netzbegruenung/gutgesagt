@@ -29,6 +29,8 @@ class EinladungRepository:
         team_name: Optional[str] = None,
         team_motiv: Optional[str] = None,
         team_saison: Optional[str] = None,
+        team_art: Optional[str] = None,
+        team_zustimmung_am: Optional[date] = None,
     ) -> EinladungZeile:
         with self.db.get_session() as session:
             zeile = EinladungZeile(
@@ -42,6 +44,8 @@ class EinladungRepository:
                 team_name=team_name,
                 team_motiv=team_motiv,
                 team_saison=team_saison,
+                team_art=team_art,
+                team_zustimmung_am=team_zustimmung_am,
             )
             session.add(zeile)
             session.flush()
@@ -74,7 +78,14 @@ class EinladungRepository:
         return self.aendern(einladung_id, abgeschaltet=abgeschaltet)
 
     # Was aendern() setzen darf; Code, Notiz und Zaehler bleiben.
-    AENDERBAR = ("abgeschaltet", "team_name", "team_motiv", "team_saison")
+    AENDERBAR = (
+        "abgeschaltet",
+        "team_name",
+        "team_motiv",
+        "team_saison",
+        "team_art",
+        "team_zustimmung_am",
+    )
 
     def aendern(self, einladung_id: uuid.UUID, **werte) -> Optional[EinladungZeile]:
         unbekannt = set(werte) - set(self.AENDERBAR)

@@ -543,6 +543,15 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('sehen je Team nur, wie viele dabei sind, keine Namen und keine Liste');
     });
 
+    it('Teams: auch nach einer Gruppe, die zugestimmt hat; die Gruppe bekommt keine Daten', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Manche Einladungen gehören zu einem Team, etwa einem Treffen, einem Ort oder einer Gruppe, die zugestimmt hat. Die Gruppe bekommt keine Daten über dich.'
+      );
+      expect(text).not.toContain('etwa einem Treffen oder einem Ort.');
+    });
+
     it('Teams: eigene Einwilligung nach Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a, getrennt von den anderen', () => {
       const text = abschnitt('Teams');
 

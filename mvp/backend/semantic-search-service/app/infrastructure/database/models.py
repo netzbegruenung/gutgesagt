@@ -417,6 +417,12 @@ class EinladungZeile(Base):
     team_name = Column(String(40), nullable=True)
     team_motiv = Column(String(32), nullable=True)
     team_saison = Column(String(20), nullable=True)
+    # Teamart ("anlass" oder "gruppe", domain/teams.py; leer heisst "anlass") und bei
+    # "gruppe" der Tag, an dem die schriftliche Zustimmung der Gruppenleitung vorlag:
+    # nur ein Nachweis fuer Admins, kein Name. Spalten aus
+    # postgres-app/migrations/2026-11-26-teams-nach-gruppe.sql.
+    team_art = Column(String(16), nullable=True)
+    team_zustimmung_am = Column(Date, nullable=True)
 
 
 class TeamMitgliedschaftZeile(Base):

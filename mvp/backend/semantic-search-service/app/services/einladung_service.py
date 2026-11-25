@@ -34,6 +34,7 @@ from datetime import date
 from typing import List, Optional, Tuple
 
 from core.logging import get_logger
+from domain.teams import TEAM_ART_ANLASS, TEAM_ART_GRUPPE
 from domain.interfaces.konten_im_realm import IKontenImRealm, KontoErgebnis
 from repositories.einladung_repository import EinladungRepository
 from services.team_service import (
@@ -96,6 +97,11 @@ class Einladung:
     team_name: Optional[str] = None
     team_motiv: Optional[str] = None
     team_saison: Optional[str] = None
+    # "anlass" oder "gruppe" (domain/teams.py TEAM_ARTEN); leer bei Einladungen
+    # von vor dieser Spalte, dann gilt "anlass".
+    team_art: Optional[str] = None
+    # Tag der schriftlichen Zustimmung der Gruppenleitung, nur bei "gruppe"
+    team_zustimmung_am: Optional[date] = None
 
     @classmethod
     def aus_zeile(cls, z) -> "Einladung":
@@ -111,6 +117,8 @@ class Einladung:
             team_name=getattr(z, "team_name", None),
             team_motiv=getattr(z, "team_motiv", None),
             team_saison=getattr(z, "team_saison", None),
+            team_art=getattr(z, "team_art", None),
+            team_zustimmung_am=getattr(z, "team_zustimmung_am", None),
         )
 
     @property
@@ -118,7 +126,13 @@ class Einladung:
         """Das Team, wie es an der Einladung steht (ohne Blick auf den Schalter)."""
         if not self.team_name or not self.team_saison:
             return None
-        return Team(self.team_name, self.team_motiv, self.team_saison)
+        return Team(
+            self.team_name,
+            self.team_motiv,
+            self.team_saison,
+            art=self.team_art or TEAM_ART_ANLASS,
+            zustimmung_am=self.team_zustimmung_am,
+        )
 
     def zustand(self, heute: Optional[date] = None) -> EinladungZustand:
         """Nur eine aktive Einladung laesst sich einloesen."""
@@ -328,4 +342,8 @@ def _team_spalten(team: Optional[Team]) -> dict:
         "team_name": team.name if team else None,
         "team_motiv": team.motiv if team else None,
         "team_saison": team.saison if team else None,
+        "team_art": team.art if team else None,
+        "team_zustimmung_am": (
+            team.zustimmung_am if team and team.art == TEAM_ART_GRUPPE else None
+        ),
     }

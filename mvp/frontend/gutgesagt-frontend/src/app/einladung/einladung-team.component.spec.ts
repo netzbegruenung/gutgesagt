@@ -93,6 +93,71 @@ describe('EinladungComponent mit Team', () => {
     c.nachname = 'Beispiel';
   }
 
+  describe('Team nach Gruppe', () => {
+    const SATZ =
+      'Dieses Team ist mit Zustimmung von Netzfeuerwehr nach ihr benannt. Verantwortlich für Gut gesagt ist allein die Netzbegrünung; Netzfeuerwehr bekommt keine Daten über dich.';
+    const NACH_GRUPPE = {
+      name: 'Netzfeuerwehr',
+      art: 'gruppe' as const,
+      knopf_ja: 'Ja, speichert, dass ich im Team Netzfeuerwehr bin',
+      einwilligung_text: 'Ich willige ausdrücklich ein, dass Gut gesagt an meinem Konto speichert, dass ich im Team Netzfeuerwehr bin …',
+    };
+
+    function satzDirektUeberDerFrage() {
+      const satz = el().querySelector('[data-testid="team-gruppe"]')!;
+      expect(satz.textContent!.trim()).toBe(SATZ);
+      // direkt über der Frage: das nächste Element sind die Sätze vor den Knöpfen
+      expect(satz.nextElementSibling?.id).toBe('team-erklaerung');
+      expect(satz.compareDocumentPosition(knopf('team-ja'))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(el().querySelector('.team-knoepfe[role="group"]')!.getAttribute('aria-describedby')).toBe(
+        'team-gruppe team-erklaerung',
+      );
+    }
+
+    it('ohne Konto: zeigt den Satz wortgleich direkt über der Frage', () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team(NACH_GRUPPE) });
+
+      expect(el().querySelector('[data-testid="team-schon-konto"]')).not.toBeNull();
+      satzDirektUeberDerFrage();
+    });
+
+    it('angemeldet beitreten: zeigt denselben Satz direkt über der Frage', () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team(NACH_GRUPPE) }, true);
+
+      // wirklich der angemeldete Weg: kein Hinweis „Hast du schon ein Konto?“, kein Formular
+      expect(el().querySelector('[data-testid="team-schon-konto"]')).toBeNull();
+      expect(el().querySelector('input[type="email"]')).toBeNull();
+      satzDirektUeberDerFrage();
+    });
+
+    it('Team nach Anlass, Ort oder Saison: kein Satz', () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team({ art: 'anlass' }) });
+
+      expect(el().querySelector('[data-testid="team-gruppe"]')).toBeNull();
+      expect(el().textContent).not.toContain('nach ihr benannt');
+      expect(el().querySelector('.team-knoepfe[role="group"]')!.getAttribute('aria-describedby')).toBe(
+        'team-erklaerung',
+      );
+    });
+
+    it('ohne Art (älterer Server), neues Konto: kein Satz', () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team() });
+      expect(el().querySelector('[data-testid="team-gruppe"]')).toBeNull();
+    });
+
+    it('angemeldet ohne Art: kein Satz', () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team() }, true);
+
+      expect(el().querySelector('[data-testid="team-schon-konto"]')).toBeNull();
+      expect(el().querySelector('[data-testid="team-gruppe"]')).toBeNull();
+    });
+  });
+
   describe('ohne Konto', () => {
     it('zeigt den Kasten über dem Formular mit Team, Motiv samt Name, Nummer und beiden Knöpfen', () => {
       starten('Code123');
