@@ -69,6 +69,31 @@ describe('AppComponent - Anonymous User Functionality', () => {
     router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
   });
 
+  describe('Besucher mit 200 von /api/user-info (keine 401, BDK-Saal)', () => {
+    const besucher: UserInfo = { isAuthenticated: false, userId: null, userName: null, claims: null };
+
+    beforeEach(() => {
+      authService.fetchUserInfo.and.returnValue(of(besucher));
+      fixture = TestBed.createComponent(AppComponent);
+      component = fixture.componentInstance;
+    });
+
+    afterEach(() => sessionStorage.removeItem('loginReturnUrl'));
+
+    it('lässt ein gemerktes Rückkehrziel für die Anmeldung liegen', () => {
+      sessionStorage.setItem('loginReturnUrl', '/contributions');
+      const navigateByUrl = jasmine.createSpy('navigateByUrl');
+      (router as unknown as { navigateByUrl: jasmine.Spy }).navigateByUrl = navigateByUrl;
+
+      fixture.detectChanges();
+
+      expect(component.userInfo).toEqual(besucher);
+      expect(sessionStorage.getItem('loginReturnUrl')).toBe('/contributions');
+      expect(navigateByUrl).not.toHaveBeenCalled();
+      expect(navigationService.navigateToLogin).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Anonymous User State', () => {
     beforeEach(() => {
       authService.fetchUserInfo.and.returnValue(throwError(() => new Error('Unauthorized')));
