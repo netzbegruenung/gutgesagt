@@ -364,6 +364,14 @@ Der Prüfwert der Muster-Hinweise für „ein Konto hat einen Beitrag eines ande
 Was eine angemeldete Person nach dem Kopieren mit „Ja, gepostet“ meldet: Sie hat den Text öffentlich als Antwort gepostet. Gezählt wird je Kalenderwoche jede Person einmal, nicht jeder Klick, und ohne den Beitrag; das ist der Nordstern (verschiedene Menschen je Woche, die öffentlich kontern). Gemerkt wird dafür bis Wochenende nur ein Prüfwert aus der Kennung mit einem Wochenschlüssel im Arbeitsspeicher, danach nur die Zahl der Woche. Nur mit Art.-9-Einwilligung, ohne Startkonten, hinter einem Schalter (#643). Den Link zum eigenen Post fragt Gut gesagt nicht ab.
 _Avoid_: geteilt (das ist Nutzung), Conversion
 
+**Wirkungs-Echo**:
+Die Summe „öffentlich gepostet“ je Beitrag, die nur die Autorin sieht, in „Meine Beiträge“ und in „Seit deinem letzten Besuch“ als Zuwachs über alle eigenen Beiträge seit dem letzten Besuch (ein Zählerstand am Konto wie bei der Nutzung, kein Zeitpunkt). Sie entsteht, wenn jemand nach dem Kopieren „Ja, gepostet“ meldet und dabei der Beitrag mitgeht; getrennt von der Wochenzahl unter „Öffentlich gekontert“, die keinen Beitrag kennt. Am Zähler stehen nur Beitrag und Summe, keine Kennung, kein Zeitpunkt; entdoppelt je Person, Beitrag und Tag nur im Arbeitsspeicher. Eigene Beiträge und Startkonten zählen nicht. Angezeigt als „3-mal öffentlich gepostet“, nie als Zahl von Menschen. Schalter `wirkungs_echo` (#790).
+_Avoid_: Reichweite, Shares
+
+**Danke**:
+Ein Klick auf „Danke an die Autorin“ nach dem Kopieren. Die Autorin sieht je Beitrag nur die Summe („5 Danke“), nie von wem. Höchstens ein Danke je Person (ohne Konto: Besuchermerkmal), Beitrag und Tag, entdoppelt wie die Nutzung über einen Tages-Prüfwert; keine Punkte, eigene Beiträge und Startkonten zählen nicht. Angemeldet nur mit Art.-9-Einwilligung, ohne Konto nur mit dem Unterschalter. Schalter `danke_knopf`, Unterschalter `danke_ohne_konto` (#791).
+_Avoid_: Like (das ist eine Stimme), Kudos
+
 **Oft genutzt**:
 Ein Beitrag, der in den letzten sieben Tagen (nicht der Kalenderwoche) mehrfach genutzt wurde, gezählt als entdoppelte Nutzung. „Diese Woche oft genutzt“ auf der Startseite zeigt die meistgenutzten zuerst und nur, wenn genug Beiträge oft genutzt wurden; sonst gibt es den Bereich nicht. Gesperrte und gelöschte Beiträge stehen dort nie. Die Schwellen (Mindestnutzung, Mindestzahl, Höchstzahl) sind Stellschrauben und stehen in `services/oft_genutzt_service.py`, nicht hier.
 _Avoid_: Trending, Trend, beliebt, Top-Beiträge

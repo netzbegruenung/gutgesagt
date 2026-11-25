@@ -758,7 +758,7 @@ describe('KartenAktionenComponent - Abstimmen', () => {
 
       aktion.next();
 
-      expect(usage.gepostetMelden).toHaveBeenCalledWith('test-user');
+      expect(usage.gepostetMelden).toHaveBeenCalledWith('test-user', INHALT_ID);
       expect(snackBar.open).not.toHaveBeenCalled();
     });
 
