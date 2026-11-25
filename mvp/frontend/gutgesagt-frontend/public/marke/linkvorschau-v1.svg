@@ -1,38 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-<!-- Linkvorschau (og:image) fuer Messenger, 1200 x 630 (1,91:1, das Format, das WhatsApp, Signal und
-     Telegram gross zeigen). linkvorschau-v1.png ist aus dieser Zeichnung gerendert (Chromium, Schriften aus
-     ../fonts/). Das Bild gilt fuer jede geteilte Seite, auch /beitrag/<id> und /result (dort setzt nginx nur
-     Titel und Beschreibung ein, das Bild bleibt): deshalb zeigt es den Ablauf (Parole, darauf eine bewaehrte
-     Antwort) ohne einen bestimmten Beitrag, sonst widersprechen sich Bild und Titel. Absender Netzbegruenung,
-     keine Personen, keine Anzeigenamen. Logo: logo-v2.svg (Hand "Thumbs up" aus Fluent Emoji, Copyright (c)
-     Microsoft Corporation, MIT-Lizenz, siehe FLUENT-EMOJI-LIZENZ.txt). Schriften: GrueneType und PT Sans,
-     dieselben Dateien wie in der App (src/styles.css). Farben wie das Teilen-Bild (sharepic.ts): Grund App-Gelb
-     #f6ff7c, Tannengruen #005437, Text #1f1f1f, alle Paare ueber 4,5:1. Logo und Claim stehen in der Mitte
-     (x 285 bis 915), damit ein quadratischer Ausschnitt sie behaelt; Schrift ab 36 px, damit sie auch bei
-     300 px Vorschaubreite lesbar bleibt. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500">
+<!-- Linkvorschau (og:image) fuer Messenger, 1200 x 500 (2,4:1). Flacher als das uebliche 1200 x 630, damit die
+     Karte im Chat weniger hoch wird (Sebastian 26.11.2026: "nicht ganz so riesig groß, weniger höhe"); WhatsApp
+     zeigt grosse Vorschauen bis 4:1 (Meta, WhatsApp Business Platform, Link previews), Telegram gross mit
+     twitter:card summary_large_image. linkvorschau-v1.png ist aus dieser Zeichnung gerendert (Chromium,
+     Schriften aus ../fonts/). Das Bild gilt fuer jede geteilte Seite, auch /beitrag/<id> und /result (dort
+     setzt nginx nur Titel und Beschreibung ein, das Bild bleibt): deshalb zeigt es den Ablauf ohne einen
+     bestimmten Beitrag. Absender Netzbegruenung, keine Personen, keine Anzeigenamen. Logo: logo-v2.svg (Hand
+     "Thumbs up" aus Fluent Emoji, Copyright (c) Microsoft Corporation, MIT-Lizenz, siehe
+     FLUENT-EMOJI-LIZENZ.txt). Schriften: GrueneType und PT Sans, dieselben Dateien wie in der App
+     (src/styles.css). Farben wie das Teilen-Bild (sharepic.ts): Grund App-Gelb #f6ff7c, Tannengruen #005437,
+     Text #1f1f1f, alle Paare ueber 4,5:1. Alles mittig in einer Spalte (x 285 bis 915 fuer Logo und Claim),
+     damit ein quadratischer Ausschnitt sie behaelt. -->
 <style>
 @font-face{font-family:GT;src:url(../fonts/GrueneTypeNeue-Regular.woff2)}
 @font-face{font-family:PT;src:url(../fonts/PTS55F.ttf)}
 @font-face{font-family:PTB;src:url(../fonts/PTS75F.ttf)}
 .marke{font-family:GT;fill:#005437}
-.t{font-family:PT;fill:#1f1f1f;font-size:42px}
-.tb{font-family:PTB;fill:#1f1f1f;font-size:42px}
-.s{font-family:PTB;fill:#fff;font-size:40px}
-.f{font-family:PTB;fill:#005437;font-size:34px}
+.t{font-family:PT;fill:#1f1f1f;font-size:36px}
+.s{font-family:PTB;fill:#fff;font-size:34px}
+.f{font-family:PTB;fill:#005437;font-size:28px}
 </style>
-<rect width="1200" height="630" fill="#f6ff7c"/>
-<image href="logo-v2.svg" x="440" y="30" width="92" height="92"/>
-<text class="marke" x="545" y="98" font-size="56">Gut gesagt</text>
-<text class="marke" x="600" y="214" font-size="82" text-anchor="middle">Nie wieder sprachlos</text>
-<g transform="translate(130 250)">
-  <rect width="600" height="76" rx="38" fill="#005437"/>
-  <path d="M44 68 L30 98 L80 72 Z" fill="#005437"/>
-  <text class="s" x="300" y="52" text-anchor="middle">Die Parole im Familienchat?</text>
+<rect width="1200" height="500" fill="#f6ff7c"/>
+<image href="logo-v2.svg" x="472" y="44" width="70" height="70"/>
+<text class="marke" x="554" y="96" font-size="44">Gut gesagt</text>
+<text class="marke" x="600" y="200" font-size="76" text-anchor="middle">Nie wieder sprachlos</text>
+<g transform="translate(600 238)">
+  <rect x="-250" width="500" height="62" rx="31" fill="#005437"/>
+  <path d="M-212 56 L-222 80 L-184 58 Z" fill="#005437"/>
+  <text class="s" y="43" text-anchor="middle">Die Parole im Familienchat?</text>
 </g>
-<g transform="translate(130 350)">
-  <rect width="940" height="160" rx="30" fill="#fff" stroke="#005437" stroke-width="3"/>
-  <text class="tb" x="44" y="66">Darauf eine bewährte Antwort:</text>
-  <text class="t" x="44" y="122">finden, kopieren, posten.</text>
-</g>
-<text class="f" x="600" y="584" text-anchor="middle">Netzbegrünung · gutgesagt.netzbegruenung.de</text>
+<text class="t" x="600" y="358" text-anchor="middle">Darauf eine bewährte Antwort: finden, kopieren, posten.</text>
+<text class="f" x="600" y="448" text-anchor="middle">Netzbegrünung · gutgesagt.netzbegruenung.de</text>
 </svg>
