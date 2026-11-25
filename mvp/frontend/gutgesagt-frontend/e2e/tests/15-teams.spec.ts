@@ -421,7 +421,7 @@ test.describe('Teams über Einladungslinks', () => {
     await expect(satz).toHaveText(GRUPPE_SATZ);
     // direkt über der Frage: danach die Sätze vor den Knöpfen
     await expect(satz.locator('xpath=following-sibling::*[1]')).toHaveAttribute('id', 'team-erklaerung');
-    await expect(kasten.getByRole('group')).toHaveAttribute('aria-describedby', 'team-gruppe team-erklaerung');
+    await expect(kasten.locator('.team-knoepfe[role="group"]')).toHaveAttribute('aria-describedby', 'team-gruppe team-erklaerung');
     await keinQuerscrollen(page);
     await bild('teams-nach-gruppe-kasten', true);
 
