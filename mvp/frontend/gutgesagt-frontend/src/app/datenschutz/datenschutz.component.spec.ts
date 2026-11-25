@@ -569,12 +569,12 @@ describe('DatenschutzComponent', () => {
       );
     });
 
-    it('Teams: die Team-Summe mit derselben Einwilligung, noch nicht eingeschaltet (25.11.2026)', () => {
+    it('Teams: die Team-Summe mit derselben Einwilligung, mit Kommentaren und „Ja, gepostet“, noch nicht eingeschaltet (26.11.2026)', () => {
       const text = abschnitt('Teams').replace(/\s+/g, ' ');
 
       expect(text).toContain(
         'Diese Anzeige am Namen ist noch nicht eingeschaltet. ' +
-          'Mit derselben Einwilligung darf die Zahl deiner Beiträge und Bewertungen in eine Summe deines Teams eingehen. ' +
+          'Mit derselben Einwilligung darf die Zahl deiner Beiträge, Bewertungen und Kommentare und deiner Meldungen „Ja, gepostet“ in eine Summe deines Teams eingehen. ' +
           'Diese Summe sehen nur Mitglieder des Teams, nur für abgeschlossene Wochen, erst wenn mindestens fünf ' +
           'Mitglieder eingewilligt haben, gerundet und nie mit einzelnen Namen. Die Team-Summe ist noch nicht eingeschaltet.'
       );

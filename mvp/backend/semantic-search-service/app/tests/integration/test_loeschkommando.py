@@ -315,7 +315,7 @@ def spuren(datenbank, einwuerfe):
                 saison="2026",
                 nummer=1,
                 eingetreten_am=date(2026, 11, 25),
-                einwilligung_kennung="team-2026-11-25",
+                einwilligung_kennung="team-2026-11-26",
                 einwilligung_zeitpunkt=datetime.now(timezone.utc),
             )
         )

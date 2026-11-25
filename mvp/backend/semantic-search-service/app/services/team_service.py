@@ -36,7 +36,7 @@ from core.config import Settings
 from core.logging import get_logger, log_pseudonym
 from domain.teams import (
     EINWILLIGUNG_KENNUNG,
-    EINWILLIGUNG_WORTLAUTE,
+    EINWILLIGUNG_GELTEND,
     OEFFENTLICH_KENNUNG,
     OEFFENTLICH_WORTLAUTE,
     wortlaut_pruefen,
@@ -148,13 +148,14 @@ class TeamService:
         """
         Speichert die Mitgliedschaft mit Einwilligung: Kennung des Wortlauts, den die
         Person gesehen hat (ohne Angabe der aktuelle, EINWILLIGUNG_KENNUNG), und
-        Zeitpunkt jetzt. Mit ``code`` zaehlt die Einloesung in derselben Transaktion
+        Zeitpunkt jetzt. Nur geltende Kennungen (EINWILLIGUNG_GELTEND); eine fruehere
+        wird abgelehnt wie eine unbekannte. Mit ``code`` zaehlt die Einloesung in derselben Transaktion
         (NichtEinloesbar, wenn die Einladung nicht mehr zaehlt).
         """
         if not self.wirksam():
             raise TeamsAus()
         kennung = wortlaut_pruefen(
-            einwilligung_kennung or EINWILLIGUNG_KENNUNG, EINWILLIGUNG_WORTLAUTE
+            einwilligung_kennung or EINWILLIGUNG_KENNUNG, EINWILLIGUNG_GELTEND
         )
         mitgliedschaft, neu = self._repository.beitreten(
             konto=konto,
