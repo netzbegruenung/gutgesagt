@@ -162,6 +162,19 @@ describe('SchalterComponent', () => {
     expect(zustand(rangliste)).toBe('Admin: an · wirksam: aus, weil Punkte aus');
   });
 
+  it('„Ja, gepostet“ ohne Konto: Name und Voraussetzung (#799)', () => {
+    laden([
+      schalter({ name: 'gepostet', admin_wert: false, wirksam: false }),
+      schalter({ name: 'gepostet_ohne_konto', admin_wert: true, wirksam: false }),
+    ]);
+
+    const ohneKonto = karten()[1];
+    expect(ohneKonto.querySelector('h3')!.textContent).toBe('„Ja, gepostet“ ohne Konto');
+    expect((ohneKonto.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim()).toBe(
+      'Admin: an · wirksam: aus, weil Rückfrage „Ja, gepostet“ aus',
+    );
+  });
+
   describe('Teams und aktuelle Saison', () => {
     const SAISON: Einstellung = {
       name: 'aktuelle_saison',

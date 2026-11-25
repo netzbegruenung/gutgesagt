@@ -11,7 +11,9 @@ gilt die Einstellung auf der Seite Schalter wie bisher.
 Den Fortschrittsbalken sehen alle erst ab der Schwelle (Settings
 ``saison_ziel_schwelle_menschen`` und ``saison_ziel_schwelle_wochen``), vorher nur
 Admins. Gezaehlt wird nur aus den vorhandenen Wochenzahlen von "Ja, gepostet"
-(gepostet_wochen); gespeichert wird dafuer nichts Neues.
+(gepostet_wochen); gespeichert wird dafuer nichts Neues. Die Meldungen ohne Konto
+(#799, gepostet_ohne_konto_wochen) sind keine Menschen: Sie zaehlen weder fuers Ziel
+noch fuer die Schwelle, die Admin-Seite zeigt sie nur daneben.
 
 Schnittstelle fuer spaetere Bausteine (Rangliste je Saison, Rueckblick): ``alle``,
 ``laufende`` und die Saison-Dataclass aus domain/saisons.py (id, name, beginn, ende).
@@ -70,6 +72,11 @@ class SaisonStand:
     erreicht: int
     # Nur die laufende Saison: verschiedene Menschen der laufenden Woche bisher
     laufende_woche: Optional[int]
+    # Meldungen ohne Konto (#799) aus abgeschlossenen Wochen der Saison, nur daneben:
+    # nicht in ``erreicht``, nicht in der Schwelle
+    meldungen_ohne_konto: int = 0
+    # Nur die laufende Saison: Meldungen ohne Konto der laufenden Woche bisher
+    laufende_woche_ohne_konto: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -93,6 +100,9 @@ class SaisonService:
         repository: SaisonRepository,
         wochenzahlen: Callable[[date, date], Dict[date, int]],
         einstellungen: Optional[Settings] = None,
+        ohne_konto_wochenzahlen: Optional[
+            Callable[[date, date], Dict[date, int]]
+        ] = None,
         wirksam: Callable[[Settings], bool] = _wirksam,
         cache_sekunden: float = CACHE_SEKUNDEN,
         uhr: Callable[[], float] = time.monotonic,
@@ -100,9 +110,12 @@ class SaisonService:
         """
         ``wochenzahlen(von, laufende)``: verschiedene Menschen je Woche von ``von`` bis
         zur laufenden Woche (GepostetRepository.wochen), nur Wochen mit Meldungen.
+        ``ohne_konto_wochenzahlen(von, laufende)``: Meldungen ohne Konto je Woche
+        (#799), nur fuer die Admin-Seite; ohne Angabe keine.
         """
         self._repository = repository
         self._wochenzahlen = wochenzahlen
+        self._ohne_konto_wochenzahlen = ohne_konto_wochenzahlen or (lambda _v, _l: {})
         self._einstellungen = einstellungen
         self._wirksam_fn = wirksam
         self._cache_sekunden = cache_sekunden
@@ -210,6 +223,15 @@ class SaisonService:
         laufende = wochenbeginn(heute)
         saisons = self.alle()
         zahlen = self._zahlen(laufende)
+        # Nur daneben (#799): nie in zahlen, damit Ziel und Schwelle Menschen bleiben.
+        # Faellt die Abfrage aus, fehlen nur diese Zahlen, nicht die Saison-Seite.
+        try:
+            ohne_konto = self._ohne_konto_wochenzahlen(
+                min(_ERSTE_WOCHE, laufende), laufende
+            )
+        except Exception as e:
+            logger.error(f"Meldungen ohne Konto nicht gelesen: {type(e).__name__}")
+            ohne_konto = {}
         return AdminStand(
             saisons=[
                 SaisonStand(
@@ -218,6 +240,10 @@ class SaisonService:
                     erreicht=saisonzahl(s, zahlen, laufende, saisons),
                     laufende_woche=(
                         zahlen.get(laufende, 0) if s.laeuft(heute) else None
+                    ),
+                    meldungen_ohne_konto=saisonzahl(s, ohne_konto, laufende, saisons),
+                    laufende_woche_ohne_konto=(
+                        ohne_konto.get(laufende, 0) if s.laeuft(heute) else None
                     ),
                 )
                 for s in saisons
@@ -273,12 +299,18 @@ _service: Optional[SaisonService] = None
 def get_saison_service() -> SaisonService:
     global _service
     if _service is None:
+        from repositories.gepostet_ohne_konto_repository import (
+            get_gepostet_ohne_konto_repository,
+        )
         from repositories.gepostet_repository import get_gepostet_repository
         from repositories.saison_repository import get_saison_repository
 
         _service = SaisonService(
             get_saison_repository(),
             lambda von, laufende: get_gepostet_repository().wochen(von, laufende),
+            ohne_konto_wochenzahlen=lambda von, laufende: (
+                get_gepostet_ohne_konto_repository().wochen(von, laufende)
+            ),
         )
     return _service
 

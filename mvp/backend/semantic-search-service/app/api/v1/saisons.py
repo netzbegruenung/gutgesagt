@@ -67,6 +67,9 @@ class SaisonResponse(BaseModel):
     erreicht: int
     # Nur bei der laufenden Saison: verschiedene Menschen der laufenden Woche bisher
     laufende_woche: Optional[int]
+    # Meldungen ohne Konto (#799): nur daneben, nicht in erreicht und nicht in der Schwelle
+    meldungen_ohne_konto: int = 0
+    laufende_woche_ohne_konto: Optional[int] = None
 
 
 class SaisonListeResponse(BaseModel):
@@ -95,6 +98,8 @@ def _liste(stand: AdminStand) -> SaisonListeResponse:
                 zustand=s.zustand.value,
                 erreicht=s.erreicht,
                 laufende_woche=s.laufende_woche,
+                meldungen_ohne_konto=s.meldungen_ohne_konto,
+                laufende_woche_ohne_konto=s.laufende_woche_ohne_konto,
             )
             for s in stand.saisons
         ],

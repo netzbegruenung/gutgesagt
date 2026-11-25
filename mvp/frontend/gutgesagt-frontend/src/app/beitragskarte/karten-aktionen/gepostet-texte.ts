@@ -8,6 +8,11 @@ export const JA_GEPOSTET = 'Ja, gepostet';
 /** So lange bleibt die Frage stehen: Zeit, den Knopf zu lesen und zu treffen. */
 export const GEPOSTET_FRAGE_MS = 8000;
 export const GEPOSTET_NICHT_GEZAEHLT = 'Danke! Zählen hat gerade nicht geklappt.';
+/**
+ * Der Dank ohne Konto (#799): ohne Zahl, denn gezählt werden dort nur Meldungen, keine
+ * Menschen; und ohne Aufforderung, sich anzumelden.
+ */
+export const GEPOSTET_OHNE_KONTO_DANK = 'Danke! Schön, dass du öffentlich konterst.';
 
 /**
  * Der Dank nach „Ja, gepostet“; ``personen`` schließt die Person selbst ein. Die Zahl

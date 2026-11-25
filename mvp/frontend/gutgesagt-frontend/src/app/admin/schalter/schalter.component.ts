@@ -17,6 +17,7 @@ const TITEL: Record<string, string> = {
   punkte: 'Punkte und Meilensteine',
   abzeichen_sichtbar: 'Abzeichen am Anzeigenamen',
   gepostet: 'Rückfrage „Ja, gepostet“',
+  gepostet_ohne_konto: '„Ja, gepostet“ ohne Konto',
   herkunft_pruefen: 'Links unter „Herkunft“ prüfen',
   abkuerzungen: 'App-Abkürzungen',
   antworten_hinweis: 'Neue Antworten auf eigene Aussagen',
@@ -47,6 +48,7 @@ const VORAUSSETZUNG: Record<string, [string, string]> = {
   team_fortschritt: ['teams', 'Teams'],
   team_quests: ['team_fortschritt', 'Team-Fortschritt'],
   danke_ohne_konto: ['danke_knopf', 'Danke-Knopf'],
+  gepostet_ohne_konto: ['gepostet', 'Rückfrage „Ja, gepostet“'],
   rangliste: ['punkte', 'Punkte'],
 };
 

@@ -231,6 +231,20 @@ class GepostetWoche(Base):
     personen = Column(Integer, nullable=False)
 
 
+class GepostetOhneKontoWoche(Base):
+    """
+    Meldungen ohne Konto (#799): je Kalenderwoche nur die Zahl der Klicks auf "Ja,
+    gepostet" ohne Anmeldung. Keine Kennung, kein Pruefwert, kein Beitrag, keine
+    Adresse; getrennt von ``gepostet_wochen``, weil sie keine Menschen zaehlt
+    (GLOSSARY.md "Meldung ohne Konto").
+    """
+
+    __tablename__ = "gepostet_ohne_konto_wochen"
+
+    woche = Column(Date, primary_key=True)
+    meldungen = Column(Integer, nullable=False)
+
+
 class WirkungJeBeitrag(Base):
     """
     Was andere mit einem Beitrag tun, nur als Summe je Beitrag fuer die Autorin:

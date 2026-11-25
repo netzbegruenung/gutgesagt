@@ -677,6 +677,9 @@ OFFEN = {
     ("POST", "/api/v1/usage/content/{content_id}/usage"),
     # Danke (#791): prueft die Einwilligung selbst, erst nach dem Schalter
     ("POST", "/api/v1/usage/content/{content_id}/danke"),
+    # Meldungen ohne Konto (#799): nur ein Wochenzaehler ohne Kennung; Angemeldete
+    # zaehlen dort nicht (sie melden ueber /users/me/gepostet mit Einwilligung)
+    ("POST", "/api/v1/ereignis"),
     ("POST", "/api/v1/usage/users/me/besuch"),
     ("POST", "/api/v1/statement/addReplysuggestionToStatement"),
     ("PUT", "/api/v1/statement/themen/zuordnen"),

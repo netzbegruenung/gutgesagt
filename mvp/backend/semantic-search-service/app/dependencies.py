@@ -434,6 +434,22 @@ def get_nutzung_rate_limiter() -> RateLimiter:
     return _nutzung_rate_limiter
 
 
+_ereignis_rate_limiter: Optional[RateLimiter] = None
+
+
+def get_ereignis_rate_limiter() -> RateLimiter:
+    """
+    Drosselung von POST /api/v1/ereignis (#799): ein Schluessel fuer alle, Fenster
+    eine Sekunde, nur im Arbeitsspeicher; keine Adresse, kein Wochenbezug.
+    """
+    global _ereignis_rate_limiter
+    if _ereignis_rate_limiter is None:
+        _ereignis_rate_limiter = RateLimiter(
+            max_requests=settings.ereignis_je_sekunde, window_seconds=1
+        )
+    return _ereignis_rate_limiter
+
+
 def get_gegenlesen_service() -> GegenlesenService:
     """Einmal je Prozess: die Listen "statt X sag Y" und Parteistimme werden beim
     ersten Aufruf gelesen."""
