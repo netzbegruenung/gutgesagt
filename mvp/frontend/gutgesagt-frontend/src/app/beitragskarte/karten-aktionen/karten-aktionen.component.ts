@@ -10,6 +10,7 @@ import {
   Output,
   Injector,
   SimpleChanges,
+  computed,
   inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -44,6 +45,7 @@ import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hin
 import { STIMM_DANK_MS, stimmDank } from './stimm-dank-texte';
 import { KopiertErfolgComponent } from './kopiert-erfolg.component';
 import type { AndereTonlage } from './kopiert-erfolg';
+import { KopiertErfolgStelle } from './kopiert-erfolg-stelle';
 
 /**
  * So lange steht „Kopiert“: Mit 1,5 s war es beim Wechsel in die andere App schon weg
@@ -149,8 +151,17 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
   @Input() andereTonlage: AndereTonlage | null = null;
   /** Statt „Kopiert – jetzt unter dem Post einfügen.“ der Erfolgstext unter der Leiste (#785, Standard aus). */
   readonly kopiertErfolgAn = inject(FunktionenService).an('kopiert_erfolg');
-  /** Ob der Erfolgstext gerade dasteht; bis die Person ihn schließt, ohne Frist. */
-  kopiertErfolg = false;
+  /** Welche Karte gerade ihren Erfolgstext zeigt; immer nur die zuletzt kopierte (#785). */
+  private readonly erfolgStelle = inject(KopiertErfolgStelle);
+  /** Kennung dieser Karte bei der Erfolgsstelle. */
+  private readonly erfolgKennung = {};
+  /** Ob der Erfolgstext gerade dasteht: bis die Person ihn schließt oder eine andere Karte kopiert. */
+  readonly kopiertErfolg = computed(() => this.erfolgStelle.aktiv() === this.erfolgKennung);
+  /**
+   * Die Nutzung im Moment des Kopierens, bevor die Karte die eigene Kopie hochzählt: „Schon
+   * N-mal genutzt“ nennt, wie oft die Antwort vorher genutzt wurde.
+   */
+  nutzungBeimKopieren: number | null = null;
 
   @Output() likeToggled = new EventEmitter<string>();
   /** Im Album: "Ändern" angetippt; den Dialog oeffnet die Seite. */
@@ -244,6 +255,7 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.abgleich.complete();
+    this.erfolgStelle.schliessen(this.erfolgKennung);
   }
 
   toggleLike(): void {
@@ -364,16 +376,18 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
    * auch beim zweiten Kopieren erneut ansagen.
    */
   private kopiertErfolgZeigen(): void {
-    if (this.kopiertErfolg) {
-      this.kopiertErfolg = false;
+    // Vor kopiert.emit(): danach zählt die Karte die eigene Kopie schon mit.
+    this.nutzungBeimKopieren = this.nutzung;
+    if (this.kopiertErfolg()) {
+      this.erfolgStelle.schliessen(this.erfolgKennung);
       this.cdr.detectChanges();
     }
-    this.kopiertErfolg = true;
+    this.erfolgStelle.zeigen(this.erfolgKennung);
     this.cdr.markForCheck();
   }
 
   kopiertErfolgSchliessen(): void {
-    this.kopiertErfolg = false;
+    this.erfolgStelle.schliessen(this.erfolgKennung);
     this.cdr.markForCheck();
   }
 

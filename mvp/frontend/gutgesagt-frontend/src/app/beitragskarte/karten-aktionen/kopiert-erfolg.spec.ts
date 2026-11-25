@@ -1,15 +1,18 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { WritableSignal, signal } from '@angular/core';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 
 import { KartenAktionenComponent } from './karten-aktionen.component';
 import { KOPIERT_ERFOLG, nutzungSatz, tonlagenHinweis } from './kopiert-erfolg';
-import { AuthService } from '../../auth/auth.service';
+import { AuthService, UserInfo } from '../../auth/auth.service';
+import { BeitragskarteComponent } from '../beitragskarte.component';
+import { ausSuchergebnis } from '../karten-daten';
 import { LoggingService } from '../../services/logging.service';
 import { UsageTrackingService } from '../../services/usage-tracking.service';
 import { VotingService } from '../../services/voting.service';
@@ -195,4 +198,140 @@ describe('Erfolgstext nach dem Kopieren - Karte (#785)', () => {
 
     expect(erfolg()).toBeNull();
   });
+});
+
+describe('Erfolgstext nach dem Kopieren - in der Beitragskarte (#785)', () => {
+  let schalter: WritableSignal<boolean>;
+
+  function inhalt(id: string, usageCount: number): any {
+    return {
+      id,
+      text: 'Windkraft schafft Arbeitsplätze.',
+      content_type: 'commentary',
+      created: new Date().toISOString(),
+      last_modified: new Date().toISOString(),
+      original_author: '0f3c2a9e-1111-2222-3333-444455556666',
+      last_modified_by: 'Test Author',
+      title: 'Test Title',
+      references: [],
+      usage_count: usageCount,
+    };
+  }
+
+  function karte(id: string, usageCount: number): ComponentFixture<BeitragskarteComponent> {
+    const fixture = TestBed.createComponent(BeitragskarteComponent);
+    fixture.componentRef.setInput(
+      'daten',
+      ausSuchergebnis({
+        score: 0.95,
+        statement_text: 'Windräder töten die Vögel!',
+        statement_similarity_score: 0.9,
+        reply_relevance: 0.85,
+        commentary_result: inhalt(id, usageCount),
+      } as any),
+    );
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  function kopieren(fixture: ComponentFixture<BeitragskarteComponent>): void {
+    (fixture.nativeElement.querySelector('.kopieren-knopf') as HTMLButtonElement).click();
+    fixture.detectChanges();
+  }
+
+  function erfolg(fixture: ComponentFixture<BeitragskarteComponent>): HTMLElement | null {
+    return fixture.nativeElement.querySelector('.kopiert-erfolg');
+  }
+
+  function nutzungAnDerKarte(fixture: ComponentFixture<BeitragskarteComponent>): string {
+    return fixture.nativeElement.querySelector('.karte-nutzung').textContent.trim();
+  }
+
+  beforeEach(async () => {
+    schalter = signal(true);
+    const auth = jasmine.createSpyObj('AuthService', ['getUserInfo', 'login']);
+    auth.getUserInfo.and.returnValue({ isAuthenticated: false });
+    auth.userInfo$ = new BehaviorSubject<UserInfo | null>(null);
+    const usage = jasmine.createSpyObj('UsageTrackingService', {
+      trackContentUsage: undefined,
+      gepostetBekannt: null,
+      gepostetAngeboten: of(false),
+    });
+    await TestBed.configureTestingModule({
+      imports: [BeitragskarteComponent, NoopAnimationsModule],
+      providers: [
+        provideRouter([]),
+        { provide: MeilensteinHinweisService, useValue: jasmine.createSpyObj('MeilensteinHinweisService', ['bestaetigen']) },
+        { provide: VotingService, useValue: jasmine.createSpyObj('VotingService', ['setLike']) },
+        { provide: MatSnackBar, useValue: jasmine.createSpyObj('MatSnackBar', ['open']) },
+        { provide: AuthService, useValue: auth },
+        { provide: Clipboard, useValue: jasmine.createSpyObj('Clipboard', ['copy']) },
+        { provide: UsageTrackingService, useValue: usage },
+        {
+          provide: LoggingService,
+          useValue: jasmine.createSpyObj('LoggingService', ['logInteraction', 'logError', 'error', 'debug', 'info', 'warn']),
+        },
+        { provide: MatDialog, useValue: jasmine.createSpyObj('MatDialog', ['open']) },
+        { provide: TEILEN_NAVIGATOR, useValue: {} },
+        {
+          provide: FunktionenService,
+          useValue: { an: (name: string) => (name === 'kopiert_erfolg' ? schalter : signal(false)) },
+        },
+      ],
+    }).compileComponents();
+  });
+
+  it('bei 0 Nutzungen nur der Erfolgssatz: die eigene Kopie zaehlt nicht mit', fakeAsync(() => {
+    const fixture = karte('a', 0);
+    kopieren(fixture);
+
+    expect(nutzungAnDerKarte(fixture)).toBe('1× genutzt');
+    expect(erfolg(fixture)!.textContent).toContain(KOPIERT_ERFOLG);
+    expect(erfolg(fixture)!.textContent).not.toContain('genutzt');
+    tick(600);
+  }));
+
+  it('bei 14 Nutzungen „Schon 14-mal“, auch wenn die Karte schon 15 zeigt', fakeAsync(() => {
+    const fixture = karte('a', 14);
+    kopieren(fixture);
+
+    expect(nutzungAnDerKarte(fixture)).toBe('15× genutzt');
+    expect(erfolg(fixture)!.textContent!.replace(/\s+/g, ' ')).toContain('Schon 14-mal genutzt.');
+    tick(600);
+  }));
+
+  it('zeigt den Erfolgstext nur an der zuletzt kopierten Karte', fakeAsync(() => {
+    const karteA = karte('a', 3);
+    const karteB = karte('b', 5);
+
+    kopieren(karteA);
+    expect(erfolg(karteA)).not.toBeNull();
+
+    kopieren(karteB);
+    karteA.detectChanges();
+    expect(erfolg(karteA)).toBeNull();
+    expect(karteA.nativeElement.querySelector('.erfolg-schliessen')).toBeNull();
+    expect(erfolg(karteB)!.textContent!.replace(/\s+/g, ' ')).toContain('Schon 5-mal genutzt.');
+    expect(document.body.textContent!.split('🌱').length - 1).toBeLessThanOrEqual(1);
+
+    kopieren(karteA);
+    karteB.detectChanges();
+    expect(erfolg(karteB)).toBeNull();
+    expect(erfolg(karteA)!.textContent!.replace(/\s+/g, ' ')).toContain('Schon 4-mal genutzt.');
+    tick(600);
+  }));
+
+  it('Schliessen an einer alten Karte nimmt der neuen nichts weg', fakeAsync(() => {
+    const karteA = karte('a', 3);
+    const karteB = karte('b', 5);
+
+    kopieren(karteA);
+    kopieren(karteB);
+    karteA.debugElement.query(By.directive(KartenAktionenComponent)).componentInstance.kopiertErfolgSchliessen();
+    karteA.detectChanges();
+    karteB.detectChanges();
+
+    expect(erfolg(karteB)).not.toBeNull();
+    tick(600);
+  }));
 });
