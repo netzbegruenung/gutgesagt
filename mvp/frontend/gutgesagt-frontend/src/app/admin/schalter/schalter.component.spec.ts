@@ -133,6 +133,24 @@ describe('SchalterComponent', () => {
     expect(knopf(karten()[0]).getAttribute('aria-checked')).toBe('false');
     expect(document.body.textContent).toContain('Der Server erlaubt diesen Schalter nicht.');
   });
+
+  it('zeigt die Schalter des Spielgefühls mit Namen und erklärt die Unterschalter', () => {
+    laden([
+      schalter({ name: 'kopiert_erfolg' }),
+      schalter({ name: 'danke_knopf', admin_wert: false, wirksam: false }),
+      schalter({ name: 'danke_ohne_konto', admin_wert: true, wirksam: false }),
+      schalter({ name: 'punkte', admin_wert: false, wirksam: false }),
+      schalter({ name: 'rangliste', admin_wert: true, wirksam: false }),
+    ]);
+
+    const [kopiert, , ohneKonto, , rangliste] = karten();
+    expect(kopiert.querySelector('h3')!.textContent).toBe('Erfolgstext nach dem Kopieren');
+    expect(ohneKonto.querySelector('h3')!.textContent).toBe('Danke-Knopf ohne Konto');
+    const zustand = (k: HTMLElement) => (k.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim();
+    expect(zustand(ohneKonto)).toBe('Admin: an · wirksam: aus, weil Danke-Knopf aus');
+    expect(zustand(rangliste)).toBe('Admin: an · wirksam: aus, weil Punkte aus');
+  });
+
   describe('Teams und aktuelle Saison', () => {
     const SAISON: Einstellung = {
       name: 'aktuelle_saison',

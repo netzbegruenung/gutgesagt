@@ -326,6 +326,21 @@ class Settings(BaseSettings):
     # Obergrenze, bewusst nicht an abzeichen_sichtbar_aktiv gekoppelt: Auf Prod bleibt
     # sie aus, bis die Datenschutzbeauftragte geraten hat. Wirkt nur mit teams_aktiv.
     teams_oeffentlich_aktiv: bool = False
+    # Spielgefuehl zur BDK (#782 bis #793, services/schalter_service.py SPIEL_SCHALTER):
+    # je Baustein eine Obergrenze, von Haus aus aus; Einschalt-Bedingungen je Schalter in
+    # docs/ARCHITECTURE.md. danke_ohne_konto wirkt nur mit danke_knopf, rangliste nur mit
+    # punkte.
+    saison_ziel_aktiv: bool = False
+    gartenansicht_aktiv: bool = False
+    kopiert_erfolg_aktiv: bool = False
+    konter_probe_aktiv: bool = False
+    luecke_zu_gross_aktiv: bool = False
+    einwilligung_im_gewinn_aktiv: bool = False
+    naechster_schritt_aktiv: bool = False
+    wirkungs_echo_aktiv: bool = False
+    danke_knopf_aktiv: bool = False
+    danke_ohne_konto_aktiv: bool = False
+    rangliste_aktiv: bool = False
     # Gewichte und Deckel der drei Stufen (domain/punkte.py): Tun klein und je Tag
     # gedeckelt, Quests mehr, Wirkung bei anderen am meisten.
     punkte_nutzung: int = Field(default=10, ge=0)

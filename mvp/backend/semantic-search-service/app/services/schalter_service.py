@@ -43,6 +43,139 @@ class Schalterart:
     # funktionen.py): fuer Funktionen, die nur im Browser laufen und deshalb keinen
     # eigenen Endpunkt haben, der mit 404 antworten koennte (etwa Teilen als Bild).
     oeffentlich: bool = False
+    # Eigene Bedingung fuers Einschalten auf Prod, die die Admin-Seite statt des
+    # allgemeinen DSFA-Hinweises zeigt (etwa ein DSFA-Nachtrag oder ein Jura-OK).
+    einschalt_hinweis: Optional[str] = None
+
+
+# Spielgefuehl zur BDK (#782 bis #793, docs/ARCHITECTURE.md "Schalter fuer das
+# Spielgefuehl"): je Baustein ein Schalter, Obergrenze von Haus aus aus. Die Bausteine
+# selbst kommen in eigenen PRs; bis dahin schalten diese Schalter nichts.
+SPIEL_SCHALTER = (
+    Schalterart(
+        name="saison_ziel",
+        feld="saison_ziel_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_SAISON_ZIEL_AKTIV",
+        erklaerung=(
+            "Saisons mit Gemeinschaftsziel und der Fortschrittsbalken auf der "
+            "Startseite; für alle erst ab der Schwelle, vorher nur im Admin."
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="gartenansicht",
+        feld="gartenansicht_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_GARTENANSICHT_AKTIV",
+        erklaerung=(
+            "Gartenansicht für alle: je Thema die Zahl der Antworten und der "
+            "Aussagen ohne Antwort; Besucher sehen nur die Zahlen."
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="kopiert_erfolg",
+        feld="kopiert_erfolg_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_KOPIERT_ERFOLG_AKTIV",
+        erklaerung=(
+            "Kurzer Erfolgstext nach dem Kopieren mit der Nutzung der Karte und "
+            "einem Hinweis auf andere Tonlagen; speichert und zählt nichts Neues."
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="konter_probe",
+        feld="konter_probe_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_KONTER_PROBE_AKTIV",
+        erklaerung=(
+            "Spiel „Konter-Probe“: ein Spruch, drei echte Antworten, tippen, danach "
+            "die echte Nutzung sehen; ohne Konto, der Tipp wird nicht gespeichert."
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="luecke_zu_gross",
+        feld="luecke_zu_gross_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_LUECKE_ZU_GROSS_AKTIV",
+        erklaerung=(
+            "„Lücke zu!“ nach dem Beantworten einer gesuchten Aussage als großer "
+            "Moment mit dem Knopf „Nächste Lücke“; aus: der kleine Satz wie bisher."
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="einwilligung_im_gewinn",
+        feld="einwilligung_im_gewinn_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_EINWILLIGUNG_IM_GEWINN_AKTIV",
+        erklaerung=(
+            "Einwilligungsfragen im passenden Moment statt alle auf einmal: "
+            "höchstens eine neue Frage je Besuch und vier im ersten Monat; die "
+            "Wortlaute bleiben gleich."
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="naechster_schritt",
+        feld="naechster_schritt_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_NAECHSTER_SCHRITT_AKTIV",
+        erklaerung=(
+            "Karte „Dein nächster Schritt“ auf der Startseite: ein Vorschlag aus den "
+            "eigenen Beiträgen, ohne Frist; speichert auf dem Server nichts zusätzlich."
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="wirkungs_echo",
+        feld="wirkungs_echo_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV",
+        erklaerung=(
+            "Wer schreibt, sieht je Beitrag, wie oft er öffentlich gepostet wurde, "
+            "nur als Summe und nie, von wem."
+        ),
+        einschalt_hinweis=(
+            "Vor dem Einschalten auf Prod: DSFA-Nachtrag V31 beschlossen"
+        ),
+    ),
+    Schalterart(
+        name="danke_knopf",
+        feld="danke_knopf_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV",
+        erklaerung=(
+            "Knopf „Danke an die Autorin“ nach dem Kopieren, für Angemeldete; die "
+            "Autorin sieht nur die Summe je Beitrag. Bringt keine Punkte."
+        ),
+        einschalt_hinweis=(
+            "Vor dem Einschalten auf Prod: DSFA-Nachtrag V31 beschlossen"
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="danke_ohne_konto",
+        feld="danke_ohne_konto_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV",
+        erklaerung=(
+            "Danke-Knopf auch ohne Konto, entdoppelt über das Besuchermerkmal; wirkt "
+            "nur zusammen mit dem Danke-Knopf."
+        ),
+        einschalt_hinweis=(
+            "Vor dem Einschalten auf Prod: DSFA-Nachtrag V31 beschlossen und das "
+            "Besuchermerkmal für Besucher geklärt"
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="rangliste",
+        feld="rangliste_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_RANGLISTE_AKTIV",
+        erklaerung=(
+            "Rangliste je Saison, sichtbar nur für Angemeldete, die selbst "
+            "eingewilligt haben; wirkt nur zusammen mit den Punkten."
+        ),
+        einschalt_hinweis=(
+            "Vor dem Einschalten auf Prod: Jura-OK zu Wortlaut, DSFA V28 und Absatz "
+            "der Datenschutzerklärung"
+        ),
+    ),
+)
 
 
 SCHALTER: Dict[str, Schalterart] = {
@@ -140,6 +273,7 @@ SCHALTER: Dict[str, Schalterart] = {
             dsfa_hinweis=True,
             oeffentlich=True,
         ),
+        *SPIEL_SCHALTER,
     )
 }
 
@@ -257,7 +391,8 @@ class SchalterService:
                 obergrenze=bool(getattr(einstellungen, art.feld)),
                 admin_wert=bool(werte.get(art.name, False)),
                 wirksam=_wirksam(art.name, einstellungen, werte),
-                dsfa_hinweis=DSFA_HINWEIS if art.dsfa_hinweis else None,
+                dsfa_hinweis=art.einschalt_hinweis
+                or (DSFA_HINWEIS if art.dsfa_hinweis else None),
             )
             for art in SCHALTER.values()
         ]
@@ -287,6 +422,12 @@ def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool
     if name == "teams_oeffentlich":
         # Ohne Teams keine Teams am Namen
         return an and _wirksam("teams", einstellungen, werte)
+    if name == "danke_ohne_konto":
+        # Unterschalter: ohne Danke-Knopf kein Danke ohne Konto
+        return an and _wirksam("danke_knopf", einstellungen, werte)
+    if name == "rangliste":
+        # Rangliste aus Punkten (ADR 0004): ohne Punkte keine Rangliste
+        return an and _wirksam("punkte", einstellungen, werte)
     return an
 
 

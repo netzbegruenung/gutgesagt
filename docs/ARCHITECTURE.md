@@ -425,6 +425,29 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   `autor_teams` stays `null`.
 - `DOCKER_CONTAINER` - set to `true` inside containers to enforce strict path validation
 
+#### Schalter für das Spielgefühl (#782 to #793)
+
+One Schalter per building block for the BDK, registered in `SPIEL_SCHALTER`
+(`services/schalter_service.py`). Upper bound `SEMANTIC_SEARCH_<NAME>_AKTIV`, default `false`
+everywhere; like every Schalter it also needs the admin value (Admin, "Schalter"), which is off
+without an entry. The building blocks arrive in their own PRs; until then a switch changes
+nothing. "public" means `GET /api/v1/funktionen` reports the effective value without login.
+Team progress (#784) and team quests (#792) get their switches later.
+
+| Schalter | Upper bound | Default | Public | Condition for switching on (issue) |
+|----------|-------------|---------|--------|------------------------------------|
+| `saison_ziel` | `SEMANTIC_SEARCH_SAISON_ZIEL_AKTIV` | off | yes | none; privacy policy sentence ships with #782 |
+| `gartenansicht` | `SEMANTIC_SEARCH_GARTENANSICHT_AKTIV` | off | yes | none (#783) |
+| `kopiert_erfolg` | `SEMANTIC_SEARCH_KOPIERT_ERFOLG_AKTIV` | off | yes | none (#785) |
+| `konter_probe` | `SEMANTIC_SEARCH_KONTER_PROBE_AKTIV` | off | yes | none (#786) |
+| `luecke_zu_gross` | `SEMANTIC_SEARCH_LUECKE_ZU_GROSS_AKTIV` | off | yes | none (#787) |
+| `einwilligung_im_gewinn` | `SEMANTIC_SEARCH_EINWILLIGUNG_IM_GEWINN_AKTIV` | off | yes | none, wordings stay (#788) |
+| `naechster_schritt` | `SEMANTIC_SEARCH_NAECHSTER_SCHRITT_AKTIV` | off | yes | none; privacy policy sentences ship with #789 |
+| `wirkungs_echo` | `SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV` | off | no | DSFA addendum V31 (#790) |
+| `danke_knopf` | `SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV` | off | yes | DSFA addendum V31 (#791) |
+| `danke_ohne_konto` | `SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV` | off | yes | V31 and visitor marker (#495); works only with `danke_knopf` |
+| `rangliste` | `SEMANTIC_SEARCH_RANGLISTE_AKTIV` | off | no | legal OK (wording, DSFA V28, privacy policy) and Punkte on (#793); works only with `punkte` |
+
 ## Startup Scripts
 
 ### Local Development
