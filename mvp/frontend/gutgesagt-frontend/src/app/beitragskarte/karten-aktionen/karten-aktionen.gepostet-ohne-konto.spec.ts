@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Clipboard } from '@angular/cdk/clipboard';
@@ -16,7 +16,14 @@ import { FunktionenService } from '../../services/funktionen.service';
 import { TEILEN_NAVIGATOR } from '../../shared/teilen.service';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
 import { KOPIERT } from '../../shared/vorlagen-luecke';
-import { GEPOSTET_FRAGE, GEPOSTET_NICHT_GEZAEHLT, GEPOSTET_OHNE_KONTO_DANK } from './gepostet-texte';
+import {
+  GEPOSTET_FRAGE,
+  GEPOSTET_NICHT_GEZAEHLT,
+  GEPOSTET_OHNE_KONTO_DANK,
+  GEPOSTET_RUECKKEHR,
+  GEPOSTET_RUECKKEHR_OHNE_KONTO,
+} from './gepostet-texte';
+import { RUECKKEHR_AB_MS, RUECKKEHR_LEUCHTEN_MS } from './kopiert-erfolg.component';
 
 /**
  * „Ja, gepostet“ ohne Konto (#799): nur mit Schalter, dieselbe Frage wie mit Konto im
@@ -194,4 +201,20 @@ describe('KartenAktionenComponent - Ja, gepostet ohne Konto', () => {
     expect(cookieSetzen).not.toHaveBeenCalled();
     expect(cookieLesen).not.toHaveBeenCalled();
   });
+
+  it('Rückkehr-Moment: ohne Konto der Hinweis ohne „zählt mit“, je Kopieren neu', fakeAsync(() => {
+    schalter['gepostet_ohne_konto'].set(true);
+    kopieren();
+    tick(RUECKKEHR_AB_MS);
+    document.dispatchEvent(new Event('visibilitychange'));
+    fixture.detectChanges();
+    const frage = () => fixture.nativeElement.querySelector('.erfolg-gepostet-frage').textContent.trim();
+    expect(frage()).toBe(GEPOSTET_RUECKKEHR_OHNE_KONTO);
+    expect(frage()).not.toBe(GEPOSTET_RUECKKEHR);
+
+    // Neues Kopieren: wieder die Frage, der Moment kommt erneut erst nach 3 s
+    kopieren();
+    expect(frage()).toBe(GEPOSTET_FRAGE);
+    tick(RUECKKEHR_LEUCHTEN_MS);
+  }));
 });
