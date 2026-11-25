@@ -34,11 +34,34 @@ export interface Einladung {
   abgeschaltet: boolean;
   angelegt_am: string;
   zustand: EinladungZustand;
+  /** Team an der Einladung, nur mit Schalter teams; ``mitglieder`` ist nur eine Zahl, nie wer. */
+  team?: EinladungTeam | null;
+}
+
+export interface EinladungTeam {
+  name: string;
+  motiv: string | null;
+  saison: string;
+  mitglieder: number;
+}
+
+/** Team für eine neue Einladung (POST): Name nur nach Anlass, Ort oder Saison. */
+export interface EinladungTeamFelder {
+  team_name: string;
+  team_motiv: string;
+  team_saison: string;
 }
 
 export interface EinladungListe {
   einloesen_eingerichtet: boolean;
   einladungen: Einladung[];
+  /** Schalter teams wirkt: nur dann der Block „Team (optional)“ im Formular. */
+  teams_aktiv?: boolean;
+  /** Vorschlag für die Saison neuer Teamlinks (Admin-Einstellung). */
+  aktuelle_saison?: string | null;
+  motive?: { schluessel: string; name: string }[];
+  /** Hinweis zum Teamnamen fürs Formular. */
+  teamname_hinweis?: string | null;
 }
 
 /** Der Link, den ein Admin weitergibt. Der Code steht hinter #, damit er in keinem Server-Log landet. */
@@ -61,11 +84,18 @@ export class EinladungService {
     return this.http.get<EinladungListe>(this.baseUrl, { context: still ? stillerKontext() : undefined });
   }
 
-  anlegen(notiz: string, erlaubteEinloesungen: number, gueltigBis: string): Observable<Einladung> {
+  /** ``team``: optional; ohne Schalter teams ignoriert der Server die Teamfelder. */
+  anlegen(
+    notiz: string,
+    erlaubteEinloesungen: number,
+    gueltigBis: string,
+    team?: EinladungTeamFelder,
+  ): Observable<Einladung> {
     return this.http.post<Einladung>(this.baseUrl, {
       notiz,
       erlaubte_einloesungen: erlaubteEinloesungen,
       gueltig_bis: gueltigBis,
+      ...(team ?? {}),
     });
   }
 

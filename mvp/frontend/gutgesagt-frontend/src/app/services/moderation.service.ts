@@ -18,8 +18,19 @@ export interface Schalter {
   dsfa_hinweis: string | null;
 }
 
+/** Eine Admin-Einstellung mit Textwert, etwa ``aktuelle_saison`` (Teams). */
+export interface Einstellung {
+  name: string;
+  erklaerung: string;
+  wert: string;
+  standard: string;
+  max_laenge: number;
+}
+
 export interface SchalterListe {
   schalter: Schalter[];
+  /** Admin-Einstellungen mit Textwert; fehlt bei älteren Servern. */
+  einstellungen?: Einstellung[];
 }
 
 export interface ReportContentRequest {
@@ -277,6 +288,11 @@ export class ModerationService {
   /** Admin-Wert setzen; Einschalten über die Obergrenze hinaus lehnt der Server mit 409 ab. */
   schalterSetzen(name: string, an: boolean): Observable<SchalterListe> {
     return this.http.put<SchalterListe>(`${this.baseUrl}/schalter/${encodeURIComponent(name)}`, { an });
+  }
+
+  /** Textwert einer Einstellung setzen (etwa aktuelle_saison); 422: ungültig, 404: unbekannt. */
+  einstellungSetzen(name: string, wert: string): Observable<SchalterListe> {
+    return this.http.put<SchalterListe>(`${this.baseUrl}/schalter/einstellungen/${encodeURIComponent(name)}`, { wert });
   }
 
   /**

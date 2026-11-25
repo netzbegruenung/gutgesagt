@@ -1,0 +1,53 @@
+<!-- Nur mit Schalter teams und nur fuer die Person selbst; fremde Teams gibt keine Schnittstelle heraus -->
+<section *ngIf="stand" class="meine-teams" aria-labelledby="meine-teams-titel" data-testid="meine-teams">
+    <h2 id="meine-teams-titel">Meine Teams<span *ngIf="stand.teams.length" class="meine-teams-zahl">{{ stand.teams.length }}</span></h2>
+
+    <ng-container *ngIf="stand.teams.length; else leer">
+        <p class="meine-teams-hinweis" data-testid="sichtbarkeit">
+            <ng-container *ngIf="!oeffentlich">Nur du siehst deine Teams.</ng-container>
+            <ng-container *ngIf="oeffentlich">Andere Angemeldete sehen an deinem Namen deine Teams der Saison {{ stand.aktuelle_saison }}; vergangene Saisons und deine Nummern siehst nur du.</ng-container>
+        </p>
+
+        <ul *ngIf="aktuelle.length" class="team-liste" role="list" [attr.aria-label]="'Teams der Saison ' + stand.aktuelle_saison">
+            <li *ngFor="let team of aktuelle" class="team" data-testid="team">
+                <ng-container *ngTemplateOutlet="eintrag; context: { $implicit: team }"></ng-container>
+            </li>
+        </ul>
+
+        <ng-container *ngIf="vergangene.length">
+            <h3 class="meine-teams-unter">Vergangene Saisons</h3>
+            <ul class="team-liste" role="list" aria-label="Abzeichen vergangener Saisons">
+                <li *ngFor="let team of vergangene" class="team vergangen" data-testid="team-vergangen">
+                    <ng-container *ngTemplateOutlet="eintrag; context: { $implicit: team }"></ng-container>
+                </li>
+            </ul>
+        </ng-container>
+    </ng-container>
+    <ng-template #leer>
+        <p class="meine-teams-hinweis" data-testid="leer">Noch in keinem Team. Teams gibt es über Einladungslinks, zum Beispiel an einem Stand.</p>
+    </ng-template>
+
+    <ng-template #eintrag let-team>
+        <app-team-pille [name]="team.team_name" [motiv]="team.motiv" [nummer]="team.nummer"
+                        [saison]="team.saison" [vergangen]="!team.aktuelle_saison"></app-team-pille>
+        <span class="team-seit">seit {{ tag(team.eingetreten_am) }}</span>
+        <button mat-button type="button" class="team-verlassen" data-testid="verlassen" [disabled]="laeuft"
+                [attr.aria-label]="'Team verlassen: ' + team.team_name + ', Saison ' + team.saison"
+                (click)="verlassen(team)">Team verlassen</button>
+    </ng-template>
+
+    <!-- Nur mit wirksamem Schalter teams_oeffentlich; der Wortlaut steht vor dem Umschalter -->
+    <div *ngIf="stand.oeffentlich_verfuegbar && stand.teams.length" class="oeffentlich" data-testid="oeffentlich">
+        <p id="oeffentlich-wortlaut" class="oeffentlich-wortlaut">{{ stand.oeffentlich_text }}</p>
+        <mat-slide-toggle [checked]="oeffentlich" [disabled]="laeuft"
+                          aria-describedby="oeffentlich-wortlaut"
+                          (change)="oeffentlichSchalten($event)">Öffentlich am Namen zeigen</mat-slide-toggle>
+        <p class="oeffentlich-mehr"><a routerLink="/datenschutz" target="_blank" rel="noopener">Mehr dazu in der Datenschutzerklärung</a></p>
+    </div>
+
+    <!-- Immer da, damit Screenreader den neuen Stand nach einer Handlung ansagen -->
+    <div role="status" class="meine-teams-status">
+        <p *ngIf="ansage && !fehler" class="visually-hidden">{{ ansage }}</p>
+        <p *ngIf="fehler" class="meine-teams-fehler">{{ fehler }}</p>
+    </div>
+</section>

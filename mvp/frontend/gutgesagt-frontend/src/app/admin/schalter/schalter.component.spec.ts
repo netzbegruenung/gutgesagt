@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { SchalterComponent } from './schalter.component';
-import { Schalter } from '../../services/moderation.service';
+import { Einstellung, Schalter } from '../../services/moderation.service';
 import { environment } from '../../../environments/environment';
 
 const URL = `${environment.baseUrl}/api/v1/moderation/schalter`;
@@ -132,5 +132,101 @@ describe('SchalterComponent', () => {
 
     expect(knopf(karten()[0]).getAttribute('aria-checked')).toBe('false');
     expect(document.body.textContent).toContain('Der Server erlaubt diesen Schalter nicht.');
+  });
+  describe('Teams und aktuelle Saison', () => {
+    const SAISON: Einstellung = {
+      name: 'aktuelle_saison',
+      erklaerung: 'Saison der Teams, die am Namen erscheinen.',
+      wert: '2026',
+      standard: '2026',
+      max_laenge: 20,
+    };
+
+    function mitEinstellungen(liste: Schalter[], einstellungen: Einstellung[] = [SAISON]): void {
+      http.expectOne(URL).flush({ schalter: liste, einstellungen });
+      fixture.detectChanges();
+    }
+
+    function einstellung(): HTMLElement {
+      return (fixture.nativeElement as HTMLElement).querySelector('[data-testid="einstellung"]') as HTMLElement;
+    }
+
+    it('zeigt die Schalter teams und teams_oeffentlich mit Namen', () => {
+      mitEinstellungen([schalter({ name: 'teams' }), schalter({ name: 'teams_oeffentlich' })]);
+
+      const [teams, oeffentlich] = karten();
+      expect(teams.querySelector('h3')!.textContent).toBe('Teams über Einladungen');
+      expect(oeffentlich.querySelector('h3')!.textContent).toBe('Teams am Anzeigenamen');
+    });
+
+    it('erklärt, warum teams_oeffentlich ohne Teams nicht wirkt', () => {
+      mitEinstellungen([
+        schalter({ name: 'teams', admin_wert: false, wirksam: false }),
+        schalter({ name: 'teams_oeffentlich', admin_wert: true, wirksam: false }),
+      ]);
+
+      expect((karten()[1].querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim()).toBe(
+        'Admin: an · wirksam: aus, weil Teams aus',
+      );
+    });
+
+    it('zeigt die aktuelle Saison als Textfeld mit Standard und Grenze', async () => {
+      mitEinstellungen([schalter({ name: 'teams' })]);
+      // ngModel schreibt den Wert erst nach einem Mikrotask ins Feld (whenStable wartete auf den Nachlade-Takt)
+      await Promise.resolve();
+      fixture.detectChanges();
+
+      const karte = einstellung();
+      expect(karte.querySelector('h3')!.textContent).toBe('Aktuelle Saison');
+      expect(karte.textContent).toContain('Saison der Teams, die am Namen erscheinen.');
+      expect(karte.textContent).toContain('Standard: 2026');
+      const feld = karte.querySelector('input') as HTMLInputElement;
+      expect(feld.value).toBe('2026');
+      expect(feld.maxLength).toBe(20);
+      expect((karte.querySelector('[data-testid="einstellung-speichern"]') as HTMLButtonElement).disabled).toBeTrue();
+    });
+
+    it('speichert eine neue Saison und zeigt den Stand des Servers ohne Neuladen', () => {
+      mitEinstellungen([schalter({ name: 'teams' })]);
+      const k = fixture.componentInstance;
+      k.entwuerfe['aktuelle_saison'] = ' 2027 ';
+      k.einstellungSpeichern(k.einstellungen[0]);
+
+      const anfrage = http.expectOne(`${URL}/einstellungen/aktuelle_saison`);
+      expect(anfrage.request.method).toBe('PUT');
+      expect(anfrage.request.body).toEqual({ wert: '2027' });
+      anfrage.flush({ schalter: [schalter({ name: 'teams' })], einstellungen: [{ ...SAISON, wert: '2027' }] });
+      fixture.detectChanges();
+
+      expect(einstellung().querySelector('[data-testid="einstellung-stand"]')!.textContent).toContain('Gespeichert: 2027');
+      expect(k.entwuerfe['aktuelle_saison']).toBe('2027');
+    });
+
+    it('meldet einen ungültigen Wert (422)', () => {
+      mitEinstellungen([schalter({ name: 'teams' })]);
+      const k = fixture.componentInstance;
+      k.entwuerfe['aktuelle_saison'] = 'x';
+      k.einstellungSpeichern(k.einstellungen[0]);
+
+      http
+        .expectOne(`${URL}/einstellungen/aktuelle_saison`)
+        .flush({ detail: 'Ungueltiger Wert' }, { status: 422, statusText: 'Unprocessable Entity' });
+      fixture.detectChanges();
+
+      expect(document.body.textContent).toContain('Ungültiger Wert');
+      expect(k.entwuerfe['aktuelle_saison']).toBe('x');
+    });
+
+    it('überschreibt beim Nachladen keine angefangene Eingabe', () => {
+      mitEinstellungen([schalter({ name: 'teams' })]);
+      const k = fixture.componentInstance;
+      k.entwuerfe['aktuelle_saison'] = 'Winter';
+      (k as unknown as { uebernehmen(d: unknown): void }).uebernehmen({
+        schalter: [schalter({ name: 'teams' })],
+        einstellungen: [{ ...SAISON, wert: '2028' }],
+      });
+
+      expect(k.entwuerfe['aktuelle_saison']).toBe('Winter');
+    });
   });
 });

@@ -8,6 +8,7 @@ import type { NutzungJeFassung } from '../shared/fassung';
 import { STIL_LABEL, Stil } from '../shared/zweck-stil';
 import type { BeitragAnsicht } from '../services/content.service';
 import type { Thema } from '../services/dtos/themenDtos';
+import type { TeamAmNamen } from '../shared/teams/teams';
 
 /**
  * Was eine Beitragskarte anzeigt, unabhaengig davon, woher die Daten kommen.
@@ -177,6 +178,8 @@ export interface KartenDaten {
    * nur wenn die Person der Sichtbarkeit zugestimmt hat; fehlt = kein Abzeichen.
    */
   autorAbzeichen?: number | null;
+  /** Teams der aktuellen Saison am Anzeigenamen (autor_teams); fehlt = keine. */
+  autorTeams?: TeamAmNamen[] | null;
   /** Verwendungen; null = unbekannt, dann kein Badge. */
   nutzung: number | null;
   /** Wie viele Beitraege auf diesem beruhen ("N Varianten", #356); fehlt = keine. */
@@ -218,6 +221,7 @@ export function ausSuchergebnis(paket: Suchpaket): KartenDaten {
     eigen: inhalt.ist_eigener_beitrag ?? null,
     autorName: inhalt.autor_name ?? null,
     autorAbzeichen: inhalt.autor_abzeichen ?? null,
+    autorTeams: inhalt.autor_teams ?? null,
     nutzung: inhalt.usage_count ?? 0,
     varianten: inhalt.varianten ?? 0,
     quellen: (inhalt.references ?? []).map(quelle),
@@ -337,6 +341,7 @@ export function ausBeitrag(eintrag: ContentResult): KartenDaten {
     eigen: eintrag.ist_eigener_beitrag ?? null,
     autorName: eintrag.autor_name ?? null,
     autorAbzeichen: eintrag.autor_abzeichen ?? null,
+    autorTeams: eintrag.autor_teams ?? null,
     nutzung: eintrag.usage_count ?? 0,
     nutzungLetzte7Tage: eintrag.nutzung_letzte_7_tage ?? 0,
     nutzungJeFassung: typ === 'commentary' ? (eintrag.nutzung_je_fassung ?? undefined) : undefined,

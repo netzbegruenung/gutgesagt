@@ -304,6 +304,43 @@ describe('BeitragskarteComponent', () => {
       expect(fixture.nativeElement.querySelector('.autor-abzeichen')).toBeNull();
     });
 
+    it('zeigt die Teams der aktuellen Saison am Namen und den Rest als „+N“ mit Langtext', () => {
+      const teams = [
+        { name: 'BDK 26 Berlin', motiv: 'vogel', motiv_name: 'Vogel' },
+        { name: 'Bayreuth', motiv: 'waage', motiv_name: 'Waage' },
+        { name: 'Vorhut', motiv: 'laufschuh', motiv_name: 'Laufschuh' },
+        { name: 'Winter 26', motiv: 'sprechblase', motiv_name: 'Sprechblase' },
+      ];
+      zeigen(ausSuchergebnis(paket('commentary_result', { autor_name: 'Kim G.', autor_teams: teams })));
+
+      const zeile = element('[data-testid="autor-teams"]');
+      const pillen = Array.from(zeile.querySelectorAll('[data-testid="team-pille"]')) as HTMLElement[];
+      expect(pillen.map((p) => p.textContent!.trim())).toEqual(['BDK 26 Berlin', 'Bayreuth']);
+      expect(pillen[0].querySelector('img')!.getAttribute('src')).toBe('/meilensteine/vogel.svg');
+      // Keine Nummer am Namen (Datenminimierung)
+      expect(zeile.textContent).not.toContain('Nr.');
+      const mehr = zeile.querySelector('.autor-teams-mehr')!;
+      expect(mehr.textContent!.trim()).toBe('+2');
+      expect(mehr.getAttribute('aria-label')).toBe('und 2 weitere Teams: Vorhut, Winter 26');
+    });
+
+    it('zeigt ohne Teams vom Server nichts am Namen', () => {
+      zeigen(ausSuchergebnis(paket('commentary_result', { autor_name: 'Kim G.', autor_teams: null })));
+
+      expect(fixture.nativeElement.querySelector('[data-testid="autor-teams"]')).toBeNull();
+    });
+
+    it('zeigt ohne Anmeldung keine Teams, auch wenn welche mitkaemen', () => {
+      const auth = TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>;
+      auth.getUserInfo.and.returnValue(null);
+      zeigen(ausSuchergebnis(paket('commentary_result', {
+        autor_name: 'Kim G.',
+        autor_teams: [{ name: 'Bayreuth', motiv: 'waage', motiv_name: 'Waage' }],
+      })));
+
+      expect(fixture.nativeElement.querySelector('[data-testid="autor-teams"]')).toBeNull();
+    });
+
     it('zeigt ohne Herkunft keine Zeile und sonst die Adressen (#599)', () => {
       zeigen(ausSuchergebnis(paket('commentary_result')));
       expect(element('.karte-quellen')).toBeNull();
