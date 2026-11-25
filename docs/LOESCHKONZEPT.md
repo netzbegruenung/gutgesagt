@@ -257,7 +257,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Löschaufträge, erledigt | 365 Tage (entschieden 13.11.2026) | Ausführung (`erledigt_am`); mit dem Konto sofort (Schritt 2) |
 | Zustimmung zur Sichtbarkeit der Abzeichen (`abzeichen_sichtbarkeit`) | solange das Konto besteht | — Nachweis der Zustimmung (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Einwilligung „Punkte und Meilensteine“ (`punkte_einwilligung`, #351) | solange das Konto besteht | — Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
-| Mitgliedschaften in Teams (`team_mitgliedschaften`): Kennung, Teamname, Motiv, Saison, Nummer, Tag des Beitritts, Kennung des Wortlauts und Zeitpunkt der Einwilligung | bis „Team verlassen“ (sofort gelöscht, Widerruf der Einwilligung für dieses Team) oder bis zur Löschung des Kontos | — die Einwilligung `team-2026-11-24` steht an der Mitgliedschaft und geht mit ihr; kein Bezug zur Einladung. Mit dem Konto sofort (Schritt 2), unter „Teams“ |
+| Mitgliedschaften in Teams (`team_mitgliedschaften`): Kennung, Teamname, Motiv, Saison, Nummer, Tag des Beitritts, Kennung des Wortlauts und Zeitpunkt der Einwilligung | bis „Team verlassen“ (sofort gelöscht, Widerruf der Einwilligung für dieses Team) oder bis zur Löschung des Kontos | — die Einwilligung `team-2026-11-25` steht an der Mitgliedschaft und geht mit ihr; kein Bezug zur Einladung. Mit dem Konto sofort (Schritt 2), unter „Teams“ |
 | Einwilligung „Team öffentlich am Namen zeigen“ (`team_oeffentlich`): Kennung, ja/nein, Kennung des Wortlauts, Zeitpunkt | solange das Konto besteht | — nur die jüngste Antwort je Konto; Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Zähler je Team und Saison (`team_nummern`): Teamname, Saison, zuletzt vergebene Nummer | keine | — kein Personenbezug (keine Kennung); hält fest, dass eine Nummer nach „Team verlassen“ nicht neu vergeben wird |
 | Admin-Einstellungen (`einstellungen`, etwa die aktuelle Saison): Wert, Zeitpunkt, Kennung des Admins | keine | — der Wert bleibt; die Kennung des Admins wird mit seinem Konto geleert (Schritt 2) |
@@ -438,7 +438,7 @@ und der Ablauf oben erfasst die Tabelle nicht.
 Eine Einladung kann zu einem Team gehören (GLOSSARY „Teamlink“): An `einladungen` stehen dann
 zusätzlich Teamname, Motiv und Saison, weiter ohne Mail-Adresse und ohne Kennung. Eine
 Mitgliedschaft (`team_mitgliedschaften`) entsteht nur, wenn die Person auf der Begrüßung
-ausdrücklich einwilligt (Wortlaut `team-2026-11-24`, gespeichert mit Kennung und Zeitpunkt an
+ausdrücklich einwilligt (Wortlaut `team-2026-11-25`, gespeichert mit Kennung und Zeitpunkt an
 der Mitgliedschaft). Sie trägt **keinen Bezug zur Einladung**: Welche Einladung jemand genutzt
 hat, steht weiter nirgends. Ohne Ja zählt die Einladung wie bisher nur.
 

@@ -83,11 +83,12 @@ die die App selbst einholt, nicht Keycloak (Entscheidung Maintainer, 05.11.2026,
   Art. 9 Abs. 2 lit. a DSGVO), gegeben mit dem Knopf „Ja, speichert, dass ich im Team X bin“,
   gleichwertig daneben „Nein, ohne Team weiter“. Die Anzeige der Teams am Namen ist eine zweite,
   eigene Einwilligung, gefragt nur mit dem Schalter `teams_oeffentlich`. Beide Wortlaute stehen
-  mit Kennung an einer Stelle, `EINWILLIGUNG_WORTLAUTE` (aktuell `team-2026-11-24`) und
+  mit Kennung an einer Stelle, `EINWILLIGUNG_WORTLAUTE` (aktuell `team-2026-11-25`) und
   `OEFFENTLICH_WORTLAUTE` (aktuell `team-oeffentlich-2026-11-25`) in `domain/teams.py`; das
   Frontend zeigt, was `POST /api/v1/einladungen/pruefen` und `GET /api/v1/teams/meine` liefern
   (`einwilligung_text`, `knopf_ja`, `knopf_nein`, `oeffentlich_text`), und hat keinen eigenen
-  Text. Wie hier bleibt jede frühere Kennung bekannt; ein geänderter Wortlaut bekommt eine neue.
+  Text. Wie hier bleibt jede Kennung bekannt, die einmal in Betrieb war; ein geänderter Wortlaut
+  bekommt eine neue.
   Beitreten und die Antwort zur Anzeige gehen ohne diese Einwilligung (`OFFEN` in
   `tests/unit/api/test_art9_einwilligung_api.py`); ein Widerruf hier lässt die Teams stehen,
   verlassen geht unter „Meine Teams“ („Team verlassen“, `docs/LOESCHKONZEPT.md`, „Teams“).

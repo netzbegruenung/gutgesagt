@@ -2,7 +2,7 @@
  * Texte der Teams (GLOSSARY.md „Team“, „Teamlink“, „Mitgliedschaft“), an einer Stelle,
  * damit Begrüßung, „Meine Teams“ und Datenschutzerklärung nicht auseinanderlaufen.
  *
- * Der Wortlaut der Einwilligung selbst (Kennung `team-2026-11-24`) und die beiden
+ * Der Wortlaut der Einwilligung selbst (Kennung `team-2026-11-25`) und die beiden
  * Knöpfe stehen nicht hier, sondern im Backend (`domain/teams.py`); das Frontend zeigt,
  * was `POST /api/v1/einladungen/pruefen` liefert (`einwilligung_text`, `knopf_ja`,
  * `knopf_nein`), wie bei der Art.-9-Einwilligung (docs/ART9_EINWILLIGUNG.md).

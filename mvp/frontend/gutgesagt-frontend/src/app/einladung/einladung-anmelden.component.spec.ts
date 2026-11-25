@@ -69,7 +69,7 @@ describe('EinladungAnmeldenComponent', () => {
   });
 
   describe('mit einer Einladung mit Team im Merker', () => {
-    beforeEach(() => teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-24', oeffentlich: false }));
+    beforeEach(() => teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-25', oeffentlich: false }));
     afterEach(() => localStorage.clear());
 
     it('fuehrt nach der Anmeldung zurueck auf die Einladung, ohne den Code in der Adresse', () => {

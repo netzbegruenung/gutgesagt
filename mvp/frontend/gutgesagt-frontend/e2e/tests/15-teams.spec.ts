@@ -19,7 +19,7 @@ import { expect, test } from './fixtures';
  */
 const CODE = 'E2eTeamCode_42';
 const TEAM = { name: 'BDK 26 Berlin', motiv: 'vogel', saison: '2026' };
-const KENNUNG = 'team-2026-11-24';
+const KENNUNG = 'team-2026-11-25';
 const KNOPF_JA = `Ja, speichert, dass ich im Team ${TEAM.name} bin`;
 const KNOPF_NEIN = 'Nein, ohne Team weiter';
 const MERKER = 'gutgesagt-einladung-team';

@@ -21,7 +21,11 @@ from api.v1.schalter import router as schalter_router
 from api.v1.teams import router as teams_router
 from core.config import Settings
 from dependencies import get_einladung_service, get_settings
-from domain.teams import EINWILLIGUNG_KENNUNG, OEFFENTLICH_KENNUNG
+from domain.teams import (
+    EINWILLIGUNG_KENNUNG,
+    EINWILLIGUNG_WORTLAUTE,
+    OEFFENTLICH_KENNUNG,
+)
 from repositories.team_repository import Mitgliedschaft, OeffentlichAntwort
 from services.beitrag_fuer_aufrufer import BEITRAG, Aufrufer, personen_fuer_aufrufer
 from services.einladung_service import EinladungService
@@ -273,8 +277,17 @@ class TestPruefen:
         assert team["mitglieder"] == 36
         assert team["naechste_nummer"] == 37
         assert team["eigene_nummer"] is None
-        assert team["einwilligung_kennung"] == EINWILLIGUNG_KENNUNG
-        assert "im Team BDK 26 Berlin bin" in team["einwilligung_text"]
+        assert team["einwilligung_kennung"] == "team-2026-11-25"
+        # Wortlaut vom 25.11.2026, wortgleich (Mitgliedschaft und Team-Summe)
+        assert team["einwilligung_text"] == (
+            "Ich willige ausdrücklich ein, dass Gut gesagt an meinem Konto speichert, "
+            "dass ich im Team BDK 26 Berlin bin, mit meiner Nummer und dem Tag des "
+            "Beitritts, und dass die Zahl meiner Beiträge und Bewertungen in eine "
+            "Summe meines Teams eingeht (Art. 9 Abs. 2 lit. a DSGVO). Meine Teams "
+            "sehe nur ich, die Summe nur Mitglieder des Teams, nie mit einzelnen "
+            "Namen. Ich kann die Einwilligung jederzeit unter „Meine Teams“ mit "
+            "„Team verlassen“ widerrufen; dann wird der Eintrag sofort gelöscht."
+        )
         assert team["knopf_ja"] == "Ja, speichert, dass ich im Team BDK 26 Berlin bin"
         assert team["knopf_nein"] == "Nein, ohne Team weiter"
         # Schalter teams_oeffentlich aus: keine zweite Frage
@@ -383,6 +396,11 @@ class TestBeitreten:
         kw = team_repo.beitreten.call_args.kwargs
         assert kw["konto"] == "konto-1" and kw["code"] == CODE
         assert kw["einwilligung_kennung"] == EINWILLIGUNG_KENNUNG
+
+    def test_nur_der_aktuelle_wortlaut_gilt(self):
+        # Ein frueherer Wortlaut bleibt nicht gueltig: nur die Kennung vom 25.11.2026
+        assert list(EINWILLIGUNG_WORTLAUTE) == [EINWILLIGUNG_KENNUNG]
+        assert EINWILLIGUNG_KENNUNG == "team-2026-11-25"
 
     @pytest.mark.parametrize("kennung", ["team-1999-01-01", None])
     def test_unbekannter_oder_fehlender_wortlaut_422(

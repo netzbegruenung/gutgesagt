@@ -11,9 +11,9 @@ describe('team-merker', () => {
   afterEach(() => localStorage.clear());
 
   it('legt Code, Kennung und zweite Antwort ab und liest sie wieder', () => {
-    teamMerkerAblegen({ code: 'Abc', kennung: 'team-2026-11-24', oeffentlich: true }, 1000);
+    teamMerkerAblegen({ code: 'Abc', kennung: 'team-2026-11-25', oeffentlich: true }, 1000);
 
-    expect(teamMerkerLesen(1000)).toEqual({ code: 'Abc', kennung: 'team-2026-11-24', oeffentlich: true });
+    expect(teamMerkerLesen(1000)).toEqual({ code: 'Abc', kennung: 'team-2026-11-25', oeffentlich: true });
   });
 
   it('legt ohne Kennung die zweite Antwort nie als ja ab', () => {

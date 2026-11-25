@@ -379,7 +379,7 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
     characters, requires `team_motiv`), `team_motiv` (one of the Meilenstein motifs) and
     `team_saison` (at most 20, default the current Saison).
   - Redeeming: `POST /api/v1/einladungen/pruefen` returns `team` with the greeting, the next
-    number and the consent wording `team-2026-11-24` plus both button texts. For a logged-in
+    number and the consent wording `team-2026-11-25` plus both button texts. For a logged-in
     member it returns `team` with `eigene_nummer` even when the invitation is no longer
     redeemable ("schon dabei"); everyone else gets no team then.
     `POST /api/v1/einladungen/einloesen` stores a Mitgliedschaft only with

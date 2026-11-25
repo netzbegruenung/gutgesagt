@@ -285,10 +285,12 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
 ### T13 Teams über Einladungen (gebaut, ausgeschaltet)
 
 - **Zweck:** der Person zeigen, in welchen Teams sie dabei ist, und die Nummer im Team vergeben
-  (GLOSSARY „Team“, „Teamlink“, „Mitgliedschaft“, „Saison“); später, mit eigener Einwilligung
+  (GLOSSARY „Team“, „Teamlink“, „Mitgliedschaft“, „Saison“); mit derselben Einwilligung die
+  Zahl der Beiträge und Bewertungen in eine Summe des Teams einbeziehen (noch nicht
+  eingeschaltet); später, mit eigener Einwilligung
   und eigenem Schalter, die Teams der aktuellen Saison am Anzeigenamen zeigen.
 - **Rechtsgrundlage:** Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a über eine eigene,
-  ausdrückliche Einwilligung je Team (Wortlaut `team-2026-11-24`, Knopf „Ja, speichert, dass ich
+  ausdrückliche Einwilligung je Team (Wortlaut `team-2026-11-25`, Knopf „Ja, speichert, dass ich
   im Team X bin“, gleichwertig „Nein, ohne Team weiter“), getrennt von der Art.-9-Einwilligung
   und von „Punkte und Meilensteine“; für die Anzeige am Namen eine zweite, eigene Einwilligung
   (`team-oeffentlich-2026-11-25`). DSE „Teams“.

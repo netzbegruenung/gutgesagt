@@ -39,16 +39,18 @@ TEAMNAME_HINWEIS = (
 
 # --- Einwilligung zur Mitgliedschaft -------------------------------------------
 
-EINWILLIGUNG_KENNUNG = "team-2026-11-24"
+EINWILLIGUNG_KENNUNG = "team-2026-11-25"
 
 # {team} steht fuer den Namen des Teams.
 EINWILLIGUNG_WORTLAUTE: Dict[str, str] = {
-    "team-2026-11-24": (
+    "team-2026-11-25": (
         "Ich willige ausdrücklich ein, dass Gut gesagt an meinem Konto speichert, "
-        "dass ich im Team {team} bin, mit meiner Nummer und dem Tag des Beitritts "
-        "(Art. 9 Abs. 2 lit. a DSGVO). Das sehe nur ich. Ich kann die Einwilligung "
-        "jederzeit unter „Meine Teams“ mit „Team verlassen“ widerrufen; dann wird "
-        "der Eintrag sofort gelöscht."
+        "dass ich im Team {team} bin, mit meiner Nummer und dem Tag des Beitritts, "
+        "und dass die Zahl meiner Beiträge und Bewertungen in eine Summe meines "
+        "Teams eingeht (Art. 9 Abs. 2 lit. a DSGVO). Meine Teams sehe nur ich, die "
+        "Summe nur Mitglieder des Teams, nie mit einzelnen Namen. Ich kann die "
+        "Einwilligung jederzeit unter „Meine Teams“ mit „Team verlassen“ widerrufen; "
+        "dann wird der Eintrag sofort gelöscht."
     ),
 }
 

@@ -552,6 +552,34 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('mit der Kennung des Wortlauts und dem Zeitpunkt als Nachweis');
     });
 
+    it('Teams: der Nachweis bleibt, solange du im Team bist, nicht bis zur Kontolöschung (25.11.2026)', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Deine Antwort speichern wir mit der Kennung des Wortlauts und dem Zeitpunkt als Nachweis, solange du im Team bist.'
+      );
+      expect(text).not.toContain('als Nachweis, bis dein Konto gelöscht wird');
+    });
+
+    it('Teams: Zweck mit der Summe des Teams (25.11.2026)', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Zweck: dir zu zeigen, in welchen Teams du dabei bist, und die Nummer in deinem Team zu vergeben und die Summe deines Teams zu bilden.'
+      );
+    });
+
+    it('Teams: die Team-Summe mit derselben Einwilligung, noch nicht eingeschaltet (25.11.2026)', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Diese Anzeige am Namen ist noch nicht eingeschaltet. ' +
+          'Mit derselben Einwilligung darf die Zahl deiner Beiträge und Bewertungen in eine Summe deines Teams eingehen. ' +
+          'Diese Summe sehen nur Mitglieder des Teams, nur für abgeschlossene Wochen, erst wenn mindestens fünf ' +
+          'Mitglieder eingewilligt haben, gerundet und nie mit einzelnen Namen. Die Team-Summe ist noch nicht eingeschaltet.'
+      );
+    });
+
     it('Teams: „Team verlassen“ löscht sofort, Nummer nicht neu, Sicherungskopien bis zum Ablauf', () => {
       const text = abschnitt('Teams');
 
@@ -829,6 +857,21 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('wenn du es selbst wählst');
       expect(text).toContain('bis du die Wahl zurücksetzt');
       expect(text).toContain('Ohne eigene Wahl speichern wir nichts');
+    });
+
+    it('Gerätespeicher: der Merker einer Einladung mit Team, höchstens drei Tage, nach dem Lesen gelöscht (team-merker.ts)', () => {
+      const text = abschnitt('Weitere Einträge').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Sagst du ohne Konto bei einer Einladung zu einem Team „Ja, speichert …“, merkt sich dein Browser den Code ' +
+          'der Einladung, die Kennung des Wortlauts, dem du zugestimmt hast, und deine Antwort auf die zweite Frage, ' +
+          'ob deine Teams an deinem Namen erscheinen dürfen.'
+      );
+      expect(text).toContain('Willst du dich zum Beitreten erst anmelden, merkt er sich nur den Code.');
+      expect(text).toContain('bis zur Anmeldung nach dem Anlegen deines Kontos');
+      expect(text).toContain('den Namen des Teams und deine Nummer enthält der Eintrag nicht');
+      expect(text).toContain('höchstens drei Tage');
+      expect(text).toContain('wird gelöscht, sobald die Seite der Einladung ihn nach deiner Anmeldung gelesen hat');
     });
 
     it('Gerätespeicher: Willkommen und Rundgang „Mitmachen“ als zwei Vermerke ohne Übertragung (#516)', () => {

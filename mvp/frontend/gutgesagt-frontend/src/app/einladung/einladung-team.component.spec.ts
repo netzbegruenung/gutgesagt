@@ -20,7 +20,7 @@ function team(anders: Partial<TeamBeimPruefen> = {}): TeamBeimPruefen {
     mitglieder: 36,
     naechste_nummer: 37,
     eigene_nummer: null,
-    einwilligung_kennung: 'team-2026-11-24',
+    einwilligung_kennung: 'team-2026-11-25',
     einwilligung_text: 'Ich willige ausdrücklich ein, dass Gut gesagt an meinem Konto speichert, dass ich im Team BDK 26 Berlin bin …',
     knopf_ja: 'Ja, speichert, dass ich im Team BDK 26 Berlin bin',
     knopf_nein: 'Nein, ohne Team weiter',
@@ -168,7 +168,7 @@ describe('EinladungComponent mit Team', () => {
         nachname: 'Beispiel',
         team_einwilligung: true,
         team_oeffentlich: false,
-        team_einwilligung_kennung: 'team-2026-11-24',
+        team_einwilligung_kennung: 'team-2026-11-25',
       });
       anfrage.flush({ success: true }, { status: 202, statusText: 'Accepted' });
       fixture.detectChanges();
@@ -181,7 +181,7 @@ describe('EinladungComponent mit Team', () => {
       const link = Array.from(el().querySelectorAll('a')).find((a) => a.textContent?.includes('melde dich an'))!;
       link.click();
       expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/einladung' } });
-      expect(teamMerkerLesen()).toEqual({ code: 'Code123', kennung: 'team-2026-11-24', oeffentlich: false });
+      expect(teamMerkerLesen()).toEqual({ code: 'Code123', kennung: 'team-2026-11-25', oeffentlich: false });
       expect(localStorage.getItem(TEAM_MERKER_SCHLUESSEL)).not.toContain('BDK');
     });
 
@@ -268,7 +268,7 @@ describe('EinladungComponent mit Team', () => {
     });
 
     it('lässt den Merker liegen, solange niemand angemeldet ist', () => {
-      teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-24', oeffentlich: false });
+      teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-25', oeffentlich: false });
       starten('Code123');
       pruefen({ einloesbar: true, team: team() });
 
@@ -291,7 +291,7 @@ describe('EinladungComponent mit Team', () => {
       expect(anfrage.request.body).toEqual({
         code: 'Code123',
         einwilligung: true,
-        einwilligung_kennung: 'team-2026-11-24',
+        einwilligung_kennung: 'team-2026-11-25',
         oeffentlich: false,
       });
       expect(knopf('team-ja').disabled).toBeTrue();
@@ -404,7 +404,7 @@ describe('EinladungComponent mit Team', () => {
 
   describe('Rücksprung nach dem Anlegen', () => {
     it('nimmt den Code aus dem Merker und zeigt das beim Anlegen gespeicherte Team als neu', () => {
-      teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-24', oeffentlich: false });
+      teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-25', oeffentlich: false });
       starten(null);
       pruefen({ einloesbar: true, team: team({ eigene_nummer: 37 }) }, true);
 
@@ -417,7 +417,7 @@ describe('EinladungComponent mit Team', () => {
 
     it('fragt nach dem „Ja“ beim Anlegen noch einmal, wenn es das Konto vorher schon gab, und sendet nichts von selbst', () => {
       // Geteiltes Gerät: Angemeldet kann jemand anderes sein als die Person, die „Ja“ gedrückt hat.
-      teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-24', oeffentlich: true });
+      teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-25', oeffentlich: true });
       starten(null);
       pruefen({ einloesbar: true, team: team(OEFFENTLICH) }, true);
 
@@ -433,7 +433,7 @@ describe('EinladungComponent mit Team', () => {
       expect(anfrage.request.body).toEqual({
         code: 'Code123',
         einwilligung: true,
-        einwilligung_kennung: 'team-2026-11-24',
+        einwilligung_kennung: 'team-2026-11-25',
         oeffentlich: false,
       });
       anfrage.flush({ team: { name: 'BDK 26 Berlin', motiv: 'vogel', saison: '2026' }, nummer: 38, neu: true });
@@ -462,7 +462,7 @@ describe('EinladungComponent mit Team', () => {
     });
 
     it('sagt bei einem inzwischen aufgebrauchten Link ehrlich, dass kein Team gespeichert ist', () => {
-      teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-24', oeffentlich: false });
+      teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-25', oeffentlich: false });
       starten(null);
       pruefen({ einloesbar: false, team: null }, true);
 
@@ -471,7 +471,7 @@ describe('EinladungComponent mit Team', () => {
     });
 
     it('zeigt einem Mitglied auch bei aufgebrauchtem Link das Team als neu', () => {
-      teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-24', oeffentlich: false });
+      teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-25', oeffentlich: false });
       starten(null);
       pruefen({ einloesbar: false, team: team({ eigene_nummer: 37 }) }, true);
 

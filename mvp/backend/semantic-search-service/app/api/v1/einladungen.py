@@ -76,7 +76,7 @@ CODE_MAX = 64
 # Serverfehler statt eines falschen Namens. Dazu "@": Daraus bildete die BFF keinen
 # Anzeigenamen (DisplayNamePolicy). Laenger als 100 Zeichen heisst niemand.
 NAME_MAX = 100
-# Kennung eines Einwilligungswortlauts (domain/teams.py), etwa "team-2026-11-24"
+# Kennung eines Einwilligungswortlauts (domain/teams.py), etwa "team-2026-11-25"
 KENNUNG_MAX = 64
 NAME_VERBOTEN = re.compile(r'[<>&"\v$%!#?§;*~/\\|^=\[\]{}()@\x00-\x1f\x7f]')
 # Teamname und Saison stehen an Namen und in Pillen: keine Steuerzeichen, kein
