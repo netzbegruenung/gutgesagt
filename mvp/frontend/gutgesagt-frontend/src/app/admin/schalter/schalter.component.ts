@@ -10,6 +10,7 @@ import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/sl
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Einstellung, ModerationService, Schalter, SchalterListe } from '../../services/moderation.service';
 import { ohneRechte, selbstNachladen } from '../../shared/selbst-nachladen';
+import { SaisonsComponent } from '../saisons/saisons.component';
 
 /** Anzeigenamen der Schalter; unbekannte zeigen ihren technischen Namen. */
 const TITEL: Record<string, string> = {
@@ -70,6 +71,7 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
     MatProgressSpinnerModule,
     MatSlideToggleModule,
     MatSnackBarModule,
+    SaisonsComponent,
   ],
   template: `
     <h2>Schalter</h2>
@@ -133,7 +135,13 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
                   [disabled]="!einstellungGeaendert(e) || setzend !== null">Speichern</button>
         </form>
         <p class="zustand" role="status" data-testid="einstellung-stand">Gespeichert: {{ e.wert }}</p>
+        <p *ngIf="e.hinweis" class="dsfa" data-testid="einstellung-hinweis">
+          <mat-icon aria-hidden="true">info</mat-icon>
+          {{ e.hinweis }}
+        </p>
       </section>
+      <!-- Saisons mit Gemeinschaftsziel (#782) -->
+      <app-saisons></app-saisons>
     </ng-container>
   `,
   styles: [`

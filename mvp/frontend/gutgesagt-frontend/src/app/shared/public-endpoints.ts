@@ -36,6 +36,7 @@ export class PublicEndpoints {
     '/api/v1/usage/trending',   // Allow anonymous access to trending content
     '/api/v1/usage/punkte/status', // Schalter der Punkte, ohne Anmeldung lesbar (UX-Review B20)
     '/api/v1/funktionen',          // oeffentliche Schalter, ohne Anmeldung lesbar (#756)
+    '/api/v1/saisons/aktuell',     // Saisonbalken, ohne Anmeldung lesbar (#782)
     '/api/v1/konter-probe',        // Konter-Probe ohne Konto (#786)
     '/api/v1/content/recent',   // oeffentlich am BFF; fehlte hier, ein anonymer
                                 // Besucher wurde deshalb auf /login umgeleitet

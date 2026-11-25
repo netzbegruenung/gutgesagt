@@ -197,7 +197,7 @@ Die Stelle in eckigen Klammern im Text eines Beitrags, „[Hier …]“, die die
 _Avoid_: Lücke (das ist eine unbeantwortete Aussage), Vorlagen-Lücke, Leerstelle
 
 **Lücke**:
-Eine Aussage in „Hier fehlt eine Antwort“, auf die noch keine Antwort passt. Wer sie beantwortet, schließt die Lücke: Die Ergebnisseite sagt dann „Lücke zu“ mit der Zahl der Personen, die ohne Treffer danach gesucht haben, und bietet die nächste an. Die Startseite nennt Angemeldeten unter „Seit deinem letzten Besuch“, wie viele Lücken warten. Im Code steht das Wort nur in `shared/luecke-texte.ts`. Bis 13.11. hieß so der Platzhalter.
+Eine Aussage in „Hier fehlt eine Antwort“, auf die noch keine Antwort passt. Wer sie beantwortet, schließt die Lücke: Die Ergebnisseite sagt dann „Lücke zu“ mit der Zahl der Personen, die ohne Treffer danach gesucht haben, und bietet die nächste an; mit dem Schalter `luecke_zu_gross` (#787) steht das einmal je Antwort groß als „Lücke zu!“. Die Startseite nennt Angemeldeten unter „Seit deinem letzten Besuch“, wie viele Lücken warten. Im Code steht das Wort nur in `shared/luecke-texte.ts`. Bis 13.11. hieß so der Platzhalter.
 _Avoid_: Platzhalter (das ist die Stelle „[Hier …]“ im Text), offene Frage
 
 **Schreibhilfe**:
@@ -363,6 +363,14 @@ Der Prüfwert der Muster-Hinweise für „ein Konto hat einen Beitrag eines ande
 **Öffentlich gekontert**:
 Was eine angemeldete Person nach dem Kopieren mit „Ja, gepostet“ meldet: Sie hat den Text öffentlich als Antwort gepostet. Gezählt wird je Kalenderwoche jede Person einmal, nicht jeder Klick, und ohne den Beitrag; das ist der Nordstern (verschiedene Menschen je Woche, die öffentlich kontern). Gemerkt wird dafür bis Wochenende nur ein Prüfwert aus der Kennung mit einem Wochenschlüssel im Arbeitsspeicher, danach nur die Zahl der Woche. Nur mit Art.-9-Einwilligung, ohne Startkonten, hinter einem Schalter (#643). Den Link zum eigenen Post fragt Gut gesagt nicht ab.
 _Avoid_: geteilt (das ist Nutzung), Conversion
+
+**Wirkungs-Echo**:
+Die Summe „öffentlich gepostet“ je Beitrag, die nur die Autorin sieht, in „Meine Beiträge“ und in „Seit deinem letzten Besuch“ als Zuwachs über alle eigenen Beiträge seit dem letzten Besuch (ein Zählerstand am Konto wie bei der Nutzung, kein Zeitpunkt). Sie entsteht, wenn jemand nach dem Kopieren „Ja, gepostet“ meldet und dabei der Beitrag mitgeht; getrennt von der Wochenzahl unter „Öffentlich gekontert“, die keinen Beitrag kennt. Am Zähler stehen nur Beitrag und Summe, keine Kennung, kein Zeitpunkt; entdoppelt je Person, Beitrag und Tag nur im Arbeitsspeicher. Eigene Beiträge und Startkonten zählen nicht. Angezeigt als „3-mal öffentlich gepostet“, nie als Zahl von Menschen. Schalter `wirkungs_echo` (#790).
+_Avoid_: Reichweite, Shares
+
+**Danke**:
+Ein Klick auf „Danke an die Autorin“ nach dem Kopieren. Die Autorin sieht je Beitrag nur die Summe („5 Danke“), nie von wem. Höchstens ein Danke je Person (ohne Konto: Besuchermerkmal), Beitrag und Tag, entdoppelt wie die Nutzung über einen Tages-Prüfwert; keine Punkte, eigene Beiträge und Startkonten zählen nicht. Angemeldet nur mit Art.-9-Einwilligung, ohne Konto nur mit dem Unterschalter. Schalter `danke_knopf`, Unterschalter `danke_ohne_konto` (#791).
+_Avoid_: Like (das ist eine Stimme), Kudos
 
 **Oft genutzt**:
 Ein Beitrag, der in den letzten sieben Tagen (nicht der Kalenderwoche) mehrfach genutzt wurde, gezählt als entdoppelte Nutzung. „Diese Woche oft genutzt“ auf der Startseite zeigt die meistgenutzten zuerst und nur, wenn genug Beiträge oft genutzt wurden; sonst gibt es den Bereich nicht. Gesperrte und gelöschte Beiträge stehen dort nie. Die Schwellen (Mindestnutzung, Mindestzahl, Höchstzahl) sind Stellschrauben und stehen in `services/oft_genutzt_service.py`, nicht hier.
@@ -642,8 +650,16 @@ Der Eintrag, dass ein Konto in einem Team ist: Kennung, Teamname, Motiv, Saison,
 _Avoid_: Mitglied (ohne Zusatz meint es die Netzbegrünung), Membership
 
 **Saison**:
-Der Zeitraum, zu dem ein Team gehört, frei benannt, höchstens 20 Zeichen, in der Regel das Jahr, etwa „2026“. Pflicht an jedem Teamlink und jeder Mitgliedschaft; lässt der Admin sie beim Anlegen eines Teamlinks leer, trägt der Dienst die aktuelle Saison ein. Die **aktuelle Saison** setzt ein Admin auf der Admin-Seite „Schalter“ (Standard: das laufende Jahr); sie ist der Vorschlag für neue Teamlinks und entscheidet, welche Teams am Anzeigenamen erscheinen. „Meine Teams“ zeigt alle Saisons, vergangene als Abzeichen.
+Der Zeitraum, zu dem ein Team gehört, frei benannt, höchstens 20 Zeichen, etwa „Frühjahr 27“ oder das Jahr „2026“. Pflicht an jedem Teamlink und jeder Mitgliedschaft; lässt der Admin sie beim Anlegen eines Teamlinks leer, trägt der Dienst die aktuelle Saison ein. Ein Admin kann Saisons auf der Admin-Seite „Schalter“ anlegen, mit Name, erstem und letztem Tag und einem Gemeinschaftsziel (#782); sie überschneiden sich nie, es läuft also höchstens eine. Solange der Schalter `saison_ziel` an ist, ist die laufende Saison die **aktuelle Saison**, in einer Lücke zwischen zwei Saisons die zuletzt beendete, bis die nächste beginnt; sonst, oder solange noch keine Saison begonnen hat, gilt die Einstellung „Aktuelle Saison“ auf derselben Seite (Standard: das laufende Jahr). Die aktuelle Saison ist der Vorschlag für neue Teamlinks und entscheidet, welche Teams am Anzeigenamen erscheinen. Name und erster Tag stehen fest, sobald eine Saison läuft, weil Teamlinks und Mitgliedschaften den Namen als Kopie tragen; löschen lässt sie sich nur vor ihrem Beginn. „Meine Teams“ zeigt alle Saisons, vergangene als Abzeichen.
 _Avoid_: Season, Staffel, Spielzeit
+
+**Gemeinschaftsziel**:
+Das Ziel aller zusammen in einer Saison, gezählt in Widerspruchs-Wochen und auf der Startseite als Fortschrittsbalken gezeigt, auch ohne Konto. Für alle sichtbar erst, wenn es einmal drei abgeschlossene Wochen hintereinander mit je mindestens 25 verschiedenen Menschen gab, die „Ja, gepostet“ gemeldet haben (Stellschrauben `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_WOCHEN` und `_MENSCHEN`; die Datenschutzerklärung nennt die Zahlen; wer eine der beiden ändert, zieht den Satz dort nach); vorher sehen nur Admins den Stand. Kein Ende und keine Frist im Balken, nichts verfällt. Nur mit dem Schalter `saison_ziel`.
+_Avoid_: Challenge, Quest (die bringt Punkte)
+
+**Widerspruchs-Woche**:
+Die Einheit der Saisonzahl: je Kalenderwoche eine Person, die öffentlich gekontert hat. Die Saisonzahl ist die Summe der Wochenzahlen von „Öffentlich gekontert“ über die abgeschlossenen Wochen der Saison, angebrochene Wochen am Rand eingeschlossen; grenzen zwei Saisons in einer Woche aneinander, zählt diese Woche nur für die Saison, in der ihr Montag liegt; die laufende Woche zählt erst nach ihrem Ende. Wer drei Wochen dabei ist, zählt dreimal, deshalb heißt es „Woche für Woche zusammen N-mal widersprochen“, nie „N Menschen“: Verschiedene Menschen über die ganze Saison lassen sich ohne neue Datenspur nicht zählen. Hat nichts mit dem Widerspruch gegen eine Sperre zu tun.
+_Avoid_: Menschen, Teilnehmende, Widerspruch (das ist der Einwand gegen eine Sperre)
 
 **Team-Fortschritt**:
 Was ein Team in der letzten abgeschlossenen Woche gemeinsam bewirkt hat, unter „Meine Teams“ je Team der aktuellen Saison: die Zahl der Beiträge (jeder Beitragstyp, Kommentare eingeschlossen), Bewertungen und Meldungen „Ja, gepostet“ seiner Mitglieder, aus dem Wochenzähler. Nur Mitglieder sehen ihn, nie die laufende Woche, und erst ab 5 Mitgliedern mit Einwilligung `team-2026-11-26`; darunter steht „Euer Team wächst noch, ab 5 zeigen wir eure gemeinsame Wirkung“. Keine genaue Zahl: unter 10 „weniger als 10“, darüber auf 5 gerundet. Nie Team gegen Team, keine Teamnamen öffentlich. Hinter dem Schalter `team_fortschritt` (#784).

@@ -51,6 +51,30 @@ export function lueckeZuSatz(personen: number): string {
     : `${personen} Personen haben danach gesucht, ab jetzt finden sie was.`;
 }
 
+/**
+ * Der Satz unter „Lücke zu!“ im großen Moment (#787). Gezählt sind Personen wie in
+ * „Hier fehlt eine Antwort“, nicht Suchen; ohne Zahl ein ruhiger Satz ohne Zahl.
+ */
+export function lueckeZuMomentSatz(personen: number): string {
+  if (personen <= 0) {
+    return 'Wer nach diesem Spruch sucht, findet ab jetzt deine Antwort.';
+  }
+  return personen === 1
+    ? 'Eine Person hat nach diesem Spruch gesucht und nichts gefunden. Ab jetzt findet sie deine Antwort.'
+    : `${personen} Personen haben nach diesem Spruch gesucht und nichts gefunden. Ab jetzt finden sie deine Antwort.`;
+}
+
+/**
+ * Der Vermerk im Verlaufseintrag (history.state), dass der große Moment „Lücke zu!“ zu
+ * dieser Antwort schon stand: Mit „Zurück“ kommt der Eintrag samt Vermerk als Router-State
+ * wieder, und der Moment bleibt aus (einmal je Antwort, #787). Kein Browser-Speicher: Der
+ * Vermerk haengt nur an diesem Eintrag im Verlauf des Tabs.
+ */
+export function mitLueckeZuGezeigt(state: unknown): Record<string, unknown> {
+  const bisher = state && typeof state === 'object' ? (state as Record<string, unknown>) : {};
+  return { ...bisher, lueckeZuGezeigt: true };
+}
+
 export type Herkunft = 'fangkorb' | 'suche' | 'frei';
 
 /** Was ein Beitragsformular nach dem Speichern meldet; die Ergebnisseite zeigt es. */
@@ -76,6 +100,8 @@ export interface GespeichertZustand {
   themenHinweis?: string;
   /** Nur Fangkorb: false, wenn der Einwurf nicht mit dem Beitrag verknuepft wurde. */
   einwurfVerknuepft?: boolean;
+  /** Der große Moment „Lücke zu!“ stand schon (mitLueckeZuGezeigt, #787). */
+  lueckeZuGezeigt?: boolean;
 }
 
 export function herkunftAus(params: { get(name: string): string | null }): Herkunft {

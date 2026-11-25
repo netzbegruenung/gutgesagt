@@ -1,14 +1,16 @@
 import { Component, Input, Type, forwardRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { Observable, of, throwError } from 'rxjs';
+import { ActivatedRoute, NavigationEnd, Router, convertToParamMap, provideRouter } from '@angular/router';
+import { NEVER, Observable, Subject, of, throwError } from 'rxjs';
 
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { TEILEN_LINK_KOPIERT, TEILEN_NAVIGATOR, TeilenNavigator } from '../../shared/teilen.service';
 
 import { BeitragGespeichertComponent, EINWURF_NICHT_MIT_NEUEM_VERKNUEPFT, beitragLink } from './beitrag-gespeichert.component';
-import { GespeichertZustand, gespeichertEltern } from './gespeichert-adresse';
+import { GespeichertZustand, gespeichertEltern, lueckeZuMomentSatz, mitLueckeZuGezeigt } from './gespeichert-adresse';
+import { FunktionenService } from '../../services/funktionen.service';
+import { FEIER_AUDIO, FEIER_TON_SCHLUESSEL } from '../../shared/feier/feier-ton.service';
 import { CommentaryService } from '../../services/commentary.service';
 import { GenericTextService } from '../../services/generic-text.service';
 import { PostService } from '../../services/post.service';
@@ -54,12 +56,24 @@ describe('BeitragGespeichertComponent', () => {
   let nav: TeilenNavigator;
   /** Was statt der echten Karte gerendert wird. */
   let karteStub: Type<unknown>;
+  /** Schalter luecke_zu_gross laut /api/v1/funktionen; Standard aus. */
+  let lueckeZuGrossAn: Observable<boolean>;
+  /** Steht statt router.events, wenn ein Test das Ende der Navigation selbst meldet. */
+  let routerEvents: Subject<unknown> | null;
+  /** Baut den AudioContext für „Ton bei Erfolgen“; null: kein Lautsprecher im Test. */
+  let audio: jasmine.Spy;
 
   beforeEach(() => {
+    audio = jasmine.createSpy('audio').and.returnValue(null);
+    localStorage.removeItem(FEIER_TON_SCHLUESSEL);
     nav = {};
+    lueckeZuGrossAn = of(false);
+    routerEvents = null;
     karteStub = BeitragskarteStubComponent;
     geladenerEinwurf = of({ id: 'e-1', ist_eigener_einwurf: true } as Einwurf);
   });
+
+  afterEach(() => localStorage.removeItem(FEIER_TON_SCHLUESSEL));
 
   async function oeffnen(
     adresse: Record<string, string> = {},
@@ -107,6 +121,11 @@ describe('BeitragGespeichertComponent', () => {
           useValue: { userInfo$: of({ isAuthenticated: true, userId: 'u-1', userName: null, claims: null }) },
         },
         { provide: TEILEN_NAVIGATOR, useFactory: () => nav },
+        { provide: FEIER_AUDIO, useFactory: () => audio },
+        {
+          provide: FunktionenService,
+          useFactory: () => ({ frisch: (name: string) => (name === 'luecke_zu_gross' ? lueckeZuGrossAn : of(false)) }),
+        },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -123,6 +142,9 @@ describe('BeitragGespeichertComponent', () => {
       .compileComponents();
 
     // Router-State wie nach router.navigate(..., { state }); ohne ihn wie nach dem Neuladen.
+    if (routerEvents) {
+      Object.defineProperty(TestBed.inject(Router), 'events', { value: routerEvents });
+    }
     spyOn(TestBed.inject(Router), 'getCurrentNavigation').and.returnValue(
       zustand ? ({ extras: { state: zustand } } as any) : null,
     );
@@ -292,6 +314,157 @@ describe('BeitragGespeichertComponent', () => {
       TestBed.resetTestingModule();
       await oeffnen({ gesucht: '3' }, aussage);
       expect(seite().querySelector('.luecke-zu')).toBeNull();
+    });
+  });
+
+  describe('„Lücke zu!“ als großer Moment (#787)', () => {
+    const aussage = { aussage: { id: 'a-1', text: 'Windkraft tötet Vögel' }, verknuepft: true };
+    const vonDort = { von: 'hier-fehlt-eine-antwort', gesucht: '4' };
+
+    beforeEach(() => (lueckeZuGrossAn = of(true)));
+
+    it('zeigt den Moment mit der Zahl, Überschrift im Fokus und „Nächste Lücke“', async () => {
+      await oeffnen(vonDort, aussage);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const navigieren = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+
+      const moment = seite().querySelector('.luecke-zu-moment')!;
+      expect(moment).not.toBeNull();
+      const titel = moment.querySelector('h2.luecke-zu-moment-titel') as HTMLElement;
+      expect(titel.textContent!.trim()).toBe('Lücke zu!');
+      expect(moment.querySelector('.luecke-zu-moment-satz')!.textContent!.trim()).toBe(
+        '4 Personen haben nach diesem Spruch gesucht und nichts gefunden. Ab jetzt finden sie deine Antwort.',
+      );
+      // Fokus auf die Ueberschrift, den Satz sagt die Live-Region an, die schon vorher stand
+      expect(document.activeElement).toBe(titel);
+      expect(seite().querySelector('[aria-live="polite"].luecke-zu-ansage')!.textContent!.trim()).toBe(
+        '4 Personen haben nach diesem Spruch gesucht und nichts gefunden. Ab jetzt finden sie deine Antwort.',
+      );
+      // Der kleine Satz und ein zweiter Knopf "Nächste Lücke" entfallen
+      expect(seite().querySelector('.luecke-zu')).toBeNull();
+      expect(seite().querySelectorAll('.naechste-luecke').length).toBe(1);
+      expect(knoepfe()).not.toContain('Noch einen Kommentar');
+
+      (moment.querySelector('.naechste-luecke') as HTMLButtonElement).click();
+      expect(navigieren).toHaveBeenCalledOnceWith(['/hier-fehlt-eine-antwort']);
+    });
+
+    it('sagt ohne Zahl einen ruhigen Satz ohne Zahl und bei einer Person den Singular', async () => {
+      await oeffnen({ von: 'hier-fehlt-eine-antwort' }, aussage);
+      expect(seite().querySelector('.luecke-zu-moment-satz')!.textContent!.trim()).toBe(
+        'Wer nach diesem Spruch sucht, findet ab jetzt deine Antwort.',
+      );
+      expect(lueckeZuMomentSatz(0)).not.toMatch(/\d/);
+      expect(lueckeZuMomentSatz(1)).toBe(
+        'Eine Person hat nach diesem Spruch gesucht und nichts gefunden. Ab jetzt findet sie deine Antwort.',
+      );
+    });
+
+    it('bleibt beim kleinen Satz, wenn der Schalter aus ist: kein Keim, kein Umschalter, kein Ton', async () => {
+      lueckeZuGrossAn = of(false);
+      localStorage.setItem(FEIER_TON_SCHLUESSEL, '1');
+      await oeffnen(vonDort, aussage);
+      await fixture.whenStable();
+      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
+      expect(seite().querySelector('.luecke-zu-titel')!.textContent!.trim()).toBe('Lücke zu.');
+      expect(seite().querySelector('app-feier-keim')).toBeNull();
+      expect(seite().querySelector('app-feier-ton-schalter')).toBeNull();
+      expect(audio).not.toHaveBeenCalled();
+    });
+
+    it('zeigt den wachsenden Keim und „Ton bei Erfolgen“, standardmäßig aus und still', async () => {
+      await oeffnen(vonDort, aussage);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const moment = seite().querySelector('.luecke-zu-moment')!;
+      expect(moment.querySelector('app-feier-keim[aria-hidden="true"]')).not.toBeNull();
+      const schalter = moment.querySelector('app-feier-ton-schalter button[role="switch"]')!;
+      expect(schalter.getAttribute('aria-checked')).toBe('false');
+      expect(moment.querySelector('app-feier-ton-schalter')!.textContent!.trim()).toBe('Ton bei Erfolgen');
+      expect(audio).not.toHaveBeenCalled();
+    });
+
+    it('spielt den Ton im Moment, wenn die Person ihn eingeschaltet hat', async () => {
+      localStorage.setItem(FEIER_TON_SCHLUESSEL, '1');
+      await oeffnen(vonDort, aussage);
+      await fixture.whenStable();
+      expect(audio).toHaveBeenCalledTimes(1);
+    });
+
+    it('steht einmal je Antwort: Neuladen und „Zurück“ bringen den Vermerk mit', async () => {
+      // Angular gibt den Router-State samt Vermerk aus history.state wieder
+      await oeffnen(vonDort, { ...aussage, lueckeZuGezeigt: true });
+      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
+      expect(seite().querySelector('.luecke-zu')).not.toBeNull();
+
+      // Ganz ohne Router-State (etwa ein neuer Tab): ebenso der kleine Satz
+      TestBed.resetTestingModule();
+      await oeffnen(vonDort);
+      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
+      expect(seite().querySelector('.luecke-zu')).not.toBeNull();
+    });
+
+    it('vermerkt den Moment nach dem Ende der Navigation im Verlaufseintrag', async () => {
+      routerEvents = new Subject<unknown>();
+      const ersetzen = spyOn(window.history, 'replaceState');
+      await oeffnen(vonDort, aussage);
+      expect(ersetzen).not.toHaveBeenCalled();
+
+      routerEvents.next(new NavigationEnd(1, '/x', '/x'));
+      expect(ersetzen).toHaveBeenCalledTimes(1);
+      expect(ersetzen.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ lueckeZuGezeigt: true }));
+    });
+
+    it('vermerkt nichts, wenn der Schalter aus ist', async () => {
+      lueckeZuGrossAn = of(false);
+      routerEvents = new Subject<unknown>();
+      const ersetzen = spyOn(window.history, 'replaceState');
+      await oeffnen(vonDort, aussage);
+      routerEvents.next(new NavigationEnd(1, '/x', '/x'));
+      expect(ersetzen).not.toHaveBeenCalled();
+    });
+
+    it('springt nicht: solange der Schalter aussteht, bleibt der Kopf leer', async () => {
+      lueckeZuGrossAn = NEVER;
+      await oeffnen(vonDort, aussage);
+      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
+      expect(seite().querySelector('.luecke-zu')).toBeNull();
+      expect(seite().querySelector('.naechste-luecke')).toBeNull();
+    });
+
+    it('zieht den Fokus nicht weg, wenn er schon woanders steht', async () => {
+      const schalter = new Subject<boolean>();
+      lueckeZuGrossAn = schalter;
+      await oeffnen(vonDort, aussage);
+      const teilen = seite().querySelector('.teilen') as HTMLButtonElement;
+      document.body.appendChild(fixture.nativeElement);
+      teilen.focus();
+      schalter.next(true);
+      schalter.complete();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(seite().querySelector('.luecke-zu-moment')).not.toBeNull();
+      expect(document.activeElement).toBe(teilen);
+      fixture.nativeElement.remove();
+    });
+
+    it('nicht, wenn die Verknüpfung scheiterte oder es nicht von dort kam', async () => {
+      await oeffnen(vonDort, { ...aussage, verknuepft: false });
+      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
+
+      TestBed.resetTestingModule();
+      await oeffnen({ gesucht: '4' }, aussage);
+      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
+    });
+
+    it('der Vermerk ergänzt den Verlaufseintrag, ohne ihn zu ersetzen', () => {
+      expect(mitLueckeZuGezeigt({ navigationId: 3, aussage: 1 })).toEqual({
+        navigationId: 3,
+        aussage: 1,
+        lueckeZuGezeigt: true,
+      });
+      expect(mitLueckeZuGezeigt(null)).toEqual({ lueckeZuGezeigt: true });
     });
   });
 

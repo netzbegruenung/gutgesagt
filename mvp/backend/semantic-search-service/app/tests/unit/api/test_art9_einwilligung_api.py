@@ -653,6 +653,8 @@ OFFEN = {
     ("POST", "/api/v1/spracherkennung"),
     ("POST", "/api/v1/statement/themen/vorschlaege"),  # nur Vorschlag (#401)
     ("POST", "/api/v1/usage/content/{content_id}/usage"),
+    # Danke (#791): prueft die Einwilligung selbst, erst nach dem Schalter
+    ("POST", "/api/v1/usage/content/{content_id}/danke"),
     ("POST", "/api/v1/usage/users/me/besuch"),
     ("POST", "/api/v1/statement/addReplysuggestionToStatement"),
     ("PUT", "/api/v1/statement/themen/zuordnen"),
@@ -668,6 +670,9 @@ OFFEN = {
     ("POST", "/api/v1/moderation/loeschauftraege/{auftrag_id}/ausfuehren"),
     # Schalter setzen (Admin, #708): keine Daten von Nutzenden
     ("PUT", "/api/v1/moderation/schalter/{name}"),
+    # Saisons pflegen (Admin, #782): keine Daten von Nutzenden
+    ("POST", "/api/v1/moderation/saisons"),
+    ("PUT", "/api/v1/moderation/saisons/{saison_id}"),
     # Herkunft pruefen anstossen (Admin, #759): keine Daten von Nutzenden
     ("POST", "/api/v1/herkunft-pruefen/lauf"),
     ("POST", "/api/v1/sperren/{sperre_id}/widerspruch"),

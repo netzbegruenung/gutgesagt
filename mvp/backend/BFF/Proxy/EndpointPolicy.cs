@@ -37,6 +37,9 @@ public static class EndpointPolicy
         // Welche Funktionen hinter einem Schalter an sind (#756): nur lesend, ohne Person.
         // Die Admin-Seite der Schalter liegt unter /api/v1/moderation/schalter.
         "/api/v1/funktionen",
+        // Balken der laufenden Saison (#782): nur Summen, ohne Person. Nur dieser Pfad;
+        // die Pflege unter /api/v1/moderation/saisons bleibt hinter dem Gate.
+        "/api/v1/saisons/aktuell",
         // Konter-Probe (#786): Proben fuer das Spiel ohne Konto, nur lesend; der Tipp
         // bleibt im Browser. Hinter dem Schalter konter_probe, aus antwortet sie mit 404.
         "/api/v1/konter-probe",

@@ -41,6 +41,75 @@
     color: var(--akzent-schrift);
 }
 
+/* "Luecke zu!" als grosser Moment (#787), Gegenstueck zum Meilenstein-Moment */
+.luecke-zu-moment {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 16px;
+    border: 1px solid var(--akzent-tanne);
+    border-radius: 12px;
+    background: var(--primaer-tint);
+    text-align: center;
+}
+
+.luecke-zu-moment-titel {
+    margin: 0;
+    font-family: GrueneType, Roboto, sans-serif;
+    font-weight: 400;
+    font-size: 2.25rem;
+    line-height: 1.1;
+    color: var(--akzent-schrift);
+}
+
+/* Wie in der Einladung: Rahmen nur bei Tastaturbedienung */
+.luecke-zu-moment-titel:focus {
+    outline: none;
+}
+
+.luecke-zu-moment-titel:focus-visible {
+    outline: 2px solid var(--primaer-text);
+    outline-offset: 4px;
+}
+
+.luecke-zu-moment-satz {
+    margin: 0;
+    max-width: 32em;
+    font-size: 1.1rem;
+}
+
+.luecke-zu-moment .naechste-luecke {
+    min-height: 48px;
+}
+
+@media (max-width: 599px) {
+    .luecke-zu-moment .naechste-luecke {
+        align-self: stretch;
+    }
+}
+
+.luecke-zu-moment-ton {
+    margin-top: 4px;
+}
+
+/*
+ * Bewegung nur, wer sie nicht abgeschaltet hat: Der Kasten wird grün, waehrend der Keim
+ * waechst (feier-keim). Ueberschrift und Satz stehen sofort und bewegen sich nicht.
+ */
+@media (prefers-reduced-motion: no-preference) {
+    .luecke-zu-moment {
+        animation: luecke-zu-gruen 600ms ease-out both;
+    }
+}
+
+@keyframes luecke-zu-gruen {
+    from {
+        background-color: var(--flaeche);
+        border-color: var(--linie);
+    }
+}
+
 .gespeichert-laedt {
     display: flex;
     justify-content: center;

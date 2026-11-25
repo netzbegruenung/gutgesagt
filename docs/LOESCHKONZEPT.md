@@ -222,7 +222,7 @@ macht für diese Person dasselbe wie der Ablauf oben, beschränkt auf die Mitwir
 Was **bleibt**: das Konto, der Anzeigename in `users`, die Einwilligungen samt Widerruf als
 Nachweis (Art. 7 Abs. 1; der Vermerk „ohne Einwilligung weiter“ in `art9_ohne_einwilligung`
 geht dagegen mit dem Löschablauf), Meldungen der Person und Muster-Hinweise (beide gehen mit ihrer
-Frist) sowie `gesehene_nutzung` (nur Zählerstände: Nutzung und Einwürfe anderer beim letzten Besuch, kein Zeitpunkt, ohne Frist, geht mit dem Konto). Erst Qdrant, dann PostgreSQL: Scheitert ein Schritt, bleibt der Auftrag offen,
+Frist) sowie `gesehene_nutzung` (nur Zählerstände: Nutzung, Einwürfe anderer und Wirkungs-Echo beim letzten Besuch, kein Zeitpunkt, ohne Frist, geht mit dem Konto). Erst Qdrant, dann PostgreSQL: Scheitert ein Schritt, bleibt der Auftrag offen,
 und ein zweiter Klick holt nach, was fehlt; beide Teile sind wiederholbar. Danach wie in
 Schritt 3 die Texte durchsehen; macht einer die Person erkennbar, wird er einzeln entfernt. Die
 Beiträge stehen danach nicht mehr in „Meine Beiträge“ der Person, sie kann sie also nicht mehr
@@ -252,6 +252,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Paar-Prüfwerte der Muster-Hinweise (`muster_pruefwerte`) | 7 Tage | letzte Nutzung in dieser Richtung (`tag`) |
 | Prüfwerte „Ja, gepostet“ (`gepostet_pruefwerte`, #643) | ihre Kalenderwoche | zur Zahl der Woche verdichtet und gelöscht beim ersten täglichen Lauf nach Wochenende (Montag, UTC; derselbe Task wie für `nutzung_heute`, auch bei ausgeschaltetem Schalter), spätestens bei der nächsten Meldung; der Wochenschlüssel liegt nur im Arbeitsspeicher |
 | Zahl je Woche „Ja, gepostet“ (`gepostet_wochen`) | keine | — nur eine Zahl je Woche, ohne Personenbezug |
+| Wirkungs-Echo und Danke je Beitrag (`wirkung_je_beitrag`, #790, #791) | keine | — nur zwei Summen je Beitrag, ohne Kennung und Zeitpunkt; die Tages-Prüfwerte des Danke liegen in `nutzung_heute` und gehen mit ihnen nach dem Tageswechsel, die des Wirkungs-Echos nur im Arbeitsspeicher |
 | Muster-Hinweise (`muster_hinweise`) | 56 Tage (8 Wochen) | letzter Tag mit gegenseitiger Nutzung (`letzter_tag`) |
 | Löschaufträge (`loeschauftraege`), offen | keine | — sie sind Arbeit und bleiben, bis ein Admin den Löschablauf ausführt (Frist dafür: sieben Tage ab dem Widerruf, unter „Löschauftrag nach dem Widerruf“) |
 | Löschaufträge, erledigt | 365 Tage (entschieden 13.11.2026) | Ausführung (`erledigt_am`); mit dem Konto sofort (Schritt 2) |
@@ -260,6 +261,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Mitgliedschaften in Teams (`team_mitgliedschaften`): Kennung, Teamname, Motiv, Saison, Nummer, Tag des Beitritts, Kennung des Wortlauts und Zeitpunkt der Einwilligung | bis „Team verlassen“ (sofort gelöscht, Widerruf der Einwilligung für dieses Team) oder bis zur Löschung des Kontos | — die Einwilligung `team-2026-11-26` steht an der Mitgliedschaft und geht mit ihr; kein Bezug zur Einladung. Mit dem Konto sofort (Schritt 2), unter „Teams“ |
 | Einwilligung „Team öffentlich am Namen zeigen“ (`team_oeffentlich`): Kennung, ja/nein, Kennung des Wortlauts, Zeitpunkt | solange das Konto besteht | — nur die jüngste Antwort je Konto; Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Zähler je Team und Saison (`team_nummern`): Teamname, Saison, zuletzt vergebene Nummer | keine | — kein Personenbezug (keine Kennung); hält fest, dass eine Nummer nach „Team verlassen“ nicht neu vergeben wird |
+| Saisons (`saisons`, #782): Name, erster und letzter Tag, Ziel, Anlegezeitpunkt | keine | — kein Personenbezug, auch keine Kennung des Admins; löschen lässt sich eine Saison nur vor ihrem Beginn |
 | team_wochen, team_quests: ohne Personenbezug, unbefristet; entfallen mit dem Team | keine | — Wochenzähler (Teamname, Saison, Woche, Zahl der Beiträge, Bewertungen und Meldungen „Ja, gepostet“) und Team-Quests (Teamname, Saison, Woche, Thema, Ziel), ohne Kennung, ohne Beitrag, ohne Zeitpunkt; bleiben bei „Team verlassen“ und bei der Löschung des Kontos. Entdoppelt wird über einen Wochen-Prüfwert nur im Arbeitsspeicher, der mit dem Wochenwechsel verfällt. Eine Team-Löschung gibt es noch nicht; kommt sie, gehen die Zeilen mit (`TeamFortschrittRepository.team_loeschen`) |
 | Admin-Einstellungen (`einstellungen`, etwa die aktuelle Saison): Wert, Zeitpunkt, Kennung des Admins | keine | — der Wert bleibt; die Kennung des Admins wird mit seinem Konto geleert (Schritt 2) |
 | Zustimmung zu den Nutzungsbedingungen in der App (`nutzungsbedingungen_zustimmungen`) | solange das Konto besteht | — Nachweis des Vertragsschlusses und des Stands, dem die Person zugestimmt hat (Art. 6 Abs. 1 lit. b DSGVO); geht mit dem Konto (Schritt 2) |

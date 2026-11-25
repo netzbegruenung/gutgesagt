@@ -231,6 +231,25 @@ class GepostetWoche(Base):
     personen = Column(Integer, nullable=False)
 
 
+class WirkungJeBeitrag(Base):
+    """
+    Was andere mit einem Beitrag tun, nur als Summe je Beitrag fuer die Autorin:
+    wie oft er als "oeffentlich gepostet" gemeldet wurde (Wirkungs-Echo, #790) und
+    wie oft jemand "Danke an die Autorin" gesagt hat (#791). Keine Kennung, kein
+    Pruefwert, kein Zeitpunkt; wer gepostet oder gedankt hat, steht nirgends
+    (services/wirkung_service.py). Getrennt von der Wochenzahl "Ja, gepostet"
+    (``gepostet_wochen``), die keinen Beitrag kennt.
+    """
+
+    __tablename__ = "wirkung_je_beitrag"
+
+    content_id = Column(SQLUUID(as_uuid=True), primary_key=True)
+    oeffentlich_gepostet = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    danke = Column(Integer, default=0, server_default="0", nullable=False)
+
+
 class MusterHinweisZeile(Base):
     """
     Ein auffaelliges Muster fuer Admins (ADR 0004, #352): zwei Konten, die innerhalb
@@ -898,6 +917,10 @@ class GeseheneNutzung(Base):
     # NULL: noch nie gezaehlt; der erste Besuch nennt dann nichts als neu.
     # Migration: postgres-app/migrations/2026-11-13-gesehene-einwuerfe.sql.
     einwuerfe = Column(Integer, nullable=True)
+    # Wirkungs-Echo (#790): die Summe "oeffentlich gepostet" der eigenen Beitraege beim
+    # letzten Besuch; die Startseite nennt nur den Zuwachs. NULL: noch nie gezeigt (0).
+    # Migration: postgres-app/migrations/2026-11-25-790-gesehenes-echo.sql.
+    echo = Column(Integer, nullable=True)
 
 
 class Art9EinwilligungZeile(Base):
@@ -1117,6 +1140,35 @@ class EinstellungZeile(Base):
     geaendert_am = Column(DateTime(timezone=True), nullable=False)
     # Kennung des Admins; leer, wenn sein Konto geloescht ist (person_loeschen.sql)
     geaendert_von = Column(String(255), nullable=True)
+
+
+class SaisonZeile(Base):
+    """
+    Eine Saison mit Gemeinschaftsziel (#782, domain/saisons.py): Name, erster und
+    letzter Tag (UTC, beide eingeschlossen) und das Ziel in Widerspruchs-Wochen.
+    Saisons ueberschneiden sich nie (prueft repositories/saison_repository.py unter
+    einer Tabellensperre), deshalb laeuft an jedem Tag hoechstens eine. Nichts zur
+    Person, auch nicht, welcher Admin sie angelegt hat.
+
+    Teamlinks und Mitgliedschaften tragen den Namen als Kopie (Spalte saison), keinen
+    Fremdschluessel: Teams gab es vor den Saisons, und vergangene Teams bleiben, auch
+    wenn es zu ihrem Saisonnamen keine Zeile hier gibt.
+    """
+
+    __tablename__ = "saisons"
+
+    id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(20), nullable=False)
+    beginn = Column(Date, nullable=False)
+    ende = Column(Date, nullable=False)
+    ziel = Column(Integer, nullable=False)
+    angelegt_am = Column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("name", name="uq_saisons_name"),
+        CheckConstraint("ende >= beginn", name="ck_saisons_ende_nach_beginn"),
+        CheckConstraint("ziel > 0", name="ck_saisons_ziel_positiv"),
+    )
 
 
 class HerkunftPruefungZeile(Base):

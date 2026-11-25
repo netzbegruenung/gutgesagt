@@ -152,6 +152,21 @@ def schalter_admin_alle_an():
 
 
 @pytest.fixture(autouse=True)
+def wirkung_ohne_datenbank(monkeypatch):
+    """
+    Wirkungs-Echo und Danke (#790, #791) ohne Datenbank: keine Summen. Tests mit
+    Summen stellen ``wirkung_ohne_datenbank.je_beitrag.return_value`` ein.
+    """
+    import services.wirkung_service as modul
+
+    repository = MagicMock()
+    repository.je_beitrag.return_value = {}
+    repository.danke_zaehlen.return_value = True
+    monkeypatch.setattr(modul, "_service", modul.WirkungService(repository))
+    yield repository
+
+
+@pytest.fixture(autouse=True)
 def einstellungen_ohne_datenbank():
     """
     Admin-Einstellungen mit Textwert (services/einstellungen_service.py) ohne
@@ -172,6 +187,22 @@ def einstellungen_ohne_datenbank():
     )
     yield werte
     einstellungen_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
+def saisons_ohne_datenbank():
+    """
+    Saisons (services/saison_service.py, #782) ohne Datenbank: keine Saison, keine
+    Wochenzahlen. Die aktuelle Saison der Teams fragt sie bei wirksamem Schalter;
+    Tests mit Saisons setzen einen eigenen Dienst (saison_service_setzen).
+    """
+    from services.saison_service import SaisonService, saison_service_setzen
+
+    repository = MagicMock()
+    repository.alle.return_value = []
+    saison_service_setzen(SaisonService(repository, lambda von, laufende: {}))
+    yield repository
+    saison_service_setzen(None)
 
 
 @pytest.fixture(autouse=True)
