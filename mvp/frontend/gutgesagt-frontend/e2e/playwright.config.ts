@@ -42,8 +42,14 @@ export default defineConfig({
       testMatch: /13-teilen\.spec\.ts/,
     },
     {
+      // Teams ueber Einladungslinks mit gemocktem /api (route.fulfill): ohne Sitzung, 360 px.
+      name: 'teams',
+      testMatch: /15-teams\.spec\.ts/,
+      use: { ...devices['Pixel 5'], viewport: { width: 360, height: 740 } },
+    },
+    {
       name: 'mobil-360',
-      testIgnore: /(stichproben|besucher|fangkorb-desktop|12-ergebnisseite|13-teilen)\.spec\.ts/,
+      testIgnore: /(stichproben|besucher|fangkorb-desktop|12-ergebnisseite|13-teilen|15-teams)\.spec\.ts/,
       dependencies: ['setup'],
       use: {
         ...devices['Pixel 5'],
