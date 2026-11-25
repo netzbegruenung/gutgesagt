@@ -8,6 +8,8 @@ import type { NutzungJeFassung } from '../shared/fassung';
 import { STIL_LABEL, Stil } from '../shared/zweck-stil';
 import type { BeitragAnsicht } from '../services/content.service';
 import type { Thema } from '../services/dtos/themenDtos';
+import type { TeamAmNamen } from '../shared/teams/teams';
+import type { AndereTonlage } from './karten-aktionen/kopiert-erfolg';
 
 /**
  * Was eine Beitragskarte anzeigt, unabhaengig davon, woher die Daten kommen.
@@ -177,12 +179,18 @@ export interface KartenDaten {
    * nur wenn die Person der Sichtbarkeit zugestimmt hat; fehlt = kein Abzeichen.
    */
   autorAbzeichen?: number | null;
+  /** Teams der aktuellen Saison am Anzeigenamen (autor_teams); fehlt = keine. */
+  autorTeams?: TeamAmNamen[] | null;
   /** Verwendungen; null = unbekannt, dann kein Badge. */
   nutzung: number | null;
   /** Wie viele Beitraege auf diesem beruhen ("N Varianten", #356); fehlt = keine. */
   varianten?: number;
   /** Davon in den letzten 7 Tagen; nur in Meine Beitraege gesetzt, sonst kein Zuwachs. */
   nutzungLetzte7Tage?: number;
+  /** Nur in Meine Beitraege: wie oft als öffentlich gepostet gemeldet (#790); fehlt = Schalter aus. */
+  oeffentlichGepostet?: number | null;
+  /** Nur in Meine Beitraege: wie oft jemand Danke gesagt hat (#791); fehlt = Schalter aus. */
+  danke?: number | null;
   /** Am Kommentar in Meine Beitraege: Nutzung und Zuwachs je vorhandener Fassung (#355). */
   nutzungJeFassung?: NutzungJeFassung;
   quellen: KartenQuelle[];
@@ -193,6 +201,11 @@ export interface KartenDaten {
   guete?: KartenGuete;
   extra?: KartenExtra;
   einwurfAngaben?: EinwurfAngaben;
+  /**
+   * Eine Antwort zur selben Aussage in anderem Stil, fuer den Hinweis nach dem Kopieren
+   * (#785); nur auf der Ergebnisseite gesetzt (result-view/andere-tonlage.ts), fehlt = keiner.
+   */
+  andereTonlage?: AndereTonlage | null;
 }
 
 // Suchergebnis und /recent
@@ -218,6 +231,7 @@ export function ausSuchergebnis(paket: Suchpaket): KartenDaten {
     eigen: inhalt.ist_eigener_beitrag ?? null,
     autorName: inhalt.autor_name ?? null,
     autorAbzeichen: inhalt.autor_abzeichen ?? null,
+    autorTeams: inhalt.autor_teams ?? null,
     nutzung: inhalt.usage_count ?? 0,
     varianten: inhalt.varianten ?? 0,
     quellen: (inhalt.references ?? []).map(quelle),
@@ -337,8 +351,11 @@ export function ausBeitrag(eintrag: ContentResult): KartenDaten {
     eigen: eintrag.ist_eigener_beitrag ?? null,
     autorName: eintrag.autor_name ?? null,
     autorAbzeichen: eintrag.autor_abzeichen ?? null,
+    autorTeams: eintrag.autor_teams ?? null,
     nutzung: eintrag.usage_count ?? 0,
     nutzungLetzte7Tage: eintrag.nutzung_letzte_7_tage ?? 0,
+    oeffentlichGepostet: eintrag.oeffentlich_gepostet ?? null,
+    danke: eintrag.danke ?? null,
     nutzungJeFassung: typ === 'commentary' ? (eintrag.nutzung_je_fassung ?? undefined) : undefined,
     quellen: (eintrag.references ?? []).map(quelle),
     bildUrl: eintrag.image_url || undefined,

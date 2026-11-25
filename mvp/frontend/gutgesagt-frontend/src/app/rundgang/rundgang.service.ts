@@ -7,7 +7,7 @@ import { Art9EinwilligungService } from '../services/art9-einwilligung.service';
 import { HOME_HINWEIS_MERKER } from '../shared/geraetespeicher-schalter';
 import { HOME_BILDSCHIRM_MOEGLICH } from './home-bildschirm';
 import { AppInstallierenService } from './app-installieren.service';
-import { Angebot, APP_INSTALLIEREN_ANGEBOT, HOME_ANGEBOT, MITMACHEN_ANGEBOT, RUNDGAENGE, Rundgang, RundgangId, WILLKOMMEN } from './rundgang-daten';
+import { Angebot, APP_INSTALLIEREN_ANGEBOT, HOME_ANGEBOT, MITMACHEN_ANGEBOT, RUNDGAENGE, Rundgang, RundgangId, WILLKOMMEN, WILLKOMMEN_ANGEMELDET } from './rundgang-daten';
 import { ANSICHT_PARAM, MIT_KONTO_PFAD, STANDARD_ZIEL, ZIEL_PARAM } from '../mit-konto/vorschau-schritte';
 import { gesehen as imSpeicher, merken as speichern } from './rundgang-merker';
 
@@ -199,7 +199,10 @@ export class RundgangService {
       if (this.mitmachenFaellig(info) && hier(MITMACHEN_ANGEBOT)) return MITMACHEN_ANGEBOT;
     }
     // Wer Mitmachen schon hatte, braucht kein Willkommen mehr
-    if (!this.gesehen(WILLKOMMEN) && !this.gesehen(MITMACHEN_ANGEBOT) && hier(WILLKOMMEN)) return WILLKOMMEN;
+    // Angemeldet ohne den Satz „Ein Konto brauchst du nicht“ (Review Spielgefühl 25.11.)
+    if (!this.gesehen(WILLKOMMEN) && !this.gesehen(MITMACHEN_ANGEBOT) && hier(WILLKOMMEN)) {
+      return info.isAuthenticated ? WILLKOMMEN_ANGEMELDET : WILLKOMMEN;
+    }
     // Zuletzt und nie zugleich mit einem anderen: Es gibt nur ein Band
     // iPhone und iPad: Anleitung. Sonst nur mit Angebot des Browsers (nicht in Firefox,
     // nicht schon installiert); ohne es wird auch kein Vermerk gelesen.

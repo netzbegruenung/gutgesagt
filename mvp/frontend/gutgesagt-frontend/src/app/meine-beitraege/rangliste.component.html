@@ -1,0 +1,84 @@
+<!-- Nur fuer die Person selbst; ohne Schalter (404) fehlt die Karte (#793) -->
+<section *ngIf="sichtbar && stand" class="rangliste" aria-labelledby="rangliste-titel" data-testid="rangliste">
+    <h2 id="rangliste-titel" #titel tabindex="-1">Rangliste<ng-container *ngIf="stand.saison"> {{ stand.saison.name }}</ng-container></h2>
+
+    <!-- Einmal fragen, zwei gleichwertige Knoepfe, nichts vorbelegt; der volle Wortlaut steht davor -->
+    <div *ngIf="fragen" class="rangliste-frage" role="group" aria-labelledby="rangliste-wortlaut" data-testid="frage">
+        <p class="rangliste-hinweis">Freiwillig: Deine Punkte zählen genauso ohne Rangliste.</p>
+        <p id="rangliste-wortlaut" class="rangliste-wortlaut">{{ stand.aktueller_wortlaut.text }}</p>
+        <p class="rangliste-mehr"><a routerLink="/datenschutz" fragment="rangliste" target="_blank" rel="noopener">Mehr dazu in der Datenschutzerklärung</a></p>
+        <div class="rangliste-knoepfe">
+            <button mat-stroked-button type="button" data-testid="ja" [disabled]="speichert" (click)="antworten(true)">{{ ja }}</button>
+            <button mat-stroked-button type="button" data-testid="nein" [disabled]="speichert" (click)="antworten(false)">{{ nein }}</button>
+        </div>
+    </div>
+
+    <ng-container *ngIf="dabei && !fragen">
+        <ng-container *ngIf="stand.rangliste as liste; else zuWenige">
+            <p class="rangliste-hinweis">Nur wer selbst mitmacht, sieht diese Liste. {{ liste.teilnehmende }} machen mit.</p>
+            <ol class="rangliste-liste" aria-label="Die ersten zehn Plätze">
+                <li *ngFor="let platz of liste.oben" class="rangliste-platz" [class.ich]="platz.ich" data-testid="platz">
+                    <ng-container *ngTemplateOutlet="zeile; context: { $implicit: platz }"></ng-container>
+                </li>
+            </ol>
+            <p *ngIf="liste.eigener as eigener" class="rangliste-platz ich rangliste-eigener" data-testid="eigener">
+                <ng-container *ngTemplateOutlet="zeile; context: { $implicit: eigener }"></ng-container>
+            </p>
+        </ng-container>
+        <ng-template #zuWenige>
+            <p class="rangliste-hinweis" data-testid="zu-wenige">
+                <ng-container *ngIf="stand.saison">Die Rangliste erscheint, sobald {{ stand.min_teilnehmende }} mitmachen.</ng-container>
+                <ng-container *ngIf="!stand.saison">Gerade läuft keine Saison.</ng-container>
+                <ng-container *ngIf="stand.eigene_punkte !== null"> Deine Punkte in dieser Saison: {{ stand.eigene_punkte }}.</ng-container>
+            </p>
+        </ng-template>
+
+        <!-- Aktive Wahl: Standard ist der zufaellige Ranglistenname, der Anzeigename nur auf Klick -->
+        <fieldset class="rangliste-name" [disabled]="speichert">
+            <legend>Dein Name in der Rangliste</legend>
+            <label>
+                <input #nameWahl type="radio" name="rangliste-name" value="zufall" data-testid="name-zufall" [checked]="!mitAnzeigename" (change)="nameWaehlen(false)">
+                Zufälliger Ranglistenname: <strong>{{ stand.ranglistenname ?? 'wird gerade vergeben' }}</strong>
+            </label>
+            <label *ngIf="stand.anzeigename">
+                <input #nameWahl type="radio" name="rangliste-name" value="anzeigename" data-testid="name-anzeigename" [checked]="mitAnzeigename" (change)="nameWaehlen(true)">
+                Mein Anzeigename: <strong>{{ stand.anzeigename }}</strong>
+            </label>
+        </fieldset>
+
+        <ng-container *ngIf="stand.vergangene.length">
+            <h3 class="rangliste-unter">Vergangene Saisons</h3>
+            <ul class="rangliste-vergangene" data-testid="vergangene">
+                <li *ngFor="let saison of stand.vergangene">{{ saison.name }}: {{ saison.punkte }} Punkte</li>
+            </ul>
+        </ng-container>
+
+        <p class="rangliste-stand">
+            <button mat-button type="button" class="rangliste-raus" data-testid="raus" [disabled]="speichert"
+                    (click)="antworten(false)">Aus der Rangliste nehmen</button>
+        </p>
+    </ng-container>
+
+    <p *ngIf="ruhend" class="rangliste-stand" data-testid="ruhend">
+        Du hast der Rangliste zugestimmt, stehst aber gerade nicht darin: Dafür braucht es auch deine Einwilligungen zur Mitwirkung und zu „Punkte und Meilensteine“.
+        <button mat-button type="button" class="rangliste-raus" data-testid="raus-ruhend" [disabled]="speichert"
+                (click)="antworten(false)">Aus der Rangliste nehmen</button>
+    </p>
+
+    <p *ngIf="stand.gefragt && stand.teilnehmen === false && !fragen" class="rangliste-stand" data-testid="ohne">
+        Du bist nicht in der Rangliste.
+        <button mat-button type="button" class="rangliste-doch" [disabled]="speichert" (click)="doch()">In die Rangliste</button>
+    </p>
+
+    <ng-template #zeile let-platz>
+        <span class="rangliste-nummer">{{ platz.platz }}.</span>
+        <span class="rangliste-name-text">{{ platz.name }}<span *ngIf="platz.ich" class="rangliste-du"> (du)</span></span>
+        <span class="rangliste-punkte">{{ platz.punkte }} Punkte</span>
+    </ng-template>
+
+    <!-- Immer da, damit Screenreader den neuen Stand nach einer Antwort ansagen -->
+    <div role="status" class="rangliste-status">
+        <p *ngIf="ansage && !fehler" class="visually-hidden">{{ ansage }}</p>
+        <p *ngIf="fehler" class="rangliste-fehler">Das hat nicht geklappt. Bitte versuch es noch einmal.</p>
+    </div>
+</section>

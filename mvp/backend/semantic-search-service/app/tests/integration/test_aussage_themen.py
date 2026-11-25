@@ -143,3 +143,16 @@ def test_aussagen_mit_thema(neue_datenbank):
 
     assert sorted(repository.aussagen_mit_thema("klima")) == [A, B]
     assert repository.aussagen_mit_thema("wohnen") == []
+
+
+def test_alle_zuordnungen_je_aussage(neue_datenbank):
+    """Alle Zuordnungen je Aussage fuer die Gartenansicht (#783)."""
+    repository = _repository(neue_datenbank)
+    assert repository.alle() == {}
+    repository.setzen(A, ["klima", "verkehr"], VON_HAND)
+    repository.setzen(B, ["europa"], VON_HAND)
+
+    assert {k: sorted(v) for k, v in repository.alle().items()} == {
+        A: ["klima", "verkehr"],
+        B: ["europa"],
+    }

@@ -1,0 +1,3 @@
+Die Symbole abkuerzung-*-96.png (App-Abkuerzungen im Manifest, #757) zeigen Zeichen aus
+Material Icons von Google (Apache License 2.0, Wortlaut in ../fonts/MATERIAL-ICONS-LIZENZ.txt),
+gesetzt in Tannengruen auf dem App-Gelb.

@@ -30,7 +30,9 @@ services/suchen_ohne_treffer_service.py, Nutzungsereignisse in core/config.py.
   Bleibt der Link ungenutzt, war die Adresse vertippt oder fremd, oder die Person hat
   es sich anders ueberlegt; einen Monat lang kommt sie noch ueber "Passwort vergessen"
   hinein. Was "nie benutzt" heisst: KeycloakKonten.nie_benutzte_loeschen. Ohne Zugang
-  zur Keycloak-Admin-Schnittstelle (Dev-Stack) entfaellt die Frist.
+  zur Keycloak-Admin-Schnittstelle (Dev-Stack) entfaellt die Frist. Mit dem Konto gehen
+  seine Team-Mitgliedschaften und die Antwort auf "Team öffentlich am Namen zeigen"
+  (TeamRepository.konten_loeschen): Sie entstehen schon beim Anlegen des Kontos.
 - Suchereignisse (#495): Ist ein UTC-Tag abgeschlossen, werden seine Suchereignisse
   zum Tageszaehler der Suchen verdichtet (SearchTrackingRepository.verdichten_vor):
   Zahl der Suchen, der Suchen ohne Treffer und der Personen, kein Tagespseudonym.
@@ -55,6 +57,7 @@ Bereinigungsjob: Die Fristen stehen im Loeschkonzept ohne Bedingung.
 
 import asyncio
 from datetime import date, datetime, time, timedelta, timezone
+from functools import partial
 from typing import Any, Dict, List, Optional
 
 from core.logging import get_logger
@@ -67,6 +70,7 @@ from repositories.loeschauftrag_repository import LoeschauftragRepository
 from repositories.schalter_repository import SchalterRepository
 from repositories.search_tracking_repository import SearchTrackingRepository
 from repositories.sperre_repository import SperreRepository
+from repositories.team_repository import TeamRepository
 from services.moderation_service import ModerationService
 from utils.utc_tag import heute_utc, sekunden_bis_mitternacht
 
@@ -114,6 +118,7 @@ class LoeschfristenService:
         suchereignisse: Optional[SearchTrackingRepository] = None,
         loeschauftraege: Optional[LoeschauftragRepository] = None,
         schalter: Optional[SchalterRepository] = None,
+        teams: Optional[TeamRepository] = None,
     ):
         self._meldungen = meldungen
         self._einwuerfe = einwuerfe
@@ -124,6 +129,7 @@ class LoeschfristenService:
         self._suchereignisse = suchereignisse
         self._loeschauftraege = loeschauftraege
         self._schalter = schalter
+        self._teams = teams
         # True, wenn der letzte Lauf Suchereignisse nicht verdichten konnte.
         self.verdichten_offen = False
 
@@ -169,17 +175,38 @@ class LoeschfristenService:
                 "Schalter history entries",
             )
         if self._konten is not None:
-            await self._frist_anwenden(
-                self._konten.nie_benutzte_loeschen,
-                _grenze(heute, NIE_BENUTZTES_KONTO_TAGE)
-                - timedelta(seconds=MAIL_GUELTIG_SEKUNDEN),
-                "never used accounts from invitations",
-            )
+            await self._nie_benutzte_konten(heute)
         try:
             await self._geloeschte_beitraege(heute)
         except Exception as e:
             logger.error(
                 f"Error removing deleted content: {type(e).__name__}", exc_info=True
+            )
+
+    async def _nie_benutzte_konten(self, heute: date) -> None:
+        """
+        Nie benutzte Konten im Realm loeschen und danach ihre Teamdaten. Auch wenn der
+        Realm mittendrin abbricht, gehen die Teamdaten der schon geloeschten Konten.
+        """
+        geloescht: List[str] = []
+        loeschen = self._konten.nie_benutzte_loeschen
+        if self._teams is not None:
+            loeschen = partial(loeschen, bei_geloescht=geloescht.append)
+        await self._frist_anwenden(
+            loeschen,
+            _grenze(heute, NIE_BENUTZTES_KONTO_TAGE)
+            - timedelta(seconds=MAIL_GUELTIG_SEKUNDEN),
+            "never used accounts from invitations",
+        )
+        if not geloescht:
+            return
+        try:
+            n = await asyncio.to_thread(self._teams.konten_loeschen, geloescht)
+            logger.info(f"Deleted {n} Team memberships of never used accounts")
+        except Exception as e:
+            logger.error(
+                f"Error deleting Team data of never used accounts: {type(e).__name__}",
+                exc_info=True,
             )
 
     async def _ueberfaellige_melden(self) -> None:

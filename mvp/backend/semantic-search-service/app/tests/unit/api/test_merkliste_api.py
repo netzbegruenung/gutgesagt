@@ -142,8 +142,12 @@ def test_ohne_einwilligung_403(merkliste, art9_einwilligung_ohne_datenbank):
     merkliste.merken.assert_not_called()
 
 
-def test_obergrenze_standard_an_und_hinweis_auf_der_admin_seite():
-    from services.schalter_service import SCHALTER
+def test_obergrenze_standard_aus_und_hinweis_auf_der_admin_seite():
+    from services.schalter_service import GRUNDFUNKTIONEN, SCHALTER
 
-    assert Settings().merkliste_aktiv is True
-    assert "Datenschutzerklärung" in SCHALTER["merkliste"].hinweis
+    assert Settings().merkliste_aktiv is False
+    art = SCHALTER["merkliste"]
+    assert art.gruppe == GRUNDFUNKTIONEN
+    assert not art.rechtlich_freigegeben
+    for teil in ("Einwilligungswortlaut", "DSFA", "DSE"):
+        assert teil in art.einschalt_hinweis

@@ -1,3 +1,4 @@
+import { TAGESDECKEL_MELDUNG } from '../beitragsformular/speicherfehler';
 import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
@@ -21,6 +22,7 @@ import { erwarteCc0Hinweis } from '../shared/cc0-hinweis/cc0-hinweis.testing';
 import { FANGKORB_BESCHREIBUNG, MENUE_ICONS } from '../shared/fangkorb-texte';
 import { Art9EinwilligungZustand } from '../services/art9-einwilligung-zustand';
 import { ThemenService } from '../services/themen.service';
+import { VORSCHLAG_PAUSE_MS } from '../shared/themen/themen-vorschlaege';
 import { Thema } from '../services/dtos/themenDtos';
 
 const THEMEN: Thema[] = [
@@ -73,6 +75,8 @@ describe('EinwerfenComponent', () => {
   let neueMeilensteine: Meilenstein[] = [];
   /** Was die Themenliste liefert; null: nicht ladbar. */
   let themenListe: Thema[] | null = THEMEN;
+  /** Themenvorschlaege (#401): je Aufruf Text und Hoechstzahl. */
+  const vorschlaegeSpy = jasmine.createSpy('vorschlaege').and.returnValue(of(['verkehr']));
 
   /**
    * Die Vorbelegung passiert in ngOnInit, also muss eine Ablage liegen, bevor die
@@ -102,6 +106,8 @@ describe('EinwerfenComponent', () => {
           provide: ThemenService,
           useValue: {
             liste: () => (themenListe ? of(themenListe) : throwError(() => new Error('nicht ladbar'))),
+            vorschlaege: vorschlaegeSpy,
+            vorschlaegeAn: () => of(true),
           },
         },
         {
@@ -270,6 +276,19 @@ describe('EinwerfenComponent', () => {
       expect(component.wirdGespeichert).toBeFalse();
     });
 
+    it('sagt am Tagesdeckel freundlich, dass morgen wieder geht, und behaelt die Eingabe', () => {
+      einwurfService.einwerfen.and.returnValue(
+        throwError(() => ({ status: 429, error: { error: 'TAGESDECKEL' } })),
+      );
+      eingeben('https://example.org/a', 'nicht verlieren');
+
+      component.einwerfen();
+
+      expect(component.fehler).toBe(TAGESDECKEL_MELDUNG);
+      expect(component.wirdGespeichert).toBeFalse();
+      expect(component.einwurfForm.value.hinweis).toBe('nicht verlieren');
+    });
+
     // UX-Review B4: Ohne Einwilligung kein "versuche es erneut", sondern der Hinweiskasten
     it('zeigt bei fehlender Einwilligung (403) keinen Fehler, sondern den Hinweiskasten, und behaelt die Eingabe', () => {
       einwurfService.einwerfen.and.returnValue(
@@ -318,6 +337,27 @@ describe('EinwerfenComponent', () => {
       const chips = Array.from(fixture.nativeElement.querySelectorAll('.thema-chip')) as HTMLButtonElement[];
       return chips.find((c) => c.textContent?.trim() === name)!;
     }
+
+    function pause(): Promise<void> {
+      return new Promise((fertig) => setTimeout(fertig, VORSCHLAG_PAUSE_MS + 50));
+    }
+
+    it('fragt eingeklappt nicht nach Vorschlaegen, aufgeklappt hoechstens zwei zum Hinweis (#401)', async () => {
+      vorschlaegeSpy.calls.reset();
+      await erstellen();
+      eingeben('', 'Das Tempolimit bringt nichts');
+      await pause();
+      expect(vorschlaegeSpy).not.toHaveBeenCalled();
+
+      aufklappen();
+      await pause();
+      fixture.detectChanges();
+
+      expect(vorschlaegeSpy).toHaveBeenCalledOnceWith('Das Tempolimit bringt nichts', 2);
+      const vorschlag = fixture.nativeElement.querySelector('.themen-vorschlag .vorschlag-chip') as HTMLButtonElement;
+      expect(vorschlag.getAttribute('aria-label')).toBe('Verkehr übernehmen');
+      expect(component.themen).toEqual([]);
+    });
 
     it('ist eingeklappt: ohne Thema bleibt das Formular wie vorher', async () => {
       await erstellen();

@@ -198,6 +198,31 @@ class UsageTrackingRepository:
                 result[str(content_id)] = anzahl
         return result
 
+    def nutzung_entdoppelt_im_zeitraum(
+        self, content_ids: List[uuid.UUID], erster: date, letzter: date
+    ) -> int:
+        """
+        Die entdoppelte Nutzung dieser Beitraege an den UTC-Tagen erster bis letzter,
+        zusammen (Punkte je Saison, #793). Gezaehlt aus usage_events mit
+        ``entdoppelt``: nur dort steht, wann genutzt wurde. Was vor der Frist der
+        usage_events (90 Tage, cleanup_old_events) liegt, fehlt.
+        """
+        if not content_ids:
+            return 0
+        von, bis = utc_zeitraum(erster, letzter)
+        with self.db.get_session() as session:
+            return (
+                session.query(func.count(UsageEvent.id))
+                .filter(
+                    UsageEvent.content_id.in_(content_ids),
+                    UsageEvent.entdoppelt.is_(True),
+                    UsageEvent.timestamp >= von,
+                    UsageEvent.timestamp < bis,
+                )
+                .scalar()
+                or 0
+            )
+
     def vergangene_tage_verwerfen(self, heute: Optional[date] = None) -> int:
         """
         Die Pruefwerte vergangener Tage verwerfen (#352): Sie entdoppeln nur am

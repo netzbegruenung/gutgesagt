@@ -1,3 +1,4 @@
+import { TAGESDECKEL_MELDUNG } from '../beitragsformular/speicherfehler';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -20,6 +21,7 @@ const ENTFERNEN_URL = (id: string) => `${environment.baseUrl}/api/v1/moderation/
 const VORAB_URL = `${environment.baseUrl}/api/v1/statement/vorab`;
 const THEMEN_URL = `${environment.baseUrl}/api/v1/statement/themen`;
 const ZUORDNEN_URL = `${THEMEN_URL}/zuordnen`;
+const VORSCHLAG_URL = `${THEMEN_URL}/vorschlaege`;
 const THEMEN = [
   { schluessel: 'klima', name: 'Klima' },
   { schluessel: 'energie-heizen', name: 'Energie und Heizen' },
@@ -51,7 +53,8 @@ describe('HierFehltEineAntwortComponent', () => {
     fixture = TestBed.createComponent(HierFehltEineAntwortComponent);
     http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
-    http.expectOne(THEMEN_URL).flush({ themen: THEMEN });
+    // Themenvorschlaege (#401) an, damit die Seite sie zeigt; Standard im Dienst ist aus.
+    http.expectOne(THEMEN_URL).flush({ themen: THEMEN, vorschlaege: true });
   });
 
   afterEach(() => http.verify());
@@ -393,12 +396,33 @@ describe('HierFehltEineAntwortComponent', () => {
       const anfrage = http.expectOne(SPRACHE_URL);
       expect(anfrage.request.body).toEqual({ text: 'Heat pumps are far too expensive' });
       anfrage.flush({ sprache: 'en' });
+      http.expectOne(VORSCHLAG_URL).flush({ themen: [] });
       fixture.detectChanges();
 
       expect(element().querySelector('.vorab .sprachhinweis')!.textContent).toContain(
         'Diese Aussage ist offenbar nicht auf Deutsch',
       );
       expect((element().querySelector('button.aussage-anlegen') as HTMLButtonElement).disabled).toBeFalse();
+    }));
+
+    it('schlaegt Themen zum Text vor, ohne sie zu waehlen; ein Tipp uebernimmt (#401)', fakeAsync(() => {
+      eingeben('Das Tempolimit bringt nichts');
+      tick(1000);
+      const anfrage = http.expectOne(VORSCHLAG_URL);
+      expect(anfrage.request.body).toEqual({ text: 'Das Tempolimit bringt nichts', hoechstens: 3 });
+      anfrage.flush({ themen: ['verkehr'] });
+      fixture.detectChanges();
+
+      const vorschlag = element().querySelector('.vorab-themen .vorschlag-chip') as HTMLButtonElement;
+      expect(vorschlag.getAttribute('aria-label')).toBe('Verkehr übernehmen');
+      const verkehr = Array.from(element().querySelectorAll('.vorab-themen .thema-chip')).find(
+        (c) => c.textContent?.trim() === 'Verkehr',
+      ) as HTMLButtonElement;
+      expect(verkehr.getAttribute('aria-pressed')).toBe('false');
+      vorschlag.click();
+      fixture.detectChanges();
+      expect(verkehr.getAttribute('aria-pressed')).toBe('true');
+      expect(element().querySelector('.vorab-themen .themen-vorschlag')).toBeNull();
     }));
 
     it('schickt zu kurze Aussagen nicht ab', () => {
@@ -417,6 +441,20 @@ describe('HierFehltEineAntwortComponent', () => {
       expect(text()).toContain('konnte nicht angelegt werden');
       expect((element().querySelector('textarea[name="aussage"]') as HTMLTextAreaElement).value)
         .toBe('Das Heizungsgesetz enteignet uns');
+    });
+
+    it('sagt am Tagesdeckel freundlich, dass morgen wieder geht', () => {
+      eingeben('Das Heizungsgesetz enteignet uns');
+      anlegen();
+
+      http.expectOne(VORAB_URL).flush(
+        { detail: 'x', error: 'TAGESDECKEL' },
+        { status: 429, statusText: 'Too Many Requests' },
+      );
+      fixture.detectChanges();
+
+      expect(text()).toContain(TAGESDECKEL_MELDUNG);
+      expect(text()).not.toContain('versuche es erneut');
     });
   });
   describe('Melden und Entfernen', () => {

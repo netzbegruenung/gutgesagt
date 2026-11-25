@@ -1,4 +1,5 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { TextFieldModule } from '@angular/cdk/text-field';
@@ -12,6 +13,7 @@ import {
 import { ThemenService } from '../services/themen.service';
 import { Thema } from '../services/dtos/themenDtos';
 import { ThemenAuswahlComponent } from '../shared/themen/themen-auswahl.component';
+import { ThemenVorschlaege } from '../shared/themen/themen-vorschlaege';
 import {
   EinwurfBeitrag,
   StufenAnzeige,
@@ -39,6 +41,7 @@ import { einwilligungFehlt } from '../services/art9-einwilligung.service';
 import { Art9EinwilligungZustand } from '../services/art9-einwilligung-zustand';
 import { Subject, of, timer } from 'rxjs';
 import { catchError, map, switchMap, takeUntil, tap } from 'rxjs/operators';
+import { TAGESDECKEL_MELDUNG, tagesdeckelErreicht } from '../beitragsformular/speicherfehler';
 
 export const HINWEIS_LIMIT = 5000;
 
@@ -143,6 +146,8 @@ export class EinwerfenComponent implements OnInit, OnDestroy {
   themenListe: Thema[] = [];
   /** Ob die Themenauswahl aufgeklappt ist; bleibt nach dem Einwerfen, wie die Person sie hatte. */
   themenOffen = false;
+  /** Themenvorschlaege (#401) zum Hinweis-Text, hoechstens zwei wie die Wahl. */
+  readonly themenVorschlaege = new ThemenVorschlaege(HOECHSTENS_THEMEN_JE_EINWURF);
 
   einwurfForm: FormGroup;
 
@@ -187,6 +192,21 @@ export class EinwerfenComponent implements OnInit, OnDestroy {
       hinweis: ['', Validators.maxLength(HINWEIS_LIMIT)],
       themen: [[] as string[]],
     });
+    // Nur bei aufgeklappter Themenwahl: Wer sie nicht sieht, schickt den Hinweis nicht ab.
+    this.einwurfForm
+      .get('hinweis')!
+      .valueChanges.pipe(takeUntilDestroyed())
+      .subscribe(() => this.vorschlagsTextSetzen());
+  }
+
+  /** Themenwahl auf- oder zuklappen; aufgeklappt fragt sie nach Vorschlaegen zum Hinweis. */
+  themenUmschalten(): void {
+    this.themenOffen = !this.themenOffen;
+    this.vorschlagsTextSetzen();
+  }
+
+  private vorschlagsTextSetzen(): void {
+    this.themenVorschlaege.text(this.themenOffen ? this.einwurfForm.value.hinweis : '');
   }
 
   ngOnInit(): void {
@@ -385,6 +405,10 @@ export class EinwerfenComponent implements OnInit, OnDestroy {
         if (einwilligungFehlt(error)) {
           this.fehler = null;
           this.einwilligungZustand.hinweisZeigen();
+          return;
+        }
+        if (tagesdeckelErreicht(error)) {
+          this.fehler = TAGESDECKEL_MELDUNG;
           return;
         }
         this.fehler =

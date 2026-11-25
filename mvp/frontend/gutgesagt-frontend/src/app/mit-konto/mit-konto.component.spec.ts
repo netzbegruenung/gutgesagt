@@ -5,6 +5,8 @@ import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angul
 import { BehaviorSubject } from 'rxjs';
 import { ANMELDEN_KNOPF, MitKontoComponent, VORSCHAU_ETIKETT, VORSCHAU_SATZ, WEITER_SUCHEN } from './mit-konto.component';
 import { VORSCHAU_SCHRITTE } from './vorschau-schritte';
+import { signal } from '@angular/core';
+import { FunktionenService } from '../services/funktionen.service';
 
 describe('MitKontoComponent', () => {
   let fixture: ComponentFixture<MitKontoComponent>;
@@ -20,6 +22,8 @@ describe('MitKontoComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ActivatedRoute, useValue: { queryParamMap: query, snapshot: { queryParamMap: query.value } } },
+        // Gartenansicht aus (#783): kein Abruf der Schalter, garten/mit-konto-satz.spec prueft beide Stellungen
+        { provide: FunktionenService, useValue: { an: () => signal(false) } },
       ],
     });
     http = TestBed.inject(HttpTestingController);

@@ -8,5 +8,8 @@ export const LUECKE = { einzahl: 'Lücke', mehrzahl: 'Lücken' } as const;
 /** „Lücke zu.“ auf der Ergebnisseite. */
 export const LUECKE_ZU = `${LUECKE.einzahl} zu.`;
 
+/** „Lücke zu!“ als großer Moment (Schalter luecke_zu_gross, #787). */
+export const LUECKE_ZU_AUSRUF = `${LUECKE.einzahl} zu!`;
+
 /** Der Hauptknopf danach. */
 export const NAECHSTE_LUECKE = `Nächste ${LUECKE.einzahl}`;

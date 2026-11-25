@@ -102,6 +102,8 @@
         </button>
     </mat-menu>
 </div>
+<!-- Danke an die Autorin nach dem Kopieren (#791) -->
+<app-danke-knopf *ngIf="dankeSichtbar" [inhaltId]="inhaltId"></app-danke-knopf>
 
 <!--
     Eigenes Album (Meine Beitraege, Variante A 20.11.): links Aendern, in der Mitte Teilen als
@@ -163,3 +165,14 @@
         </button>
     </mat-menu>
 </div>
+
+<!--
+    Erfolgstext nach dem Kopieren (#785, Schalter kopiert_erfolg) mit der Frage „Gepostet?“ (#643, #799):
+    auch im Album, nie in der Vorschau. Steht immer bereit (leer), damit die Status-Region schon da ist,
+    wenn ohne Erfolgstext nur die Frage erscheint.
+-->
+<app-kopiert-erfolg *ngIf="!vorschau" [sichtbar]="kopiertErfolg()" [erfolgstext]="kopiertErfolgAn()"
+                    [nutzung]="nutzungBeimKopieren" [andereTonlage]="andereTonlage"
+                    [gepostet]="gepostetStand" [gepostetDank]="gepostetDankText"
+                    [kopierLauf]="erfolgLauf" [ohneKonto]="gepostetOhneKonto"
+                    (schliessen)="kopiertErfolgSchliessen()" (jaGepostet)="jaGepostet()"></app-kopiert-erfolg>

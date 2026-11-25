@@ -282,8 +282,10 @@ is. Push, tag and manual runs build without it, as a clean reference.
 Woodpecker logs need a Woodpecker login, which agents do not have. If a pull-request run is
 red, the last step `ci-bericht` writes one comment into the pull request: per red step the
 exit code and its error lines (the `FAILED`/`ERROR` lines of the pytest short summary, not
-the `ERROR` lines of captured logs; or else the last non-empty line, the summary of Karma,
-dotnet or Ruff), the last 80 lines of its output folded in
+the `ERROR` lines of captured logs; the `… FAILED` line of each red Karma spec with the first
+two lines of its reason, without the stack, since Karma prints it long before the end of
+the log; or else the last non-empty line, the summary of Karma (no red spec), dotnet or
+Ruff), the last 80 lines of its output folded in
 `<details>` ("Log <step>"), and the steps that did not run.
 
 - **Same error, one line.** Each report ends with an invisible HTML comment

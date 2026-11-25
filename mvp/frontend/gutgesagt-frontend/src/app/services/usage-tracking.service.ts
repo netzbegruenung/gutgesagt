@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { catchError, distinctUntilChanged, map, shareReplay, switchMap, tap } from 'rxjs/operators';
@@ -28,6 +28,7 @@ function noch(seit: number | null): boolean {
   return seit !== null && Date.now() - seit < SCHALTER_AUS_MERKEN_MS;
 }
 import type { Fassung } from '../shared/fassung';
+import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 
 export interface TrackUsageRequest {
   /** Die kopierte Fassung eines Kommentars (#355); fehlt bei anderen Beitragstypen. */
@@ -106,7 +107,25 @@ export const GEPOSTET_NICHT_ANGEBOTEN = 'nicht_angeboten' as const;
 export interface GepostetAntwort {
   /** Verschiedene Personen, die diese Kalenderwoche „Ja, gepostet“ gemeldet haben. */
   personen_diese_woche: number;
+  /** Wirkungs-Echo (#790): ob beim Melden der Beitrag mitgehen soll; nur mit Schalter. */
+  beitrag_nennen?: boolean;
+  /** Nur GET: false ohne Schalter oder für Startkonten (statt 404, Gateway-fail2ban). */
+  angeboten?: boolean;
 }
+
+/**
+ * Was nach „Ja, gepostet“ ohne Konto passiert ist (#799): ``nicht_angeboten`` heißt 404
+ * (Schalter aus) oder angemeldet (dann zählt der Weg mit Konto).
+ */
+export type MeldungOhneKontoErgebnis = 'gezaehlt' | 'nicht_angeboten' | 'fehler';
+
+/** Antwort von POST /content/{id}/danke (#791). */
+export interface DankeAntwort {
+  gezaehlt: boolean;
+}
+
+/** Was nach „Danke an die Autorin“ passiert ist (#791). */
+export type DankeErgebnis = 'gezaehlt' | 'nicht_gezaehlt' | 'nicht_angeboten' | 'fehler';
 
 export interface BesuchResponse {
   nutzung_seit_letztem_besuch: number;
@@ -120,6 +139,23 @@ export interface BesuchResponse {
   ausformulierte_einwuerfe?: number;
   /** Kommentare und Hintergrundinfos anderer aus den letzten 7 Tagen (Zeitraum, kein Stand). */
   neue_beitraege?: number;
+  /**
+   * Antworten anderer auf eigene Aussagen aus den letzten 7 Tagen (#760). null oder fehlend:
+   * Schalter „antworten_hinweis“ aus, dann gibt es weder Kachel noch Reiter „Meine Aussagen“.
+   */
+  antworten_auf_eigene_aussagen?: number | null;
+  /**
+   * Wirkungs-Echo (#790): wie oft die eigenen Beiträge seit dem letzten Besuch als
+   * öffentlich gepostet gemeldet wurden (Zählerstand wie die Nutzung, kein Zeitraum).
+   * null oder fehlend: Schalter aus.
+   */
+  neu_oeffentlich_gepostet?: number | null;
+  /**
+   * Der allererste Besuch dieses Kontos: Dann gibt es kein „seit deinem letzten Besuch“,
+   * die Startseite lässt den Block weg (Review Spielgefühl 25.11.). Fehlt bei älteren
+   * Antworten und gilt dann als false.
+   */
+  erster_besuch?: boolean;
 }
 
 export interface TrendingContent {
@@ -154,6 +190,12 @@ export class UsageTrackingService {
   private gepostetStand = new Map<string, boolean>();
 
   /**
+   * Je Kennung, ob beim Melden von „Ja, gepostet“ der Beitrag mitgehen soll (Wirkungs-Echo,
+   * #790); jede Antwort des Servers schreibt es fort. Ohne Ja geht kein Beitrag mit.
+   */
+  private beitragNennen = new Map<string, boolean>();
+
+  /**
    * Seit wann die Punkte am Server als ausgeschaltet gelten: ``punkte`` oder
    * ``meilensteine`` antworteten 404 (UX-Review B20). So lange fragt die App nicht, auch
    * nicht im Takt der Punkte-Anzeige; ohne Punkte gibt es auch keine Sichtbarkeit der
@@ -166,6 +208,8 @@ export class UsageTrackingService {
   /** Der Schalter-Status, einmal abgefragt und geteilt; mit dem Zeitpunkt der Abfrage. */
   private status$?: Observable<PunkteStatus>;
   private statusSeit: number | null = null;
+
+  private readonly budget = inject(EinwilligungsBudgetService);
 
   constructor(
     private http: HttpClient,
@@ -342,7 +386,7 @@ export class UsageTrackingService {
 
   /**
    * Der eigene Punktestand (#352), nur für die Person selbst. Solange die Punkte
-   * ausgeschaltet sind, antwortet der Server 404, dann null: „Meine Beiträge“ zeigt
+   * ausgeschaltet sind, antwortet der Server mit `aktiv: false` (ältere: 404), dann null: „Meine Beiträge“ zeigt
    * keine Punkte. Jeder andere Fehler (502, Zeitüberschreitung) heißt nur, dass der
    * Stand gerade unbekannt ist: PUNKTE_NICHT_GELADEN.
    */
@@ -351,7 +395,15 @@ export class UsageTrackingService {
       switchMap((status) =>
         !status.aktiv || this.punkteAus
           ? of(null)
-          : this.http.get<Punktestand>(`${this.apiUrl}/users/me/punkte`).pipe(
+          : this.http.get<Punktestand & { aktiv?: boolean }>(`${this.apiUrl}/users/me/punkte`).pipe(
+              // Schalter aus: 200 mit aktiv false statt 404 (Gateway-fail2ban), gilt wie zuvor das 404
+              map((stand) => {
+                if (stand?.aktiv === false) {
+                  this.punkteAusSeit = Date.now();
+                  return null;
+                }
+                return stand;
+              }),
               catchError((error) => {
                 if (error?.status === 404) {
                   this.punkteAusSeit = Date.now();
@@ -367,7 +419,7 @@ export class UsageTrackingService {
 
   /**
    * Die eigenen Meilensteine (#351), nur für die Person selbst. Solange die Punkte
-   * ausgeschaltet sind, antwortet der Server 404; dann und bei jedem anderen Fehler
+   * ausgeschaltet sind, antwortet der Server mit `aktiv: false` (ältere: 404); dann und bei jedem anderen Fehler
    * eine leere Liste, und „Meine Beiträge“ zeigt keine Meilensteine.
    */
   getEigeneMeilensteine(): Observable<Meilenstein[]> {
@@ -375,8 +427,14 @@ export class UsageTrackingService {
       switchMap((status) =>
         !status.aktiv || this.punkteAus
           ? of([])
-          : this.http.get<{ meilensteine: Meilenstein[] }>(`${this.apiUrl}/users/me/meilensteine`).pipe(
-              map((antwort) => antwort.meilensteine ?? []),
+          : this.http.get<{ meilensteine: Meilenstein[]; aktiv?: boolean }>(`${this.apiUrl}/users/me/meilensteine`).pipe(
+              map((antwort) => {
+                if (antwort?.aktiv === false) {
+                  this.punkteAusSeit = Date.now();
+                  return [];
+                }
+                return antwort.meilensteine ?? [];
+              }),
               catchError((error) => {
                 if (error?.status === 404) {
                   this.punkteAusSeit = Date.now();
@@ -392,7 +450,7 @@ export class UsageTrackingService {
 
   /**
    * Ob andere Angemeldete die eigenen Meilenstein-Abzeichen sehen (#351). Ohne die
-   * Schalter antwortet der Server 404; dann und bei jedem Fehler null, und die Seite
+   * Schalter antwortet der Server mit `aktiv: false` (ältere: 404); dann und bei jedem Fehler null, und die Seite
    * fragt nicht.
    */
   getAbzeichenSichtbarkeit(): Observable<AbzeichenSichtbarkeit | null> {
@@ -400,7 +458,14 @@ export class UsageTrackingService {
       switchMap((status) =>
         !status.abzeichen_sichtbar || this.punkteAus || this.sichtbarkeitAus
           ? of(null)
-          : this.http.get<AbzeichenSichtbarkeit>(`${this.apiUrl}/users/me/abzeichen-sichtbarkeit`).pipe(
+          : this.http.get<AbzeichenSichtbarkeit & { aktiv?: boolean }>(`${this.apiUrl}/users/me/abzeichen-sichtbarkeit`).pipe(
+              map((antwort) => {
+                if (antwort?.aktiv === false) {
+                  this.sichtbarkeitAusSeit = Date.now();
+                  return null;
+                }
+                return antwort;
+              }),
               catchError((error) => {
                 if (error?.status === 404) {
                   this.sichtbarkeitAusSeit = Date.now();
@@ -416,9 +481,10 @@ export class UsageTrackingService {
 
   /**
    * Ob nach dem Kopieren „Ja, gepostet“ angeboten wird (#643): nur mit Schalter am
-   * Server, angemeldet und mit Art.-9-Einwilligung (sonst 404, 401 oder 403). Ein Ja
-   * und ein 404 (Schalter aus, Startkonto) gelten je Kennung bis zum Neuladen; ein 403
-   * wird nicht gemerkt, die Einwilligung kann inzwischen da sein.
+   * Server, angemeldet und mit Art.-9-Einwilligung (sonst `angeboten: false`, 401 oder
+   * 403). Ein Ja und ein Nein (Schalter aus, Startkonto; bei einem älteren Backend 404)
+   * gelten je Kennung bis zum Neuladen; ein 403 wird nicht gemerkt, die Einwilligung kann
+   * inzwischen da sein.
    */
   gepostetAngeboten(kennung: string): Observable<boolean> {
     const gemerkt = this.gepostetStand.get(kennung);
@@ -426,8 +492,11 @@ export class UsageTrackingService {
       return of(gemerkt);
     }
     return this.http.get<GepostetAntwort>(`${this.apiUrl}/users/me/gepostet`).pipe(
-      map(() => true),
-      tap(() => this.gepostetStand.set(kennung, true)),
+      tap((antwort) => this.beitragNennen.set(kennung, antwort?.beitrag_nennen === true)),
+      // angeboten false: Schalter aus oder Startkonto (200 statt 404, Gateway-fail2ban);
+      // gemerkt wie zuvor das 404. Ein älteres Backend ohne das Feld bietet an.
+      map((antwort) => antwort?.angeboten !== false),
+      tap((angeboten) => this.gepostetStand.set(kennung, angeboten)),
       catchError((error) => {
         if (error?.status === 404) {
           this.gepostetStand.set(kennung, false);
@@ -452,9 +521,19 @@ export class UsageTrackingService {
    * Kalenderwoche. Liefert die Zahl der Personen dieser Woche, bei einem Fehler null.
    * Ein 403 (Einwilligung widerrufen) oder 404 (Schalter aus) heißt: nicht mehr
    * angeboten; dann vergisst der Dienst das gemerkte Ja und liefert NICHT_ANGEBOTEN.
+   *
+   * Wirkungs-Echo (#790): Nur wenn der Server es zuletzt verlangt hat (Schalter an), geht
+   * ``inhaltId`` mit; sonst erfährt er wie bisher nicht, welcher Beitrag gepostet wurde.
    */
-  gepostetMelden(kennung: string): Observable<number | null | typeof GEPOSTET_NICHT_ANGEBOTEN> {
-    return this.http.post<GepostetAntwort>(`${this.apiUrl}/users/me/gepostet`, {}).pipe(
+  gepostetMelden(
+    kennung: string,
+    inhaltId?: string,
+  ): Observable<number | null | typeof GEPOSTET_NICHT_ANGEBOTEN> {
+    const body = inhaltId && this.beitragNennen.get(kennung) ? { content_id: inhaltId } : {};
+    return this.http.post<GepostetAntwort>(`${this.apiUrl}/users/me/gepostet`, body).pipe(
+      tap((antwort) => this.beitragNennen.set(kennung, antwort?.beitrag_nennen === true)),
+      // Ein Gewinn mit Dank: Danach wartet jede Einwilligungsfrage (#788).
+      tap(() => this.budget.gewinn()),
       map((antwort) => antwort.personen_diese_woche),
       catchError((error) => {
         if (error?.status === 403 || error?.status === 404) {
@@ -465,6 +544,49 @@ export class UsageTrackingService {
         return of(null);
       }),
     );
+  }
+
+  /**
+   * „Ja, gepostet“ ohne Konto (#799) an den neutralen Sammelpfad: Die Art steht nur im
+   * Body, nie in Pfad oder Adresszusatz; kein Beitrag, keine Kennung. Gemerkt wird hier
+   * nichts, auch nicht im Browser-Speicher: Entdoppelt wird nur auf der offenen Seite,
+   * indem die Karte nach dem Klick nicht mehr fragt.
+   */
+  gepostetOhneKontoMelden(): Observable<MeldungOhneKontoErgebnis> {
+    return this.http
+      .post<{ gezaehlt: boolean }>(`${environment.baseUrl}/api/v1/ereignis`, { art: 'gepostet_ohne_konto' })
+      .pipe(
+        map((antwort): MeldungOhneKontoErgebnis => (antwort?.gezaehlt === true ? 'gezaehlt' : 'nicht_angeboten')),
+        catchError((error) => {
+          if (error?.status === 404) {
+            return of<MeldungOhneKontoErgebnis>('nicht_angeboten');
+          }
+          this.loggingService.error('Meldung ohne Konto nicht gezählt', error);
+          return of<MeldungOhneKontoErgebnis>('fehler');
+        }),
+      );
+  }
+
+  /**
+   * „Danke an die Autorin“ (#791): ``gezaehlt``, ``nicht_gezaehlt`` (der Server sagt nicht,
+   * warum: heute schon gedankt, derselbe Anschluss ohne Konto, Beitrag nicht lesbar,
+   * Startkonto), ``nicht_angeboten`` (403 ohne Einwilligung, die meldet der
+   * Auth-Interceptor selbst mit Knopf zur Einwilligung, oder 404, Schalter aus) und
+   * ``fehler`` für alles andere.
+   */
+  dankeSagen(inhaltId: string): Observable<DankeErgebnis> {
+    return this.http
+      .post<DankeAntwort>(`${this.apiUrl}/content/${encodeURIComponent(inhaltId)}/danke`, {})
+      .pipe(
+        map((antwort): DankeErgebnis => (antwort?.gezaehlt === true ? 'gezaehlt' : 'nicht_gezaehlt')),
+        catchError((error) => {
+          if (error?.status === 403 || error?.status === 404) {
+            return of<DankeErgebnis>('nicht_angeboten');
+          }
+          this.loggingService.error('Danke nicht gemeldet', error);
+          return of<DankeErgebnis>('fehler');
+        }),
+      );
   }
 
   /** Ja oder Nein zur Sichtbarkeit speichern; true, wenn es geklappt hat. */

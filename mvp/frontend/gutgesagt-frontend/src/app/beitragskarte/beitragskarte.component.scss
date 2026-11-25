@@ -703,6 +703,27 @@ h4.karte-titel {
   color: var(--text-leise);
 }
 
+/* Teams der aktuellen Saison am Anzeigenamen; brechen um, statt die Karte zu verbreitern */
+.autor-teams {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-left: 4px;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.autor-teams-mehr {
+  padding: 0 6px;
+  border: 1px solid var(--feldrand);
+  border-radius: 999px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
 /* Meilenstein-Abzeichen am Anzeigenamen (#351) */
 .autor-abzeichen {
   display: inline-flex;

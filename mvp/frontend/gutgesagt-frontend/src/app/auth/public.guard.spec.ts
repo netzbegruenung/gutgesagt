@@ -45,10 +45,27 @@ describe('PublicGuard', () => {
     });
 
     const req = httpMock.expectOne(`${environment.baseUrl}/api/check-session`);
-    req.flush({});
+    req.flush({ isAuthenticated: true });
   });
 
-  it('should allow access for anonymous users', (done) => {
+  it('lässt Besucher durch: 200 mit isAuthenticated = false, ohne Nutzerinfo zu fragen', (done) => {
+    guard.canActivate().subscribe(result => {
+      expect(result).toBe(true);
+      expect(authService.fetchUserInfo).not.toHaveBeenCalled();
+      expect(authService.setUserInfo).toHaveBeenCalledWith({
+        isAuthenticated: false,
+        userId: null,
+        userName: null,
+        claims: null
+      });
+      done();
+    });
+
+    const req = httpMock.expectOne(`${environment.baseUrl}/api/check-session`);
+    req.flush({ isAuthenticated: false });
+  });
+
+  it('wertet eine 401 (älteres BFF) weiter als Besucher', (done) => {
     guard.canActivate().subscribe(result => {
       expect(result).toBe(true);
       expect(authService.setUserInfo).toHaveBeenCalledWith({

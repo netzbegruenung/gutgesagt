@@ -57,6 +57,8 @@ import { ContentService } from '../services/content.service';
 import { ROUTES } from '../shared/constants/app.constants';
 import { TextStueck, textStuecke } from '../shared/vorlagen-luecke';
 import { istAenderbar } from './aenderbar';
+import { TeamPilleComponent } from '../shared/teams/team-pille.component';
+import { TEAMS_AM_NAMEN, TeamAmNamen } from '../shared/teams/teams';
 
 const NEU_STUNDEN = 24;
 const BELIEBT_AB = 5;
@@ -124,6 +126,7 @@ function nutzungsZeile(label: string, nutzung: number, zuwachs: number): Nutzung
   standalone: true,
   imports: [
     CommonModule,
+    TeamPilleComponent,
     MatButtonModule,
     MatButtonToggleModule,
     MatIconModule,
@@ -756,6 +759,27 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
    */
   get autorAbzeichen(): number | null {
     return this.zeigtAutor && this.daten.autorAbzeichen ? this.daten.autorAbzeichen : null;
+  }
+
+  /**
+   * Teams der aktuellen Saison am Anzeigenamen: Der Server liefert sie nur fuer
+   * Angemeldete, nur mit Schalter teams_oeffentlich und Einwilligung der Person. Die
+   * ersten TEAMS_AM_NAMEN als Pille, der Rest als „+N“; ohne Autorzeile nichts.
+   */
+  get autorTeams(): TeamAmNamen[] {
+    return this.zeigtAutor && this.daten.autorTeams?.length ? this.daten.autorTeams.slice(0, TEAMS_AM_NAMEN) : [];
+  }
+
+  /** Wie viele Teams nicht als Pille am Namen stehen („+N“). */
+  get weitereTeams(): number {
+    return this.zeigtAutor ? Math.max(0, (this.daten.autorTeams?.length ?? 0) - TEAMS_AM_NAMEN) : 0;
+  }
+
+  /** Langtext fuer „+N“: wie viele weitere Teams, und welche. */
+  weitereTeamsText(): string {
+    const weitere = (this.daten.autorTeams ?? []).slice(TEAMS_AM_NAMEN);
+    const anzahl = weitere.length === 1 ? 'und 1 weiteres Team' : `und ${weitere.length} weitere Teams`;
+    return `${anzahl}: ${weitere.map((t) => t.name).join(', ')}`;
   }
 
   abzeichenText(anzahl: number): string {

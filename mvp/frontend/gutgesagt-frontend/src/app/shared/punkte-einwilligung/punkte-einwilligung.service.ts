@@ -17,8 +17,9 @@ export interface PunkteEinwilligungStand {
 /**
  * Die eigene, freiwillige Einwilligung „Punkte und Meilensteine“ (#351): getrennt von
  * der Art.-9-Einwilligung zur Mitwirkung, nichts ist vorausgewählt. Ohne eingeschaltete
- * Punkte antwortet der Server 404; dann ist der Stand null und das Häkchen wird nicht
- * angeboten.
+ * Punkte antwortet der Server 200 mit `aktiv: false` (nie 404: die Seiten fragen beim
+ * Laden, Gateway-fail2ban; ein älteres Backend 404); dann ist der Stand null und das
+ * Häkchen wird nicht angeboten.
  *
  * Ein gemeinsamer Stand für „Meine Beiträge“ und die Datenschutz-Einstellungen: Ändert
  * die Person ihn an einer Stelle, sieht die andere es sofort, ohne Neuladen.
@@ -37,7 +38,8 @@ export class PunkteEinwilligungService {
 
   /** Den Stand frisch holen; jeder Aufruf fragt den Server. */
   laden(): Observable<PunkteEinwilligungStand | null> {
-    return this.http.get<PunkteEinwilligungStand>(this.url).pipe(
+    return this.http.get<PunkteEinwilligungStand & { aktiv?: boolean }>(this.url).pipe(
+      map((stand): PunkteEinwilligungStand | null => (stand?.aktiv === false ? null : stand)),
       catchError((error) => {
         if (error?.status !== 404) {
           this.logger.error('Einwilligung Punkte nicht geladen', error);

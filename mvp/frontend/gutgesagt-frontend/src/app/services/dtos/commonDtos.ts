@@ -1,4 +1,5 @@
 import { Thema } from './themenDtos';
+import type { TeamAmNamen } from '../../shared/teams/teams';
 
 import { ContentStatus } from "./content-status-enum";
 
@@ -34,6 +35,11 @@ export interface BaseContentResult {
      * wenn sie der Sichtbarkeit zugestimmt hat, sonst null.
      */
     autor_abzeichen?: number | null;
+    /**
+     * Teams der aktuellen Saison der Autorin am Namen, neuester Beitritt zuerst; nur fuer
+     * Angemeldete, nur mit Schalter teams_oeffentlich und ihrer Einwilligung, sonst null.
+     */
+    autor_teams?: TeamAmNamen[] | null;
     /** Ob die angemeldete Person den Beitrag gespeichert hat; ohne Anmeldung null. */
     ist_eigener_beitrag?: boolean | null;
     status: ContentStatus;

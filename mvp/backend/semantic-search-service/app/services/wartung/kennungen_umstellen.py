@@ -66,6 +66,8 @@ SPALTEN = {
     "punkte_einwilligung": ("user_id",),
     # Merkliste (#758): geht mit der Person mit.
     "merkliste": ("user_id",),
+    # Einwilligung zur Rangliste (#793): geht mit der Person mit.
+    "rangliste_einwilligung": ("user_id",),
     # Zustimmung zu den Nutzungsbedingungen in der App: geht mit der Person mit.
     "nutzungsbedingungen_zustimmungen": ("user_id",),
     # Loeschauftraege nach dem Widerruf (DSFA R9b): Ein offener muss die Kennung
@@ -79,6 +81,12 @@ SPALTEN = {
     # Kennung des Admins an Schaltern und ihrem Verlauf (#708).
     "schalter": ("geaendert_von",),
     "schalter_verlauf": ("geaendert_von",),
+    # Kennung des Admins an Admin-Einstellungen (aktuelle Saison der Teams).
+    "einstellungen": ("geaendert_von",),
+    # Teams: Mitgliedschaften und die Einwilligung "Team oeffentlich am Namen zeigen"
+    # gehen mit der Person mit.
+    "team_mitgliedschaften": ("konto_kennung",),
+    "team_oeffentlich": ("konto_kennung",),
     "sperren": ("autor", "gesperrt_von", "geprueft_von"),
 }
 
@@ -146,6 +154,10 @@ _ZEILE_DER_NEUEN_GEWINNT = {
     ("art9_ohne_einwilligung", "user_id"): (),
     ("votes", "user_id"): ("content_id",),
     ("merkliste", "user_id"): ("content_id",),
+    # Teams: je Person eine Antwort auf "Team oeffentlich am Namen zeigen" und je Team
+    # und Saison eine Mitgliedschaft; die der neuen Kennung bleibt.
+    ("team_oeffentlich", "konto_kennung"): (),
+    ("team_mitgliedschaften", "konto_kennung"): ("team_name", "saison"),
 }
 
 

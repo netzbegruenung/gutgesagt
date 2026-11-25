@@ -19,7 +19,7 @@ Prozess wuerde einen Widerruf, das Loeschkommando oder die Kennungsumstellung
 erst nach einem Neustart sehen.
 """
 
-from typing import Optional, Protocol
+from typing import Iterable, Optional, Protocol, Set
 
 from domain.art9_einwilligung import bekannter_wortlaut, geltender_wortlaut
 from repositories.merkliste_repository import get_merkliste_repository
@@ -76,6 +76,10 @@ class Art9EinwilligungService:
     def eingewilligt(self, user_id: str) -> bool:
         einwilligung = self._repository.lesen(user_id)
         return einwilligung is not None and einwilligung.zaehlt
+
+    def eingewilligte(self, kennungen: Iterable[str]) -> Set[str]:
+        """Wie ``eingewilligt``, fuer viele Kennungen in einer Abfrage."""
+        return self._repository.zaehlende(kennungen)
 
     def einwilligen(self, user_id: str, wortlaut: str) -> None:
         if not bekannter_wortlaut(wortlaut):

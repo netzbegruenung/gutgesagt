@@ -101,6 +101,7 @@
                     <div *ngIf="zeigtThemen" class="themen-feld">
                         <span class="feld-beschriftung">Themen der neuen Aussage</span>
                         <app-themen-auswahl [themen]="themenWahl.liste" [gewaehlt]="commentaryForm.value.themen"
+                                            [vorschlaege]="themenWahl.themenVorschlaege.vorschlaege"
                                             beschriftung="Themen der neuen Aussage"
                                             (gewaehltChange)="themenWahl.setzen($event)"></app-themen-auswahl>
                     </div>

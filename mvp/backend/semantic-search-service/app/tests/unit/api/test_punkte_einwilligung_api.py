@@ -33,8 +33,13 @@ def repo(punkte_einwilligung_ohne_datenbank):
     return punkte_einwilligung_ohne_datenbank
 
 
-def test_ohne_punkte_wird_nichts_angeboten():
-    assert _client(aktiv=False).get(URL, headers=KIM).status_code == 404
+def test_ohne_punkte_wird_nichts_angeboten(repo):
+    # Lesen fragen die Seiten automatisch: 200 mit aktiv false statt 404 (Gateway-fail2ban)
+    antwort = _client(aktiv=False).get(URL, headers=KIM)
+    assert antwort.status_code == 200
+    assert antwort.json()["aktiv"] is False
+    assert antwort.json()["eingewilligt"] is False
+    repo.lesen.assert_not_called()
     antwort = _client(aktiv=False).put(
         URL, headers=KIM, json={"eingewilligt": True, "wortlaut": AKTUELLER_WORTLAUT}
     )
@@ -58,6 +63,7 @@ def test_nie_gefragt_ist_nicht_eingewilligt_und_bringt_den_wortlaut(repo):
             "kennung": AKTUELLER_WORTLAUT,
             "text": WORTLAUTE[AKTUELLER_WORTLAUT],
         },
+        "aktiv": True,
     }
     assert "Ohne diese Einwilligung kann ich genauso beitragen" in (
         antwort.json()["aktueller_wortlaut"]["text"]
@@ -70,6 +76,24 @@ def test_eingewilligt_zum_geltenden_wortlaut(repo):
     )
 
     assert _client().get(URL, headers=KIM).json()["eingewilligt"] is True
+
+
+def test_die_frage_nutzt_den_wortlaut_2026_11_13():
+    # #788, Jura 25.11.: Die Frage im Moment des Gewinns bringt keinen neuen Wortlaut.
+    assert AKTUELLER_WORTLAUT == "2026-11-13"
+
+
+def test_nach_einem_nein_ist_die_frage_beantwortet(repo):
+    # #788: Das Nein steht mit Kennung auf dem Server; ``wortlaut`` ist danach gesetzt,
+    # und die App fragt in keinem spaeteren Besuch wieder.
+    repo.lesen.return_value = PunkteEinwilligung(
+        False, AKTUELLER_WORTLAUT, datetime(2026, 11, 25, tzinfo=timezone.utc)
+    )
+
+    stand = _client().get(URL, headers=KIM).json()
+
+    assert stand["eingewilligt"] is False
+    assert stand["wortlaut"] == AKTUELLER_WORTLAUT
 
 
 def test_einwilligen_speichert_mit_wortlaut(repo):
@@ -111,3 +135,30 @@ def test_speicherfehler_500(repo):
     )
 
     assert antwort.status_code == 500
+
+
+def test_widerruf_haelt_ja_zur_rangliste_als_nein_fest(repo, rangliste_ohne_datenbank):
+    """Sonst stuende die Person nach neuer Punkte-Einwilligung ungefragt in der Rangliste (#793)."""
+    from domain.rangliste import AKTUELLER_WORTLAUT as RANGLISTE_WORTLAUT
+    from repositories.rangliste_einwilligung_repository import RanglisteAntwort
+
+    rangliste_ohne_datenbank.lesen.return_value = RanglisteAntwort(
+        True, True, RANGLISTE_WORTLAUT, datetime(2026, 12, 1, tzinfo=timezone.utc)
+    )
+
+    antwort = _client().put(
+        URL, headers=KIM, json={"eingewilligt": False, "wortlaut": AKTUELLER_WORTLAUT}
+    )
+
+    assert antwort.status_code == 204
+    rangliste_ohne_datenbank.antworten.assert_called_once_with(
+        "kim-1", False, False, RANGLISTE_WORTLAUT
+    )
+
+
+def test_einwilligen_laesst_die_rangliste_unberuehrt(repo, rangliste_ohne_datenbank):
+    _client().put(
+        URL, headers=KIM, json={"eingewilligt": True, "wortlaut": AKTUELLER_WORTLAUT}
+    )
+
+    rangliste_ohne_datenbank.antworten.assert_not_called()

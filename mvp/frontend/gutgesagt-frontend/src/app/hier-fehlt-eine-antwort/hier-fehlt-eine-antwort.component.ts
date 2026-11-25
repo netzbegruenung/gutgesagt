@@ -1,8 +1,8 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { Subject, Subscription } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -16,6 +16,7 @@ import { Thema } from '../services/dtos/themenDtos';
 import { ThemenService, schluesselVon } from '../services/themen.service';
 import { ThemenAuswahlComponent } from '../shared/themen/themen-auswahl.component';
 import { ThemenFilterComponent } from '../shared/themen/themen-filter.component';
+import { ThemenVorschlaege } from '../shared/themen/themen-vorschlaege';
 import { AUSSAGE_GIBT_ES_SCHON, THEMEN_NICHT_GESPEICHERT, themenDerAussage } from '../shared/themen/themen-meldung';
 import { AUSSAGE_PARAM, FORMULAR_PFAD } from '../shared/formular-adresse';
 import {
@@ -32,6 +33,7 @@ import { AuthService } from '../auth/auth.service';
 import { ModerationService } from '../services/moderation.service';
 import { BestaetigungsDialogComponent } from '../shared/components/bestaetigungs-dialog/bestaetigungs-dialog.component';
 import { AUSSAGE_NICHT_ENTFERNT, entfernenFrage } from '../shared/aussagekarte/aussage-entfernen';
+import { TAGESDECKEL_MELDUNG, tagesdeckelErreicht } from '../beitragsformular/speicherfehler';
 
 /**
  * "Hier fehlt eine Antwort": Mitwirkende sehen die unbeantworteten Aussagen (ohne
@@ -141,6 +143,8 @@ export class HierFehltEineAntwortComponent implements OnInit, OnDestroy {
 
   neueAussage = '';
   neueThemen: string[] = [];
+  /** Themenvorschlaege (#401) zum Text der neuen Aussage. */
+  readonly themenVorschlaege = new ThemenVorschlaege();
   /** Die laufende Abfrage der Liste; ein neuer Filter bricht sie ab. */
   private ladend?: Subscription;
   private readonly destroy$ = new Subject<void>();
@@ -202,9 +206,18 @@ export class HierFehltEineAntwortComponent implements OnInit, OnDestroy {
       });
   }
 
+  /** ?thema= aus der Gartenansicht (#783): gefiltert, sobald die Themenliste das Thema kennt. */
+  private readonly route = inject(ActivatedRoute, { optional: true });
+
   ngOnInit(): void {
+    const vorgewaehlt = this.route?.snapshot.queryParamMap.get('thema') ?? null;
     this.themenService.liste().subscribe({
-      next: (themen) => (this.themen = themen),
+      next: (themen) => {
+        this.themen = themen;
+        if (vorgewaehlt && this.aktivesThema === null && themen.some((t) => t.schluessel === vorgewaehlt)) {
+          this.filtern(vorgewaehlt);
+        }
+      },
       error: () => (this.themen = []),
     });
     this.laden();
@@ -269,6 +282,7 @@ export class HierFehltEineAntwortComponent implements OnInit, OnDestroy {
   eingabe(wert: string): void {
     this.neueAussage = wert;
     this.meldung = '';
+    this.themenVorschlaege.text(wert);
   }
 
   anlegen(): void {
@@ -283,12 +297,15 @@ export class HierFehltEineAntwortComponent implements OnInit, OnDestroy {
         this.speichert = false;
         this.neueAussage = '';
         this.neueThemen = [];
+        this.themenVorschlaege.text('');
         this.meldung = vorabMeldung(antwort, mitThemen);
         this.laden();
       },
-      error: () => {
+      error: (fehler: unknown) => {
         this.speichert = false;
-        this.meldung = 'Die Aussage konnte nicht angelegt werden. Bitte versuche es erneut.';
+        this.meldung = tagesdeckelErreicht(fehler)
+          ? TAGESDECKEL_MELDUNG
+          : 'Die Aussage konnte nicht angelegt werden. Bitte versuche es erneut.';
       },
     });
   }

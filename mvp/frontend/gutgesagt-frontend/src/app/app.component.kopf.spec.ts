@@ -158,9 +158,9 @@ describe('AppComponent - Desktop-Kopf', () => {
     });
 
     // #620: Das Logo ist der Weg zur Startseite, "Start" im Kopf entfaellt
-    it('fuehrt mit dem Logo "Startseite" zur Startseite; die Ueberschrift nennt nur die Seite', () => {
+    it('fuehrt mit dem Logo "Gut gesagt, Startseite" zur Startseite; der Kopf hat keine Ueberschrift', () => {
       const link = kopf().querySelector('a.logo-link') as HTMLAnchorElement;
-      expect(link.getAttribute('aria-label')).toBe('Startseite');
+      expect(link.getAttribute('aria-label')).toBe('Gut gesagt, Startseite');
       expect(link.querySelector('img')!.getAttribute('alt')).toBe('');
       expect(kopf().querySelector('h1 a')).toBeNull();
       expect(kopf().querySelector('[data-testid="start-knopf"]')).toBeNull();
@@ -207,7 +207,7 @@ describe('AppComponent - Desktop-Kopf', () => {
     it('blendet den Kopfknopf "Anmelden" auf /login und /login/managed aus', () => {
       aufSeite('/login/managed?returnUrl=%2Fcontribute');
       expect(anmeldenKnopf()).toBeUndefined();
-      expect(kopf().querySelector('h1')!.textContent!.trim()).toBe('Anmelden');
+      expect(fixture.nativeElement.querySelector('.seitenkopf h1')!.textContent!.trim()).toBe('Anmelden');
     });
 
     it('zeigt ihn auf anderen Seiten weiter', () => {
@@ -355,16 +355,74 @@ describe('AppComponent - Desktop-Kopf', () => {
       expect(kopf().querySelector('.farbschema-knopf')).toBeNull();
     });
 
-    it('setzt lange Titel kleiner, kurze nicht', () => {
+    function seitentitel(): HTMLElement {
+      return fixture.nativeElement.querySelector('.seitenkopf h1') as HTMLElement;
+    }
+
+    // Einheitliche Titelgroesse (23.11.2026): Lange Titel brechen um, statt kleiner zu werden.
+    it('setzt lange und kurze Titel in derselben Klasse und Groesse', () => {
       const komponente = fixture.componentInstance;
       komponente.pageTitle = 'Hintergrundinfo verfassen';
       fixture.detectChanges();
-      expect(kopf().classList).toContain('header--titel-lang');
-      expect(kopf().querySelector('.desktop-header-title')!.classList).toContain('desktop-header-title--lang');
+      const langKlassen = Array.from(seitentitel().classList).sort();
+      const langGroesse = getComputedStyle(seitentitel()).fontSize;
 
       komponente.pageTitle = 'Fangkorb';
       fixture.detectChanges();
-      expect(kopf().classList).not.toContain('header--titel-lang');
+      expect(Array.from(seitentitel().classList).sort()).toEqual(langKlassen);
+      expect(getComputedStyle(seitentitel()).fontSize).toBe(langGroesse);
+      expect(langGroesse).toBe('40px');
+    });
+
+    // Einzeiliger Kopf (23.11.2026): Im Kopf steht die Marke, der Seitentitel darunter, mit
+    // Zurueck davor. So rutschen die Ziele nie je nach Titel in eine zweite Zeile.
+    it('hat im Kopf die Marke und keinen Seitentitel, der Titel steht darunter', () => {
+      const komponente = fixture.componentInstance;
+      komponente.pageTitle = 'Meine Beiträge';
+      komponente.showBackButton = true;
+      fixture.detectChanges();
+
+      expect(kopf().querySelector('h1')).toBeNull();
+      expect(kopf().querySelector('.marke-text')!.textContent!.trim()).toBe('Gut gesagt');
+      expect(kopf().querySelector('.back-button-header')).toBeNull();
+      expect(seitentitel().textContent!.trim()).toBe('Meine Beiträge');
+      expect(seitentitel().classList).not.toContain('visually-hidden');
+      expect(fixture.nativeElement.querySelector('.seitenkopf .back-button-header')).not.toBeNull();
+    });
+
+    it('nennt den Titel „Gut gesagt“ nur dem Screenreader, statt die Marke zu wiederholen', () => {
+      const komponente = fixture.componentInstance;
+      komponente.pageTitle = 'Gut gesagt';
+      komponente.showBackButton = false;
+      fixture.detectChanges();
+
+      expect(seitentitel().textContent!.trim()).toBe('Gut gesagt');
+      expect(seitentitel().classList).toContain('visually-hidden');
+      expect(fixture.nativeElement.querySelector('.seitenkopf')!.classList).toContain('seitenkopf--leer');
+    });
+
+    it('zeigt auf der Ergebnisseite Zurueck, den Titel „Gut gesagt“ aber nur dem Screenreader', () => {
+      const komponente = fixture.componentInstance;
+      komponente.pageTitle = 'Gut gesagt';
+      komponente.showBackButton = true;
+      fixture.detectChanges();
+
+      const seitenkopf = fixture.nativeElement.querySelector('.seitenkopf') as HTMLElement;
+      expect(seitenkopf.classList).not.toContain('seitenkopf--leer');
+      expect(seitenkopf.querySelector('.back-button-header')).not.toBeNull();
+      expect(seitentitel().classList).toContain('visually-hidden');
+    });
+
+    // Am Handy klebt der Kopf nur ausserhalb von main: main ist mit overflow: hidden ein
+    // Scroll-Container, daran wirkte position: sticky nicht, und der Kopf scrollte unter die
+    // Statusleiste.
+    it('stellt den Handy-Kopf vor main, nicht hinein', () => {
+      fixture.componentInstance.isMobile = true;
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('#app-container > app-mobile-header')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('main app-mobile-header')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.seitenkopf')).toBeNull();
     });
   });
 

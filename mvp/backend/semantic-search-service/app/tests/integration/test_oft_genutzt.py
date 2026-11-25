@@ -76,6 +76,8 @@ async def test_oft_genutzt_zeigt_sichtbare_ohne_gesperrte(
             real_repository_factory,
             ReferenceService(integration_settings, real_repository_factory),
         ),
+        mindest_nutzungen=integration_settings.oft_genutzt_mindest_nutzungen,
+        mindest_beitraege=integration_settings.oft_genutzt_mindest_beitraege,
     )
     beitraege = await service.beitraege()
 

@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { Thema } from '../services/dtos/themenDtos';
+import { ThemenVorschlaege } from '../shared/themen/themen-vorschlaege';
 import { AussageMitThemenFeld, ThemenService } from '../services/themen.service';
 import { AntwortAuf } from './antwort-auf/antwort-auf.component';
 import { themenWaehlbar } from './aussage-fuer-anfrage';
@@ -26,6 +27,8 @@ export class ThemenWahl {
   private vorschlag: string[] = [];
   /** Ob die Themenwahl zuletzt zu sehen war; der Vorschlag kommt nur beim Erscheinen. */
   private warWaehlbar = false;
+  /** Themenvorschlaege (#401) zum Text der neuen Aussage, fuer [vorschlaege]. */
+  readonly themenVorschlaege = new ThemenVorschlaege();
   /**
    * Die gewaehlte, vorhandene Aussage mit ihren Themen; null ohne, solange sie laden oder
    * wenn das Nachsehen scheiterte (dann kein Zuordnen, das vorhandene ersetzte).
@@ -73,6 +76,7 @@ export class ThemenWahl {
       this.vorschlagEinsetzen();
     }
     this.warWaehlbar = waehlbar;
+    this.themenVorschlaege.text(waehlbar ? aussage.text : '');
     this.vorhandeneLaden(aussage.id || null);
   }
 
@@ -116,6 +120,7 @@ export class ThemenWahl {
   zuruecksetzen(): void {
     this.warWaehlbar = false;
     this.themen.setValue([]);
+    this.themenVorschlaege.text('');
     this.vorhandeneLaden(null);
   }
 

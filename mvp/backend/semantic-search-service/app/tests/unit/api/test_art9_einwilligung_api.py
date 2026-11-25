@@ -403,6 +403,25 @@ class TestWiderrufen:
         assert client.delete(BASIS, headers=PERSON).status_code == 204
         dienst.zuruecknehmen.assert_called_once_with("user-001")
 
+    def test_delete_haelt_ja_zur_rangliste_als_nein_fest(
+        self, client, repository, rangliste_ohne_datenbank
+    ):
+        """Sonst stuende die Person nach neuer Einwilligung ungefragt wieder darin (#793)."""
+        from datetime import datetime, timezone
+
+        from domain.rangliste import AKTUELLER_WORTLAUT
+        from repositories.rangliste_einwilligung_repository import RanglisteAntwort
+
+        rangliste_ohne_datenbank.lesen.return_value = RanglisteAntwort(
+            True, True, AKTUELLER_WORTLAUT, datetime(2026, 12, 1, tzinfo=timezone.utc)
+        )
+
+        assert client.delete(BASIS, headers=PERSON).status_code == 204
+        rangliste_ohne_datenbank.antworten.assert_called_once_with(
+            "user-001", False, False, AKTUELLER_WORTLAUT
+        )
+        repository.widerrufen.assert_called_once()
+
     def test_delete_ohne_anmeldung_401(self, client, repository, stimmen):
         assert client.delete(BASIS).status_code == 401
         repository.widerrufen.assert_not_called()
@@ -636,6 +655,9 @@ OFFEN = {
     # Einwilligung "Punkte und Meilensteine" (#351): eine eigene, freiwillige, nicht
     # an die Art.-9-Einwilligung gekoppelt (Art. 7 Abs. 4).
     ("PUT", "/api/v1/usage/users/me/punkte-einwilligung"),
+    # Einwilligung zur Rangliste (#793): Ein Nein ist Zuruecknehmen, ein Ja wirkt
+    # ohne Art.-9-Einwilligung nicht (Voraussetzung je Abruf).
+    ("PUT", "/api/v1/rangliste/einwilligung"),
     # Die Einwilligung selbst und "ohne Einwilligung weiter" (B2)
     ("POST", "/api/v1/art9-einwilligung"),
     ("POST", "/api/v1/art9-einwilligung/ohne"),
@@ -655,7 +677,13 @@ OFFEN = {
     ("POST", "/api/v1/gegenlesen"),
     ("POST", "/api/v1/kuerzungsvorschlag"),
     ("POST", "/api/v1/spracherkennung"),
+    ("POST", "/api/v1/statement/themen/vorschlaege"),  # nur Vorschlag (#401)
     ("POST", "/api/v1/usage/content/{content_id}/usage"),
+    # Danke (#791): prueft die Einwilligung selbst, erst nach dem Schalter
+    ("POST", "/api/v1/usage/content/{content_id}/danke"),
+    # Meldungen ohne Konto (#799): nur ein Wochenzaehler ohne Kennung; Angemeldete
+    # zaehlen dort nicht (sie melden ueber /users/me/gepostet mit Einwilligung)
+    ("POST", "/api/v1/ereignis"),
     ("POST", "/api/v1/usage/users/me/besuch"),
     ("POST", "/api/v1/statement/addReplysuggestionToStatement"),
     ("PUT", "/api/v1/statement/themen/zuordnen"),
@@ -671,6 +699,9 @@ OFFEN = {
     ("POST", "/api/v1/moderation/loeschauftraege/{auftrag_id}/ausfuehren"),
     # Schalter setzen (Admin, #708): keine Daten von Nutzenden
     ("PUT", "/api/v1/moderation/schalter/{name}"),
+    # Saisons pflegen (Admin, #782): keine Daten von Nutzenden
+    ("POST", "/api/v1/moderation/saisons"),
+    ("PUT", "/api/v1/moderation/saisons/{saison_id}"),
     # Herkunft pruefen anstossen (Admin, #759): keine Daten von Nutzenden
     ("POST", "/api/v1/herkunft-pruefen/lauf"),
     ("POST", "/api/v1/sperren/{sperre_id}/widerspruch"),
@@ -679,6 +710,12 @@ OFFEN = {
     ("PATCH", "/api/v1/einladungen/{einladung_id}"),
     ("POST", "/api/v1/einladungen/pruefen"),
     ("POST", "/api/v1/einladungen/einloesen"),
+    # Teams: Beitreten und "Team oeffentlich am Namen zeigen" sind eigene,
+    # ausdrueckliche Einwilligungen, nicht an die Art.-9-Einwilligung gekoppelt
+    # (domain/teams.py); die aktuelle Saison setzt ein Admin.
+    ("POST", "/api/v1/einladungen/beitreten"),
+    ("PUT", "/api/v1/teams/oeffentlich"),
+    ("PUT", "/api/v1/moderation/schalter/einstellungen/{name}"),
     ("PATCH", "/api/v1/feedback/{feedback_id}"),
     ("PUT", "/api/v1/moderation/content/{content_id}/sperren"),
     ("PUT", "/api/v1/moderation/content/{content_id}/entsperren"),
@@ -697,6 +734,7 @@ OFFEN = {
 
 
 def _gesperrte_routen():
+    from api.v1.usage import gepostet_angeboten
     from main import app
 
     gesperrt = set()
@@ -704,7 +742,8 @@ def _gesperrte_routen():
         if not isinstance(route, APIRoute):
             continue
         if any(
-            d.call is require_art9_einwilligung for d in route.dependant.dependencies
+            d.call in (require_art9_einwilligung, gepostet_angeboten)
+            for d in route.dependant.dependencies
         ):
             gesperrt |= {(methode, route.path) for methode in route.methods}
     return gesperrt

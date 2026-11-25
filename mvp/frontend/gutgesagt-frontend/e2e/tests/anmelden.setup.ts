@@ -12,7 +12,9 @@ setup('anmelden', async ({ page }) => {
     data: { email: KONTO.email, password: KONTO.passwort },
   });
   expect(antwort.status()).toBe(200);
-  expect((await page.request.get('/api/check-session')).status()).toBe(200);
+  const sitzung = await page.request.get('/api/check-session');
+  expect(sitzung.status()).toBe(200);
+  expect((await sitzung.json()).isAuthenticated).toBe(true);
   // Ohne Art.-9-Einwilligung fuehrt die App auf /einwilligung und sperrt Beitragen und
   // Bewerten (#489). Das Testkonto willigt einmal in den aktuellen Wortlaut ein.
   const stand = await page.request.get('/api/v1/art9-einwilligung');

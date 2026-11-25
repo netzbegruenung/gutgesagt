@@ -13,6 +13,8 @@ export interface Thema {
 
 export interface ThemenResponse {
     themen: Thema[];
+    /** Ob Themenvorschlaege (#401) an sind; fehlt bei aelteren Diensten (dann aus). */
+    vorschlaege?: boolean;
 }
 
 export interface ThemenZuordnenRequest {
@@ -47,4 +49,15 @@ export interface ThemenZuordnung {
 
 export interface ThemenTestsetResponse {
     zuordnungen: ThemenZuordnung[];
+}
+
+/** Themenvorschlaege (#401): Text und wie viele hoechstens (Aussage 3, Einwurf 2). */
+export interface ThemenVorschlagRequest {
+    text: string;
+    hoechstens: number;
+}
+
+export interface ThemenVorschlagResponse {
+    /** Die vorgeschlagenen Schluessel, das naechste zuerst. */
+    themen: string[];
 }

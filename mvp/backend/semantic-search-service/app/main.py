@@ -29,6 +29,7 @@ from api.v1.metrics import router as metrics_router
 from api.v1.reference import router as reference_router
 
 from api.v1.search import router as search_router
+from api.v1.garten import router as garten_router
 from api.v1.statement import router as statement_router
 
 from api.v1.generic_text import router as generic_text_router
@@ -37,6 +38,8 @@ from api.v1.image import router as image_router
 from api.v1.einwurf import router as einwurf_router
 from api.v1.seeding import router as seeding_router
 from api.v1.usage import router as usage_router
+from api.v1.naechster_schritt import router as naechster_schritt_router
+from api.v1.einwilligungs_moment import router as einwilligungs_moment_router
 from api.v1.voting import router as voting_router
 from api.v1.moderation import router as moderation_router
 from api.v1.vormoderation import router as vormoderation_router
@@ -44,10 +47,16 @@ from api.v1.loeschauftraege import router as loeschauftraege_router
 from api.v1.schalter import router as schalter_router
 from api.v1.funktionen import router as funktionen_router
 from api.v1.merkliste import router as merkliste_router
+from api.v1.ereignis import router as ereignis_router
+from api.v1.saisons import admin_router as saisons_admin_router
+from api.v1.saisons import router as saisons_router
+from api.v1.rangliste import router as rangliste_router
+from api.v1.konter_probe import router as konter_probe_router
 from api.v1.sperren import router as sperren_router
 from api.v1.health import router as health_router
 from api.v1.feedback import router as feedback_router
 from api.v1.einladungen import router as einladungen_router
+from api.v1.teams import router as teams_router
 from api.v1.gegenlesen import router as gegenlesen_router
 from api.v1.spracherkennung import router as spracherkennung_router
 from api.v1.varianten import router as varianten_router
@@ -100,7 +109,10 @@ from utils.rate_limiter import (
     kuerzungsvorschlag_rate_limiter,
     report_rate_limiter,
     search_query_statement_rate_limiter,
+    team_beitreten_rate_limiter,
+    themen_vorschlag_rate_limiter,
 )
+from utils.tagesdeckel import tagesdeckel
 import asyncio
 
 # This is a workaround for a dependency issue: "OMP: Error #15: Initializing libomp140.x86_64.dll, but found libomp140.x86_64.dll already initialized.""
@@ -168,10 +180,14 @@ async def lifespan(app: FastAPI):
                     feedback_rate_limiter,
                     einladung_rate_limiter,
                     einladung_pruefen_rate_limiter,
+                    team_beitreten_rate_limiter,
                     gegenlesen_rate_limiter,
                     get_nutzung_rate_limiter(),
                     spracherkennung_rate_limiter,
                     kuerzungsvorschlag_rate_limiter,
+                    themen_vorschlag_rate_limiter,
+                    # Kein RateLimiter, raeumt aber genauso auf (Zaehler von gestern).
+                    tagesdeckel,
                 ]
             )
         )
@@ -338,9 +354,16 @@ from middleware.rate_limit import RateLimitMiddleware
 
 app.add_middleware(
     RateLimitMiddleware,
-    requests_per_minute=10,  # Max 10 requests per minute per user
-    requests_per_hour=100,  # Max 100 requests per hour per user
+    # Je Person, aus der Umgebung (core/config.py); Startkonten sind ausgenommen.
+    requests_per_minute=settings.anlege_rate_limit_je_minute,
+    requests_per_hour=settings.anlege_rate_limit_je_stunde,
 )
+
+# Tagesdeckel (middleware/tagesdeckel.py): nach dem Rate-Limit eingetragen und damit
+# aussen; lehnt das Rate-Limit ab, gibt der Tagesdeckel den Platz wieder frei.
+from middleware.tagesdeckel import TagesdeckelMiddleware
+
+app.add_middleware(TagesdeckelMiddleware)
 
 app.include_router(commentary_router, prefix="/api/v1/commentary", tags=["commentary"])
 app.include_router(content_router, prefix="/api/v1/content", tags=["content"])
@@ -350,6 +373,8 @@ app.include_router(
 app.include_router(metrics_router, prefix="/api/v1/metrics", tags=["metrics"])
 app.include_router(reference_router, prefix="/api/v1/reference", tags=["reference"])
 app.include_router(search_router, prefix="/api/v1/search", tags=["search"])
+# Gartenansicht (#783): unter /search, damit sie wie die Suche fuer Besucher offen ist
+app.include_router(garten_router, prefix="/api/v1/search", tags=["search"])
 app.include_router(statement_router, prefix="/api/v1/statement", tags=["statement"])
 app.include_router(
     generic_text_router, prefix="/api/v1/generic_text", tags=["generic_text"]
@@ -359,6 +384,9 @@ app.include_router(image_router, prefix="/api/v1/image", tags=["image"])
 app.include_router(einwurf_router, prefix="/api/v1/rawinput", tags=["rawinput"])
 app.include_router(seeding_router, prefix="/api/v1", tags=["seeding"])
 app.include_router(usage_router, prefix="/api/v1/usage", tags=["usage"])
+# Karte "Dein naechster Schritt" (#789), nur fuer Angemeldete
+app.include_router(naechster_schritt_router, prefix="/api/v1/usage", tags=["usage"])
+app.include_router(einwilligungs_moment_router, prefix="/api/v1/usage", tags=["usage"])
 app.include_router(voting_router, prefix="/api/v1/voting", tags=["voting"])
 app.include_router(moderation_router, prefix="/api/v1/moderation", tags=["moderation"])
 app.include_router(
@@ -378,12 +406,23 @@ app.include_router(
 app.include_router(funktionen_router, prefix="/api/v1/funktionen", tags=["schalter"])
 # Merkliste (#758), hinter dem Schalter merkliste
 app.include_router(merkliste_router, prefix="/api/v1/merkliste", tags=["merkliste"])
+# Neutraler Sammelpfad (#799): die Art der Meldung steht nur im Body.
+app.include_router(ereignis_router, prefix="/api/v1/ereignis", tags=["ereignis"])
+# Saisons mit Gemeinschaftsziel (#782): Balken ohne Anmeldung, Pflege nur Admins
+app.include_router(saisons_router, prefix="/api/v1/saisons", tags=["saisons"])
+app.include_router(rangliste_router, prefix="/api/v1/rangliste", tags=["rangliste"])
+app.include_router(
+    saisons_admin_router, prefix="/api/v1/moderation/saisons", tags=["moderation"]
+)
+# Konter-Probe (#786), ohne Anmeldung, nur lesend; der Tipp bleibt im Browser
+app.include_router(konter_probe_router, prefix="/api/v1/konter-probe", tags=["spiel"])
 app.include_router(sperren_router, prefix="/api/v1/sperren", tags=["moderation"])
 app.include_router(health_router, prefix="/api/v1", tags=["monitoring"])
 app.include_router(feedback_router, prefix="/api/v1/feedback", tags=["feedback"])
 app.include_router(
     einladungen_router, prefix="/api/v1/einladungen", tags=["einladungen"]
 )
+app.include_router(teams_router, prefix="/api/v1/teams", tags=["teams"])
 app.include_router(gegenlesen_router, prefix="/api/v1/gegenlesen", tags=["gegenlesen"])
 app.include_router(varianten_router, prefix="/api/v1/varianten", tags=["varianten"])
 # Nur fuer den nginx im Frontend-Image (#360); am BFF gesperrt (EndpointPolicy.Blocked).

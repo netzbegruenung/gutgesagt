@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 # Set test environment before any imports
 os.environ["TESTING"] = "true"
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-# Die NLI-Stufe (#387) laedt sonst im Schattenbetrieb das NLI-Modell (~1,2 GB) im
+# Die NLI-Stufe (#387, Standard an) laedt sonst das NLI-Modell (~1,2 GB) im
 # Hintergrund. Tests der NLI-Stufe geben ihr eine Attrappe und schalten sie selbst an.
 os.environ.setdefault("SEMANTIC_SEARCH_DIESELBE_AUSSAGE_NLI", "aus")
 
@@ -149,6 +149,128 @@ def schalter_admin_alle_an():
     )
     yield werte
     schalter_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
+def gepostet_ohne_konto_ohne_datenbank(monkeypatch):
+    """
+    Meldungen ohne Konto (#799) ohne Datenbank: keine Zahlen. Tests mit Zahlen stellen
+    ``gepostet_ohne_konto_ohne_datenbank.wochen.return_value`` ein.
+    """
+    import services.gepostet_ohne_konto_service as modul
+
+    repository = MagicMock()
+    repository.wochen.return_value = {}
+    monkeypatch.setattr(modul, "_service", modul.GepostetOhneKontoService(repository))
+    yield repository
+
+
+@pytest.fixture(autouse=True)
+def wirkung_ohne_datenbank(monkeypatch):
+    """
+    Wirkungs-Echo und Danke (#790, #791) ohne Datenbank: keine Summen. Tests mit
+    Summen stellen ``wirkung_ohne_datenbank.je_beitrag.return_value`` ein.
+    """
+    import services.wirkung_service as modul
+
+    repository = MagicMock()
+    repository.je_beitrag.return_value = {}
+    repository.danke_zaehlen.return_value = True
+    monkeypatch.setattr(modul, "_service", modul.WirkungService(repository))
+    yield repository
+
+
+@pytest.fixture(autouse=True)
+def einstellungen_ohne_datenbank():
+    """
+    Admin-Einstellungen mit Textwert (services/einstellungen_service.py) ohne
+    Datenbank: keine gespeicherten Werte, es gilt der Standard. Tests setzen Werte
+    ueber das zurueckgegebene Dict.
+    """
+    from services.einstellungen_service import (
+        EinstellungenService,
+        einstellungen_service_setzen,
+    )
+
+    werte: dict = {}
+    einstellungen_service_setzen(
+        EinstellungenService(
+            lesen=lambda: werte,
+            setzen=lambda name, wert, admin: werte.__setitem__(name, wert),
+        )
+    )
+    yield werte
+    einstellungen_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
+def saisons_ohne_datenbank():
+    """
+    Saisons (services/saison_service.py, #782) ohne Datenbank: keine Saison, keine
+    Wochenzahlen. Die aktuelle Saison der Teams fragt sie bei wirksamem Schalter;
+    Tests mit Saisons setzen einen eigenen Dienst (saison_service_setzen).
+    """
+    from services.saison_service import SaisonService, saison_service_setzen
+
+    repository = MagicMock()
+    repository.alle.return_value = []
+    saison_service_setzen(SaisonService(repository, lambda von, laufende: {}))
+    yield repository
+    saison_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
+def rangliste_ohne_datenbank(monkeypatch):
+    """
+    Die Einwilligung zur Rangliste (#793) ohne Datenbank: niemand hat geantwortet.
+    Der Widerruf der Art.-9-Einwilligung fragt sie; Tests mit Antworten stellen
+    ``rangliste_ohne_datenbank.lesen.return_value`` ein.
+    """
+    import repositories.rangliste_einwilligung_repository as modul
+    from services.rangliste_service import rangliste_service_setzen
+
+    repository = MagicMock()
+    repository.lesen.return_value = None
+    repository.teilnehmende.return_value = {}
+    monkeypatch.setattr(modul, "_repository", repository)
+    yield repository
+    rangliste_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
+def teams_ohne_datenbank():
+    """
+    Der TeamService haengt an Antworten mit Anzeigenamen (Teams am Namen). Ohne Ersatz
+    baute er bei wirksamem Schalter das echte Repository; der Ersatz kennt keine
+    Teams. Tests mit Teams setzen einen eigenen Dienst (team_service_setzen).
+    """
+    from services.team_service import TeamService, team_service_setzen
+
+    repository = MagicMock()
+    repository.oeffentliche_teams.return_value = {}
+    team_service_setzen(TeamService(repository))
+    yield repository
+    team_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
+def team_fortschritt_ohne_datenbank():
+    """
+    Der Wochenzaehler der Teams (services/team_fortschritt_service.py) haengt an den
+    Endpunkten fuer Beitraege, Stimmen und "Ja, gepostet". Ohne Ersatz baute er bei
+    wirksamem Schalter das echte Repository. Der Ersatz kennt keine Teams; Tests mit
+    Teams setzen einen eigenen Dienst (team_fortschritt_service_setzen).
+    """
+    from services.team_fortschritt_service import (
+        TeamFortschrittService,
+        team_fortschritt_service_setzen,
+    )
+
+    repository = MagicMock()
+    repository.eigene_teams.return_value = []
+    team_fortschritt_service_setzen(TeamFortschrittService(repository))
+    yield repository
+    team_fortschritt_service_setzen(None)
 
 
 @pytest.fixture(autouse=True)

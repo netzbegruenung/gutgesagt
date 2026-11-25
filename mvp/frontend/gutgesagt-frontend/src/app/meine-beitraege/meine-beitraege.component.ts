@@ -14,6 +14,8 @@ import { KartenDaten } from '../beitragskarte/karten-daten';
 import { MeineEinwuerfeComponent } from './meine-einwuerfe.component';
 import { SperrnachrichtenComponent } from './sperrnachrichten.component';
 import { MeilensteineComponent } from './meilensteine.component';
+import { MeineTeamsComponent } from './meine-teams.component';
+import { RanglisteComponent } from './rangliste.component';
 import { PunkteComponent } from './punkte.component';
 import { tabMitTasteWaehlen } from '../shared/tab-tasten';
 import { MatButtonModule } from '@angular/material/button';
@@ -23,6 +25,7 @@ import { UnbeantworteteAussage } from '../services/dtos/statementDtos';
 import { beantwortenParamsJeAussage } from '../hier-fehlt-eine-antwort/hier-fehlt-eine-antwort.component';
 import { FORMULAR_PFAD } from '../shared/formular-adresse';
 import { AussagekarteComponent } from '../shared/aussagekarte/aussagekarte.component';
+import { MeineAussagenComponent } from './meine-aussagen.component';
 import { AlbumComponent } from './album/album.component';
 import { GemerktComponent } from './gemerkt.component';
 import { MerklisteService } from '../services/merkliste.service';
@@ -31,12 +34,16 @@ import { AlbumEintrag, albumEintrag, naechsterMeilenstein } from './album/album'
 /** So viele unbeantwortete Aussagen zeigt der leere Zustand als ersten Schritt (#645). */
 export const ERSTE_SCHRITTE = 3;
 
-/** Die Tabs: eigene Beitraege, "Meine Einwuerfe" und, mit Schalter, die Merkliste (#758). */
-export type MeineTab = 'beitraege' | 'einwuerfe' | 'gemerkt';
+/**
+ * Die Tabs: eigene Beitraege, "Meine Einwuerfe" und, je mit Schalter, "Meine Aussagen"
+ * (#760) und die Merkliste (#758).
+ */
+export type MeineTab = 'beitraege' | 'einwuerfe' | 'aussagen' | 'gemerkt';
 
 const TABS: ReadonlyArray<{ wert: MeineTab; name: string }> = [
   { wert: 'beitraege', name: 'Meine Beiträge' },
   { wert: 'einwuerfe', name: 'Meine Einwürfe' },
+  { wert: 'aussagen', name: 'Meine Aussagen' },
 ];
 /** Der Reiter der Merkliste (#758); nur mit eingeschaltetem Schalter. */
 const GEMERKT_TAB = { wert: 'gemerkt' as const, name: 'Gemerkt' };
@@ -61,8 +68,11 @@ const GEMERKT_TAB = { wert: 'gemerkt' as const, name: 'Gemerkt' };
     RouterLink,
     AlbumComponent,
     MeineEinwuerfeComponent,
+    MeineAussagenComponent,
     SperrnachrichtenComponent,
     MeilensteineComponent,
+    MeineTeamsComponent,
+    RanglisteComponent,
     PunkteComponent,
     AussagekarteComponent,
     GemerktComponent
@@ -78,6 +88,15 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
   gemerktGeoeffnet = false;
   /** Ab dem ersten Oeffnen bleibt der Einwurf-Tab stehen, damit Wechseln nicht neu laedt. */
   einwuerfeGeoeffnet = false;
+  aussagenGeoeffnet = false;
+  /**
+   * "Meine Aussagen" gibt es nur mit dem Schalter antworten_hinweis (#760): Der Besuch beim
+   * App-Start sagt es (antworten_auf_eigene_aussagen ist dann eine Zahl), ohne eigenen Abruf.
+   */
+  aussagenAn = false;
+
+  /** "Meine Aussagen" aus der Adresse (Kachel): erst gewaehlt, wenn der Besuch den Schalter bestaetigt. */
+  private aussagenGewuenscht = false;
   eintraege: AlbumEintrag[] = [];
   private destroy$ = new Subject<void>();
   /** Nur beim ersten Laden; danach laedt die Liste still nach und bleibt stehen. */
@@ -107,9 +126,22 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
     return this.merkliste.an();
   }
 
-  /** Die Tabs; „Gemerkt“ nur, solange der Schalter der Merkliste an ist. */
+  /** Die Tabs; „Meine Aussagen“ und „Gemerkt“ nur, solange ihr Schalter an ist. */
   get tabs(): ReadonlyArray<{ wert: MeineTab; name: string }> {
-    return this.gemerktAn ? [...TABS, GEMERKT_TAB] : TABS;
+    const tabs = TABS.filter((eintrag) => eintrag.wert !== 'aussagen' || this.aussagenAn);
+    return this.gemerktAn ? [...tabs, GEMERKT_TAB] : tabs;
+  }
+
+  /** Name der Tab-Leiste fuer Screenreader, passend zu den sichtbaren Tabs. */
+  get tabsName(): string {
+    const teile = ['Beiträge', 'Einwürfe'];
+    if (this.aussagenAn) {
+      teile.push('Aussagen');
+    }
+    if (this.gemerktAn) {
+      teile.push('Merkliste');
+    }
+    return `Meine ${teile.slice(0, -1).join(', ')} und ${teile[teile.length - 1]}`;
   }
 
   /** Der angezeigte Tab: „Gemerkt“ bei ausgeschaltetem Schalter faellt auf Meine Beitraege zurueck. */
@@ -121,7 +153,11 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
     // Ein Tab in der Adresse, etwa nach dem Ausformulieren "Meine Einwuerfe" (#508).
     const tab = [...TABS, GEMERKT_TAB].find((eintrag) => eintrag.wert === this.route.snapshot.queryParamMap.get(MEINE_TAB_PARAM));
     if (tab) {
-      this.tabWaehlen(tab.wert);
+      if (tab.wert === 'aussagen') {
+        this.aussagenGewuenscht = true;
+      } else {
+        this.tabWaehlen(tab.wert);
+      }
       // Der Tab gilt nur fuer diesen Sprung: Bliebe er in der Adresse, oeffnete ein
       // Neuladen nach dem Wechsel zu "Meine Beitraege" wieder "Meine Einwuerfe".
       this.router.navigate([], {
@@ -131,6 +167,22 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
         replaceUrl: true,
       });
     }
+    this.usageTrackingService.besuchStand$.pipe(takeUntil(this.destroy$)).subscribe((stand) => {
+      // Scheitert der Besuch, bleibt der Reiter fuer diesen App-Start weg (kein eigener Abruf).
+      const an = typeof stand?.antworten_auf_eigene_aussagen === 'number';
+      if (an !== this.aussagenAn) {
+        this.aussagenAn = an;
+        if (!an && this.tab === 'aussagen') {
+          this.tabWaehlen('beitraege');
+        }
+        this.cdr.markForCheck();
+      }
+      if (an && this.aussagenGewuenscht) {
+        this.aussagenGewuenscht = false;
+        this.tabWaehlen('aussagen');
+        this.cdr.markForCheck();
+      }
+    });
     this.ladenAbonnieren();
     this.laden();
     this.meilensteinLaden();
@@ -214,6 +266,7 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
   tabWaehlen(tab: MeineTab): void {
     this.tab = tab;
     this.einwuerfeGeoeffnet ||= tab === 'einwuerfe';
+    this.aussagenGeoeffnet ||= tab === 'aussagen';
     this.gemerktGeoeffnet ||= tab === 'gemerkt';
   }
 

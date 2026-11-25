@@ -64,11 +64,21 @@ describe('RouteConfigService', () => {
       '/einwilligung': 'Datenschutz-Einstellungen',
       '/about': 'Über Gut gesagt',
       '/einladung?code=abc': 'Einladung',
+      '/willkommen': 'Willkommen',
       '/admin/dashboard': 'Admin',
       '/admin/moderation': 'Admin',
     };
     for (const [pfad, erwartet] of Object.entries(titel)) {
       expect(service.getRouteConfig(pfad).pageTitle).withContext(pfad).toBe(erwartet);
+    }
+  });
+
+  // „Ersten Spruch suchen“ führt auf /search#suchen: Das Fragment ändert die Seite nicht
+  it('behandelt die Startseite mit Fragment wie die Startseite, ohne Pfeil', () => {
+    for (const pfad of ['/search#suchen', '/search?x=1#suchen', '/search#recent-content']) {
+      const config = service.getRouteConfig(pfad);
+      expect(config.pageTitle).withContext(pfad).toBe(service.getRouteConfig('/search').pageTitle);
+      expect(config.showBackButton).withContext(pfad).toBeFalse();
     }
   });
 

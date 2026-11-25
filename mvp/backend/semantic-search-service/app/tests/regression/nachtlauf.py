@@ -43,6 +43,9 @@ ABWEICHUNG = 1
 # neue Faelle), wird sie hier und in SUCHTESTSET.md im selben PR nachgezogen.
 # S06 bis S09 zaehlen am Seed mit ihrer urspruenglichen Erwartung; ihr Ersatz (#606) gilt
 # nur an einem Bestand ohne diese Seed-Aussagen (Startbestand) und aendert das Soll nicht.
+# Gemessen mit der Voreinstellung der Pruefung auf dieselbe Aussage (core/config.py): seit
+# #575 NLI-Stufe an wie auf Produktion, Bestaetiger aus; Zerfaserung am 23.11.2026
+# nachgemessen (14 statt 18 von 20 im Schattenbetrieb).
 SOLL: Dict[str, int] = {
     "gemessen": 47,
     "treffer": 32,
@@ -51,7 +54,7 @@ SOLL: Dict[str, int] = {
     "ohne_richtig_keine": 5,
     "ohne_fehltreffer": 4,
     "dieselbe_behauptung": 20,
-    "zerfaserung_neu": 18,
+    "zerfaserung_neu": 14,
     "aehnliche_erwartete_dabei": 30,
     "aehnliche_ohne_mit_vorschlag": 6,
 }
