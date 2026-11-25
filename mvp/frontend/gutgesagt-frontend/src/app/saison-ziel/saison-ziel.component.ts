@@ -1,9 +1,17 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 
+import { Observable, of } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
+
+import { MetricsService } from '../services/metrics.service';
 import { SaisonBalken, SaisonService } from '../services/saison.service';
 import { selbstNachladen } from '../shared/selbst-nachladen';
+import { Bestandszahl, bestandszahl } from './bestandszahl';
 
-/** So oft lädt der Balken nach: Die Zahl ändert sich nur einmal je Woche, der Schalter selten. */
+/**
+ * So oft lädt der Balken nach: Die Zahl ändert sich nur einmal je Woche, der Schalter selten.
+ * Die Bestandszahl ist abgerundet und zuckt deshalb auch nur selten.
+ */
 export const SAISON_NACHLADEN_MS = 5 * 60 * 1000;
 
 const zahl = (wert: number): string => wert.toLocaleString('de-DE');
@@ -17,7 +25,18 @@ const zahl = (wert: number): string => wert.toLocaleString('de-DE');
  * Frist: Die Saison nennt nur ihren Namen. Kommt nichts, gibt es den Bereich nicht. Steht die
  * Zahl noch bei 0 (Saisonstart; die Schwelle kann aus Wochen vor der Saison stammen), lädt ein
  * Startsatz ein statt „0-mal“ und leerem Balken.
+ *
+ * Solange der Balken nicht öffentlich ist (Schalter an, aber keine laufende Saison oder Schwelle
+ * nicht erreicht), steht an seinem Platz die Bestandszahl (bestandszahl.ts): wie viele Antworten
+ * auf wie viele Sprüche schon da sind, ohne Personen. Bei Schalter aus gibt es auch sie nicht.
  */
+interface Anzeige {
+  balken: SaisonBalken | null;
+  bestand: Bestandszahl | null;
+}
+
+const LEER: Anzeige = { balken: null, bestand: null };
+
 @Component({
   selector: 'app-saison-ziel',
   standalone: true,
@@ -59,6 +78,19 @@ const zahl = (wert: number): string => wert.toLocaleString('de-DE');
           dabei ist, zählt mehrmals.
         </p>
       </section>
+    } @else {
+      @if (bestand; as z) {
+        <!-- Bestandszahl statt Balken unter der Schwelle (Entscheidung 25.11.2026): nur Inhalte, keine Personen -->
+        <section class="saison-ziel" aria-labelledby="bestandszahl-titel" data-testid="bestandszahl">
+          <h2 id="bestandszahl-titel">
+            Schon {{ zahl(z.antworten) }} {{ z.antworten === 1 ? 'Antwort' : 'Antworten' }} auf
+            {{ zahl(z.sprueche) }} {{ z.sprueche === 1 ? 'Spruch' : 'Sprüche' }}
+          </h2>
+          <p class="erklaerung">
+            Fertig zum Kopieren und Anpassen. Jede neue Antwort hilft allen, die nach dir suchen.
+          </p>
+        </section>
+      }
     }
   `,
   styles: [
@@ -117,24 +149,48 @@ const zahl = (wert: number): string => wert.toLocaleString('de-DE');
 })
 export class SaisonZielComponent implements OnInit {
   balken: SaisonBalken | null = null;
+  /** Nur ohne öffentlichen Balken und bei Schalter an */
+  bestand: Bestandszahl | null = null;
 
   protected readonly zahl = zahl;
 
   private readonly saisons = inject(SaisonService);
+  private readonly metrics = inject(MetricsService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
     const folgen = {
-      next: (balken: SaisonBalken | null) => {
-        this.balken = balken;
+      next: (anzeige: Anzeige) => {
+        this.balken = anzeige.balken;
+        this.bestand = anzeige.bestand;
         this.cdr.markForCheck();
       },
       // Nach einem Fehler bleibt der letzte Stand; ohne Stand gibt es den Bereich nicht.
       error: () => undefined,
     };
-    this.saisons.aktuell().subscribe(folgen);
-    selbstNachladen(() => this.saisons.aktuell(), this.destroyRef, folgen, SAISON_NACHLADEN_MS);
+    this.laden().subscribe(folgen);
+    selbstNachladen(() => this.laden(), this.destroyRef, folgen, SAISON_NACHLADEN_MS);
+  }
+
+  /**
+   * Balken, sonst bei Schalter an die Bestandszahl aus /getMetrics (öffentlich, im Server 60 s
+   * gecacht, nie 401/404). Ein Fehler geht weiter: Das Nachladen behält dann den letzten Stand.
+   */
+  private laden(): Observable<Anzeige> {
+    return this.saisons.zustand().pipe(
+      switchMap((stand): Observable<Anzeige> => {
+        if (!stand.aktiv) {
+          return of(LEER);
+        }
+        if (stand.balken) {
+          return of({ balken: stand.balken, bestand: null });
+        }
+        return this.metrics
+          .getMetrics()
+          .pipe(map((m) => ({ balken: null, bestand: bestandszahl(m?.commentary_count, m?.statement_count) })));
+      }),
+    );
   }
 
   /** Über dem Ziel bleibt der Balken voll, die Zahl darunter nennt den echten Stand. */

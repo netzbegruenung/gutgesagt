@@ -19,6 +19,15 @@ export interface SaisonBalken {
   erreicht: number;
 }
 
+/** Was die Startseite zum Saisonbalken weiß: Schalter aus, oder an mit Balken bzw. ohne. */
+export interface SaisonZustandOeffentlich {
+  aktiv: boolean;
+  /** null: keine laufende Saison oder Schwelle nicht erreicht (oder Schalter aus) */
+  balken: SaisonBalken | null;
+}
+
+const AUS: SaisonZustandOeffentlich = { aktiv: false, balken: null };
+
 export type SaisonZustand = 'geplant' | 'laufend' | 'vorbei';
 
 /** Eine Saison auf der Admin-Seite. */
@@ -70,26 +79,29 @@ export class SaisonService {
   private readonly admin = `${environment.baseUrl}/api/v1/moderation/saisons`;
 
   /**
-   * Der Balken der laufenden Saison; null, solange der Schalter aus ist, keine Saison
-   * läuft oder die Schwelle nicht erreicht ist. Meldet FunktionenService den Schalter
+   * Stand des Saisonbalkens: `aktiv: false`, solange der Schalter aus ist; sonst der Balken der
+   * laufenden Saison oder `balken: null`, wenn keine Saison läuft oder die Schwelle nicht erreicht
+   * ist (dann zeigt die Startseite die Bestandszahl). Meldet FunktionenService den Schalter
    * sicher aus, fragt die Startseite den Endpunkt gar nicht; sonst antwortet er auch bei
    * Schalter aus mit 200 (`aktiv: false`), nie 404 (Gateway-fail2ban, Saal-WLAN). Ein 404
    * kommt nur noch von einem älteren Backend und gilt ebenso als aus. Andere Fehler gehen
    * weiter, damit das Nachladen den letzten Stand behält.
    */
-  aktuell(): Observable<SaisonBalken | null> {
+  zustand(): Observable<SaisonZustandOeffentlich> {
     return this.funktionen.stand$(SAISON_SCHALTER).pipe(
       switchMap((an) =>
         an === false
-          ? of(null)
+          ? of(AUS)
           : this.http
               .get<{ balken: SaisonBalken | null; aktiv?: boolean }>(`${environment.baseUrl}/api/v1/saisons/aktuell`, {
                 context: stillerKontext(),
               })
               .pipe(
-                map((antwort) => (antwort?.aktiv === false ? null : (antwort?.balken ?? null))),
+                map((antwort): SaisonZustandOeffentlich =>
+                  antwort?.aktiv === false ? AUS : { aktiv: true, balken: antwort?.balken ?? null },
+                ),
                 catchError((fehler: { status?: number }) =>
-                  fehler?.status === 404 ? of(null) : throwError(() => fehler),
+                  fehler?.status === 404 ? of(AUS) : throwError(() => fehler),
                 ),
               ),
       ),
