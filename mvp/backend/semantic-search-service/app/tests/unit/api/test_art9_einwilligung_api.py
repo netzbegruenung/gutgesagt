@@ -676,6 +676,12 @@ OFFEN = {
     ("PATCH", "/api/v1/einladungen/{einladung_id}"),
     ("POST", "/api/v1/einladungen/pruefen"),
     ("POST", "/api/v1/einladungen/einloesen"),
+    # Teams: Beitreten und "Team oeffentlich am Namen zeigen" sind eigene,
+    # ausdrueckliche Einwilligungen, nicht an die Art.-9-Einwilligung gekoppelt
+    # (domain/teams.py); die aktuelle Saison setzt ein Admin.
+    ("POST", "/api/v1/einladungen/beitreten"),
+    ("PUT", "/api/v1/teams/oeffentlich"),
+    ("PUT", "/api/v1/moderation/schalter/einstellungen/{name}"),
     ("PATCH", "/api/v1/feedback/{feedback_id}"),
     ("PUT", "/api/v1/moderation/content/{content_id}/sperren"),
     ("PUT", "/api/v1/moderation/content/{content_id}/entsperren"),

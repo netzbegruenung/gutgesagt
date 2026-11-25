@@ -69,6 +69,7 @@ from repositories.einwurf_repository import get_einwurf_repository
 from repositories.sperre_repository import get_sperre_repository
 from repositories.loeschauftrag_repository import get_loeschauftrag_repository
 from repositories.schalter_repository import get_schalter_repository
+from repositories.team_repository import get_team_repository
 from core.fehler import INTERNER_FEHLER
 from core.logging import get_logger
 
@@ -383,7 +384,11 @@ def get_einladung_service() -> EinladungService:
     Ohne Zugang zur Keycloak-Admin-Schnittstelle lassen sich Einladungen verwalten,
     aber nicht einloesen (503).
     """
-    return EinladungService(get_einladung_repository(), _keycloak_konten())
+    from services.team_service import get_team_service
+
+    return EinladungService(
+        get_einladung_repository(), _keycloak_konten(), get_team_service()
+    )
 
 
 _gegenlesen_service: Optional[GegenlesenService] = None
@@ -489,6 +494,8 @@ def get_loeschfristen_service() -> LoeschfristenService:
         get_loeschauftrag_repository(),
         # Verlauf der Schalter nach einem Jahr (#708).
         get_schalter_repository(),
+        # Teamdaten nie benutzter Konten gehen mit dem Konto.
+        get_team_repository(),
     )
 
 

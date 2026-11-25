@@ -238,3 +238,17 @@ def test_seit_0_9_8_ohne_nutzungsbedingungen_am_konto():
 
     assert anzahl == 2
     assert keycloak.geloescht() == ["nie-geoeffnet", "uebergang"]
+
+
+def test_meldet_jedes_konto_das_danach_weg_ist():
+    # Damit Teamdaten am Konto mitgehen (loeschfristen_service), auch bei 404.
+    keycloak = Keycloak(
+        [_konto("alt"), _konto("schon-weg"), _konto("jung", angelegt=NACHHER)],
+        von_hand_geloescht=["schon-weg"],
+    )
+    weg = []
+
+    anzahl = _konten(keycloak).nie_benutzte_loeschen(GRENZE, bei_geloescht=weg.append)
+
+    assert anzahl == 1
+    assert sorted(weg) == ["alt", "schon-weg"]

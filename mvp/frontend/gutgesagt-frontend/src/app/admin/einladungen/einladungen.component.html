@@ -30,7 +30,43 @@
         <input matInput type="date" name="gueltigBis" [(ngModel)]="gueltigBis" required />
         <mat-hint>Der Tag zählt nach UTC: Der Link gilt bis 1 Uhr (Sommerzeit 2 Uhr) am Tag danach.</mat-hint>
       </mat-form-field>
-      <button mat-raised-button color="primary" type="submit" [disabled]="!notiz.trim() || speichert">
+      <!-- Nur mit Schalter teams; ohne Teamname ein reiner Kontolink wie bisher -->
+      <fieldset *ngIf="teamsAktiv" class="team-block" data-testid="team-block">
+        <legend>Team (optional)</legend>
+        <mat-form-field appearance="outline" class="team-name" subscriptSizing="dynamic">
+          <mat-label>Teamname</mat-label>
+          <input matInput name="teamName" [(ngModel)]="teamName" [maxlength]="TEAM_NAME_MAX"
+                 [attr.aria-invalid]="teamNameUngueltig" />
+          <mat-hint>{{ teamnameHinweis }}</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="team-saison" subscriptSizing="dynamic">
+          <mat-label>Saison</mat-label>
+          <input matInput name="teamSaison" [(ngModel)]="teamSaison" [maxlength]="TEAM_SAISON_MAX"
+                 [required]="mitTeam" [attr.aria-invalid]="teamSaisonUngueltig" />
+          <mat-hint>Pflicht mit Teamname, etwa „2026“.</mat-hint>
+        </mat-form-field>
+        <p *ngIf="teamNameUngueltig || teamSaisonUngueltig" class="warnung team-fehler" role="alert">
+          Teamname und Saison dürfen nicht leer sein und keine der Zeichen &lt; &gt; &amp; " \ / enthalten.
+        </p>
+        <div class="motiv-wahl">
+          <span id="motiv-label" class="motiv-label">Motiv</span>
+          <mat-radio-group name="teamMotiv" [(ngModel)]="teamMotiv" aria-labelledby="motiv-label" class="motive">
+            <mat-radio-button *ngFor="let m of motive" [value]="m.schluessel" class="motiv" data-testid="motiv">
+              <span class="motiv-inhalt">
+                <span class="medaillon" aria-hidden="true">
+                  <img *ngIf="motivBild(m.schluessel) as bild" [src]="bild" alt="" width="18" height="18" />
+                </span>
+                {{ m.name }}
+              </span>
+            </mat-radio-button>
+          </mat-radio-group>
+        </div>
+        <p class="hinweis team-erklaerung">
+          Ohne Teamname ist es ein reiner Kontolink wie bisher. Wer über einen Teamlink kommt, wird gefragt,
+          ob das Team gespeichert werden darf; hier steht später nur die Zahl der Mitglieder, nie wer.
+        </p>
+      </fieldset>
+      <button mat-raised-button color="primary" type="submit" [disabled]="!kannAnlegen">
         Einladung anlegen
       </button>
     </form>
@@ -48,6 +84,8 @@
         <thead>
           <tr>
             <th scope="col">Notiz</th>
+            <th *ngIf="teamsAktiv" scope="col">Team</th>
+            <th *ngIf="teamsAktiv" scope="col">Mitglieder</th>
             <th scope="col">Eingelöst</th>
             <th scope="col">Gültig bis</th>
             <th scope="col">Zustand</th>
@@ -58,6 +96,13 @@
         <tbody>
           <tr *ngFor="let e of einladungen" data-testid="einladung" [class.inaktiv]="e.zustand !== 'aktiv'">
             <td class="text" data-label="Notiz">{{ e.notiz }}</td>
+            <td *ngIf="teamsAktiv" class="team" data-label="Team" data-testid="team">
+              <app-team-pille *ngIf="e.team; else ohneTeam" [name]="e.team.name" [motiv]="e.team.motiv"
+                              [saison]="e.team.saison" [klein]="true"></app-team-pille>
+            </td>
+            <td *ngIf="teamsAktiv" class="eng" data-label="Mitglieder" data-testid="mitglieder">
+              <ng-container *ngIf="e.team; else ohneTeam">{{ e.team.mitglieder }}</ng-container>
+            </td>
             <td class="eng" data-label="Eingelöst">{{ e.einloesungen }} von {{ e.erlaubte_einloesungen }}</td>
             <td class="eng" data-label="Gültig bis">{{ tag(e.gueltig_bis) }}</td>
             <td class="eng" data-label="Zustand">{{ e.zustand | titlecase }}</td>
@@ -76,12 +121,14 @@
           </tr>
         </tbody>
       </table>
+      <ng-template #ohneTeam><span class="hinweis"><span aria-hidden="true">–</span><span class="unsichtbar">kein Team</span></span></ng-template>
       <ng-template #leer>
         <p class="hinweis">Noch keine Einladungen.</p>
       </ng-template>
       <p class="fussnote">
         Gezählt wird nur, wie oft eine Einladung eingelöst wurde, nicht von wem. Eine Einlösung für
-        eine Adresse, die schon ein Konto hat, zählt mit.
+        eine Adresse, die schon ein Konto hat, zählt mit.<ng-container *ngIf="teamsAktiv"> Bei Teams steht nur
+        die Zahl der Mitglieder da, keine Liste.</ng-container>
       </p>
     </ng-container>
   </mat-card-content>

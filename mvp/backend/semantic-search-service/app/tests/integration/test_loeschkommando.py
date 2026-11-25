@@ -20,6 +20,9 @@ from sqlalchemy import text
 from api.v1.einwurf import _einwuerfe_fuer_aufrufer
 from infrastructure.database.models import (
     AbzeichenSichtbarkeitZeile,
+    EinstellungZeile,
+    TeamMitgliedschaftZeile,
+    TeamOeffentlichZeile,
     Art9EinwilligungZeile,
     Art9OhneEinwilligungZeile,
     Base,
@@ -300,6 +303,36 @@ def spuren(datenbank, einwuerfe):
                 user_id=PERSON,
                 stand="2026-11-19",
                 zugestimmt_am=datetime.now(timezone.utc),
+            )
+        )
+        # Teams: eine Mitgliedschaft mit Einwilligung, die Einwilligung "Team
+        # oeffentlich am Namen zeigen" und eine Admin-Einstellung der Person.
+        s.add(
+            TeamMitgliedschaftZeile(
+                konto_kennung=PERSON,
+                team_name="BDK 26 Berlin",
+                team_motiv="vogel",
+                saison="2026",
+                nummer=1,
+                eingetreten_am=date(2026, 11, 25),
+                einwilligung_kennung="team-2026-11-25",
+                einwilligung_zeitpunkt=datetime.now(timezone.utc),
+            )
+        )
+        s.add(
+            TeamOeffentlichZeile(
+                konto_kennung=PERSON,
+                zeigen=True,
+                einwilligung_kennung="team-oeffentlich-2026-11-25",
+                beantwortet_am=datetime.now(timezone.utc),
+            )
+        )
+        s.add(
+            EinstellungZeile(
+                name="aktuelle_saison",
+                wert="2026",
+                geaendert_am=datetime.now(timezone.utc),
+                geaendert_von=PERSON,
             )
         )
         # Ein Loeschauftrag nach einem Widerruf (DSFA R9b).

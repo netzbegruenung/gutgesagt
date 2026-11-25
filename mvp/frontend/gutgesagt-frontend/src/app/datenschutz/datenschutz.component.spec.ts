@@ -521,6 +521,82 @@ describe('DatenschutzComponent', () => {
     });
   });
 
+  describe('Teams über Einladungen', () => {
+    it('Einladung: das Team nur mit ausdrücklicher Zustimmung, nie die Einladung', () => {
+      const text = abschnitt('Konto aus einer Einladung');
+
+      expect(text).toContain('Am Konto steht nicht, über welche Einladung es entstand');
+      expect(text).toContain(
+        'Nur wenn eine Einladung zu einem Team gehört und du ausdrücklich zustimmst, speichern wir dein Team (siehe „Teams“), nicht aber die Einladung.'
+      );
+    });
+
+    it('Teams: was gespeichert wird, ohne Einladung, nur für dich, Admins nur die Zahl', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain(
+        'deine Kennung, den Namen des Teams, deine laufende Nummer im Team und den Tag, an dem du beigetreten bist'
+      );
+      expect(text).toContain('Welche Einladung du genutzt hast, speichern wir nicht.');
+      expect(text).toContain('Sagst du nein, speichern wir nichts davon');
+      expect(text).toContain('Deine Teams siehst nur du, unter „Meine Teams“.');
+      expect(text).toContain('sehen je Team nur, wie viele dabei sind, keine Namen und keine Liste');
+    });
+
+    it('Teams: eigene Einwilligung nach Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a, getrennt von den anderen', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain('Artikel 6 Absatz 1 Buchstabe a und Artikel 9 Absatz 2 Buchstabe a DSGVO');
+      expect(text).toContain('Du gibst sie mit dem Knopf „Ja, speichert …“, nichts ist vorausgewählt.');
+      expect(text).toContain('getrennt von der Einwilligung zu deiner Mitwirkung und von „Punkte und Meilensteine“');
+      expect(text).toContain('mit der Kennung des Wortlauts und dem Zeitpunkt als Nachweis');
+    });
+
+    it('Teams: der Nachweis bleibt, solange du im Team bist, nicht bis zur Kontolöschung (25.11.2026)', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Deine Antwort speichern wir mit der Kennung des Wortlauts und dem Zeitpunkt als Nachweis, solange du im Team bist.'
+      );
+      expect(text).not.toContain('als Nachweis, bis dein Konto gelöscht wird');
+    });
+
+    it('Teams: Zweck mit der Summe des Teams (25.11.2026)', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Zweck: dir zu zeigen, in welchen Teams du dabei bist, und die Nummer in deinem Team zu vergeben und die Summe deines Teams zu bilden.'
+      );
+    });
+
+    it('Teams: die Team-Summe mit derselben Einwilligung, noch nicht eingeschaltet (25.11.2026)', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Diese Anzeige am Namen ist noch nicht eingeschaltet. ' +
+          'Mit derselben Einwilligung darf die Zahl deiner Beiträge und Bewertungen in eine Summe deines Teams eingehen. ' +
+          'Diese Summe sehen nur Mitglieder des Teams, nur für abgeschlossene Wochen, erst wenn mindestens fünf ' +
+          'Mitglieder eingewilligt haben, gerundet und nie mit einzelnen Namen. Die Team-Summe ist noch nicht eingeschaltet.'
+      );
+    });
+
+    it('Teams: „Team verlassen“ löscht sofort, Nummer nicht neu, Sicherungskopien bis zum Ablauf', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain('„Team verlassen“');
+      expect(text).toContain('wir löschen den Eintrag sofort');
+      expect(text).toContain('Deine Nummer vergeben wir nicht neu.');
+      expect(text).toContain('siehe „Sicherungskopien“');
+    });
+
+    it('Teams: die Anzeige am Namen ist noch nicht eingeschaltet und braucht eine eigene Frage', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain('fragen wir dich vorher gesondert');
+      expect(text).toContain('Diese Anzeige am Namen ist noch nicht eingeschaltet.');
+    });
+  });
+
   describe('Suchvorgänge (#239, #289, #495)', () => {
     it('nennt den Tag statt eines Zeitpunkts und das Ende des Tages als Frist mit Tageszähler', () => {
       const text = abschnitt('Suchvorgänge');
@@ -781,6 +857,27 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('wenn du es selbst wählst');
       expect(text).toContain('bis du die Wahl zurücksetzt');
       expect(text).toContain('Ohne eigene Wahl speichern wir nichts');
+    });
+
+    it('Gerätespeicher: der Merker einer Einladung mit Team, höchstens drei Tage, nach dem Lesen gelöscht (team-merker.ts)', () => {
+      const text = abschnitt('Weitere Einträge').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Sagst du ohne Konto bei einer Einladung zu einem Team „Ja, speichert …“, merkt sich dein Browser, auch über ' +
+          'das Schließen des Tabs hinaus, den Code der Einladung, die Kennung des Wortlauts, dem du zugestimmt hast, ' +
+          'ob du der zweiten Frage zugestimmt hast, ob deine Teams an deinem Namen erscheinen dürfen (ohne diese ' +
+          'Frage: nein), und bis wann der Eintrag gilt.'
+      );
+      expect(text).toContain('Damit trägt er deine Antwort bis zur Anmeldung nach dem Anlegen deines Kontos.');
+      expect(text).toContain(
+        'Hast du schon ein Konto und willst dich zum Beitreten erst anmelden, merkt er sich nur den Code, bis du angemeldet zurückkommst.'
+      );
+      expect(text).toContain('Den Namen des Teams und deine Nummer enthält der Eintrag nie.');
+      expect(text).toContain('Er gilt höchstens drei Tage, so lange wie der Link in der Mail.');
+      expect(text).toContain(
+        'Wir löschen ihn, sobald die Seite der Einladung ihn nach deiner Anmeldung gelesen hat, und einen abgelaufenen ' +
+          'Eintrag beim nächsten Aufruf der Einladung.'
+      );
     });
 
     it('Gerätespeicher: Willkommen und Rundgang „Mitmachen“ als zwei Vermerke ohne Übertragung (#516)', () => {

@@ -118,4 +118,121 @@ describe('EinladungenComponent', () => {
 
     expect(el().textContent).toContain('gerade nicht erreichbar, neuer Versuch in Kürze');
   });
+  describe('Teams', () => {
+    const MOTIVE = [
+      { schluessel: 'vogel', name: 'Vogel' },
+      { schluessel: 'sprechblase', name: 'Sprechblase' },
+      { schluessel: 'handschlag', name: 'Handschlag' },
+      { schluessel: 'laufschuh', name: 'Laufschuh' },
+      { schluessel: 'waage', name: 'Waage' },
+      { schluessel: 'lautsprecher', name: 'Lautsprecher' },
+    ];
+    const TEAMLINK: Einladung = {
+      ...GRUPPE,
+      id: 't1',
+      notiz: 'Stand BDK',
+      team: { name: 'BDK 26 Berlin', motiv: 'vogel', saison: '2026', mitglieder: 36 },
+    };
+
+    function mitTeams(einladungen: Einladung[], aktiv = true) {
+      http.expectOne(URL).flush({
+        einloesen_eingerichtet: true,
+        einladungen,
+        teams_aktiv: aktiv,
+        aktuelle_saison: '2026',
+        motive: MOTIVE,
+        teamname_hinweis: 'Nur nach Anlass, Ort oder Saison benennen.',
+      });
+      fixture.detectChanges();
+    }
+
+    it('zeigt ohne Schalter teams weder Teamblock noch Spalten', () => {
+      mitTeams([GRUPPE], false);
+
+      expect(el().querySelector('[data-testid="team-block"]')).toBeNull();
+      expect(el().querySelector('[data-testid="team"]')).toBeNull();
+      expect(el().textContent).not.toContain('Mitglieder');
+    });
+
+    it('zeigt den Block „Team (optional)“ mit Saison-Vorschlag, Hinweis und allen Motiven mit Namen', () => {
+      mitTeams([]);
+
+      const block = el().querySelector('[data-testid="team-block"]') as HTMLElement;
+      expect(block.querySelector('legend')!.textContent).toContain('Team (optional)');
+      expect(block.textContent).toContain('Nur nach Anlass, Ort oder Saison benennen.');
+      const motive = Array.from(block.querySelectorAll('[data-testid="motiv"]'));
+      expect(motive.length).toBe(6);
+      expect(motive.map((m) => m.textContent!.trim())).toEqual(MOTIVE.map((m) => m.name));
+      expect(motive.every((m) => m.querySelector('img[src^="/meilensteine/"]'))).toBeTrue();
+      expect(block.querySelector('mat-radio-group')!.getAttribute('role')).toBe('radiogroup');
+      expect(fixture.componentInstance.teamSaison).toBe('2026');
+      expect((block.querySelector('input[name="teamName"]') as HTMLInputElement).maxLength).toBe(40);
+    });
+
+    it('legt einen Teamlink mit Name, Motiv und Saison an', () => {
+      mitTeams([]);
+      const k = fixture.componentInstance;
+      k.notiz = 'Stand BDK';
+      k.erlaubteEinloesungen = 50;
+      k.gueltigBis = '2026-12-06';
+      k.teamName = '  BDK 26 Berlin ';
+      k.teamMotiv = 'waage';
+
+      k.anlegen();
+
+      const anfrage = http.expectOne((r) => r.method === 'POST' && r.url === URL);
+      expect(anfrage.request.body).toEqual({
+        notiz: 'Stand BDK',
+        erlaubte_einloesungen: 50,
+        gueltig_bis: '2026-12-06',
+        team_name: 'BDK 26 Berlin',
+        team_motiv: 'waage',
+        team_saison: '2026',
+      });
+      anfrage.flush({ ...TEAMLINK, team: { ...TEAMLINK.team!, mitglieder: 0 } });
+      fixture.detectChanges();
+      expect(k.teamName).toBe('');
+    });
+
+    it('sperrt Anlegen mit Teamname ohne Saison oder mit verbotenen Zeichen', () => {
+      mitTeams([]);
+      const k = fixture.componentInstance;
+      k.notiz = 'Stand';
+      k.teamName = 'Team';
+      k.teamSaison = ' ';
+      expect(k.kannAnlegen).toBeFalse();
+      k.teamSaison = '2026';
+      expect(k.kannAnlegen).toBeTrue();
+      k.teamName = 'a/b';
+      expect(k.kannAnlegen).toBeFalse();
+      k.anlegen();
+      http.expectNone((r) => r.method === 'POST');
+    });
+
+    it('zeigt in der Liste Team mit Motiv und Saison und nur die Zahl der Mitglieder', () => {
+      mitTeams([TEAMLINK, GRUPPE]);
+
+      const [mit, ohne] = Array.from(el().querySelectorAll('[data-testid="einladung"]'));
+      const team = mit.querySelector('[data-testid="team"]')!;
+      expect(team.textContent).toContain('BDK 26 Berlin');
+      expect(team.textContent).toContain('2026');
+      expect(team.querySelector('img')!.getAttribute('src')).toBe('/meilensteine/vogel.svg');
+      expect(mit.querySelector('[data-testid="mitglieder"]')!.textContent!.trim()).toBe('36');
+      expect(ohne.querySelector('[data-testid="team"]')!.textContent).toContain('kein Team');
+      expect(el().textContent).toContain('nur die Zahl der Mitglieder');
+    });
+
+    it('übernimmt beim Nachladen einen neuen Saison-Vorschlag nur, wenn niemand die Saison geändert hat', () => {
+      mitTeams([]);
+      const k = fixture.componentInstance;
+      k.teamSaison = 'Winter';
+      (k as unknown as { uebernehmen(l: unknown): void }).uebernehmen({
+        einloesen_eingerichtet: true,
+        einladungen: [],
+        teams_aktiv: true,
+        aktuelle_saison: '2027',
+      });
+      expect(k.teamSaison).toBe('Winter');
+    });
+  });
 });

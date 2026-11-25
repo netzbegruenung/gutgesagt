@@ -188,7 +188,7 @@ class TestPruefen:
 
 class TestAbschalten:
     def test_abschalten_und_wieder_einschalten(self, repository):
-        repository.schalten.return_value = _zeile(abgeschaltet=True)
+        repository.aendern.return_value = _zeile(abgeschaltet=True)
         service = EinladungService(repository, None)
 
         einladung = service.schalten(uuid.uuid4(), True)
@@ -196,6 +196,6 @@ class TestAbschalten:
         assert einladung is not None and einladung.abgeschaltet is True
 
     def test_unbekannte_einladung(self, repository):
-        repository.schalten.return_value = None
+        repository.aendern.return_value = None
 
         assert EinladungService(repository, None).schalten(uuid.uuid4(), True) is None

@@ -152,6 +152,45 @@ def schalter_admin_alle_an():
 
 
 @pytest.fixture(autouse=True)
+def einstellungen_ohne_datenbank():
+    """
+    Admin-Einstellungen mit Textwert (services/einstellungen_service.py) ohne
+    Datenbank: keine gespeicherten Werte, es gilt der Standard. Tests setzen Werte
+    ueber das zurueckgegebene Dict.
+    """
+    from services.einstellungen_service import (
+        EinstellungenService,
+        einstellungen_service_setzen,
+    )
+
+    werte: dict = {}
+    einstellungen_service_setzen(
+        EinstellungenService(
+            lesen=lambda: werte,
+            setzen=lambda name, wert, admin: werte.__setitem__(name, wert),
+        )
+    )
+    yield werte
+    einstellungen_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
+def teams_ohne_datenbank():
+    """
+    Der TeamService haengt an Antworten mit Anzeigenamen (Teams am Namen). Ohne Ersatz
+    baute er bei wirksamem Schalter das echte Repository; der Ersatz kennt keine
+    Teams. Tests mit Teams setzen einen eigenen Dienst (team_service_setzen).
+    """
+    from services.team_service import TeamService, team_service_setzen
+
+    repository = MagicMock()
+    repository.oeffentliche_teams.return_value = {}
+    team_service_setzen(TeamService(repository))
+    yield repository
+    team_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
 def anzeigenamen_ohne_datenbank(monkeypatch):
     """
     Der AnzeigenameService haengt an jeder angemeldeten Antwort. Ohne diesen Ersatz

@@ -120,7 +120,7 @@ listens on 5432 inside the container.
 
 ### PostgreSQL
 - **Purpose**: Application data — votes, usage tracking, search tracking, moderation reports,
-  Sperren with Sperrgrund and Widerspruch (`sperren`), and per person the usage last shown in the Rückmeldung (`gesehene_nutzung`); for the entdoppelte Nutzung the check values of the current day (`nutzung_heute`, HMAC only), the pair check values of the last seven days (`muster_pruefwerte`, HMAC only) and the Muster-Hinweise for admins (`muster_hinweise`, #352); for „Ja, gepostet“ after copying the check values of the current calendar week (`gepostet_pruefwerte`, HMAC only) and one number per past week (`gepostet_wochen`, #643, switch `SEMANTIC_SEARCH_GEPOSTET_AKTIV`, default off).
+  Sperren with Sperrgrund and Widerspruch (`sperren`), and per person the usage last shown in the Rückmeldung (`gesehene_nutzung`); for the entdoppelte Nutzung the check values of the current day (`nutzung_heute`, HMAC only), the pair check values of the last seven days (`muster_pruefwerte`, HMAC only) and the Muster-Hinweise for admins (`muster_hinweise`, #352); for „Ja, gepostet“ after copying the check values of the current calendar week (`gepostet_pruefwerte`, HMAC only) and one number per past week (`gepostet_wochen`, #643, switch `SEMANTIC_SEARCH_GEPOSTET_AKTIV`, default off); for the Teams the Mitgliedschaften without any reference to the invitation (`team_mitgliedschaften`), the counter per team and Saison (`team_nummern`), the answer on showing teams at the name (`team_oeffentlich`) and admin settings such as the current Saison (`einstellungen`), switch `SEMANTIC_SEARCH_TEAMS_AKTIV`, default off.
   Content and its vector embeddings live in Qdrant, not in PostgreSQL.
 - **Image**: `postgres:16-alpine` (service `postgres-app`, container `gutgesagt-app-postgres`)
 - **Access**:
@@ -304,6 +304,9 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   address, so operations raise them there. `<LIMIT>` and default: `AEHNLICHE_AUSSAGEN` 60 and
   `SUCHAUSSAGE` 60 (10 min), `FEEDBACK` 5, `MELDUNG` 5, `EINLADUNG` 30, `EINLADUNG_PRUEFEN` 60
   (15 min each). The windows are fixed: the privacy policy names the periods that follow from them.
+  `SEMANTIC_SEARCH_TEAM_BEITRETEN_RATE_LIMIT_ANFRAGEN` (default 20 in 15 min) limits
+  `POST /api/v1/einladungen/beitreten` per logged-in person instead of per Anschluss, so joins in a
+  venue WLAN do not use up the budget for redeeming without an account.
 - `SEMANTIC_SEARCH_DIESELBE_AUSSAGE_NLI` - NLI-Stufe (#387): `aus`, `schatten` (for the
   same-Aussage check the similarity threshold decides and the NLI model only counts along) or
   `an` (default since #575, as on test and production: the NLI model decides whether a new text
@@ -360,6 +363,48 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   `antworten_auf_eigene_aussagen` (answers by others to one's own Aussagen, linked in the last
   7 days; `null` while off) and `GET /api/v1/usage/users/me/aussagen` lists one's own Aussagen
   with their answers (404 while off), `services/antworten_hinweis.py`.
+- `SEMANTIC_SEARCH_TEAMS_AKTIV` - upper bound of the Schalter `teams` (Teams over
+  invitations, GLOSSARY.md "Team", "Teamlink", "Mitgliedschaft", "Saison"; default `false`: a
+  Mitgliedschaft may reveal political leaning and place, so it needs its own consent, the DSFA
+  addendum and the privacy policy section "Teams"); takes effect only when an admin switches it
+  on too (`services/team_service.py`, `domain/teams.py`). While off, team fields of invitations
+  are ignored, every invitation is a plain account link, and `POST /api/v1/einladungen/beitreten`
+  answers 404. `GET /api/v1/teams/meine` answers 404 only when the person has no Mitgliedschaft;
+  existing ones are still listed (`teams_aktiv: false`, no public toggle) so that leaving a team
+  stays as easy as joining (Art. 7(3) GDPR). While on:
+  - Admin: `GET /api/v1/einladungen` adds `team` `{name, motiv, saison, mitglieder}` per
+    invitation (`mitglieder` is only a count; no member list, export or API on other people's
+    memberships exists, admins included), plus `teams_aktiv`, `aktuelle_saison`, `motive` and
+    `teamname_hinweis`; `POST` and `PATCH /api/v1/einladungen` accept `team_name` (at most 40
+    characters, requires `team_motiv`), `team_motiv` (one of the Meilenstein motifs) and
+    `team_saison` (at most 20, default the current Saison).
+  - Redeeming: `POST /api/v1/einladungen/pruefen` returns `team` with the greeting, the next
+    number and the consent wording `team-2026-11-25` plus both button texts. For a logged-in
+    member it returns `team` with `eigene_nummer` even when the invitation is no longer
+    redeemable ("schon dabei"); everyone else gets no team then.
+    `POST /api/v1/einladungen/einloesen` stores a Mitgliedschaft only with
+    `team_einwilligung: true` plus `team_einwilligung_kennung` (the wording id shown; unknown or
+    missing: 422) and only when Keycloak creates a new account. The stored id is the one shown,
+    not the current one.
+  - Joining while logged in: `POST /api/v1/einladungen/beitreten` `{code, einwilligung: true,
+    einwilligung_kennung, oeffentlich?, oeffentlich_kennung?}` counts against the invitation's
+    limit once; a second join returns the existing number (`neu: false`). Own rate limit per
+    person (see above).
+  - Own teams only: `GET /api/v1/teams/meine` (all Saisons, newest first),
+    `DELETE /api/v1/teams/meine/{id}` ("Team verlassen", deletes at once, also with the switch
+    off; the number is never reassigned) and `PUT /api/v1/teams/oeffentlich` (second consent
+    `team-oeffentlich-2026-11-25`; withdrawing always works).
+  - Admin setting `aktuelle_saison` (table `einstellungen`, default the current UTC year):
+    `GET /api/v1/moderation/schalter` lists it under `einstellungen`,
+    `PUT /api/v1/moderation/schalter/einstellungen/{name}` `{wert}` changes it.
+- `SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV` - upper bound of the Schalter `teams_oeffentlich`
+  (default `false`; stays off on production until the data protection officer has advised).
+  Own bound, deliberately not coupled to `SEMANTIC_SEARCH_ABZEICHEN_SICHTBAR_AKTIV`; works only
+  together with `teams`, and an admin has to switch it on too. While on, logged-in viewers get
+  `autor_teams` `[{name, motiv, motiv_name}]` at a post, the teams of the current Saison of
+  authors who gave the second consent (no number); visitors never. While off, the second
+  question is not asked, `GET /api/v1/teams/meine` reports `oeffentlich_verfuegbar: false` and
+  `autor_teams` stays `null`.
 - `DOCKER_CONTAINER` - set to `true` inside containers to enforce strict path validation
 
 ## Startup Scripts

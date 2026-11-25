@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { stillerKontext } from '../selbst-nachladen';
+import { BeitretenAntwort, PruefenAntwort, TeamAntwort } from './team-einladung';
 
 // Grenzen wie im Backend (services/einladung_service.py).
 export const EINLADUNG_NOTIZ_MAX = 200;
@@ -33,11 +34,34 @@ export interface Einladung {
   abgeschaltet: boolean;
   angelegt_am: string;
   zustand: EinladungZustand;
+  /** Team an der Einladung, nur mit Schalter teams; ``mitglieder`` ist nur eine Zahl, nie wer. */
+  team?: EinladungTeam | null;
+}
+
+export interface EinladungTeam {
+  name: string;
+  motiv: string | null;
+  saison: string;
+  mitglieder: number;
+}
+
+/** Team für eine neue Einladung (POST): Name nur nach Anlass, Ort oder Saison. */
+export interface EinladungTeamFelder {
+  team_name: string;
+  team_motiv: string;
+  team_saison: string;
 }
 
 export interface EinladungListe {
   einloesen_eingerichtet: boolean;
   einladungen: Einladung[];
+  /** Schalter teams wirkt: nur dann der Block „Team (optional)“ im Formular. */
+  teams_aktiv?: boolean;
+  /** Vorschlag für die Saison neuer Teamlinks (Admin-Einstellung). */
+  aktuelle_saison?: string | null;
+  motive?: { schluessel: string; name: string }[];
+  /** Hinweis zum Teamnamen fürs Formular. */
+  teamname_hinweis?: string | null;
 }
 
 /** Der Link, den ein Admin weitergibt. Der Code steht hinter #, damit er in keinem Server-Log landet. */
@@ -60,11 +84,18 @@ export class EinladungService {
     return this.http.get<EinladungListe>(this.baseUrl, { context: still ? stillerKontext() : undefined });
   }
 
-  anlegen(notiz: string, erlaubteEinloesungen: number, gueltigBis: string): Observable<Einladung> {
+  /** ``team``: optional; ohne Schalter teams ignoriert der Server die Teamfelder. */
+  anlegen(
+    notiz: string,
+    erlaubteEinloesungen: number,
+    gueltigBis: string,
+    team?: EinladungTeamFelder,
+  ): Observable<Einladung> {
     return this.http.post<Einladung>(this.baseUrl, {
       notiz,
       erlaubte_einloesungen: erlaubteEinloesungen,
       gueltig_bis: gueltigBis,
+      ...(team ?? {}),
     });
   }
 
@@ -72,13 +103,36 @@ export class EinladungService {
     return this.http.patch<Einladung>(`${this.baseUrl}/${id}`, { abgeschaltet });
   }
 
-  pruefen(code: string): Observable<boolean> {
+  /** Ob die Einladung gilt und, bei wirksamem Schalter teams, ihr Team (sonst null). */
+  pruefen(code: string): Observable<PruefenAntwort> {
     return this.http
-      .post<{ einloesbar: boolean }>(`${this.baseUrl}/pruefen`, { code })
-      .pipe(map((antwort) => antwort.einloesbar));
+      .post<Partial<PruefenAntwort>>(`${this.baseUrl}/pruefen`, { code })
+      .pipe(map((antwort) => ({ einloesbar: antwort?.einloesbar === true, team: antwort?.team ?? null })));
   }
 
-  einloesen(code: string, email: string, vorname: string, nachname: string): Observable<unknown> {
-    return this.http.post(`${this.baseUrl}/einloesen`, { code, email, vorname, nachname });
+  /** ``team``: nur bei einer Einladung mit Team; ohne bleibt der Aufruf wie vor den Teams. */
+  einloesen(code: string, email: string, vorname: string, nachname: string, team?: TeamAntwort): Observable<unknown> {
+    const oeffentlich = !!team?.einwilligung && team.oeffentlich && !!team.oeffentlichKennung;
+    const teamfelder = team
+      ? {
+          team_einwilligung: team.einwilligung,
+          team_oeffentlich: oeffentlich,
+          ...(team.einwilligung ? { team_einwilligung_kennung: team.einwilligungKennung } : {}),
+          ...(oeffentlich ? { team_oeffentlich_kennung: team.oeffentlichKennung } : {}),
+        }
+      : {};
+    return this.http.post(`${this.baseUrl}/einloesen`, { code, email, vorname, nachname, ...teamfelder });
+  }
+
+  /** Angemeldet dem Team der Einladung beitreten, nach dem Knopf „Ja, speichert …“. */
+  beitreten(code: string, team: TeamAntwort): Observable<BeitretenAntwort> {
+    const oeffentlich = team.oeffentlich && !!team.oeffentlichKennung;
+    return this.http.post<BeitretenAntwort>(`${this.baseUrl}/beitreten`, {
+      code,
+      einwilligung: true,
+      einwilligung_kennung: team.einwilligungKennung,
+      oeffentlich,
+      ...(oeffentlich ? { oeffentlich_kennung: team.oeffentlichKennung } : {}),
+    });
   }
 }

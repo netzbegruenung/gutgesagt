@@ -63,6 +63,13 @@ DELETE FROM abzeichen_sichtbarkeit WHERE user_id      = :'uid';
 DELETE FROM punkte_einwilligung WHERE user_id         = :'uid';
 -- Zustimmung zu den Nutzungsbedingungen in der App
 DELETE FROM nutzungsbedingungen_zustimmungen WHERE user_id = :'uid';
+-- Teams: Mitgliedschaften samt Einwilligungsnachweis und die Einwilligung "Team
+-- oeffentlich am Namen zeigen". Die vergebenen Nummern bleiben vergeben (team_nummern
+-- traegt keine Kennung).
+DELETE FROM team_mitgliedschaften WHERE konto_kennung = :'uid';
+DELETE FROM team_oeffentlich WHERE konto_kennung      = :'uid';
+-- Admin-Einstellungen: der Wert bleibt, die Kennung des Admins geht.
+UPDATE einstellungen SET geaendert_von = NULL WHERE geaendert_von = :'uid';
 -- Loeschauftraege nach einem Widerruf, offene wie erledigte: Die Kontoloeschung
 -- erledigt mehr als jeder Auftrag.
 DELETE FROM loeschauftraege WHERE user_id             = :'uid';
