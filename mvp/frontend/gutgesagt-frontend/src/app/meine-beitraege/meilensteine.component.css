@@ -187,7 +187,8 @@
   gap: 8px;
 }
 
-.sichtbarkeit-stand {
+.sichtbarkeit-stand,
+.punkte-frage-stand {
   margin: 8px 0 0;
   font-size: 14px;
   color: var(--text-leise);
@@ -197,7 +198,8 @@
   margin-left: 4px;
 }
 
-.sichtbarkeit-fehler {
+.sichtbarkeit-fehler,
+.punkte-frage-fehler {
   margin: 8px 0 0;
   font-size: 14px;
   color: var(--fehler);

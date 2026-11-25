@@ -286,6 +286,11 @@ describe('DatenschutzComponent', () => {
 
       expect(text).toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
       expect(text).toContain('nichts ist vorausgewählt');
+      // Mit Schalter einwilligung_im_gewinn auch als Frage mit zwei Knöpfen (#788, Jura 25.11.)
+      expect(text).toContain(
+        'Du gibst sie selbst unter „Meine Beiträge“ (Häkchen oder Frage mit zwei gleichwertigen Knöpfen) ' +
+          'oder mit einem eigenen Häkchen in den „Datenschutz-Einstellungen“',
+      );
       expect(text).toContain('Ohne sie kannst du genauso beitragen und bewerten');
       expect(text).toContain('jederzeit in den „Datenschutz-Einstellungen“ widerrufen; danach wird nichts mehr berechnet');
       expect(text).not.toContain('Bevor wir Punkte einschalten');
