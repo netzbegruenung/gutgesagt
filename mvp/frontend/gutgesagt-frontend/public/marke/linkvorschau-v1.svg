@@ -1,34 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500">
-<!-- Linkvorschau (og:image) fuer Messenger, 1200 x 500 (2,4:1). Flacher als das uebliche 1200 x 630, damit die
-     Karte im Chat weniger hoch wird (Sebastian 26.11.2026: "nicht ganz so riesig groß, weniger höhe"); WhatsApp
-     zeigt grosse Vorschauen bis 4:1 (Meta, WhatsApp Business Platform, Link previews), Telegram gross mit
-     twitter:card summary_large_image. linkvorschau-v1.png ist aus dieser Zeichnung gerendert (Chromium,
-     Schriften aus ../fonts/). Das Bild gilt fuer jede geteilte Seite, auch /beitrag/<id> und /result (dort
-     setzt nginx nur Titel und Beschreibung ein, das Bild bleibt): deshalb zeigt es den Ablauf ohne einen
-     bestimmten Beitrag. Absender Netzbegruenung, keine Personen, keine Anzeigenamen. Logo: logo-v2.svg (Hand
-     "Thumbs up" aus Fluent Emoji, Copyright (c) Microsoft Corporation, MIT-Lizenz, siehe
-     FLUENT-EMOJI-LIZENZ.txt). Schriften: GrueneType und PT Sans, dieselben Dateien wie in der App
-     (src/styles.css). Farben wie das Teilen-Bild (sharepic.ts): Grund App-Gelb #f6ff7c, Tannengruen #005437,
-     Text #1f1f1f, alle Paare ueber 4,5:1. Alles mittig in einer Spalte (x 285 bis 915 fuer Logo und Claim),
-     damit ein quadratischer Ausschnitt sie behaelt. -->
+<!-- Linkvorschau (og:image) fuer Messenger und soziale Netzwerke, 1200 x 500 (2,4:1). Flacher als das uebliche
+     1200 x 630, damit die Karte im Chat nicht so hoch wird; WhatsApp zeigt grosse Vorschauen bis 4:1 (Meta,
+     WhatsApp Business Platform, Link previews), Telegram gross mit twitter:card summary_large_image.
+     Satz und Optik hat Sebastian am 26.11.2026 aus fuenf Varianten gewaehlt: "Darauf gibt's eine gute Antwort."
+     gross in Tannengruen auf App-Gelb, Logo rechts. Der Satz passt ueber jede geteilte Seite: Bei /beitrag/<id>
+     und /result setzt nginx nur Titel und Beschreibung ein, das Bild bleibt, und der Titel darunter ist dann die
+     Antwort. Absender Netzbegruenung, keine Personen, keine Anzeigenamen. linkvorschau-v1.png ist aus dieser
+     Zeichnung gerendert (Chromium, Schriften aus ../fonts/). Logo: logo-v2.svg (Hand "Thumbs up" aus Fluent
+     Emoji, Copyright (c) Microsoft Corporation, MIT-Lizenz, siehe FLUENT-EMOJI-LIZENZ.txt). Schriften: GrueneType
+     und PT Sans wie in der App (src/styles.css). Farben wie das Teilen-Bild (sharepic.ts): #f6ff7c, #005437,
+     #1f1f1f, alle Paare ueber 4,5:1. -->
 <style>
 @font-face{font-family:GT;src:url(../fonts/GrueneTypeNeue-Regular.woff2)}
-@font-face{font-family:PT;src:url(../fonts/PTS55F.ttf)}
 @font-face{font-family:PTB;src:url(../fonts/PTS75F.ttf)}
-.marke{font-family:GT;fill:#005437}
-.t{font-family:PT;fill:#1f1f1f;font-size:36px}
-.s{font-family:PTB;fill:#fff;font-size:34px}
-.f{font-family:PTB;fill:#005437;font-size:28px}
+.gt{font-family:GT;fill:#005437}
+.f{font-family:PTB;fill:#005437;font-size:36px}
 </style>
 <rect width="1200" height="500" fill="#f6ff7c"/>
-<image href="logo-v2.svg" x="472" y="44" width="70" height="70"/>
-<text class="marke" x="554" y="96" font-size="44">Gut gesagt</text>
-<text class="marke" x="600" y="200" font-size="76" text-anchor="middle">Nie wieder sprachlos</text>
-<g transform="translate(600 238)">
-  <rect x="-250" width="500" height="62" rx="31" fill="#005437"/>
-  <path d="M-212 56 L-222 80 L-184 58 Z" fill="#005437"/>
-  <text class="s" y="43" text-anchor="middle">Die Parole im Familienchat?</text>
-</g>
-<text class="t" x="600" y="358" text-anchor="middle">Darauf eine bewährte Antwort: finden, kopieren, posten.</text>
-<text class="f" x="600" y="448" text-anchor="middle">Netzbegrünung · gutgesagt.netzbegruenung.de</text>
+<text class="gt" x="80" y="190" font-size="112">Darauf gibt’s</text>
+<text class="gt" x="80" y="310" font-size="112">eine gute Antwort.</text>
+<text class="f" x="84" y="410">Gut gesagt · Netzbegrünung</text>
+<image href="logo-v2.svg" x="910" y="110" width="230" height="230"/>
 </svg>
