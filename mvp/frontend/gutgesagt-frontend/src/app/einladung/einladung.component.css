@@ -93,8 +93,25 @@ form .email + button {
   background: var(--flaeche);
 }
 
-.team-kasten .team-ticket {
-  margin-bottom: 0;
+/* Vor dem Ja: Motiv klein und ohne Medaillon, der Name steht daneben */
+.team-motiv-zeile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.team-motiv-zeile img {
+  flex: none;
+}
+
+/* Hinweis im Kasten, gut lesbar (nicht leise): betrifft, ob überhaupt gespeichert wird */
+.team-hinweis {
+  padding: 8px 12px;
+  border-left: 4px solid var(--akzent-tanne);
+  background: var(--flaeche);
 }
 
 .team-medaillon {

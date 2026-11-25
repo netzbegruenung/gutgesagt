@@ -106,10 +106,16 @@ describe('EinladungComponent mit Team', () => {
       // Die Sätze vor dem Ja: was, wer es sieht, Widerruf
       expect(kasten.textContent).toContain('Das siehst nur du, unter „Meine Teams“.');
       expect(kasten.textContent).toContain('mit „Team verlassen“ widerrufen');
+      // Vor dem Ja kein Ticket und kein Medaillon; das Motiv klein, mit Namen daneben
       const bild = kasten.querySelector('img')!;
       expect(bild.getAttribute('src')).toBe('/meilensteine/vogel.svg');
-      expect(bild.getAttribute('alt')).toBe('Motiv Vogel');
+      expect(bild.getAttribute('alt')).toBe('');
+      expect(kasten.querySelector('[data-testid="team-motiv"]')?.textContent).toContain('Motiv: Vogel');
+      expect(kasten.querySelector('.team-ticket, .team-medaillon')).toBeNull();
+      expect(kasten.textContent).not.toContain('Deine Nummer');
       expect(kasten.textContent).toContain('Team BDK 26 Berlin');
+      // Wer schon ein Konto hat, wird vor dem Formular zur Anmeldung geschickt
+      expect(kasten.querySelector('[data-testid="team-schon-konto"]')?.textContent).toContain('melde dich zuerst an');
       expect(knopf('team-ja').textContent?.trim()).toBe('Ja, speichert, dass ich im Team BDK 26 Berlin bin');
       expect(knopf('team-nein').textContent?.trim()).toBe('Nein, ohne Team weiter');
       // gleichwertig: dieselbe Art Knopf, nichts vorausgewählt
@@ -162,12 +168,19 @@ describe('EinladungComponent mit Team', () => {
         nachname: 'Beispiel',
         team_einwilligung: true,
         team_oeffentlich: false,
+        team_einwilligung_kennung: 'team-2026-11-24',
       });
       anfrage.flush({ success: true }, { status: 202, statusText: 'Accepted' });
       fixture.detectChanges();
 
       expect(el().textContent).toContain('Postfach');
-      expect(el().querySelector('[data-testid="team-nach-mail"]')).not.toBeNull();
+      // Ehrlich: bei einem schon vorhandenen Konto entsteht kein Team
+      const nachMail = el().querySelector('[data-testid="team-nach-mail"]')!;
+      expect(nachMail.textContent).toContain('Gab es zu deiner Adresse schon ein Konto, speichern wir kein Team');
+      // „melde dich an“ führt mit Merker zurück auf die Seite, wo noch einmal gefragt wird
+      const link = Array.from(el().querySelectorAll('a')).find((a) => a.textContent?.includes('melde dich an'))!;
+      link.click();
+      expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/einladung' } });
       expect(teamMerkerLesen()).toEqual({ code: 'Code123', kennung: 'team-2026-11-24', oeffentlich: false });
       expect(localStorage.getItem(TEAM_MERKER_SCHLUESSEL)).not.toContain('BDK');
     });
@@ -188,6 +201,7 @@ describe('EinladungComponent mit Team', () => {
       const anfrage = http.expectOne(`${URL}/einloesen`);
       expect(anfrage.request.body.team_einwilligung).toBeTrue();
       expect(anfrage.request.body.team_oeffentlich).toBeTrue();
+      expect(anfrage.request.body.team_oeffentlich_kennung).toBe('team-oeffentlich-2026-11-25');
       anfrage.flush({ success: true }, { status: 202, statusText: 'Accepted' });
 
       expect(teamMerkerLesen()?.oeffentlich).toBeTrue();
@@ -228,11 +242,29 @@ describe('EinladungComponent mit Team', () => {
       starten('Code123');
       pruefen({ einloesbar: true, team: team() });
 
-      const link = Array.from(el().querySelectorAll('a')).find((a) => a.textContent?.includes('melde dich an'))!;
+      const link = Array.from(el().querySelectorAll('a')).find((a) => a.textContent?.includes('melde dich zuerst an'))!;
       link.click();
 
       expect(teamMerkerLesen()).toEqual({ code: 'Code123', kennung: null, oeffentlich: false });
       expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/einladung' } });
+    });
+
+    it('sagt bei inzwischen geändertem Wortlaut (422 an der Kennung) nicht, die Adresse sei falsch', () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team() });
+      klick('team-ja');
+      formularAusfuellen();
+      fixture.componentInstance.einloesen();
+      http
+        .expectOne(`${URL}/einloesen`)
+        .flush(
+          { detail: [{ loc: ['body', 'team_einwilligung_kennung'], msg: 'Unbekannter Wortlaut' }] },
+          { status: 422, statusText: 'Unprocessable Entity' },
+        );
+      fixture.detectChanges();
+
+      expect(el().querySelector('[role="alert"]')?.textContent).toContain('Text der Einwilligung hat sich inzwischen geändert');
+      expect(teamMerkerLesen()).toBeNull();
     });
 
     it('lässt den Merker liegen, solange niemand angemeldet ist', () => {
@@ -256,7 +288,12 @@ describe('EinladungComponent mit Team', () => {
 
       klick('team-ja');
       const anfrage = http.expectOne(`${URL}/beitreten`);
-      expect(anfrage.request.body).toEqual({ code: 'Code123', einwilligung: true, oeffentlich: false });
+      expect(anfrage.request.body).toEqual({
+        code: 'Code123',
+        einwilligung: true,
+        einwilligung_kennung: 'team-2026-11-24',
+        oeffentlich: false,
+      });
       expect(knopf('team-ja').disabled).toBeTrue();
       anfrage.flush({ team: { name: 'BDK 26 Berlin', motiv: 'vogel', saison: '2026' }, nummer: 37, neu: true });
       fixture.detectChanges();
@@ -277,6 +314,7 @@ describe('EinladungComponent mit Team', () => {
 
       const anfrage = http.expectOne(`${URL}/beitreten`);
       expect(anfrage.request.body.oeffentlich).toBeTrue();
+      expect(anfrage.request.body.oeffentlich_kennung).toBe('team-oeffentlich-2026-11-25');
       anfrage.flush({ team: { name: 'BDK 26 Berlin', motiv: 'vogel', saison: '2026' }, nummer: 37, neu: true });
     });
 
@@ -377,18 +415,31 @@ describe('EinladungComponent mit Team', () => {
       expect(teamMerkerLesen()).toBeNull();
     });
 
-    it('tritt mit dem schon gegebenen „Ja“ bei, wenn es das Konto vorher schon gab', () => {
+    it('fragt nach dem „Ja“ beim Anlegen noch einmal, wenn es das Konto vorher schon gab, und sendet nichts von selbst', () => {
+      // Geteiltes Gerät: Angemeldet kann jemand anderes sein als die Person, die „Ja“ gedrückt hat.
       teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-24', oeffentlich: true });
       starten(null);
       pruefen({ einloesbar: true, team: team(OEFFENTLICH) }, true);
 
+      http.expectNone(`${URL}/beitreten`);
+      expect(el().querySelector('[data-testid="team-kasten"]')).not.toBeNull();
+      expect(el().querySelector('[data-testid="team-nochmal"]')?.textContent).toContain('gespeichert ist aber noch nichts');
+      // nichts vorausgewählt, auch die zweite Frage nicht
+      expect(fixture.componentInstance.teamOeffentlich).toBeFalse();
+      expect(teamMerkerLesen()).toBeNull();
+
+      klick('team-ja');
       const anfrage = http.expectOne(`${URL}/beitreten`);
-      expect(anfrage.request.body).toEqual({ code: 'Code123', einwilligung: true, oeffentlich: true });
+      expect(anfrage.request.body).toEqual({
+        code: 'Code123',
+        einwilligung: true,
+        einwilligung_kennung: 'team-2026-11-24',
+        oeffentlich: false,
+      });
       anfrage.flush({ team: { name: 'BDK 26 Berlin', motiv: 'vogel', saison: '2026' }, nummer: 38, neu: true });
       fixture.detectChanges();
 
       expect(el().textContent).toContain('Neu in deiner Sammlung: Team BDK 26 Berlin, Nr. 38');
-      expect(teamMerkerLesen()).toBeNull();
     });
 
     it('fragt neu, wenn sich der Wortlaut seit dem „Ja“ geändert hat', () => {
@@ -410,13 +461,23 @@ describe('EinladungComponent mit Team', () => {
       expect(teamMerkerLesen()).toBeNull();
     });
 
-    it('sagt bei einem inzwischen aufgebrauchten Link, dass das Konto bereit ist, statt „gilt nicht“', () => {
+    it('sagt bei einem inzwischen aufgebrauchten Link ehrlich, dass kein Team gespeichert ist', () => {
       teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-24', oeffentlich: false });
       starten(null);
       pruefen({ einloesbar: false, team: null }, true);
 
-      expect(el().textContent).toContain('Dein Konto ist bereit');
-      expect(el().textContent).not.toContain('gilt nicht');
+      expect(el().querySelector('[data-testid="kein-team"]')?.textContent).toContain('Kein Team gespeichert');
+      expect(el().textContent).not.toContain('Meine Beiträge');
+    });
+
+    it('zeigt einem Mitglied auch bei aufgebrauchtem Link das Team als neu', () => {
+      teamMerkerAblegen({ code: 'Code123', kennung: 'team-2026-11-24', oeffentlich: false });
+      starten(null);
+      pruefen({ einloesbar: false, team: team({ eigene_nummer: 37 }) }, true);
+
+      expect(el().querySelector('[data-testid="team-ergebnis"]')?.textContent?.trim()).toBe(
+        'Neu in deiner Sammlung: Team BDK 26 Berlin, Nr. 37',
+      );
     });
 
     it('ohne Merker und ohne Code fragt die Seite wie bisher nach dem Link', () => {

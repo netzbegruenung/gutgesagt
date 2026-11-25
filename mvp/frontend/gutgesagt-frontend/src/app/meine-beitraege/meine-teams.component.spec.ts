@@ -96,6 +96,21 @@ describe('MeineTeamsComponent', () => {
     expect(el().querySelector('[data-testid="meine-teams"]')).toBeNull();
   });
 
+  it('zeigt bei Schalter teams aus die eigenen Teams weiter, mit „Team verlassen“ und ohne Umschalter', () => {
+    laden(stand({ teams_aktiv: false }));
+
+    expect(el().querySelector('[data-testid="meine-teams"]')).not.toBeNull();
+    expect(el().querySelector('[data-testid="teams-aus"]')!.textContent).toContain('weiter ansehen und verlassen');
+    expect(el().querySelectorAll('[data-testid="verlassen"]').length).toBe(2);
+    expect(el().querySelector('mat-slide-toggle')).toBeNull();
+  });
+
+  it('blendet die Karte bei Schalter teams aus aus, sobald keine eigenen Teams mehr da sind', () => {
+    laden(stand({ teams_aktiv: false, teams: [] }));
+
+    expect(el().querySelector('[data-testid="meine-teams"]')).toBeNull();
+  });
+
   it('sagt ohne Teams in einem Satz, woher Teams kommen', () => {
     laden(stand({ teams: [] }));
 

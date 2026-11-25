@@ -6,7 +6,11 @@ import { TEAM_MOTIVE as MOTIV_LISTE, motivBild } from '../teams/teams';
  * (domain/teams.py), damit gezeigter und gespeicherter Wortlaut nie auseinanderlaufen.
  */
 
-/** Das Team an einer einlösbaren Einladung, nur bei wirksamem Schalter teams. */
+/**
+ * Das Team an einer einlösbaren Einladung, nur bei wirksamem Schalter teams. Ist die
+ * Einladung nicht mehr einlösbar, kommt es nur für ein angemeldetes Mitglied (mit
+ * eigene_nummer), damit es „Du bist schon dabei“ sieht.
+ */
 export interface TeamBeimPruefen {
   name: string;
   /** Schlüssel des Motivs (public/meilensteine/<motiv>.svg), siehe TEAM_MOTIVE. */
@@ -32,12 +36,16 @@ export interface PruefenAntwort {
   team: TeamBeimPruefen | null;
 }
 
-/** Was beim Einlösen ohne Konto zum Team mitgeht. */
+/** Was beim Einlösen ohne Konto oder beim Beitreten zum Team mitgeht. */
 export interface TeamAntwort {
   /** Knopf „Ja, speichert, dass ich im Team X bin“ */
   einwilligung: boolean;
+  /** Kennung des gezeigten Wortlauts (aus /pruefen); gespeichert wird genau diese. */
+  einwilligungKennung: string;
   /** Zweite Frage, zählt nur mit einwilligung */
   oeffentlich: boolean;
+  /** Kennung des gezeigten Wortlauts der zweiten Frage; null, wenn sie nicht gestellt wurde. */
+  oeffentlichKennung: string | null;
 }
 
 /** Antwort von POST /einladungen/beitreten. */

@@ -112,12 +112,27 @@ export class EinladungService {
 
   /** ``team``: nur bei einer Einladung mit Team; ohne bleibt der Aufruf wie vor den Teams. */
   einloesen(code: string, email: string, vorname: string, nachname: string, team?: TeamAntwort): Observable<unknown> {
-    const teamfelder = team ? { team_einwilligung: team.einwilligung, team_oeffentlich: team.einwilligung && team.oeffentlich } : {};
+    const oeffentlich = !!team?.einwilligung && team.oeffentlich && !!team.oeffentlichKennung;
+    const teamfelder = team
+      ? {
+          team_einwilligung: team.einwilligung,
+          team_oeffentlich: oeffentlich,
+          ...(team.einwilligung ? { team_einwilligung_kennung: team.einwilligungKennung } : {}),
+          ...(oeffentlich ? { team_oeffentlich_kennung: team.oeffentlichKennung } : {}),
+        }
+      : {};
     return this.http.post(`${this.baseUrl}/einloesen`, { code, email, vorname, nachname, ...teamfelder });
   }
 
   /** Angemeldet dem Team der Einladung beitreten, nach dem Knopf „Ja, speichert …“. */
-  beitreten(code: string, oeffentlich: boolean): Observable<BeitretenAntwort> {
-    return this.http.post<BeitretenAntwort>(`${this.baseUrl}/beitreten`, { code, einwilligung: true, oeffentlich });
+  beitreten(code: string, team: TeamAntwort): Observable<BeitretenAntwort> {
+    const oeffentlich = team.oeffentlich && !!team.oeffentlichKennung;
+    return this.http.post<BeitretenAntwort>(`${this.baseUrl}/beitreten`, {
+      code,
+      einwilligung: true,
+      einwilligung_kennung: team.einwilligungKennung,
+      oeffentlich,
+      ...(oeffentlich ? { oeffentlich_kennung: team.oeffentlichKennung } : {}),
+    });
   }
 }

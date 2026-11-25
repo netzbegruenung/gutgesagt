@@ -21,6 +21,11 @@ export interface MeinTeam {
 }
 
 export interface MeineTeams {
+  /**
+   * Schalter teams: false heißt, es gehen keine neuen Beitritte; die eigenen Teams stehen
+   * trotzdem da, damit „Team verlassen“ (Widerruf) erreichbar bleibt. Fehlt: wie true.
+   */
+  teams_aktiv?: boolean;
   aktuelle_saison: string;
   /** Schalter teams_oeffentlich wirkt: nur dann den Umschalter zeigen. */
   oeffentlich_verfuegbar: boolean;

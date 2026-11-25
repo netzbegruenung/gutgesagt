@@ -221,8 +221,9 @@ test.describe('Teams über Einladungslinks', () => {
     await expect(kasten.getByRole('heading', { level: 2 })).toHaveText(
       `Herzlich willkommen im Team ${TEAM.name}! Du wärst Nr. ${ANDERE + 1}.`,
     );
-    // Motiv nie allein: Name im Alt-Text und als Text daneben
-    await expect(kasten.getByRole('img', { name: 'Motiv Vogel' })).toBeVisible();
+    // Motiv nie allein: der Name steht als Text daneben; vor dem Ja kein Ticket, kein Medaillon
+    await expect(kasten.getByTestId('team-motiv')).toContainText('Motiv: Vogel');
+    await expect(kasten.getByTestId('team-motiv').locator('img')).toBeVisible();
     await expect(kasten).toContainText(`Team ${TEAM.name}`);
     await expect(kasten).toContainText(`Schon ${ANDERE} dabei.`);
     // Vor der Frage: was gespeichert wird, wer es sieht, wie man widerruft
@@ -258,6 +259,7 @@ test.describe('Teams über Einladungslinks', () => {
         nachname: 'Muster',
         team_einwilligung: true,
         team_oeffentlich: false,
+        team_einwilligung_kennung: KENNUNG,
       },
     ]);
     // Merker für den Rücksprung: Code und Kennung des Wortlauts, kein Teamname
@@ -342,7 +344,9 @@ test.describe('Teams über Einladungslinks', () => {
     const ergebnis = page.getByTestId('team-ergebnis');
     await expect(ergebnis).toHaveText(`Neu in deiner Sammlung: Team ${TEAM.name}, Nr. ${ANDERE + 1}`);
     await expect(ergebnis).toBeFocused();
-    expect(stand.beitreten).toEqual([{ code: CODE, einwilligung: true, oeffentlich: false }]);
+    expect(stand.beitreten).toEqual([
+      { code: CODE, einwilligung: true, einwilligung_kennung: KENNUNG, oeffentlich: false },
+    ]);
     await keinQuerscrollen(page);
 
     // Zweites Mal: schon dabei, ohne Frage und ohne zweiten Beitritt

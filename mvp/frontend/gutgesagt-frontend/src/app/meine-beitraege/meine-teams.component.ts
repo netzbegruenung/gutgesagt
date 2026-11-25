@@ -37,7 +37,9 @@ export function verlassenFrage(team: MeinTeam): BestaetigungsDialogDaten {
  *
  * Wirkt der Schalter teams_oeffentlich, steht darunter der Umschalter „Öffentlich am Namen
  * zeigen“ mit dem Wortlaut der Einwilligung davor; sonst fehlt er. Ist der Schalter teams
- * aus (404), fehlt die ganze Karte. Die Karte lädt selbst nach, auch nach jeder Handlung.
+ * aus, stehen die eigenen Teams weiter da, mit „Team verlassen“ (Widerruf so leicht wie die
+ * Einwilligung); ohne eigene Teams (404) fehlt die Karte. Die Karte lädt selbst nach, auch
+ * nach jeder Handlung.
  */
 @Component({
   selector: 'app-meine-teams',
@@ -84,6 +86,11 @@ export class MeineTeamsComponent implements OnInit {
       this.cdr.markForCheck();
     });
     this.destroyRef.onDestroy(() => abo.unsubscribe());
+  }
+
+  /** Bei Schalter teams aus nur mit eigenen Teams, etwa nachdem das letzte verlassen wurde. */
+  get sichtbar(): boolean {
+    return !!this.stand && (this.stand.teams_aktiv !== false || this.stand.teams.length > 0);
   }
 
   get aktuelle(): MeinTeam[] {

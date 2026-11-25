@@ -50,7 +50,15 @@
 
     <section *ngIf="kastenZeigen && team" class="team-kasten" aria-labelledby="team-gruss" data-testid="team-kasten">
       <h2 id="team-gruss" class="team-ueberschrift">{{ begruessungTitel(team) }}</h2>
-      <ng-container *ngTemplateOutlet="ticket; context: { zeile: 'Willkommen im', name: team.name, nummer: team.naechste_nummer, nummerText: 'Deine Nummer' }"></ng-container>
+      <!-- Vor dem Ja kein Ticket und kein Medaillon: Noch ist nichts zugeteilt. Das Motiv nur klein, mit Namen daneben. -->
+      <p class="team-motiv-zeile" data-testid="team-motiv">
+        <img *ngIf="motivBild" [src]="motivBild" alt="" width="24" height="24" />
+        <span>Team {{ team.name }}, Saison {{ team.saison }}<ng-container *ngIf="motivName"> · Motiv: {{ motivName }}</ng-container></span>
+      </p>
+      <p *ngIf="nochmalGefragt" class="team-hinweis" data-testid="team-nochmal">
+        Beim Anlegen wurde hier schon „Ja“ gewählt, gespeichert ist aber noch nichts: Zur Adresse
+        gab es schon ein Konto. Entscheide bitte hier mit deinem angemeldeten Konto.
+      </p>
       <p class="team-leise">
         <ng-container *ngIf="team.mitglieder > 0; else erstePerson">Schon {{ team.mitglieder }} dabei.</ng-container>
         <ng-template #erstePerson>Noch ist niemand dabei.</ng-template>
@@ -63,6 +71,10 @@
       </p>
       <p id="team-erklaerung">
         <ng-container *ngFor="let satz of begruessungSaetze(team); let letzter = last">{{ satz }}{{ letzter ? '' : ' ' }}</ng-container>
+      </p>
+      <p *ngIf="!angemeldet" class="team-hinweis" data-testid="team-schon-konto">
+        Hast du schon ein Konto? Dann <a href="/login" (click)="anmeldenUmBeizutreten()">melde dich zuerst an</a>.
+        Nur so kommt dein vorhandenes Konto ins Team; über das Formular unten entsteht dann kein Team.
       </p>
       <ng-container *ngIf="team.oeffentlich_text">
         <mat-checkbox name="teamOeffentlich" [(ngModel)]="teamOeffentlich" [disabled]="stand === 'tritt_bei'"
@@ -97,10 +109,6 @@
       <p class="team-leise">
         Mehr dazu in der <a routerLink="/datenschutz" fragment="teams">Datenschutzerklärung</a> unter „Teams“.
       </p>
-      <p *ngIf="!angemeldet" class="team-leise">
-        Hast du schon ein Konto? Dann <a href="/login" (click)="anmeldenUmBeizutreten()">melde dich an</a>,
-        und du kannst dem Team mit deinem Konto beitreten.
-      </p>
     </section>
 
     <ng-container *ngIf="stand === 'beigetreten' && beitritt">
@@ -132,13 +140,14 @@
       <a mat-raised-button color="primary" [routerLink]="routen.SEARCH">Zur Suche</a>
     </ng-container>
 
-    <ng-container *ngIf="stand === 'angekommen'">
-      <h2 #ueberschrift tabindex="-1" class="team-ueberschrift">Dein Konto ist bereit</h2>
-      <p>Hast du beim Anlegen „Ja“ gesagt, steht dein Team jetzt unter „Meine Beiträge“.</p>
-      <div class="team-knoepfe">
-        <a mat-raised-button color="primary" [routerLink]="routen.MEINE_BEITRAEGE">Zu meinen Teams</a>
-        <a mat-stroked-button [routerLink]="routen.SEARCH">Weiter suchen</a>
-      </div>
+    <ng-container *ngIf="stand === 'kein_team'">
+      <h2 #ueberschrift tabindex="-1" class="team-ueberschrift" data-testid="kein-team">Kein Team gespeichert</h2>
+      <p>
+        Zu deiner Adresse gab es schon ein Konto; dann speichern wir beim Anlegen kein Team. Diese
+        Einladung gilt inzwischen nicht mehr, deshalb kannst du hier nicht mehr beitreten. Frag die
+        Person, von der du den Link hast, nach einem neuen.
+      </p>
+      <a mat-raised-button color="primary" [routerLink]="routen.SEARCH">Zur Suche</a>
     </ng-container>
 
     <ng-container *ngIf="stand === 'beitritt_fehler'" [ngSwitch]="beitrittFehler">
@@ -184,6 +193,9 @@
         <p *ngSwitchCase="'adresse'" class="warnung" role="alert">
           Das sieht nicht wie eine Mail-Adresse aus. Bitte prüf sie noch einmal.
         </p>
+        <p *ngSwitchCase="'wortlaut'" class="warnung" role="alert">
+          Der Text der Einwilligung hat sich inzwischen geändert. Bitte öffne den Link noch einmal und lies ihn neu.
+        </p>
         <p *ngSwitchCase="'name'" class="warnung" role="alert">
           Bitte prüf deinen Namen: Zeichen wie ! / ( ) &#64; &lt; &gt; gehen darin nicht.
         </p>
@@ -216,11 +228,14 @@
         gilt drei Tage. Danach meldest du dich gleich an.
       </p>
       <p *ngIf="team && teamWahl === 'ja'" data-testid="team-nach-mail">
-        Dein Team speichern wir, sobald dein Konto angelegt ist. Nach dem Anmelden siehst du es unter „Meine Beiträge“.
+        Ist dein Konto neu, speichern wir dein Team gleich mit; nach dem Anmelden siehst du es unter
+        „Meine Beiträge“. Gab es zu deiner Adresse schon ein Konto, speichern wir kein Team: Melde dich
+        dann an, und wir fragen dich hier noch einmal.
       </p>
       <p>
         Keine Mail bekommen, oder gab es schon ein Konto mit dieser Adresse? Dann
-        <a routerLink="/login">melde dich an</a> und nutze dort „Passwort vergessen“.
+        <a href="/login" (click)="anmeldenNachSenden()">melde dich an</a> und nutze dort, falls nötig,
+        „Passwort vergessen“.
       </p>
     </ng-container>
   </mat-card-content>

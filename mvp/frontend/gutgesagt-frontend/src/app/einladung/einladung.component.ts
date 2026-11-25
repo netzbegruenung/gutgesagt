@@ -11,18 +11,25 @@ import { MatInputModule } from '@angular/material/input';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { EINLADUNG_NAME_MAX, EinladungService, nameGueltig } from '../shared/einladung/einladung.service';
-import { PruefenAntwort, TEAM_MOTIVE, TeamBeimPruefen, teamMotivBild } from '../shared/einladung/team-einladung';
+import {
+  PruefenAntwort,
+  TEAM_MOTIVE,
+  TeamAntwort,
+  TeamBeimPruefen,
+  teamMotivBild,
+} from '../shared/einladung/team-einladung';
 import { ROUTES } from '../shared/constants/app.constants';
 import { sitzungPruefen } from '../auth/sitzung';
 import { FunktionenService } from '../services/funktionen.service';
 import { teamBegruessungSaetze, teamBegruessungTitel } from '../shared/team-texte';
-import { TeamMerker, teamMerkerAblegen, teamMerkerLesen, teamMerkerLoeschen, teamMerkerNehmen } from './team-merker';
+import { teamMerkerAblegen, teamMerkerLesen, teamMerkerLoeschen, teamMerkerNehmen } from './team-merker';
 
 /**
  * Stände der Seite. Ohne Konto: eingeben … gesendet, bei einer Einladung mit Team mit dem
  * Kasten über dem Formular. Angemeldet (Teams): team_frage → tritt_bei → beigetreten oder
  * beitritt_fehler; ohne_team nach „Nein“; schon_konto bei einer Einladung ohne Team;
- * angekommen nach dem Rücksprung, wenn der Link inzwischen aufgebraucht ist.
+ * kein_team nach dem Rücksprung mit „Ja“, wenn keine Mitgliedschaft entstand (zur Adresse
+ * gab es schon ein Konto) und der Link inzwischen nicht mehr gilt.
  */
 type Stand =
   | 'eingeben'
@@ -38,9 +45,9 @@ type Stand =
   | 'beitritt_fehler'
   | 'ohne_team'
   | 'schon_konto'
-  | 'angekommen';
+  | 'kein_team';
 /** Warum Einloesen scheiterte, nach dem Status der Antwort (api/v1/einladungen.py). */
-type Fehler = 'adresse' | 'name' | 'zu_oft' | 'nicht_eingerichtet' | 'unbekannt';
+type Fehler = 'adresse' | 'name' | 'wortlaut' | 'zu_oft' | 'nicht_eingerichtet' | 'unbekannt';
 /** Warum Beitreten scheiterte, nach dem Status der Antwort von /beitreten. */
 type BeitrittFehler = 'zu_oft' | 'abgemeldet' | 'unbekannt';
 
@@ -77,13 +84,19 @@ const ANSAGE: Record<Stand, string> = {
   beitritt_fehler: '',
   ohne_team: '',
   schon_konto: '',
-  angekommen: '',
+  kein_team: '',
 };
 
-/** 422 wegen des Namens statt der Adresse: FastAPI nennt das Feld in detail[].loc. */
+/**
+ * 422 wegen des Namens oder eines inzwischen geänderten Wortlauts statt der Adresse: FastAPI
+ * nennt das Feld in detail[].loc.
+ */
 function fehlerBei422(e: HttpErrorResponse): Fehler {
   const details: unknown = e.error?.detail;
   const felder = Array.isArray(details) ? details.flatMap((d) => (Array.isArray(d?.loc) ? d.loc : [])) : [];
+  if (felder.includes('team_einwilligung_kennung') || felder.includes('team_oeffentlich_kennung')) {
+    return 'wortlaut';
+  }
   return felder.includes('vorname') || felder.includes('nachname') ? 'name' : 'adresse';
 }
 
@@ -173,6 +186,12 @@ export class EinladungComponent implements OnInit {
   teamWahlFehlt = false;
   beitritt: Beitritt | null = null;
   beitrittFehler: BeitrittFehler = 'unbekannt';
+  /**
+   * Nach dem Rücksprung mit „Ja“ vom Anlegen, aber ohne Mitgliedschaft (zur Adresse gab es
+   * schon ein Konto): Die Frage kommt noch einmal, gespeichert wird erst mit diesem Klick.
+   * Nie automatisch: Auf einem geteilten Gerät könnte jemand anderes angemeldet sein.
+   */
+  nochmalGefragt = false;
   /** Nach einer Handlung: Fokus auf die Überschrift des neuen Stands. */
   private ueberschriftFokussieren = false;
 
@@ -236,6 +255,7 @@ export class EinladungComponent implements OnInit {
     this.team = null;
     this.teamWahl = null;
     this.teamOeffentlich = false;
+    this.nochmalGefragt = false;
     forkJoin({
       // Pruefen ist nur Komfort: Im Zweifel das Formular zeigen, Einloesen prueft erneut.
       antwort: this.einladungService.pruefen(code).pipe(catchError(() => of<PruefenAntwort | null>(null))),
@@ -248,35 +268,43 @@ export class EinladungComponent implements OnInit {
         this.stand = 'formular';
         return;
       }
+      const mitJa = !!merker?.kennung;
       if (!antwort.einloesbar) {
-        // Nach „Ja“ beim Anlegen kann der Link inzwischen aufgebraucht sein, etwa ein persönlicher.
-        this.stand = merker?.kennung ? 'angekommen' : 'ungueltig';
+        if (angemeldet && antwort.team && antwort.team.eigene_nummer != null) {
+          // Auch nach Ablauf: Ein Mitglied sieht seine Nummer statt „gilt nicht“.
+          this.team = antwort.team;
+          this.schonImTeam(antwort.team, mitJa);
+          return;
+        }
+        // Nach „Ja“ beim Anlegen, aber ohne Mitgliedschaft, und der Link gilt nicht mehr.
+        this.stand = angemeldet && mitJa ? 'kein_team' : 'ungueltig';
         return;
       }
       this.team = antwort.team;
       if (!angemeldet) {
         this.stand = 'formular';
       } else if (this.team) {
-        this.angemeldetMitTeam(this.team, merker);
+        this.angemeldetMitTeam(this.team, mitJa);
       } else {
         this.angemeldetOhneTeam();
       }
     });
   }
 
-  private angemeldetMitTeam(team: TeamBeimPruefen, merker: TeamMerker | null) {
+  /** Mit Ja beim Anlegen: gerade beim Anlegen des Kontos beigetreten; sonst schon länger dabei. */
+  private schonImTeam(team: TeamBeimPruefen, mitJa: boolean) {
+    this.beitritt = { name: team.name, motiv: team.motiv, nummer: team.eigene_nummer ?? 0, neu: mitJa };
+    this.stand = 'beigetreten';
+  }
+
+  private angemeldetMitTeam(team: TeamBeimPruefen, mitJa: boolean) {
     if (team.eigene_nummer !== null && team.eigene_nummer !== undefined) {
-      // Mit Merker: gerade beim Anlegen des Kontos beigetreten; sonst schon länger dabei.
-      this.beitritt = { name: team.name, motiv: team.motiv, nummer: team.eigene_nummer, neu: !!merker?.kennung };
-      this.stand = 'beigetreten';
+      this.schonImTeam(team, mitJa);
       return;
     }
-    if (merker?.kennung && merker.kennung === team.einwilligung_kennung) {
-      // „Ja“ zu genau diesem Wortlaut kam schon beim Einlösen, aber zur Adresse gab es schon
-      // ein Konto: Dann entstand dort keine Mitgliedschaft, sie entsteht jetzt.
-      this.beitretenSenden(merker.oeffentlich && !!team.oeffentlich_kennung);
-      return;
-    }
+    // „Ja“ beim Einlösen, aber zur Adresse gab es schon ein Konto: Dort entstand keine
+    // Mitgliedschaft. Gefragt wird noch einmal; der Merker sendet nie selbst eine Einwilligung.
+    this.nochmalGefragt = mitJa;
     this.stand = 'team_frage';
   }
 
@@ -292,8 +320,8 @@ export class EinladungComponent implements OnInit {
       this.teamWahlFehlt = false;
       return;
     }
-    if (antwort === 'ja') {
-      this.beitretenSenden(this.teamOeffentlich && !!this.team?.oeffentlich_kennung);
+    if (antwort === 'ja' && this.team) {
+      this.beitretenSenden(this.teamAntwort(this.team, true));
     } else {
       this.ueberschriftFokussieren = true;
       this.stand = 'ohne_team';
@@ -305,12 +333,22 @@ export class EinladungComponent implements OnInit {
     this.stand = this.team ? 'team_frage' : 'schon_konto';
   }
 
-  private beitretenSenden(oeffentlich: boolean) {
+  /** Antwort mit den Kennungen der gezeigten Wortlaute; die zweite Frage nur, wenn sie gestellt wurde. */
+  private teamAntwort(team: TeamBeimPruefen, ja: boolean): TeamAntwort {
+    return {
+      einwilligung: ja,
+      einwilligungKennung: team.einwilligung_kennung,
+      oeffentlich: ja && this.teamOeffentlich && !!team.oeffentlich_kennung,
+      oeffentlichKennung: team.oeffentlich_kennung,
+    };
+  }
+
+  private beitretenSenden(antwort: TeamAntwort) {
     if (this.stand === 'tritt_bei') {
       return;
     }
     this.stand = 'tritt_bei';
-    this.einladungService.beitreten(this.code, oeffentlich).subscribe({
+    this.einladungService.beitreten(this.code, antwort).subscribe({
       next: (antwort) => {
         this.beitritt = { name: antwort.team.name, motiv: antwort.team.motiv, nummer: antwort.nummer, neu: antwort.neu };
         this.ueberschriftFokussieren = true;
@@ -336,6 +374,16 @@ export class EinladungComponent implements OnInit {
   anmeldenUmBeizutreten(): false {
     teamMerkerAblegen({ code: this.code, kennung: null, oeffentlich: false });
     void this.router.navigate([ROUTES.LOGIN], { queryParams: { returnUrl: EINLADUNG_PFAD } });
+    return false;
+  }
+
+  /**
+   * „Melde dich an“ nach dem Senden: Mit „Ja“ liegt der Merker schon; dann zurück auf diese
+   * Seite, wo die Frage für das angemeldete Konto noch einmal kommt. Sonst wie bisher.
+   */
+  anmeldenNachSenden(): false {
+    const mitTeam = !!this.team && this.teamWahl === 'ja' && teamMerkerLesen()?.code === this.code;
+    void this.router.navigate([ROUTES.LOGIN], mitTeam ? { queryParams: { returnUrl: EINLADUNG_PFAD } } : {});
     return false;
   }
 
@@ -379,13 +427,12 @@ export class EinladungComponent implements OnInit {
     this.stand = 'sendet';
     const team = this.team;
     const ja = !!team && this.teamWahl === 'ja';
-    const oeffentlich = ja && this.teamOeffentlich && !!team?.oeffentlich_kennung;
-    const teamAntwort = team ? { einwilligung: ja, oeffentlich } : undefined;
+    const teamAntwort = team ? this.teamAntwort(team, ja) : undefined;
     this.einladungService.einloesen(this.code, email, this.vorname.trim(), this.nachname.trim(), teamAntwort).subscribe({
       next: () => {
         // Für den Rücksprung nach der Mail: nur nach „Ja“, nur Code und Kennung des Wortlauts.
         if (team && ja) {
-          teamMerkerAblegen({ code: this.code, kennung: team.einwilligung_kennung, oeffentlich });
+          teamMerkerAblegen({ code: this.code, kennung: team.einwilligung_kennung, oeffentlich: !!teamAntwort?.oeffentlich });
         } else {
           teamMerkerLoeschen();
         }

@@ -6,7 +6,10 @@
  * Abgelegt wird nur, was die Person selbst gewählt hat: nach dem Knopf „Ja, speichert …“
  * die Kennung des gezeigten Wortlauts (und die Antwort auf die zweite Frage), oder ohne
  * jede Einwilligung nur der Code, wenn sie sich zum Beitreten erst anmelden will. Kein
- * Teamname, keine Nummer. Gelesen wird einmal; danach ist der Eintrag weg. Er gilt so
+ * Teamname, keine Nummer. Der Merker trägt nur, dass gefragt wurde: Er löst nie selbst
+ * einen Beitritt aus, denn angemeldet kann auf einem geteilten Gerät jemand anderes sein;
+ * ohne Mitgliedschaft kommt die Frage nach dem Anmelden noch einmal.
+ * Gelesen wird einmal; danach ist der Eintrag weg. Er gilt so
  * lange wie der Link in der Mail (MAIL_GUELTIG_SEKUNDEN in keycloak_konten.py).
  *
  * localStorage statt sessionStorage: Der Link in der Mail öffnet meist einen neuen Tab.
