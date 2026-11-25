@@ -437,7 +437,7 @@ SITZUNGS_COOKIE = "GutGesagtAuthCookie"
 ART9_EINWILLIGUNG_FEHLT = "art9_einwilligung_fehlt"
 # Dasselbe ohne Zustimmung zu den Nutzungsbedingungen in der App (dependencies.py).
 NUTZUNGSBEDINGUNGEN_FEHLEN = "nutzungsbedingungen_fehlen"
-# Rate-Limit des Dienstes fuer addCommentary: 10 je Minute, 100 je Stunde
+# Rate-Limit des Dienstes fuer addCommentary: standardmaessig 10 je Minute, 100 je Stunde
 # (main.py, middleware/rate_limit.py); Startkonten sind ausgenommen. Nach einer
 # Ablehnung eine Minute warten.
 WARTEN_NACH_LIMIT = 61
@@ -529,7 +529,7 @@ def importieren(
     die Aussage, wie im Formular "den eigenen nehmen". Einen nur aehnlichen
     eigenen Kommentar haengt das Skript nicht um; es meldet ihn. Ein abgelehnter Kommentar haelt den Rest nicht
     auf; ohne gueltige Anmeldung (401/403) bricht der Lauf mit ``ApiFehler`` ab.
-    Bleibt das Rate-Limit nach den Versuchen (100 je Stunde erreicht), endet der
+    Bleibt das Rate-Limit nach den Versuchen (Stundenlimit erreicht), endet der
     Lauf, und die uebrigen stehen als nicht versucht im Bericht.
     """
     bericht = Bericht()
@@ -589,7 +589,7 @@ def importieren(
                     bericht.fehlgeschlagen.append(
                         (
                             rest.zeile,
-                            "nicht versucht: Rate-Limit (100 je Stunde), in einer "
+                            "nicht versucht: Rate-Limit (Stundenlimit), in einer "
                             f"Stunde mit derselben Datei erneut laufen lassen: {rest.titel}",
                         )
                     )
