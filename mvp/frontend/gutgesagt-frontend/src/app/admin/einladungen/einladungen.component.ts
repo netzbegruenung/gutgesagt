@@ -8,13 +8,26 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatRadioModule } from '@angular/material/radio';
 import {
   EINLADUNG_EINLOESUNGEN_MAX,
   EINLADUNG_NOTIZ_MAX,
   Einladung,
+  EinladungListe,
   EinladungService,
+  EinladungTeamFelder,
   einladungslink,
 } from '../../shared/einladung/einladung.service';
+import { TeamPilleComponent } from '../../shared/teams/team-pille.component';
+import {
+  TEAMNAME_HINWEIS,
+  TEAM_MOTIVE,
+  TEAM_NAME_MAX,
+  TEAM_SAISON_MAX,
+  TeamMotiv,
+  motivBild,
+  teamTextGueltig,
+} from '../../shared/teams/teams';
 
 /** Heute plus n Tage als JJJJ-MM-TT, im Kalender des Browsers. */
 function inTagen(tage: number, heute = new Date()): string {
@@ -39,7 +52,9 @@ function inTagen(tage: number, heute = new Date()): string {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatRadioModule,
     NachladeHinweisComponent,
+    TeamPilleComponent,
   ],
   templateUrl: './einladungen.component.html',
   styleUrls: ['./einladungen.component.css'],
@@ -47,6 +62,8 @@ function inTagen(tage: number, heute = new Date()): string {
 export class EinladungenComponent implements OnInit {
   readonly NOTIZ_MAX = EINLADUNG_NOTIZ_MAX;
   readonly EINLOESUNGEN_MAX = EINLADUNG_EINLOESUNGEN_MAX;
+  readonly TEAM_NAME_MAX = TEAM_NAME_MAX;
+  readonly TEAM_SAISON_MAX = TEAM_SAISON_MAX;
 
   einladungen: Einladung[] | null = null;
   einloesenEingerichtet = true;
@@ -60,6 +77,16 @@ export class EinladungenComponent implements OnInit {
   notiz = '';
   erlaubteEinloesungen = 1;
   gueltigBis = inTagen(14);
+
+  /** Schalter teams wirkt (Server): nur dann Teamblock und Spalten Team und Mitglieder. */
+  teamsAktiv = false;
+  motive: readonly TeamMotiv[] = TEAM_MOTIVE;
+  teamnameHinweis = TEAMNAME_HINWEIS;
+  teamName = '';
+  teamMotiv = TEAM_MOTIVE[0].schluessel;
+  /** Vorschlag aus der Admin-Einstellung „aktuelle Saison“, bis jemand selbst etwas einträgt. */
+  teamSaison = '';
+  private saisonVorschlag = '';
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -81,22 +108,63 @@ export class EinladungenComponent implements OnInit {
     });
   }
 
-  private uebernehmen(liste: { einladungen: Einladung[]; einloesen_eingerichtet: boolean }) {
+  private uebernehmen(liste: EinladungListe) {
     this.einladungen = liste.einladungen;
     this.einloesenEingerichtet = liste.einloesen_eingerichtet;
+    this.teamsAktiv = liste.teams_aktiv === true;
+    if (liste.motive?.length) {
+      // Nur Motive, deren Bild es gibt: der Name steht immer daneben
+      const bekannt = liste.motive.filter((m) => motivBild(m.schluessel) !== null);
+      this.motive = bekannt.length ? bekannt : TEAM_MOTIVE;
+    }
+    this.teamnameHinweis = liste.teamname_hinweis || TEAMNAME_HINWEIS;
+    const vorschlag = liste.aktuelle_saison ?? '';
+    // Das Formular bleibt unberuehrt: nur ein unveraenderter Vorschlag folgt dem Server
+    if (this.teamSaison === this.saisonVorschlag) {
+      this.teamSaison = vorschlag;
+    }
+    this.saisonVorschlag = vorschlag;
     this.fehler = false;
   }
 
-  anlegen() {
+  /** Ein Teamname ist eingetragen: dann sind Saison und Motiv Pflicht. */
+  get mitTeam(): boolean {
+    return this.teamsAktiv && this.teamName.trim().length > 0;
+  }
+
+  get teamNameUngueltig(): boolean {
+    return this.mitTeam && !teamTextGueltig(this.teamName, TEAM_NAME_MAX);
+  }
+
+  get teamSaisonUngueltig(): boolean {
+    return this.mitTeam && !teamTextGueltig(this.teamSaison, TEAM_SAISON_MAX);
+  }
+
+  get kannAnlegen(): boolean {
     if (!this.notiz.trim() || this.speichert) {
+      return false;
+    }
+    return !this.mitTeam || (!this.teamNameUngueltig && !this.teamSaisonUngueltig && !!this.teamMotiv);
+  }
+
+  motivBild(schluessel: string): string | null {
+    return motivBild(schluessel);
+  }
+
+  anlegen() {
+    if (!this.kannAnlegen) {
       return;
     }
+    const team: EinladungTeamFelder | undefined = this.mitTeam
+      ? { team_name: this.teamName.trim(), team_motiv: this.teamMotiv, team_saison: this.teamSaison.trim() }
+      : undefined;
     this.speichert = true;
     this.anlegenFehler = false;
-    this.einladungService.anlegen(this.notiz.trim(), this.erlaubteEinloesungen, this.gueltigBis).subscribe({
+    this.einladungService.anlegen(this.notiz.trim(), this.erlaubteEinloesungen, this.gueltigBis, team).subscribe({
       next: (neu) => {
         this.einladungen = [neu, ...(this.einladungen ?? [])];
         this.notiz = '';
+        this.teamName = '';
         this.speichert = false;
       },
       error: () => {

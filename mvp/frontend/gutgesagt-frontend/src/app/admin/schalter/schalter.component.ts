@@ -1,10 +1,14 @@
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { ModerationService, Schalter, SchalterListe } from '../../services/moderation.service';
+import { Einstellung, ModerationService, Schalter, SchalterListe } from '../../services/moderation.service';
 import { ohneRechte, selbstNachladen } from '../../shared/selbst-nachladen';
 
 /** Anzeigenamen der Schalter; unbekannte zeigen ihren technischen Namen. */
@@ -16,6 +20,13 @@ const TITEL: Record<string, string> = {
   abkuerzungen: 'App-Abkürzungen',
   antworten_hinweis: 'Neue Antworten auf eigene Aussagen',
   sharepic: 'Teilen als Bild',
+  teams: 'Teams über Einladungen',
+  teams_oeffentlich: 'Teams am Anzeigenamen',
+};
+
+/** Anzeigenamen der Einstellungen; unbekannte zeigen ihren technischen Namen. */
+const EINSTELLUNG_TITEL: Record<string, string> = {
+  aktuelle_saison: 'Aktuelle Saison',
 };
 
 /**
@@ -27,7 +38,17 @@ const TITEL: Record<string, string> = {
 @Component({
   selector: 'app-schalter',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule, MatSlideToggleModule, MatSnackBarModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatProgressSpinnerModule,
+    MatSlideToggleModule,
+    MatSnackBarModule,
+  ],
   template: `
     <h2>Schalter</h2>
     <p class="hinweis">
@@ -74,6 +95,23 @@ const TITEL: Record<string, string> = {
           {{ s.dsfa_hinweis }}
         </p>
       </section>
+      <!-- Einstellungen mit Textwert, etwa die aktuelle Saison der Teams -->
+      <section *ngFor="let e of einstellungen" class="schalter mat-elevation-z1" data-testid="einstellung">
+        <div class="kopf">
+          <h3 [id]="'einstellung-titel-' + e.name">{{ einstellungTitel(e) }}</h3>
+        </div>
+        <p>{{ e.erklaerung }}</p>
+        <form class="einstellung" (ngSubmit)="einstellungSpeichern(e)">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ einstellungTitel(e) }}</mat-label>
+            <input matInput [name]="e.name" [(ngModel)]="entwuerfe[e.name]" [maxlength]="e.max_laenge" required />
+            <mat-hint>Standard: {{ e.standard }} · höchstens {{ e.max_laenge }} Zeichen</mat-hint>
+          </mat-form-field>
+          <button mat-stroked-button type="submit" data-testid="einstellung-speichern"
+                  [disabled]="!einstellungGeaendert(e) || setzend !== null">Speichern</button>
+        </form>
+        <p class="zustand" role="status" data-testid="einstellung-stand">Gespeichert: {{ e.wert }}</p>
+      </section>
     </ng-container>
   `,
   styles: [`
@@ -98,6 +136,8 @@ const TITEL: Record<string, string> = {
       align-items: flex-start; flex-wrap: nowrap; margin-top: 8px; padding: 8px 12px;
       font-size: 0.875rem; background: var(--hinweis-tint); color: var(--text); border-radius: var(--border-radius-medium);
     }
+    .einstellung { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin: 8px 16px 4px; }
+    .einstellung mat-form-field { flex: 1 1 220px; max-width: 320px; }
     .dsfa mat-icon { flex-shrink: 0; font-size: 20px; width: 20px; height: 20px; color: var(--hinweis-text); }
   `],
 })
@@ -107,6 +147,9 @@ export class SchalterComponent implements OnInit {
   fehler = false;
   /** Name des Schalters, der gerade gesetzt wird. */
   setzend: string | null = null;
+  einstellungen: Einstellung[] = [];
+  /** Eingaben je Einstellung; Nachladen überschreibt nur, was niemand geändert hat. */
+  entwuerfe: Record<string, string> = {};
 
   private readonly destroyRef = inject(DestroyRef);
   private readonly moderation = inject(ModerationService);
@@ -142,6 +185,10 @@ export class SchalterComponent implements OnInit {
     if (s.admin_wert && s.name === 'abzeichen_sichtbar' && punkte && !punkte.wirksam) {
       return `${admin} · wirksam: aus, weil Punkte aus`;
     }
+    const teams = this.liste?.find((t) => t.name === 'teams');
+    if (s.admin_wert && s.name === 'teams_oeffentlich' && teams && !teams.wirksam) {
+      return `${admin} · wirksam: aus, weil Teams aus`;
+    }
     return `${admin} · wirksam: aus`;
   }
 
@@ -165,8 +212,50 @@ export class SchalterComponent implements OnInit {
     });
   }
 
+  einstellungTitel(e: Einstellung): string {
+    return EINSTELLUNG_TITEL[e.name] ?? e.name;
+  }
+
+  einstellungGeaendert(e: Einstellung): boolean {
+    const entwurf = (this.entwuerfe[e.name] ?? '').trim();
+    return entwurf.length > 0 && entwurf !== e.wert;
+  }
+
+  einstellungSpeichern(e: Einstellung): void {
+    if (!this.einstellungGeaendert(e) || this.setzend !== null) {
+      return;
+    }
+    this.setzend = e.name;
+    this.moderation.einstellungSetzen(e.name, this.entwuerfe[e.name].trim()).subscribe({
+      next: (daten) => {
+        this.setzend = null;
+        // Der gespeicherte Wert gilt, auch wenn der Server ihn bereinigt hat
+        delete this.entwuerfe[e.name];
+        this.uebernehmen(daten);
+        this.snackBar.open(`${this.einstellungTitel(e)} gespeichert.`, 'OK', { duration: 4000 });
+      },
+      error: (fehler: { status?: number }) => {
+        this.setzend = null;
+        const text =
+          fehler?.status === 422
+            ? `Ungültiger Wert: nicht leer, höchstens ${e.max_laenge} Zeichen, keine Steuerzeichen.`
+            : 'Einstellung nicht gespeichert, bitte gleich noch einmal versuchen.';
+        this.snackBar.open(text, 'OK', { duration: 6000 });
+      },
+    });
+  }
+
   private uebernehmen(daten: SchalterListe): void {
     this.liste = daten.schalter;
+    const neu = daten.einstellungen ?? [];
+    for (const e of neu) {
+      const alt = this.einstellungen.find((a) => a.name === e.name);
+      const unveraendert = this.entwuerfe[e.name] === undefined || this.entwuerfe[e.name] === alt?.wert;
+      if (unveraendert) {
+        this.entwuerfe[e.name] = e.wert;
+      }
+    }
+    this.einstellungen = neu;
     this.fehler = false;
   }
 }

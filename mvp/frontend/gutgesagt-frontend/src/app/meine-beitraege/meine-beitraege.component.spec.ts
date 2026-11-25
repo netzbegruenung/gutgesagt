@@ -3,7 +3,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
+import { BehaviorSubject, NEVER, Observable, of, throwError } from 'rxjs';
 
 import { MeineBeitraegeComponent } from './meine-beitraege.component';
 import { AlbumComponent } from './album/album.component';
@@ -16,6 +16,7 @@ import { EinwurfService } from '../services/einwurf.service';
 import { SperrnachrichtService } from '../services/sperrnachricht.service';
 import { NavigationService } from '../services/navigation.service';
 import { StatementService } from '../services/statement.service';
+import { TeamsService } from '../services/teams.service';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { VotingService } from '../services/voting.service';
@@ -111,6 +112,8 @@ describe('MeineBeitraegeComponent', () => {
         { provide: LoggingService, useValue: jasmine.createSpyObj('LoggingService', ['error', 'debug', 'info', 'warn']) },
         { provide: EinwurfService, useValue: { eigeneLaden } },
         { provide: SperrnachrichtService, useValue: { meine: () => of([]) } },
+        // Meine Teams laedt nie fertig: keine Karte, kein Nachlade-Takt im Test
+        { provide: TeamsService, useValue: { meine: () => NEVER } },
         { provide: StatementService, useValue: { unbeantworteteAussagen: unbeantworteteLaden } },
         {
           provide: AuthService,

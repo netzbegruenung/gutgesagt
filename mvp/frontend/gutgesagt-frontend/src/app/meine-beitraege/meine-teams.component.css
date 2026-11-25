@@ -1,0 +1,82 @@
+.meine-teams {
+  margin-bottom: var(--spacing-md);
+}
+
+.meine-teams h2 {
+  font-size: 1.1rem;
+  margin: 0 0 4px;
+}
+
+.meine-teams-zahl {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-leise);
+  margin-left: 8px;
+}
+
+.meine-teams-unter {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 12px 0 6px;
+  color: var(--text-leise);
+}
+
+.meine-teams-hinweis {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--text-leise);
+}
+
+/* Pillen brechen um, kein waagrechtes Scrollen auf dem Handy */
+.team-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.team {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 2px;
+  min-width: 0;
+}
+
+.team-seit {
+  font-size: 12px;
+  color: var(--text-leise);
+}
+
+.team-verlassen {
+  margin-left: auto;
+}
+
+.oeffentlich {
+  margin-top: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--feldrand);
+  border-radius: 8px;
+}
+
+.oeffentlich-wortlaut {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.oeffentlich-mehr {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+.meine-teams-status p {
+  margin: 8px 0 0;
+}
+
+.meine-teams-fehler {
+  font-size: 14px;
+  color: var(--fehler);
+}

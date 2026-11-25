@@ -2,6 +2,7 @@ import { ContentReference } from './commonDtos';
 import type { NutzungJeFassung } from '../../shared/fassung';
 import type { Stil, Zweck } from '../../shared/zweck-stil';
 import type { Thema } from './themenDtos';
+import type { TeamAmNamen } from '../../shared/teams/teams';
 
 //TODO: Evaluate usage of camel case and transformation in the backend
 
@@ -41,6 +42,11 @@ export interface ContentResult {
      * wenn sie der Sichtbarkeit zugestimmt hat, sonst null.
      */
     autor_abzeichen?: number | null;
+    /**
+     * Teams der aktuellen Saison der Autorin am Namen, neuester Beitritt zuerst; nur fuer
+     * Angemeldete, nur mit Schalter teams_oeffentlich und ihrer Einwilligung, sonst null.
+     */
+    autor_teams?: TeamAmNamen[] | null;
     /** Ob es der eigene Beitrag ist; vom Server berechnet, in Meine Beitraege immer true. */
     ist_eigener_beitrag?: boolean | null;
     /** Leer bei Bildern ohne Bildunterschrift. */
