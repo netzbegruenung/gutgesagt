@@ -364,6 +364,10 @@ Der Prüfwert der Muster-Hinweise für „ein Konto hat einen Beitrag eines ande
 Was eine angemeldete Person nach dem Kopieren mit „Ja, gepostet“ meldet: Sie hat den Text öffentlich als Antwort gepostet. Gezählt wird je Kalenderwoche jede Person einmal, nicht jeder Klick, und ohne den Beitrag; das ist der Nordstern (verschiedene Menschen je Woche, die öffentlich kontern). Gemerkt wird dafür bis Wochenende nur ein Prüfwert aus der Kennung mit einem Wochenschlüssel im Arbeitsspeicher, danach nur die Zahl der Woche. Nur mit Art.-9-Einwilligung, ohne Startkonten, hinter einem Schalter (#643). Den Link zum eigenen Post fragt Gut gesagt nicht ab.
 _Avoid_: geteilt (das ist Nutzung), Conversion
 
+**Meldung ohne Konto**:
+Ein Klick auf „Ja, gepostet“ nach dem Kopieren ohne Anmeldung (#799). Gezählt wird je Kalenderwoche nur die Zahl der Klicks, ohne Prüfwert, ohne Beitrag, ohne Adresse; im Browser wird nichts gespeichert. Entdoppelt wird nur auf der offenen Seite: Nach dem Klick fragt die Karte nicht mehr. Meldungen ohne Konto sind keine Menschen: Sie zählen nicht zum Nordstern, nicht zum Gemeinschaftsziel und nicht zu dessen Schwelle, sondern stehen getrennt daneben. Hinter dem Unterschalter `gepostet_ohne_konto`, der nur mit `gepostet` wirkt.
+_Avoid_: anonym gekontert, Besucher-Konter (es zählt keine Person)
+
 **Wirkungs-Echo**:
 Die Summe „öffentlich gepostet“ je Beitrag, die nur die Autorin sieht, in „Meine Beiträge“ und in „Seit deinem letzten Besuch“ als Zuwachs über alle eigenen Beiträge seit dem letzten Besuch (ein Zählerstand am Konto wie bei der Nutzung, kein Zeitpunkt). Sie entsteht, wenn jemand nach dem Kopieren „Ja, gepostet“ meldet und dabei der Beitrag mitgeht; getrennt von der Wochenzahl unter „Öffentlich gekontert“, die keinen Beitrag kennt. Am Zähler stehen nur Beitrag und Summe, keine Kennung, kein Zeitpunkt; entdoppelt je Person, Beitrag und Tag nur im Arbeitsspeicher. Eigene Beiträge und Startkonten zählen nicht. Angezeigt als „3-mal öffentlich gepostet“, nie als Zahl von Menschen. Schalter `wirkungs_echo` (#790).
 _Avoid_: Reichweite, Shares

@@ -211,6 +211,20 @@ SCHALTER: Dict[str, Schalterart] = {
             ),
         ),
         Schalterart(
+            name="gepostet_ohne_konto",
+            feld="gepostet_ohne_konto_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_GEPOSTET_OHNE_KONTO_AKTIV",
+            erklaerung=(
+                "Rückfrage „Ja, gepostet“ auch ohne Konto, nur als Zahl je Woche "
+                "„Meldungen ohne Konto“, getrennt von den Menschen; wirkt nur "
+                "zusammen mit „gepostet“."
+            ),
+            einschalt_hinweis=(
+                "Vor dem Einschalten auf Prod: DSE-Absatz und DSFA-Nachtrag (Jura) nötig"
+            ),
+            oeffentlich=True,
+        ),
+        Schalterart(
             name="herkunft_pruefen",
             feld="herkunft_pruefen_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_HERKUNFT_PRUEFEN_AKTIV",
@@ -422,6 +436,9 @@ def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool
     if name == "teams_oeffentlich":
         # Ohne Teams keine Teams am Namen
         return an and _wirksam("teams", einstellungen, werte)
+    if name == "gepostet_ohne_konto":
+        # Unterschalter: ohne "Ja, gepostet" keine Meldungen ohne Konto
+        return an and _wirksam("gepostet", einstellungen, werte)
     if name == "danke_ohne_konto":
         # Unterschalter: ohne Danke-Knopf kein Danke ohne Konto
         return an and _wirksam("danke_knopf", einstellungen, werte)

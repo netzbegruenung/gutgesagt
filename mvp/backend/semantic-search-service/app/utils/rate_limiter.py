@@ -21,16 +21,19 @@ class RateLimiter:
     Automatically cleans up old entries.
     """
 
-    def __init__(self, max_requests: int, window_minutes: int):
+    def __init__(
+        self, max_requests: int, window_minutes: int = 0, window_seconds: float = 0
+    ):
         """
         Initialize rate limiter.
 
         Args:
             max_requests: Maximum number of requests allowed in the time window
             window_minutes: Time window in minutes
+            window_seconds: added to the window; for a window of seconds (#799)
         """
         self.max_requests = max_requests
-        self.window = timedelta(minutes=window_minutes)
+        self.window = timedelta(minutes=window_minutes, seconds=window_seconds)
         self._requests: Dict[str, List[datetime]] = defaultdict(list)
         self._lock = asyncio.Lock()
 

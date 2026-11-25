@@ -30,6 +30,13 @@ export interface Saison {
   erreicht: number;
   /** Nur die laufende Saison: verschiedene Menschen der laufenden Woche bisher */
   laufende_woche: number | null;
+  /**
+   * Meldungen ohne Konto (#799) aus abgeschlossenen Wochen der Saison: Klicks, keine
+   * Menschen; nur daneben, nicht im Ziel und nicht in der Schwelle. Fehlt bei älterem Server.
+   */
+  meldungen_ohne_konto?: number;
+  /** Nur die laufende Saison: Meldungen ohne Konto der laufenden Woche bisher. */
+  laufende_woche_ohne_konto?: number | null;
 }
 
 export interface SaisonListe {

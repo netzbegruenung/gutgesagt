@@ -43,6 +43,10 @@ public static class EndpointPolicy
         // Konter-Probe (#786): Proben fuer das Spiel ohne Konto, nur lesend; der Tipp
         // bleibt im Browser. Hinter dem Schalter konter_probe, aus antwortet sie mit 404.
         "/api/v1/konter-probe",
+        // Neutraler Sammelpfad (#799): Meldungen ohne Konto, die Art steht nur im Body,
+        // damit Zugriffsprotokolle keinen Rueckschluss zulassen. Hinter dem Schalter
+        // gepostet_ohne_konto, aus antwortet er mit 404.
+        "/api/v1/ereignis",
         "/api/v1/moderation/report",     // anonyme Meldung (DSA Art. 16)
         // Feedback an das Team, auch von Besuchern. Nur das Senden: die Liste unter
         // /api/v1/feedback ist admin-only und bleibt hinter dem Gate.

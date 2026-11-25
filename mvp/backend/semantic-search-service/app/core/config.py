@@ -291,6 +291,13 @@ class Settings(BaseSettings):
     # Standard aus, unabhaengig von punkte_aktiv: eine eigene Verarbeitung, die erst
     # mit Satz in DSFA und Datenschutzerklaerung eingeschaltet wird.
     gepostet_aktiv: bool = False
+    # Meldungen ohne Konto (#799, services/gepostet_ohne_konto_service.py): "Ja, gepostet"
+    # ohne Anmeldung als reiner Wochenzaehler, ohne Pruefwert. Standard aus und nur
+    # zusammen mit gepostet_aktiv; erst nach DSE-Absatz und DSFA-Nachtrag (Jura).
+    gepostet_ohne_konto_aktiv: bool = False
+    # Drosselung von POST /api/v1/ereignis (#799): hoechstens so viele Meldungen je
+    # Sekunde fuer alle zusammen, nur im Arbeitsspeicher, ohne Adresse.
+    ereignis_je_sekunde: int = Field(default=10, ge=1)
     # Herkunft pruefen (#759): nachts die Links aller Herkuenfte abrufen und tote oder
     # umgezogene fuer Admins auflisten (services/herkunft_pruefen.py). Obergrenze an,
     # weil dabei nichts zur Person entsteht: kein Name, keine Kennung, nur Adresse und

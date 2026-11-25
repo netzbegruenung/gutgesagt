@@ -23,7 +23,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { debounceTime, switchMap, take } from 'rxjs/operators';
+import { debounceTime, filter, switchMap, take, tap } from 'rxjs/operators';
 
 import { AuthService } from '../../auth/auth.service';
 import { LoggingService } from '../../services/logging.service';
@@ -40,7 +40,14 @@ import { FunktionenService } from '../../services/funktionen.service';
 import { sharepicDialogOeffnen } from '../../shared/sharepic/sharepic-dialog.component';
 import { KOPIERT, KOPIERT_MIT_LUECKE, hatLuecke } from '../../shared/vorlagen-luecke';
 import { platzhalterDialogOeffnen } from './platzhalter-dialog.component';
-import { GEPOSTET_FRAGE_MS, JA_GEPOSTET, KOPIERT_GEPOSTET_FRAGE, gepostetDank } from './gepostet-texte';
+import {
+  GEPOSTET_FRAGE_MS,
+  GEPOSTET_NICHT_GEZAEHLT,
+  GEPOSTET_OHNE_KONTO_DANK,
+  JA_GEPOSTET,
+  KOPIERT_GEPOSTET_FRAGE,
+  gepostetDank,
+} from './gepostet-texte';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
 import { STIMM_DANK_MS, stimmDank } from './stimm-dank-texte';
 import { DankeKnopfComponent } from './danke-knopf.component';
@@ -148,6 +155,14 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
   /** „Danke an die Autorin“ nach dem Kopieren (#791); ohne Konto nur mit Unterschalter. */
   readonly dankeKnopfAn = inject(FunktionenService).an('danke_knopf');
   readonly dankeOhneKontoAn = inject(FunktionenService).an('danke_ohne_konto');
+  /** „Ja, gepostet“ auch ohne Konto (#799), nur als Wochenzähler „Meldungen ohne Konto“. */
+  readonly gepostetOhneKontoAn = inject(FunktionenService).an('gepostet_ohne_konto');
+  /**
+   * Ohne Konto schon „Ja, gepostet“ getippt (#799): Danach fragt diese Karte nicht mehr,
+   * bis die Seite neu geladen wird. Das ist die einzige Entdoppelung; sie liegt nur in
+   * dieser Komponente, nicht im Browser-Speicher und nicht am Server.
+   */
+  private ohneKontoGemeldet = false;
   /** Seit dem ersten Kopieren auf dieser Karte; kein Zeitlimit. */
   dankeAngeboten = false;
 
@@ -363,6 +378,10 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
     const person = this.authService.getUserInfo();
     const kennung = person?.isAuthenticated ? person.userId : null;
     if (!kennung) {
+      if (this.gepostetOhneKontoAn() && !this.ohneKontoGemeldet) {
+        this.gepostetFragenOhneKonto();
+        return;
+      }
       if (!mitErfolg) {
         this.snackBar.open(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
       }
@@ -430,6 +449,30 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
           return;
         }
         this.snackBar.open(gepostetDank(personen), 'Schließen', { duration: 5000 });
+      });
+  }
+
+  /**
+   * Ohne Konto (#799): dieselbe Frage wie mit Konto, gemeldet an den neutralen
+   * Sammelpfad. Nach dem Klick ist der Knopf weg (die Snackbar schließt mit der Aktion),
+   * und diese Karte fragt bis zum Neuladen nicht mehr; ein Doppeltipp zählt einmal.
+   */
+  private gepostetFragenOhneKonto(): void {
+    this.snackBar
+      .open(KOPIERT_GEPOSTET_FRAGE, JA_GEPOSTET, { duration: GEPOSTET_FRAGE_MS })
+      .onAction()
+      .pipe(
+        take(1),
+        filter(() => !this.ohneKontoGemeldet),
+        tap(() => (this.ohneKontoGemeldet = true)),
+        switchMap(() => this.usageTrackingService.gepostetOhneKontoMelden()),
+      )
+      .subscribe((ergebnis) => {
+        if (ergebnis === 'nicht_angeboten') {
+          return;
+        }
+        const text = ergebnis === 'gezaehlt' ? GEPOSTET_OHNE_KONTO_DANK : GEPOSTET_NICHT_GEZAEHLT;
+        this.snackBar.open(text, 'Schließen', { duration: 5000 });
       });
   }
 
