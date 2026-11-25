@@ -430,6 +430,7 @@ test.describe('Teams über Einladungslinks', () => {
     await expect(page.locator('app-meine-teams')).toBeAttached();
     await expect(page.getByTestId('meine-teams')).toHaveCount(0);
   });
+
   test('Schalter teams aus mit eigener Mitgliedschaft: „Meine Teams“ mit Verlassen', async ({ page, bild }) => {
     const stand = await ohneStack(page, { teamsAn: false, konto: 'e2e-konto' });
     const m = mitgliedWerden(stand, 'e2e-konto');
@@ -442,9 +443,13 @@ test.describe('Teams über Einladungslinks', () => {
 
     await meine.getByRole('button', { name: `Team verlassen: ${TEAM.name}, Saison ${TEAM.saison}` }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Team verlassen' }).click();
-    // Danach keine eigene mehr: 404, die Karte fehlt
+    // Die Karte entfernt das Team selbst; ohne Team und bei Schalter aus fehlt sie
     await expect(page.getByTestId('meine-teams')).toHaveCount(0);
     expect(stand.verlassen).toEqual([m.id]);
     expect(stand.mitgliedschaften.some((x) => x.konto === 'e2e-konto')).toBe(false);
+    // Neu geladen: der Server antwortet ohne eigene Mitgliedschaft mit 404, die Karte bleibt weg
+    await page.reload();
+    await expect(page.locator('app-meine-teams')).toBeAttached();
+    await expect(page.getByTestId('meine-teams')).toHaveCount(0);
   });
 });
