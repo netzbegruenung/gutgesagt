@@ -14,11 +14,13 @@ from core.fehler import INTERNER_FEHLER
 from core.logging import get_logger, log_pseudonym
 from dependencies import get_settings, require_admin
 from services.einstellungen_service import (
+    AKTUELLE_SAISON,
     EinstellungenService,
     UnbekannteEinstellung,
     UngueltigerWert,
     get_einstellungen_service,
 )
+from services.saison_service import get_saison_service
 from services.schalter_service import (
     ObergrenzeAus,
     SchalterService,
@@ -52,6 +54,8 @@ class EinstellungResponse(BaseModel):
     wert: str
     standard: str
     max_laenge: int
+    # Warum der Wert gerade nicht gilt, etwa weil eine Saison laeuft (#782)
+    hinweis: Optional[str] = None
 
 
 class SchalterListeResponse(BaseModel):
@@ -76,6 +80,22 @@ def _einstellungen() -> EinstellungenService:
     return get_einstellungen_service()
 
 
+def _hinweis(name: str) -> Optional[str]:
+    """
+    Eine Saison ersetzt die Einstellung aktuelle_saison (#782): die laufende, in einer
+    Luecke zwischen zwei Saisons die zuletzt beendete.
+    """
+    if name != AKTUELLE_SAISON:
+        return None
+    saison = get_saison_service().saison_fuer_teams()
+    if saison is None:
+        return None
+    return (
+        f"Gilt gerade nicht: Die Saison „{saison}“ ist die aktuelle Saison der Teams, "
+        "bis die nächste beginnt (Abschnitt Saisons)."
+    )
+
+
 def _liste(
     dienst: SchalterService,
     settings: Settings,
@@ -89,7 +109,8 @@ def _liste(
             SchalterResponse(**vars(s)) for s in dienst.stand(settings, frisch=True)
         ],
         einstellungen=[
-            EinstellungResponse(**vars(e)) for e in einstellungen.stand(frisch=True)
+            EinstellungResponse(**vars(e), hinweis=_hinweis(e.name))
+            for e in einstellungen.stand(frisch=True)
         ],
     )
 

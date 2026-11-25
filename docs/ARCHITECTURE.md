@@ -450,7 +450,7 @@ Team progress (#784) and team quests (#792) get their switches later.
 
 | Schalter | Upper bound | Default | Public | Condition for switching on (issue) |
 |----------|-------------|---------|--------|------------------------------------|
-| `saison_ziel` | `SEMANTIC_SEARCH_SAISON_ZIEL_AKTIV` | off | yes | none; privacy policy sentence ships with #782 |
+| `saison_ziel` | `SEMANTIC_SEARCH_SAISON_ZIEL_AKTIV` | off | yes | none; privacy policy sentence ships with #782 (see below) |
 | `gartenansicht` | `SEMANTIC_SEARCH_GARTENANSICHT_AKTIV` | off | yes | none (#783) |
 | `kopiert_erfolg` | `SEMANTIC_SEARCH_KOPIERT_ERFOLG_AKTIV` | off | yes | none (#785) |
 | `konter_probe` | `SEMANTIC_SEARCH_KONTER_PROBE_AKTIV` | off | yes | none (#786) |
@@ -461,6 +461,30 @@ Team progress (#784) and team quests (#792) get their switches later.
 | `danke_knopf` | `SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV` | off | yes | DSFA addendum V31 (#791) |
 | `danke_ohne_konto` | `SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV` | off | yes | V31 and visitor marker (#495); works only with `danke_knopf` |
 | `rangliste` | `SEMANTIC_SEARCH_RANGLISTE_AKTIV` | off | no | legal OK (wording, DSFA V28, privacy policy) and Punkte on (#793); works only with `punkte` |
+
+#### Saisons and Gemeinschaftsziel (#782)
+
+Table `saisons` (name, first and last day, goal in Widerspruchs-Wochen; no personal data),
+rules in `domain/saisons.py`, `repositories/saison_repository.py` (overlap check under a table
+lock, so at most one season runs on any day) and `services/saison_service.py`. With `saison_ziel`
+effective, the running season replaces the setting "aktuelle Saison" for teams
+(`einstellungen_service.aktuelle_saison()`); in a gap between two seasons the last ended season
+stays the current one until the next begins, before the first season the setting applies. The
+count is the sum of the existing weekly numbers of "Ja, gepostet" (`gepostet_wochen`) over the
+closed weeks of the season; a boundary week shared by two seasons counts only for the season that
+contains its Monday (`domain.saisons.wochen_der_saison`); nothing new is stored.
+
+- `GET /api/v1/saisons/aktuell` (anonymous at the BFF): `{"balken": {name, ziel, erreicht}}`,
+  `{"balken": null}` without a running season or below the threshold, 404 while the switch is off.
+- `GET|POST /api/v1/moderation/saisons`, `PUT|DELETE /api/v1/moderation/saisons/{id}` (admins):
+  list with state, create, change (running: only goal and end), delete (only before the start).
+- Threshold for the public bar: `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_WOCHEN` (default 3) closed
+  weeks in a row with at least `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_MENSCHEN` (default 25) people
+  each, reached once at any time. The privacy notice names these numbers (section „Rückmeldung
+  ‚Ja, gepostet‘“, wording by the legal review 25.11.): whoever changes either variable must update
+  that sentence in `datenschutz.component.html` in the same change.
+- For later building blocks (Rangliste per season): `SaisonService.alle()`, `.laufende(heute)`
+  and the dataclass `domain.saisons.Saison` (`id`, `name`, `beginn`, `ende`, `ziel`, `wochen()`).
 
 ## Startup Scripts
 

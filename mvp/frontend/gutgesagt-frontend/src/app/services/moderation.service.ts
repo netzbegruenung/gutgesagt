@@ -25,6 +25,8 @@ export interface Einstellung {
   wert: string;
   standard: string;
   max_laenge: number;
+  /** Warum der Wert gerade nicht gilt, etwa weil eine Saison läuft (#782); fehlt sonst. */
+  hinweis?: string | null;
 }
 
 export interface SchalterListe {

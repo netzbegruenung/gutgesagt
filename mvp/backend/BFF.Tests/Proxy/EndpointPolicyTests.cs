@@ -22,6 +22,7 @@ public class EndpointPolicyTests
     [InlineData("/api/v1/usage/trending/woche")]  // "Diese Woche oft genutzt" (#364)
     [InlineData("/api/v1/usage/punkte/status")]  // Schalter der Punkte (UX-Review B20)
     [InlineData("/api/v1/funktionen")]           // oeffentliche Schalter (#756)
+    [InlineData("/api/v1/saisons/aktuell")]      // Saisonbalken, nur Summen (#782)
     [InlineData("/api/v1/konter-probe")]         // Konter-Probe ohne Konto (#786)
     [InlineData("/api/v1/moderation/report")]
     [InlineData("/api/v1/metrics/getmetrics")]   // Bestandszaehler der Startseite
@@ -55,6 +56,8 @@ public class EndpointPolicyTests
     [InlineData("/api/v1/funktionenx")]            // Segmentgrenze (#756)
     [InlineData("/api/v1/konter-probenx")]         // Segmentgrenze (#786)
     [InlineData("/api/v1/moderation/schalter")]    // Admin-Seite der Schalter (#708)
+    [InlineData("/api/v1/saisons")]                // nur /aktuell ist offen (#782)
+    [InlineData("/api/v1/moderation/saisons")]     // Pflege der Saisons, admin-only
     public void IsAnonymousAllowed_FalseForProtectedPaths(string path)
     {
         Assert.False(EndpointPolicy.IsAnonymousAllowed(path));
