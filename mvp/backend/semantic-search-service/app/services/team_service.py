@@ -23,7 +23,8 @@ ebenso die Loeschung des Kontos (mvp/scripts/manual/person_loeschen.sql).
 
 Am Namen erscheinen Teams nur, wenn der Schalter ``teams_oeffentlich`` wirkt UND die
 Person der eigenen Einwilligung "Team öffentlich am Namen zeigen" zugestimmt hat, und
-nur die Teams der aktuellen Saison (services/einstellungen_service.py).
+nur die Teams der aktuellen Saison (services/einstellungen_service.py). Neue Teamlinks
+bekommen die laufende oder naechste geplante Saison als Vorschlag (``saison_vorschlag``).
 
 Schalter ``teams`` aus: Teamfelder werden ignoriert, Einladungen wie bisher.
 """
@@ -49,7 +50,7 @@ from repositories.team_repository import (
     OeffentlichAntwort,
     TeamRepository,
 )
-from services.einstellungen_service import aktuelle_saison
+from services.einstellungen_service import aktuelle_saison, saison_vorschlag
 from services.schalter_service import schalter_wirksam
 from utils.utc_tag import heute_utc
 
@@ -106,11 +107,16 @@ class TeamService:
         settings: Optional[Settings] = None,
         saison: Callable[[], str] = aktuelle_saison,
         uhr: Callable[[], datetime] = _jetzt,
+        vorschlag: Optional[Callable[[], str]] = None,
     ):
         self._repository = repository
         self._settings = settings
         self._saison = saison
         self._uhr = uhr
+        # Ohne Angabe: mit eigener Saison (Tests) dieselbe, sonst die Saison-Tabelle
+        self._vorschlag = vorschlag or (
+            saison_vorschlag if saison is aktuelle_saison else saison
+        )
 
     # --- Schalter --------------------------------------------------------------
 
@@ -122,6 +128,13 @@ class TeamService:
 
     def aktuelle_saison(self) -> str:
         return self._saison()
+
+    def saison_vorschlag(self) -> str:
+        """
+        Saison fuer neue Teamlinks: die laufende oder naechste geplante, sonst die
+        aktuelle (services/einstellungen_service.py ``saison_vorschlag``).
+        """
+        return self._vorschlag()
 
     # --- Einladung -------------------------------------------------------------
 

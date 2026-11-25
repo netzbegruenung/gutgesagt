@@ -79,7 +79,9 @@ class MeinTeamResponse(BaseModel):
     saison: str
     nummer: int
     eingetreten_am: date
-    # Ob das Team zur aktuellen Saison gehoert (sonst ein Abzeichen vergangener Saisons)
+    # Ob das Team zur aktuellen Saison gehoert, oder zur naechsten geplanten, fuer die
+    # Teamlinks schon vor ihrem Beginn angelegt werden (sonst ein Abzeichen vergangener
+    # Saisons)
     aktuelle_saison: bool
     # Nur mit Schalter team_fortschritt und deckender Einwilligung, sonst null
     wirkung: Optional[TeamWirkungResponse] = None
@@ -162,6 +164,8 @@ async def meine_teams(
     teams = await asyncio.to_thread(service.meine, user_id)
     aktiv = service.wirksam()
     saison = service.aktuelle_saison()
+    # Ein Team der naechsten Saison (Teamlink vor ihrem Beginn) ist nicht vergangen
+    nicht_vergangen = {saison, service.saison_vorschlag()}
     verfuegbar = aktiv and service.oeffentlich_wirksam()
     antwort = (
         await asyncio.to_thread(service.oeffentlich_stand, user_id)
@@ -187,7 +191,7 @@ async def meine_teams(
                 saison=t.saison,
                 nummer=t.nummer,
                 eingetreten_am=t.eingetreten_am,
-                aktuelle_saison=t.saison == saison,
+                aktuelle_saison=t.saison in nicht_vergangen,
                 wirkung=(
                     TeamWirkungResponse(
                         **vars(staende[(t.team_name, t.saison)].wirkung)

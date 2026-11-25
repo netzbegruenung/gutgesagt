@@ -26,7 +26,8 @@ function leer(): SaisonEingabe {
 /**
  * Saisons mit Gemeinschaftsziel (#782) auf der Seite „Schalter“: anlegen, ändern, vor dem
  * Beginn löschen, dazu je Saison der Stand in Widerspruchs-Wochen. Die laufende Saison ist
- * mit dem Schalter „saison_ziel“ die aktuelle Saison der Teams; den Balken auf der
+ * die aktuelle Saison der Teams, auch bei Schalter aus; neue Teamlinks bekommen die laufende
+ * oder nächste als Vorschlag. Den Balken (nur mit dem Schalter „saison_ziel“) auf der
  * Startseite sehen alle erst ab der Schwelle, bis dahin nur Admins hier. Lädt selbst nach.
  */
 @Component({
@@ -37,8 +38,9 @@ function leer(): SaisonEingabe {
     <section class="saisons mat-elevation-z1" aria-labelledby="saisons-titel" data-testid="saisons">
       <div class="kopf"><h3 id="saisons-titel">Saisons</h3></div>
       <p>
-        Höchstens eine Saison läuft. Mit dem Schalter „Saison und Gemeinschaftsziel“ ist sie die aktuelle Saison der
-        Teams, und die Startseite zeigt ihr Ziel als Balken.
+        Höchstens eine Saison läuft, im Jahreszeiten-Takt; Teams nach Anlass (etwa BDK) gehören in die laufende. Sie
+        ist die aktuelle Saison der Teams, und neue Teamlinks bekommen die laufende oder nächste Saison als Vorschlag.
+        Mit dem Schalter „Saison und Gemeinschaftsziel“ zeigt die Startseite ihr Ziel als Balken.
       </p>
       @if (liste; as l) {
         <p class="zustand" data-testid="saisons-zustand">

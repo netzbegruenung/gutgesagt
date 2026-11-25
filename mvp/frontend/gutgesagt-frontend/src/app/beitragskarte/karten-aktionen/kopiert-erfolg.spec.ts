@@ -6,7 +6,7 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { provideRouter } from '@angular/router';
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, Subject, of } from 'rxjs';
 
 import { KartenAktionenComponent } from './karten-aktionen.component';
 import { KOPIERT_ERFOLG, nutzungSatz, tonlagenHinweis } from './kopiert-erfolg';
@@ -20,7 +20,7 @@ import { FunktionenService } from '../../services/funktionen.service';
 import { KOPIERT } from '../../shared/vorlagen-luecke';
 import { TEILEN_NAVIGATOR } from '../../shared/teilen.service';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
-import { KOPIERT_GEPOSTET_FRAGE } from './gepostet-texte';
+import { GEPOSTET_FRAGE, JA_GEPOSTET } from './gepostet-texte';
 
 describe('Erfolgstext nach dem Kopieren - Texte (#785)', () => {
   it('nennt die Nutzung als Kopiervorgaenge, nie als Menschen', () => {
@@ -172,14 +172,52 @@ describe('Erfolgstext nach dem Kopieren - Karte (#785)', () => {
     expect(fixture.nativeElement.querySelector('.erfolg-schliessen')).not.toBeNull();
   });
 
-  it('angemeldet mit Frage „Gepostet?“ kommt die Frage weiter als Snackbar dazu', () => {
+  it('angemeldet mit Frage „Gepostet?“ steht „Ja, gepostet“ im Kasten, keine Snackbar, „Kopiert“ nur einmal', () => {
     auth.getUserInfo.and.returnValue({ isAuthenticated: true, userId: 'person' } as any);
     usage.gepostetBekannt.and.returnValue(true);
-    snackBar.open.and.returnValue({ onAction: () => of() } as any);
     kopieren();
 
-    expect(erfolg()).not.toBeNull();
-    expect(snackBar.open).toHaveBeenCalledOnceWith(KOPIERT_GEPOSTET_FRAGE, jasmine.any(String), jasmine.any(Object));
+    expect(erfolg()!.textContent).toContain(GEPOSTET_FRAGE);
+    expect(fixture.nativeElement.querySelector('.ja-gepostet').textContent.trim()).toBe(JA_GEPOSTET);
+    expect(snackBar.open).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent.split('Kopiert').length - 1).toBe(1);
+  });
+
+  it('die Frage kommt nach, wenn der Server sie erst nach dem Kopieren anbietet', () => {
+    const antwort = new Subject<boolean>();
+    auth.getUserInfo.and.returnValue({ isAuthenticated: true, userId: 'person' } as any);
+    usage.gepostetAngeboten.and.returnValue(antwort.asObservable());
+    kopieren();
+    expect(fixture.nativeElement.querySelector('.ja-gepostet')).toBeNull();
+
+    antwort.next(true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.ja-gepostet')).not.toBeNull();
+    expect(snackBar.open).not.toHaveBeenCalled();
+  });
+
+  it('geschlossen, bevor der Server antwortet: der Kasten kommt nicht wieder', () => {
+    const antwort = new Subject<boolean>();
+    auth.getUserInfo.and.returnValue({ isAuthenticated: true, userId: 'person' } as any);
+    usage.gepostetAngeboten.and.returnValue(antwort.asObservable());
+    kopieren();
+    (fixture.nativeElement.querySelector('.erfolg-schliessen') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    antwort.next(true);
+    fixture.detectChanges();
+
+    expect(erfolg()).toBeNull();
+  });
+
+  it('ohne Angebot kein Knopf und keine Frage', () => {
+    auth.getUserInfo.and.returnValue({ isAuthenticated: true, userId: 'person' } as any);
+    usage.gepostetBekannt.and.returnValue(false);
+    kopieren();
+
+    expect(erfolg()!.textContent).not.toContain(GEPOSTET_FRAGE);
+    expect(fixture.nativeElement.querySelector('.ja-gepostet')).toBeNull();
   });
 
   it('bei ausgeschaltetem Schalter wie bisher die Snackbar und kein Erfolgstext', () => {

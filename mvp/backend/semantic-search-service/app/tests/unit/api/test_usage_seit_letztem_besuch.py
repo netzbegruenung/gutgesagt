@@ -59,6 +59,7 @@ def gesehen():
     repo = Mock()
     repo.neue_einwuerfe_seit_letztem_besuch = Mock(return_value=3)
     repo.neues_echo_seit_letztem_besuch = Mock(side_effect=lambda _p, jetzt: jetzt)
+    repo.schon_besucht = Mock(return_value=True)
     return repo
 
 
@@ -112,6 +113,8 @@ class TestSeitLetztemBesuch:
             "antworten_auf_eigene_aussagen": None,
             # Wirkungs-Echo aus (Standard, #790): keine Summe
             "neu_oeffentlich_gepostet": None,
+            # Schon einmal da gewesen
+            "erster_besuch": False,
         }
         dienst.nutzung_seit_letztem_besuch.assert_awaited_once_with("kim-1")
 
@@ -138,6 +141,35 @@ class TestSeitLetztemBesuch:
         assert antwort.status_code == 500
         assert log_pseudonym("kim-1") in caplog.text
         assert "kim-1" not in caplog.text
+
+
+class TestErsterBesuch:
+    """Beim allerersten Besuch kein "Seit deinem letzten Besuch" (Review 25.11.)."""
+
+    def test_ohne_stand_ist_es_der_erste_besuch(self, client, gesehen):
+        gesehen.schon_besucht.return_value = False
+
+        antwort = client.post(URL, headers={"X-User": "kim-1"})
+
+        assert antwort.status_code == 200
+        assert antwort.json()["erster_besuch"] is True
+        gesehen.schon_besucht.assert_called_once_with("kim-1")
+
+    def test_prueft_vor_den_zahlen_die_den_stand_anlegen(self, client, gesehen):
+        gesehen.schon_besucht.return_value = False
+
+        client.post(URL, headers={"X-User": "kim-1"})
+
+        assert [c[0] for c in gesehen.method_calls][0] == "schon_besucht"
+
+    def test_fehler_gilt_als_wiederkehr_und_der_besuch_steht(self, client, gesehen):
+        gesehen.schon_besucht.side_effect = RuntimeError("kaputt")
+
+        antwort = client.post(URL, headers={"X-User": "kim-1"})
+
+        assert antwort.status_code == 200
+        assert antwort.json()["erster_besuch"] is False
+        assert antwort.json()["nutzung_seit_letztem_besuch"] == 4
 
 
 class TestSeitDeinemLetztenBesuch:
@@ -188,6 +220,7 @@ class TestSeitDeinemLetztenBesuch:
             "antworten_auf_eigene_aussagen": None,
             # Wirkungs-Echo aus (Standard, #790): keine Summe
             "neu_oeffentlich_gepostet": None,
+            "erster_besuch": False,
         }
         assert "kim-1" not in caplog.text
 
@@ -278,7 +311,8 @@ class TestKachelnMitZeitraum:
 
         # Der einzige Stand bleibt der der Einwuerfe (und der Nutzung im Dienst)
         assert [c[0] for c in gesehen.method_calls] == [
-            "neue_einwuerfe_seit_letztem_besuch"
+            "schon_besucht",
+            "neue_einwuerfe_seit_letztem_besuch",
         ]
 
     def test_nie_negativ(self, client, einwuerfe, inhalte):

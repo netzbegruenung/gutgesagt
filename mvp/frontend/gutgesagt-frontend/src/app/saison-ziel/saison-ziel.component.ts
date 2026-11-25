@@ -66,16 +66,16 @@ const LEER: Anzeige = { balken: null, bestand: null };
         } @else {
           <!-- Saisonstart: kein „0-mal“ und kein leerer Balken, sondern eine Einladung (Review 25.11., Vorschlag 4) -->
           <p class="satz" data-testid="saison-ziel-satz">
-            Saison {{ b.name }} hat begonnen: Jedes „Ja, gepostet“ nach dem Kopieren zählt für unser gemeinsames Ziel.
+            Saison {{ b.name }} hat begonnen: Jede gepostete Antwort zeigt öffentlich, dass jemand widerspricht.
           </p>
           <p class="stand" data-testid="saison-ziel-stand">
-            Ziel: {{ zahl(b.ziel) }} Widerspruchs-Wochen. Sobald die erste Woche gezählt ist, füllt sich hier der
-            Balken.
+            Wer nach dem Kopieren mit Konto „Ja, gepostet“ meldet, zählt diese Woche fürs gemeinsame Ziel:
+            {{ zahl(b.ziel) }} Widerspruchs-Wochen.
           </p>
         }
         <p class="erklaerung">
-          Jede Woche zählt jede Person einmal, die nach dem Kopieren „Ja, gepostet“ meldet. Wer mehrere Wochen
-          dabei ist, zählt mehrmals.
+          Jede Woche zählt jede Person einmal, die nach dem Kopieren mit Konto „Ja, gepostet“ meldet. Wer mehrere
+          Wochen dabei ist, zählt mehrmals.
         </p>
       </section>
     } @else {

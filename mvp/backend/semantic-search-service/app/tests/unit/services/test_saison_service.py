@@ -1,5 +1,6 @@
 """
-SaisonService (#782): laufende Saison als aktuelle Saison der Teams nur mit Schalter,
+SaisonService (#782): laufende Saison als aktuelle Saison der Teams auch ohne Schalter,
+Vorschlag fuer Teamlinks (laufende oder naechste geplante),
 Balken erst ab der Schwelle und nur mit Summen abgeschlossener Wochen, Stand fuer
 Admins, Cache wird nach dem Schreiben verworfen. Repository als Attrappe.
 """
@@ -12,7 +13,7 @@ import pytest
 
 from core.config import Settings
 from domain.saisons import Saison, SaisonGesperrt, SaisonZustand
-from services.einstellungen_service import aktuelle_saison
+from services.einstellungen_service import aktuelle_saison, saison_vorschlag
 from services.saison_service import SaisonService, saison_service_setzen
 from utils.utc_tag import heute_utc
 
@@ -47,10 +48,11 @@ class TestFuerTeams:
         service, _, _ = _service()
         assert service.saison_fuer_teams(HEUTE) == "Winter 26"
 
-    def test_schalter_aus_liest_nicht(self):
-        service, repository, _ = _service(wirksam=False)
-        assert service.saison_fuer_teams(HEUTE) is None
-        repository.alle.assert_not_called()
+    def test_schalter_aus_gilt_trotzdem(self):
+        # Der Schalter steuert nur den Balken: Sonst kippten die Teams der laufenden
+        # Saison beim Ausschalten unter "Vergangene Saisons"
+        service, _, _ = _service(wirksam=False)
+        assert service.saison_fuer_teams(HEUTE) == "Winter 26"
 
     def test_vor_der_ersten_saison(self):
         service, _, _ = _service()
@@ -84,7 +86,25 @@ class TestFuerTeams:
         assert "„Winter 26“" in _hinweis("aktuelle_saison")
         assert _hinweis("teams") is None
         saison_service_setzen(_service(saisons=(vorbei,), wirksam=False)[0])
+        assert "„Winter 26“" in _hinweis("aktuelle_saison")
+        saison_service_setzen(_service(saisons=())[0])
         assert _hinweis("aktuelle_saison") is None
+
+    def test_hinweis_vor_der_ersten_saison(self, einstellungen_ohne_datenbank):
+        from api.v1.schalter import _hinweis
+
+        heute = heute_utc()
+        geplant = Saison(
+            uuid.uuid4(),
+            "Winter 26/27",
+            heute + timedelta(days=5),
+            heute + timedelta(days=95),
+            5,
+        )
+        saison_service_setzen(_service(saisons=(geplant,))[0])
+        hinweis = _hinweis("aktuelle_saison")
+        assert "Gilt bis zum Beginn der Saison „Winter 26/27“" in hinweis
+        assert "Vorschlag" in hinweis
 
     def test_datenbank_weg_heisst_einstellung(self):
         service, repository, _ = _service()
@@ -98,8 +118,60 @@ class TestFuerTeams:
         service, _, _ = _service(saisons=(jetzt,))
         saison_service_setzen(service)
         assert aktuelle_saison() == "Winter 26"
-        saison_service_setzen(_service(wirksam=False)[0])
+        saison_service_setzen(_service(saisons=(jetzt,), wirksam=False)[0])
+        assert aktuelle_saison() == "Winter 26"
+        saison_service_setzen(_service(saisons=())[0])
         assert aktuelle_saison() == "2026"
+
+
+class TestVorschlag:
+    WINTER = Saison(uuid.uuid4(), "Winter 26/27", MO, MO + timedelta(days=90), 1000)
+    FRUEHJAHR = Saison(
+        uuid.uuid4(),
+        "Frühjahr 27",
+        MO + timedelta(days=91),
+        MO + timedelta(days=182),
+        1000,
+    )
+
+    def test_laufende(self):
+        service, _, _ = _service(saisons=(self.FRUEHJAHR, self.WINTER))
+        assert service.vorschlag(MO + timedelta(days=10)) == "Winter 26/27"
+
+    def test_vor_dem_beginn_die_naechste(self):
+        # BDK-Teamlink vor dem 30.11.: schon der Name der Saison, in die das Team faellt
+        service, _, _ = _service(saisons=(self.FRUEHJAHR, self.WINTER))
+        assert service.vorschlag(MO - timedelta(days=5)) == "Winter 26/27"
+
+    def test_schalter_aus_gilt_trotzdem(self):
+        service, _, _ = _service(saisons=(self.WINTER,), wirksam=False)
+        assert service.vorschlag(MO - timedelta(days=5)) == "Winter 26/27"
+
+    def test_ohne_laufende_und_geplante_keiner(self):
+        service, _, _ = _service(saisons=(self.WINTER,))
+        assert service.vorschlag(self.WINTER.ende + timedelta(days=1)) is None
+
+    def test_datenbank_weg_keiner(self):
+        service, repository, _ = _service()
+        repository.alle.side_effect = RuntimeError("weg")
+        assert service.vorschlag(HEUTE) is None
+
+    def test_saison_vorschlag_mit_ersatz(self, einstellungen_ohne_datenbank):
+        einstellungen_ohne_datenbank["aktuelle_saison"] = "2026"
+        heute = heute_utc()
+        geplant = Saison(
+            uuid.uuid4(),
+            "Winter 26/27",
+            heute + timedelta(days=5),
+            heute + timedelta(days=95),
+            5,
+        )
+        saison_service_setzen(_service(saisons=(geplant,))[0])
+        # Vor dem Beginn: Vorschlag schon die Saison, aktuell noch die Einstellung
+        assert saison_vorschlag() == "Winter 26/27"
+        assert aktuelle_saison() == "2026"
+        saison_service_setzen(_service(saisons=())[0])
+        assert saison_vorschlag() == "2026"
 
 
 class TestBalken:

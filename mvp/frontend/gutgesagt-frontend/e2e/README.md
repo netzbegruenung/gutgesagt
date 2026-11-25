@@ -95,7 +95,8 @@ docker compose -p gg-teams -f docker-compose.dev.yml -f docker-compose.teams-sta
   Person; ein voller Lauf braucht 20 bis 30. Scheitert Speichern oder Einwerfen mit 429,
   warten die Helfer in `tests/fixtures.ts` eine Minute und versuchen es erneut (im Report als
   „Rate-Limit“ vermerkt). Nach drei, vier Läufen in einer Stunde hilft das nicht mehr;
-  `mvp/run-local.sh reset` setzt den Zähler zurück (er liegt nur im Speicher).
+  `mvp/run-local.sh reset` setzt den Zähler zurück (er liegt nur im Speicher). Die Grenzen
+  stehen in `SEMANTIC_SEARCH_ANLEGE_RATE_LIMIT_JE_MINUTE`/`_JE_STUNDE`.
   Den Tagesdeckel (20 Anlagen je Person und Tag) hebt `docker-compose.dev.yml` für den
   Dev-Stack auf 1000 an.
 - **Dubletten:** Ab dem zweiten Lauf gleicht ein neuer Kommentar dem aus dem Vorlauf. Die
