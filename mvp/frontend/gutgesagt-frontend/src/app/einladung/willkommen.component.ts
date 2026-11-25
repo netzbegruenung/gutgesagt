@@ -6,8 +6,9 @@ import { ERSTER_SPRUCH } from './erster-spruch';
 
 /**
  * Begrüßung nach dem ersten Anmelden über eine Einladung ohne Team (UX-Review 25.11.2026,
- * Vorschläge 5 und 6): ein Satz zum Gewinn und ein Hauptknopf zur ersten Suche, statt gleich
- * auf der leeren Startseite zu stehen. einladung-anmelden führt hierher; die App fragt vorher
+ * Vorschlag 5): ein Satz zum Gewinn und ein Hauptknopf zur ersten Suche, statt gleich auf
+ * der leeren Startseite zu stehen. Vorschlag 6 (Begrüßung über dem Formular) ist ein
+ * eigener Schritt und hiermit nicht erledigt. einladung-anmelden führt hierher; die App fragt vorher
  * wie bisher nach Nutzungsbedingungen und Einwilligung (/willkommen steht nicht unter den
  * Seiten ohne Umleitung) und kommt danach zurück. Suchen geht auch ohne Einwilligung, der
  * Text verspricht deshalb nichts zum Beitragen.
@@ -27,7 +28,7 @@ import { ERSTER_SPRUCH } from './erster-spruch';
         <p>Dein Konto ist bereit. Hier findest du gute Antworten auf Sprüche aus der Debatte, fertig zum Posten.</p>
         <p>{{ ersterSpruch.satz }}</p>
         <a mat-raised-button color="primary" class="hauptknopf" data-testid="erster-spruch"
-           [routerLink]="ersterSpruch.ziel" [fragment]="ersterSpruch.fragment">{{ ersterSpruch.knopf }}</a>
+           [routerLink]="ersterSpruch.ziel" [fragment]="ersterSpruch.fragment">{{ ersterSpruch.knopfNeuesKonto }}</a>
       </mat-card-content>
     </mat-card>
   `,

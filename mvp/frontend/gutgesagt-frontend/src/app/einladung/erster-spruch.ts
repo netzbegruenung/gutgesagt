@@ -8,10 +8,14 @@ import { SUCHFELD_FOKUS_FRAGMENT } from '../naechster-schritt/naechster-schritt'
  * (/willkommen). Kein Rechtstext: Er steht nach Beitritt und Konto, nicht vor einer Frage.
  */
 export const ERSTER_SPRUCH = {
-  satz:
-    'Leg gleich los: Such den Spruch, der dich zuletzt geärgert hat. Meist findest du in ' +
-    'Sekunden eine gute Antwort zum Kopieren.',
-  knopf: 'Ersten Spruch suchen',
+  satz: 'Such den Spruch, der dich zuletzt geärgert hat. Oft findest du in Sekunden eine Antwort zum Kopieren.',
+  /**
+   * Nach dem Teambeitritt: neutral, denn viele treten mit einem Konto bei, mit dem sie schon
+   * gesucht haben (Teamlink an Bestehende, „Du bist schon dabei“).
+   */
+  knopf: 'Spruch suchen',
+  /** Auf /willkommen: Dort steht nur, wer gerade ein Konto aus einer Einladung angelegt hat. */
+  knopfNeuesKonto: 'Ersten Spruch suchen',
   /** Die Startseite; das Fragment setzt dort den Fokus ins Suchfeld (search-view). */
   ziel: ROUTES.SEARCH,
   fragment: SUCHFELD_FOKUS_FRAGMENT,

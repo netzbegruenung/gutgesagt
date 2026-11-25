@@ -41,8 +41,8 @@ export interface Anzeige {
 export const SUCHFELD_ID = 'suche';
 
 /**
- * Fragment der Startseite, das den Fokus ins Suchfeld setzt (/search#suchen, „Ersten Spruch
- * suchen“). Bewusst nicht die id des Feldes: Sonst scrollte der Router (anchorScrolling) das
+ * Fragment der Startseite, das den Fokus ins Suchfeld setzt (/search#suchen, Knopf „Spruch
+ * suchen“ nach einer Einladung). Bewusst nicht die id des Feldes: Sonst scrollte der Router (anchorScrolling) das
  * Feld an den oberen Rand und Titel und Untertitel aus dem Bild.
  */
 export const SUCHFELD_FOKUS_FRAGMENT = 'suchen';

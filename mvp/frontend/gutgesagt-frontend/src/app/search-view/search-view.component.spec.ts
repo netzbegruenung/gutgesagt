@@ -3,7 +3,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ApplicationRef } from '@angular/core';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { SearchViewComponent } from './search-view.component';
 import { AuthService } from '../auth/auth.service';
@@ -177,7 +177,7 @@ describe('SearchViewComponent mit Anker #recent-content', () => {
 });
 
 describe('SearchViewComponent mit Anker #suchen', () => {
-  it('setzt den Fokus ins Suchfeld, nach „Ersten Spruch suchen“ (UX-Review 25.11., Vorschlag 5)', () => {
+  it('setzt den Fokus ins Suchfeld und nimmt das Fragment aus der Adresse, nach „Spruch suchen“ (UX-Review 25.11., Vorschlag 5)', () => {
     TestBed.configureTestingModule({
       providers: [
         provideAnimations(),
@@ -191,12 +191,19 @@ describe('SearchViewComponent mit Anker #suchen', () => {
       ],
       imports: [SearchViewComponent],
     });
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     const fixture = TestBed.createComponent(SearchViewComponent);
     // Der erste Lauf zeichnet die Seite, afterNextRender setzt nach dem nächsten Rendern den Fokus.
     fixture.detectChanges();
     TestBed.inject(ApplicationRef).tick();
 
     expect(document.activeElement?.id).toBe('suche');
+    // Danach ist das Fragment aus der Adresse, damit Zurück oder Neuladen nicht erneut fokussieren
+    expect(navigate).toHaveBeenCalledWith([], {
+      queryParamsHandling: 'preserve',
+      fragment: undefined,
+      replaceUrl: true,
+    });
     fixture.destroy();
   });
 });

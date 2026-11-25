@@ -99,11 +99,24 @@ export class SearchViewComponent implements AfterViewInit {
       const fragTimestamp = new Date().toISOString();
       this.logger.debug(`[${fragTimestamp}] Fragment received:`, fragment);
 
-      // „Ersten Spruch suchen“ nach einer Einladung: Fokus ins Suchfeld, auch am Handy,
-      // denn die Person hat genau das angetippt.
+      // „Spruch suchen“ nach einer Einladung: Fokus ins Suchfeld, auch auf Touch-Geräten,
+      // denn die Person hat genau das angetippt. Ob die Bildschirmtastatur gleich aufgeht,
+      // entscheidet der Browser: iOS Safari öffnet sie nach einer Navigation erst beim Antippen.
       if (fragment === SUCHFELD_FOKUS_FRAGMENT) {
-        // Ohne preventScroll: Der Browser scrollt nur, wenn das Feld nicht zu sehen ist.
-        afterNextRender(() => document.getElementById(SUCHFELD_ID)?.focus(), { injector: this.injector });
+        afterNextRender(
+          () => {
+            // Ohne preventScroll: Der Browser scrollt nur, wenn das Feld nicht zu sehen ist.
+            document.getElementById(SUCHFELD_ID)?.focus();
+            // Das Fragment wieder aus der Adresse: Zurück, Neuladen oder ein geteilter Link
+            // setzen den Fokus sonst erneut, ohne dass jemand das Feld angetippt hat.
+            void this.router.navigate([], {
+              queryParamsHandling: 'preserve',
+              fragment: undefined,
+              replaceUrl: true,
+            });
+          },
+          { injector: this.injector },
+        );
         return;
       }
 
