@@ -26,7 +26,8 @@ const TESTKONTO = { email: 'test.user@example.com', id: 'user-001' };
 /** Kennungen in derselben Reihenfolge, in der der Keycloak-Ersatz sie vergibt. */
 const NEU1 = { email: 'teams.neu1@example.com', id: 'teams-neu-1' };
 const NEU2 = { email: 'teams.neu2@example.com', id: 'teams-neu-2' };
-const KENNUNG = 'team-2026-11-25';
+/** Geltender Wortlaut (domain/teams.py EINWILLIGUNG_KENNUNG); frühere nimmt der Server für neue Einwilligungen nicht an. */
+const KENNUNG = 'team-2026-11-26';
 const TEAM_A = { name: 'Stacktest Bayreuth', saison: '2026' };
 const TEAM_B = { name: 'Stacktest Nordstand', saison: '2026' };
 
@@ -145,6 +146,14 @@ test.describe('Teams gegen den echten Stack', () => {
     const kasten = page.getByTestId('team-kasten');
     await expect(kasten.getByRole('heading', { level: 2 })).toContainText('Du wärst Nr. 1');
     await bild('begruessung', true);
+    // Der Server liefert den geltenden Wortlaut: Kennung und Text mit Kommentaren und „Ja, gepostet“
+    const pruefen = await page.request.post('/api/v1/einladungen/pruefen', { data: { code: links['A'].split('#')[1] } });
+    expect(pruefen.status()).toBe(200);
+    expect((await pruefen.json()).team.einwilligung_kennung).toBe(KENNUNG);
+    const wortlaut = kasten.locator('details.team-wortlaut');
+    await wortlaut.locator('summary').click();
+    await expect(wortlaut).toContainText('Beiträge, Bewertungen und Kommentare');
+    await expect(wortlaut).toContainText('Meldungen „Ja, gepostet“');
     await kasten.getByTestId('team-ja').click();
     await formular(page, NEU1.email);
     await page.getByRole('button', { name: 'Konto anlegen' }).click();

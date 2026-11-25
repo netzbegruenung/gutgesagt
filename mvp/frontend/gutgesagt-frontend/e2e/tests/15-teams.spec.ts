@@ -15,6 +15,7 @@ import { expect, test } from './fixtures';
  * - angemeldet beitreten, zweimal = „Du bist schon dabei“ ohne zweiten Beitritt;
  * - „Team verlassen“ mit Rückfrage löscht sofort, die Karte lädt selbst nach;
  * - Schalter teams aus: die Seite wie vor den Teams, ohne Teamfelder in der Anfrage;
+ *   vorhandene Mitgliedschaften stehen weiter unter „Meine Teams“ und lassen sich verlassen;
  * - Schalter teams_oeffentlich aus: keine zweite Frage, kein Umschalter in „Meine Teams“.
  */
 const CODE = 'E2eTeamCode_42';
@@ -154,10 +155,13 @@ async function ohneStack(page: Page, start: Partial<Stand> = {}): Promise<Stand>
     }
     if (pfad === '/api/v1/teams/meine' && methode === 'GET') {
       if (!angemeldet) return anfrage.fulfill({ status: 401, json: {} });
-      if (!stand.teamsAn) return anfrage.fulfill({ status: 404, json: {} });
       const m = eigene(stand);
+      // Schalter aus: 404 nur ohne eigene Mitgliedschaft; vorhandene bleiben sichtbar und
+      // lassen sich verlassen (docs/ARCHITECTURE.md, SEMANTIC_SEARCH_TEAMS_AKTIV)
+      if (!stand.teamsAn && !m) return anfrage.fulfill({ status: 404, json: {} });
       return anfrage.fulfill({
         json: {
+          teams_aktiv: stand.teamsAn,
           aktuelle_saison: TEAM.saison,
           oeffentlich_verfuegbar: false,
           oeffentlich_zeigen: null,
@@ -425,5 +429,22 @@ test.describe('Teams über Einladungslinks', () => {
     await page.goto('/contributions');
     await expect(page.locator('app-meine-teams')).toBeAttached();
     await expect(page.getByTestId('meine-teams')).toHaveCount(0);
+  });
+  test('Schalter teams aus mit eigener Mitgliedschaft: „Meine Teams“ mit Verlassen', async ({ page, bild }) => {
+    const stand = await ohneStack(page, { teamsAn: false, konto: 'e2e-konto' });
+    const m = mitgliedWerden(stand, 'e2e-konto');
+    await page.goto('/contributions');
+    const meine = page.getByTestId('meine-teams');
+    await expect(meine.getByTestId('teams-aus')).toBeVisible();
+    await expect(meine.getByTestId('team')).toHaveCount(1);
+    await expect(meine.getByTestId('team')).toContainText(`Nr. ${m.nummer}`);
+    await bild('teams-schalter-aus-meine-teams', true);
+
+    await meine.getByRole('button', { name: `Team verlassen: ${TEAM.name}, Saison ${TEAM.saison}` }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Team verlassen' }).click();
+    // Danach keine eigene mehr: 404, die Karte fehlt
+    await expect(page.getByTestId('meine-teams')).toHaveCount(0);
+    expect(stand.verlassen).toEqual([m.id]);
+    expect(stand.mitgliedschaften.some((x) => x.konto === 'e2e-konto')).toBe(false);
   });
 });
