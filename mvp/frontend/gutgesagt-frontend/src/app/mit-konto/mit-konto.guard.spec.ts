@@ -26,8 +26,7 @@ describe('mitKontoVorschauGuard', () => {
       TestBed.runInInjectionContext(() => mitKontoVorschauGuard(snapshot, {} as RouterStateSnapshot)) as Observable<boolean | UrlTree>,
     );
     const anfrage = http.expectOne((r) => r.url.endsWith('/api/check-session'));
-    if (angemeldet) anfrage.flush({});
-    else anfrage.flush(null, { status: 401, statusText: 'Unauthorized' });
+    anfrage.flush({ isAuthenticated: angemeldet });
     return ergebnis;
   }
 

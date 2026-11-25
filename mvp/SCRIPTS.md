@@ -288,7 +288,10 @@ Das Skript gibt das Cookie nirgends aus; es zeigt nur, als wer es angemeldet ist
   Kommentar (anderer Titel, etwa zu einer anderen Aussage) hängt es nicht um, es meldet ihn.
 - Je angelegtem Kommentar nennt die Ausgabe seine ID und die der Aussage; hängt er an einer
   schon vorhandenen Aussage mit anderem Wortlaut, steht deren Text dabei.
-- Der Dienst nimmt höchstens 10 Kommentare je Minute und 100 je Stunde und Konto an; bei
+- Der Dienst nimmt höchstens 10 Kommentare je Minute und 100 je Stunde und Konto an
+  (`SEMANTIC_SEARCH_ANLEGE_RATE_LIMIT_JE_MINUTE`/`_JE_STUNDE`). Startkonten
+  (`SEMANTIC_SEARCH_STARTKONTEN`) sind davon ausgenommen: Mit einem Startkonto läuft der
+  Import ohne Pausen durch, nur so schnell, wie der Dienst anlegt. Bei
   einer Ablehnung wartet das Skript eine Minute und versucht es bis zu dreimal. Bleibt es
   dabei (Stundenlimit), endet der Lauf, die übrigen stehen als „nicht versucht“ im Bericht:
   nach einer Stunde mit derselben Datei erneut laufen lassen.

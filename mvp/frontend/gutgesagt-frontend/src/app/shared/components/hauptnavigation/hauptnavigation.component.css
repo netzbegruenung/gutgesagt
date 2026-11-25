@@ -37,6 +37,19 @@
     line-height: 0;
 }
 
+/* Punkt an „Meine“ (#760): Rand in der Flächenfarbe, damit er auf jedem Grund absetzt */
+.punkt {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--flaeche);
+    border-radius: 50%;
+    background: var(--akzent-tanne);
+    box-sizing: border-box;
+}
+
 /* Neue Einwürfe im Fangkorb; die Zahl selbst ist stumm, der Linkname nennt sie */
 .zaehler {
     position: absolute;
@@ -160,20 +173,27 @@
 
 :host(.hauptnavigation--leiste) .ziel-icon-rahmen {
     padding: 4px 18px;
-    border-radius: 16px;
 }
 
+/*
+ * Aktiv (23.11.2026, Variante B): Akzentfarbe und oben ein Strich zum Inhalt hin, wie am
+ * Desktop unten; nicht nur ueber die Farbe (WCAG 1.4.1). Die limettene Pille um das Icon
+ * stach aus der App heraus.
+ */
 :host(.hauptnavigation--leiste) .ziel--aktiv {
     color: var(--akzent-schrift);
-}
-
-:host(.hauptnavigation--leiste) .ziel--aktiv .ziel-icon-rahmen {
-    background: var(--accent-light);
+    box-shadow: inset 0 3px 0 var(--akzent-tanne);
 }
 
 :host(.hauptnavigation--leiste) .zaehler {
     top: -2px;
     right: 4px;
+}
+
+/* In der Leiste hat der Icon-Rahmen 18 px Rand: Der Punkt sitzt sonst neben dem Icon */
+:host(.hauptnavigation--leiste) .punkt {
+    top: 2px;
+    right: 14px;
 }
 
 /* Admin-Zahl im Menü neben dem Wort */

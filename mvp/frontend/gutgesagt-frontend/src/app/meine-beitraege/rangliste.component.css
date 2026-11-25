@@ -1,0 +1,156 @@
+.rangliste {
+  margin-bottom: var(--spacing-md);
+}
+
+.rangliste h2 {
+  font-size: 1.1rem;
+  margin: 0 0 4px;
+}
+
+.rangliste h2:focus {
+  outline: none;
+}
+
+.rangliste h2:focus-visible {
+  outline: 2px solid var(--akzent-tanne);
+  outline-offset: 2px;
+}
+
+.rangliste-hinweis {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--text-leise);
+}
+
+.rangliste-frage {
+  padding: 12px 16px;
+  border: 1px solid var(--feldrand);
+  border-radius: 8px;
+}
+
+.rangliste-wortlaut,
+.rangliste-mehr {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.rangliste-knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Lange Knopftexte duerfen umbrechen: 360 px ohne waagrechtes Scrollen */
+.rangliste-knoepfe button {
+  white-space: normal;
+  height: auto;
+  min-height: 40px;
+}
+
+.rangliste-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rangliste-platz {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--feldrand);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.rangliste-platz.ich {
+  border-color: var(--akzent-tanne);
+  background: var(--primaer-tint);
+  font-weight: 500;
+}
+
+.rangliste-eigener {
+  margin: 4px 0 0;
+}
+
+.rangliste-nummer {
+  flex: none;
+  min-width: 2.5ch;
+  text-align: right;
+}
+
+.rangliste-name-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.rangliste-punkte {
+  flex: none;
+  color: var(--text-leise);
+}
+
+.rangliste-platz.ich .rangliste-punkte {
+  color: var(--text);
+}
+
+.rangliste-name {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  border: 1px solid var(--feldrand);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.rangliste-name legend {
+  padding: 0 4px;
+  font-weight: 500;
+}
+
+.rangliste-name label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  overflow-wrap: anywhere;
+}
+
+.rangliste-name input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--akzent-tanne);
+}
+
+.rangliste-unter {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 12px 0 6px;
+  color: var(--text-leise);
+}
+
+.rangliste-vergangene {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+}
+
+.rangliste-stand {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text-leise);
+}
+
+.rangliste-fehler {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--fehler);
+}

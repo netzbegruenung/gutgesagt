@@ -1,6 +1,6 @@
 services:
   qdrant:
-    image: qdrant/qdrant:v1.18.2
+    image: qdrant/qdrant:v1.20.2
     container_name: gutgesagt-qdrant
     restart: always
     ports:

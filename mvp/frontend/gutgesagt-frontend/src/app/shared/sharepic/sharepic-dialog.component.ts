@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  Inject,
+  InjectionToken,
+  OnDestroy,
+  OnInit,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,7 +16,21 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { TEILEN_NAVIGATOR } from '../teilen.service';
-import { SHAREPIC_FORMAT_LABEL, SharepicDaten, SharepicFormat, sharepicDatei } from './sharepic';
+import {
+  BROWSER_LADER,
+  SHAREPIC_FORMAT_LABEL,
+  SharepicDaten,
+  SharepicFormat,
+  SharepicLader,
+  SharepicZeitueberschreitung,
+  sharepicDatei,
+} from './sharepic';
+
+/** Was das Bild von außen lädt; Tests setzen hier einen eigenen Lader ein. */
+export const SHAREPIC_LADER = new InjectionToken<SharepicLader>('SharepicLader', {
+  providedIn: 'root',
+  factory: () => BROWSER_LADER,
+});
 
 /** Wie das Bild die Karte verlassen hat; undefined = geschlossen ohne Bild. */
 export type SharepicErgebnis = 'geteilt' | 'heruntergeladen';
@@ -20,7 +43,8 @@ export const SHAREPIC_TEXTE = {
   schliessen: 'Schließen',
   laedt: 'Bild wird gemalt …',
   fehler: 'Das Bild ließ sich nicht malen. Versuch es noch einmal oder teile den Link.',
-  nochmal: 'Noch einmal',
+  zuLangsam: 'Das Bild braucht gerade zu lange. Versuch es gleich noch einmal oder teile den Link.',
+  nochmal: 'Noch einmal versuchen',
   hinweis: 'Das Bild entsteht auf deinem Gerät. Gut gesagt speichert es nicht.',
 } as const;
 
@@ -53,7 +77,7 @@ export const SHAREPIC_TEXTE = {
           <mat-spinner diameter="32"></mat-spinner><span>{{ texte.laedt }}</span>
         </div>
         <div *ngIf="fehler && !laedt" class="sharepic-fehler" role="alert">
-          <p><mat-icon aria-hidden="true">error_outline</mat-icon>{{ texte.fehler }}</p>
+          <p><mat-icon aria-hidden="true">error_outline</mat-icon>{{ fehler === 'zeit' ? texte.zuLangsam : texte.fehler }}</p>
           <button mat-stroked-button type="button" class="sharepic-nochmal" (click)="nochmal()">
             <mat-icon aria-hidden="true">refresh</mat-icon>{{ texte.nochmal }}
           </button>
@@ -105,10 +129,12 @@ export class SharepicDialogComponent implements OnInit, OnDestroy {
   datei: File | null = null;
   vorschau: string | null = null;
   laedt = false;
-  fehler = false;
+  /** Warum das Malen scheiterte: 'zeit' nach der Zeitgrenze (#819), sonst 'fehler'; null ohne Fehler. */
+  fehler: 'zeit' | 'fehler' | null = null;
 
   private readonly nav = inject(TEILEN_NAVIGATOR);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly lader = inject(SHAREPIC_LADER);
   private auftrag = 0;
 
   constructor(
@@ -195,20 +221,20 @@ export class SharepicDialogComponent implements OnInit, OnDestroy {
   private async malen(): Promise<void> {
     const auftrag = ++this.auftrag;
     this.laedt = true;
-    this.fehler = false;
+    this.fehler = null;
     this.datei = null;
     this.cdr.markForCheck();
     try {
-      const datei = await sharepicDatei(this.daten, this.format);
+      const datei = await sharepicDatei(this.daten, this.format, this.lader);
       if (auftrag !== this.auftrag) {
         return;
       }
       this.vorschauFreigeben();
       this.datei = datei;
       this.vorschau = URL.createObjectURL(datei);
-    } catch {
+    } catch (grund) {
       if (auftrag === this.auftrag) {
-        this.fehler = true;
+        this.fehler = grund instanceof SharepicZeitueberschreitung ? 'zeit' : 'fehler';
       }
     } finally {
       if (auftrag === this.auftrag) {

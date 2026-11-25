@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, Tuple, TYPE_CHECKING
 from fastapi import Depends, Header, HTTPException
 
 if TYPE_CHECKING:
@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     # under TYPE_CHECKING to avoid pulling the registry/service graph at module load.
     from services.content.base_content_service import BaseContentService
     from services.abzeichen_service import AbzeichenService
+    from services.themen_vorschlag import ThemenVorschlagService
 from core.config import settings, Settings
 from utils.rate_limiter import RateLimiter
 from services.orchestration.content_orchestrator import ContentOrchestrator
@@ -68,6 +69,7 @@ from repositories.einwurf_repository import get_einwurf_repository
 from repositories.sperre_repository import get_sperre_repository
 from repositories.loeschauftrag_repository import get_loeschauftrag_repository
 from repositories.schalter_repository import get_schalter_repository
+from repositories.team_repository import get_team_repository
 from core.fehler import INTERNER_FEHLER
 from core.logging import get_logger
 
@@ -201,6 +203,59 @@ def get_aussage_themen_service(
     return AussageThemenService(get_aussage_themen_repository(), statement_service)
 
 
+_themen_vorschlag_service: Optional["ThemenVorschlagService"] = None
+
+
+class _EinbetterDesDienstes:
+    """Der Embeddings-Manager erst beim Einbetten geholt: Ist er noch nicht gestartet,
+    scheitert der Vorschlag im Service (leere Liste), nicht schon die Dependency."""
+
+    def encode_query(self, query: str):
+        from services.embeddings.qdrant_embeddings_manager import (
+            get_embeddings_manager,
+        )
+
+        return get_embeddings_manager().encode_query(query)
+
+
+def get_themen_vorschlag_service() -> "ThemenVorschlagService":
+    """
+    Der eine ThemenVorschlagService des Prozesses (#401): Er haelt die Prototypen und die
+    Vektoren der Zuordnungen von Hand im Speicher; die Beispiele kommen aus dem Testset
+    (AussageThemenService.testset). Wirft nicht: Fehlt der Statement-Service oder das
+    Modell noch, scheitert erst der Bau bzw. die Einbettung, und der Vorschlag ist leer.
+    Die Schwellen liest er einmal beim ersten Aufruf; geaendert wirken sie nach einem
+    Neustart.
+    """
+    global _themen_vorschlag_service
+    if _themen_vorschlag_service is None:
+        from core.config import NLI_MODELL
+        from services.dieselbe_behauptung.nli_modell import nli_modell
+        from services.themen_vorschlag import Schwellen, ThemenVorschlagService
+
+        einstellungen = get_settings()
+
+        async def beispiele_laden():
+            themen_service = AussageThemenService(
+                get_aussage_themen_repository(), get_statement_service()
+            )
+            return [(z.text, list(z.themen)) for z in await themen_service.testset()]
+
+        _themen_vorschlag_service = ThemenVorschlagService(
+            einbetter=_EinbetterDesDienstes(),
+            beispiele_laden=beispiele_laden,
+            schwellen=Schwellen(
+                einstellungen.themen_vorschlag_ab,
+                einstellungen.themen_vorschlag_abstand_hoechstens,
+                einstellungen.themen_vorschlag_folgerung_ab,
+            ),
+            folgerer=(
+                nli_modell(NLI_MODELL) if einstellungen.themen_vorschlag_nli else None
+            ),
+        )
+    return _themen_vorschlag_service
+
+
 def get_themen_aussagen_service(
     statement_service: StatementService = Depends(get_statement_service),
 ) -> ThemenAussagenService:
@@ -223,6 +278,29 @@ def get_unbeantwortete_aussagen_service(
     themen: AussageThemenService = Depends(get_aussage_themen_service),
 ) -> UnbeantworteteAussagenService:
     return UnbeantworteteAussagenService(statement_service, suchen_ohne_treffer, themen)
+
+
+# Wie viele Aussagen hoechstens fuer den Bedarf der Team-Quests gelesen werden.
+TEAM_BEDARF_HOECHSTENS = 5000
+
+
+async def team_bedarf() -> Tuple[Optional[str], int]:
+    """
+    Der Bedarf fuer die Team-Quests (#792): das Thema mit den meisten Aussagen aus "Hier
+    fehlt eine Antwort" und deren Zahl. Solange es kein Wochenthema gibt, gilt dieses
+    Thema. Die Dienste erst beim Aufruf geholt, einmal je Woche
+    (services/team_fortschritt_service.py).
+    """
+    from services.team_fortschritt_service import bedarf_aus
+
+    statement_service = get_statement_service()
+    dienst = get_unbeantwortete_aussagen_service(
+        statement_service,
+        get_suchen_ohne_treffer_service(statement_service),
+        get_aussage_themen_service(statement_service),
+    )
+    liste = await dienst.liste(limit=TEAM_BEDARF_HOECHSTENS)
+    return bedarf_aus(a.themen for a in liste)
 
 
 def get_feedback_service() -> FeedbackService:
@@ -253,12 +331,15 @@ def get_punkte_service(
 ) -> PunkteService:
     from repositories.punkte_repository import get_punkte_repository
     from repositories.usage_tracking_repository import get_usage_repository
+    from services.team_fortschritt_service import get_team_fortschritt_service
 
     return PunkteService(
         _sichtbare_beitraege(settings),
         get_usage_repository(),
         get_punkte_repository(),
         settings,
+        # Team-Quests (#792): Der Dienst fragt seinen Schalter selbst.
+        quest_tage=get_team_fortschritt_service().quest_tage,
     )
 
 
@@ -329,7 +410,11 @@ def get_einladung_service() -> EinladungService:
     Ohne Zugang zur Keycloak-Admin-Schnittstelle lassen sich Einladungen verwalten,
     aber nicht einloesen (503).
     """
-    return EinladungService(get_einladung_repository(), _keycloak_konten())
+    from services.team_service import get_team_service
+
+    return EinladungService(
+        get_einladung_repository(), _keycloak_konten(), get_team_service()
+    )
 
 
 _gegenlesen_service: Optional[GegenlesenService] = None
@@ -347,6 +432,22 @@ def get_nutzung_rate_limiter() -> RateLimiter:
             window_minutes=settings.nutzung_rate_limit_minuten,
         )
     return _nutzung_rate_limiter
+
+
+_ereignis_rate_limiter: Optional[RateLimiter] = None
+
+
+def get_ereignis_rate_limiter() -> RateLimiter:
+    """
+    Drosselung von POST /api/v1/ereignis (#799): ein Schluessel fuer alle, Fenster
+    eine Sekunde, nur im Arbeitsspeicher; keine Adresse, kein Wochenbezug.
+    """
+    global _ereignis_rate_limiter
+    if _ereignis_rate_limiter is None:
+        _ereignis_rate_limiter = RateLimiter(
+            max_requests=settings.ereignis_je_sekunde, window_seconds=1
+        )
+    return _ereignis_rate_limiter
 
 
 def get_gegenlesen_service() -> GegenlesenService:
@@ -435,6 +536,8 @@ def get_loeschfristen_service() -> LoeschfristenService:
         get_loeschauftrag_repository(),
         # Verlauf der Schalter nach einem Jahr (#708).
         get_schalter_repository(),
+        # Teamdaten nie benutzter Konten gehen mit dem Konto.
+        get_team_repository(),
     )
 
 

@@ -18,8 +18,11 @@ from fastapi.testclient import TestClient
 
 from api.v1 import usage as usage_module
 from api.v1.usage import router as usage_router
+from types import SimpleNamespace
+
+from core.config import Settings
 from core.logging import log_pseudonym
-from dependencies import get_unbeantwortete_aussagen_service
+from dependencies import get_settings, get_unbeantwortete_aussagen_service
 from repositories.einwurf_repository import get_einwurf_repository
 from repositories.gesehene_nutzung_repository import get_gesehene_nutzung_repository
 from services.unbeantwortete_aussagen_service import LIMIT_STANDARD
@@ -55,6 +58,8 @@ def inhalte():
 def gesehen():
     repo = Mock()
     repo.neue_einwuerfe_seit_letztem_besuch = Mock(return_value=3)
+    repo.neues_echo_seit_letztem_besuch = Mock(side_effect=lambda _p, jetzt: jetzt)
+    repo.schon_besucht = Mock(return_value=True)
     return repo
 
 
@@ -77,7 +82,18 @@ def client(dienst, einwuerfe, gesehen, unbeantwortete, inhalte):
 
     with patch.object(
         usage_module, "get_usage_service", return_value=dienst
-    ), patch.object(usage_module, "get_content_repository", return_value=inhalte):
+    ), patch.object(
+        usage_module, "get_content_repository", return_value=inhalte
+    ), patch.object(
+        # Antworten auf eigene Aussagen (#760): eigene Tests in
+        # test_antworten_hinweis_api.py; hier ohne eigene Aussagen
+        usage_module.antworten_hinweis,
+        "statement_repository",
+        return_value=Mock(
+            get_by_author=AsyncMock(return_value=[]),
+            antworten_mit_autor=AsyncMock(return_value={}),
+        ),
+    ):
         yield TestClient(app)
 
 
@@ -93,6 +109,12 @@ class TestSeitLetztemBesuch:
             "unbeantwortete_aussagen_mehr": False,
             "ausformulierte_einwuerfe": 2,
             "neue_beitraege": 6,
+            # Obergrenze aus (Standard, #760): keine Zahl
+            "antworten_auf_eigene_aussagen": None,
+            # Wirkungs-Echo aus (Standard, #790): keine Summe
+            "neu_oeffentlich_gepostet": None,
+            # Schon einmal da gewesen
+            "erster_besuch": False,
         }
         dienst.nutzung_seit_letztem_besuch.assert_awaited_once_with("kim-1")
 
@@ -119,6 +141,35 @@ class TestSeitLetztemBesuch:
         assert antwort.status_code == 500
         assert log_pseudonym("kim-1") in caplog.text
         assert "kim-1" not in caplog.text
+
+
+class TestErsterBesuch:
+    """Beim allerersten Besuch kein "Seit deinem letzten Besuch" (Review 25.11.)."""
+
+    def test_ohne_stand_ist_es_der_erste_besuch(self, client, gesehen):
+        gesehen.schon_besucht.return_value = False
+
+        antwort = client.post(URL, headers={"X-User": "kim-1"})
+
+        assert antwort.status_code == 200
+        assert antwort.json()["erster_besuch"] is True
+        gesehen.schon_besucht.assert_called_once_with("kim-1")
+
+    def test_prueft_vor_den_zahlen_die_den_stand_anlegen(self, client, gesehen):
+        gesehen.schon_besucht.return_value = False
+
+        client.post(URL, headers={"X-User": "kim-1"})
+
+        assert [c[0] for c in gesehen.method_calls][0] == "schon_besucht"
+
+    def test_fehler_gilt_als_wiederkehr_und_der_besuch_steht(self, client, gesehen):
+        gesehen.schon_besucht.side_effect = RuntimeError("kaputt")
+
+        antwort = client.post(URL, headers={"X-User": "kim-1"})
+
+        assert antwort.status_code == 200
+        assert antwort.json()["erster_besuch"] is False
+        assert antwort.json()["nutzung_seit_letztem_besuch"] == 4
 
 
 class TestSeitDeinemLetztenBesuch:
@@ -165,6 +216,11 @@ class TestSeitDeinemLetztenBesuch:
             "unbeantwortete_aussagen_mehr": False,
             "ausformulierte_einwuerfe": 0,
             "neue_beitraege": 0,
+            # Obergrenze aus (Standard, #760): keine Zahl
+            "antworten_auf_eigene_aussagen": None,
+            # Wirkungs-Echo aus (Standard, #790): keine Summe
+            "neu_oeffentlich_gepostet": None,
+            "erster_besuch": False,
         }
         assert "kim-1" not in caplog.text
 
@@ -255,7 +311,8 @@ class TestKachelnMitZeitraum:
 
         # Der einzige Stand bleibt der der Einwuerfe (und der Nutzung im Dienst)
         assert [c[0] for c in gesehen.method_calls] == [
-            "neue_einwuerfe_seit_letztem_besuch"
+            "schon_besucht",
+            "neue_einwuerfe_seit_letztem_besuch",
         ]
 
     def test_nie_negativ(self, client, einwuerfe, inhalte):
@@ -278,3 +335,54 @@ class TestKachelnMitZeitraum:
         assert antwort.json()["ausformulierte_einwuerfe"] == 2
         assert antwort.json()["nutzung_seit_letztem_besuch"] == 4
         assert "kim-1" not in caplog.text
+
+
+class TestWirkungsEcho:
+    """#790: die Summe "oeffentlich gepostet" ueber die eigenen Beitraege, nur mit Schalter."""
+
+    def test_mit_schalter_der_zuwachs_der_eigenen_beitraege(
+        self, client, inhalte, gesehen, wirkung_ohne_datenbank
+    ):
+        eigene = [
+            SimpleNamespace(id="11111111-1111-4111-8111-111111111111"),
+            SimpleNamespace(id="22222222-2222-4222-8222-222222222222"),
+        ]
+        inhalte.getByAuthor = AsyncMock(return_value=eigene)
+        wirkung_ohne_datenbank.je_beitrag.return_value = {
+            "11111111-1111-4111-8111-111111111111": (3, 1),
+            "22222222-2222-4222-8222-222222222222": (2, 0),
+        }
+        client.app.dependency_overrides[get_settings] = lambda: Settings(
+            wirkungs_echo_aktiv=True
+        )
+
+        antwort = client.post(URL, headers={"X-User": "kim-1"})
+
+        assert antwort.status_code == 200
+        # Die Summe 5 geht als Stand an gesehene_nutzung, gezeigt wird der Zuwachs
+        gesehen.neues_echo_seit_letztem_besuch.assert_called_once_with("kim-1", 5)
+        assert antwort.json()["neu_oeffentlich_gepostet"] == 5
+        assert inhalte.getByAuthor.await_args.kwargs["user_id"] == "kim-1"
+
+    def test_ohne_neues_echo_keine_zahl(self, client, inhalte, gesehen):
+        inhalte.getByAuthor = AsyncMock(return_value=[])
+        gesehen.neues_echo_seit_letztem_besuch = Mock(return_value=0)
+        client.app.dependency_overrides[get_settings] = lambda: Settings(
+            wirkungs_echo_aktiv=True
+        )
+
+        antwort = client.post(URL, headers={"X-User": "kim-1"})
+
+        assert antwort.json()["neu_oeffentlich_gepostet"] == 0
+
+    def test_fehler_kostet_nur_die_summe(self, client, inhalte):
+        inhalte.getByAuthor = AsyncMock(side_effect=RuntimeError("weg"))
+        client.app.dependency_overrides[get_settings] = lambda: Settings(
+            wirkungs_echo_aktiv=True
+        )
+
+        antwort = client.post(URL, headers={"X-User": "kim-1"})
+
+        assert antwort.status_code == 200
+        assert antwort.json()["neu_oeffentlich_gepostet"] == 0
+        assert antwort.json()["nutzung_seit_letztem_besuch"] == 4

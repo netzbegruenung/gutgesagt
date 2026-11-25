@@ -145,7 +145,9 @@ class Settings(BaseSettings):
     # StatementService fuer alle Wege (Formular, Suche, Seeding). Ohne verfuegbares
     # Modell gilt die Schwelle oben. Gemessen am Messset (tests/regression/MESSSET.md,
     # Abschnitt NLI-Stufe): tau und kappa am Train-Teil, Ergebnis am Test-Teil.
-    dieselbe_aussage_nli: NliModus = "schatten"
+    # Standard an wie auf Test und Produktion seit 09.11.2026 (#575); der naechtliche
+    # Lauf misst damit (tests/regression/SUCHTESTSET.md).
+    dieselbe_aussage_nli: NliModus = "an"
     # Kandidaten: Vektortreffer ab dieser query/query-Aehnlichkeit, hoechstens so viele.
     # Das niedrigste gleich-Paar der Aussagen liegt bei 0,887.
     nli_kandidaten_ab: float = Field(default=0.85, ge=0.0, le=1.0)
@@ -298,16 +300,70 @@ class Settings(BaseSettings):
     # Standard aus, unabhaengig von punkte_aktiv: eine eigene Verarbeitung, die erst
     # mit Satz in DSFA und Datenschutzerklaerung eingeschaltet wird.
     gepostet_aktiv: bool = False
+    # Meldungen ohne Konto (#799, services/gepostet_ohne_konto_service.py): "Ja, gepostet"
+    # ohne Anmeldung als reiner Wochenzaehler, ohne Pruefwert. Standard aus und nur
+    # zusammen mit gepostet_aktiv; erst nach DSE-Absatz und DSFA-Nachtrag (Jura).
+    gepostet_ohne_konto_aktiv: bool = False
+    # Drosselung von POST /api/v1/ereignis (#799): hoechstens so viele Meldungen je
+    # Sekunde fuer alle zusammen, nur im Arbeitsspeicher, ohne Adresse.
+    ereignis_je_sekunde: int = Field(default=10, ge=1)
     # Herkunft pruefen (#759): nachts die Links aller Herkuenfte abrufen und tote oder
     # umgezogene fuer Admins auflisten (services/herkunft_pruefen.py). Obergrenze an,
     # weil dabei nichts zur Person entsteht: kein Name, keine Kennung, nur Adresse und
     # Ergebnis. Wirksam erst, wenn ein Admin den Schalter einschaltet (Standard aus).
     herkunft_pruefen_aktiv: bool = True
+    # App-Abkuerzungen im Manifest (#757): Langes Druecken aufs App-Symbol bietet
+    # Einwerfen, Suchen und Fangkorb an. Das Manifest ist statisch, der Schalter wirkt an
+    # der Zielroute /abkuerzung/<name> (aus: Startseite). Obergrenze an, weil nichts
+    # uebertragen wird; Standard aus ist der Admin-Wert (ohne Eintrag aus).
+    abkuerzungen_aktiv: bool = True
+    # Antworten auf eigene Aussagen (#760): Kachel auf der Startseite und Reiter "Meine
+    # Aussagen" (services/antworten_hinweis.py). Nichts wird gespeichert, aber die
+    # Datenschutzerklaerung nennt bisher nur zwei 7-Tage-Zahlen: Standard aus wie bei
+    # gepostet_aktiv, bis der Satz dort steht.
+    antworten_hinweis_aktiv: bool = False
     # Teilen als Bild (#756): Die Karte malt im Browser ein Bild (Sharepic) und gibt es
     # ans Teilen-Menue des Geraets; der Server sieht davon nichts. Obergrenze an, weil
     # nichts uebertragen oder gespeichert wird; Standard aus ist der Admin-Wert
     # (services/schalter_service.py, ohne Eintrag aus).
     sharepic_aktiv: bool = True
+    # Teams ueber Einladungen (services/team_service.py): Teamfelder an der Einladung,
+    # Beitreten mit eigener Einwilligung, "Meine Teams". Standard aus: Die
+    # Mitgliedschaft ist im Zweifel ein Art.-9-Datum; erst mit DSFA-Nachtrag,
+    # Loeschkonzept und Abschnitt "Teams" in der Datenschutzerklaerung einschalten.
+    teams_aktiv: bool = False
+    # Team-Fortschritt (#784) und Team-Quests (#792), services/team_fortschritt_service.py:
+    # eigene Obergrenzen, Standard aus; erst nach DSFA-Nachtrag V29 und Jura-OK
+    # einschalten. team_fortschritt wirkt nur mit teams, team_quests nur mit
+    # team_fortschritt.
+    team_fortschritt_aktiv: bool = False
+    team_quests_aktiv: bool = False
+    # Teams oeffentlich am Namen (eigene Einwilligung, domain/teams.py). Eigene
+    # Obergrenze, bewusst nicht an abzeichen_sichtbar_aktiv gekoppelt: Auf Prod bleibt
+    # sie aus, bis die Datenschutzbeauftragte geraten hat. Wirkt nur mit teams_aktiv.
+    teams_oeffentlich_aktiv: bool = False
+    # Spielgefuehl zur BDK (#782 bis #793, services/schalter_service.py SPIEL_SCHALTER):
+    # je Baustein eine Obergrenze, von Haus aus aus; Einschalt-Bedingungen je Schalter in
+    # docs/ARCHITECTURE.md. danke_ohne_konto wirkt nur mit danke_knopf, rangliste nur mit
+    # punkte.
+    saison_ziel_aktiv: bool = False
+    gartenansicht_aktiv: bool = False
+    kopiert_erfolg_aktiv: bool = False
+    konter_probe_aktiv: bool = False
+    luecke_zu_gross_aktiv: bool = False
+    einwilligung_im_gewinn_aktiv: bool = False
+    naechster_schritt_aktiv: bool = False
+    wirkungs_echo_aktiv: bool = False
+    danke_knopf_aktiv: bool = False
+    danke_ohne_konto_aktiv: bool = False
+    rangliste_aktiv: bool = False
+    # Saison und Gemeinschaftsziel (#782, domain/saisons.py): Den Balken sehen alle erst,
+    # wenn es einmal so viele abgeschlossene Wochen hintereinander mit je mindestens so
+    # vielen verschiedenen Menschen gab, die "Ja, gepostet" gemeldet haben; vorher nur
+    # Admins. Die Datenschutzerklaerung nennt beide Zahlen: wer sie aendert, zieht den
+    # Satz in datenschutz.component.html ("Rueckmeldung 'Ja, gepostet'") nach.
+    saison_ziel_schwelle_menschen: int = Field(default=25, ge=0)
+    saison_ziel_schwelle_wochen: int = Field(default=3, ge=0)
     # Gewichte und Deckel der drei Stufen (domain/punkte.py): Tun klein und je Tag
     # gedeckelt, Quests mehr, Wirkung bei anderen am meisten.
     punkte_nutzung: int = Field(default=10, ge=0)
@@ -331,6 +387,19 @@ class Settings(BaseSettings):
     guete_stimmen_gewicht_max: float = Field(default=0.6, ge=0, le=1)
     guete_stimmen_halbwert: int = Field(default=5, ge=1)
 
+    # "Diese Woche oft genutzt" (services/oft_genutzt_service.py): Ein Beitrag gilt ab so
+    # vielen entdoppelten Nutzungen in sieben Tagen als oft genutzt, und den Bereich gibt
+    # es erst ab so vielen solchen Beitraegen. Entdoppelt wird je Person und Tag, nicht je
+    # Woche: Eine Person allein kann den Bereich ausloesen, wenn sie die noetigen Beitraege
+    # an zwei Tagen kopiert (ohne Anmeldung auch ueber wechselnde Anschluesse). Das galt
+    # auch bei 3 und ist fuer die Startphase in Kauf genommen; wer was kopiert hat, zeigt
+    # der Bereich nicht. Die Mindestnutzung bleibt mindestens 2: eine einzelne Kopie ist
+    # Zufall, kein "oft". Startphase zur BDK (Maintainer 25.11.2026: bei kleinen Zahlen
+    # frueher zeigen): Standard 2 Beitraege; mit mehr Nutzung hebt der Betrieb ihn an.
+    # Hoechstens 5, so viele zeigt der Bereich (ANZAHL dort).
+    oft_genutzt_mindest_nutzungen: int = Field(default=2, ge=2)
+    oft_genutzt_mindest_beitraege: int = Field(default=2, ge=1, le=5)
+
     # Rate-Limit am Zaehl-Endpunkt (POST /usage/content/{id}/usage, #352): so viele
     # Kopien je Person (Besucher: je Adresse) im Fenster. Die Entdoppelung schuetzt
     # Punkte und "oft genutzt", nicht den Zaehler der Karte, der jede Kopie zaehlt.
@@ -338,6 +407,32 @@ class Settings(BaseSettings):
     # Raum fuer mehrere Besucher hinter einer Adresse.
     nutzung_rate_limit_anfragen: int = Field(default=60, ge=1)
     nutzung_rate_limit_minuten: int = Field(default=10, ge=1)
+
+    # Tagesdeckel (GLOSSARY.md, middleware/tagesdeckel.py): so viele Beitraege,
+    # Aussagen und Einwuerfe darf eine Person je UTC-Tag anlegen. Admins und
+    # Startkonten sind ausgenommen (Redaktion, Import).
+    tagesdeckel_beitraege: int = Field(default=20, ge=1)
+
+    # Rate-Limit an den Anlege-Routen (middleware/rate_limit.py): so viele Anfragen
+    # je Person und Minute bzw. Stunde. Startkonten sind ausgenommen (Import des
+    # Startbestands), Admins nicht.
+    anlege_rate_limit_je_minute: int = Field(default=10, ge=1)
+    anlege_rate_limit_je_stunde: int = Field(default=100, ge=1)
+
+    # Anfragen je Fenster der Rate-Limiter ohne Anmeldung (utils/rate_limiter.py).
+    # Sie zaehlen je Anschluss; im Saal-WLAN eines Parteitags teilen sich alle eine
+    # Adresse, dort hebt der Betrieb die Zahl an. Einstellbar ist nur die Zahl, nicht
+    # das Fenster: Die Datenschutzerklaerung nennt die Fristen, die aus den Fenstern
+    # folgen (test_rate_limiter_cleanup.py).
+    aehnliche_aussagen_rate_limit_anfragen: int = Field(default=60, ge=1)
+    suchaussage_rate_limit_anfragen: int = Field(default=60, ge=1)
+    feedback_rate_limit_anfragen: int = Field(default=5, ge=1)
+    meldung_rate_limit_anfragen: int = Field(default=5, ge=1)
+    einladung_rate_limit_anfragen: int = Field(default=30, ge=1)
+    einladung_pruefen_rate_limit_anfragen: int = Field(default=60, ge=1)
+    # Angemeldet einem Team beitreten (POST /einladungen/beitreten): je Person, nicht je
+    # Anschluss, damit Beitritte im Saal-WLAN nicht das Budget fuers Einloesen aufbrauchen.
+    team_beitreten_rate_limit_anfragen: int = Field(default=20, ge=1)
 
     # Secret key for the daily search-actor pseudonym (see SearchTrackingService).
     # Set SEMANTIC_SEARCH_ACTOR_HASH_SECRET in production so the daily-active-user
@@ -409,6 +504,24 @@ class Settings(BaseSettings):
     suche_inhaltstor_ab: float = Field(default=0.82, ge=0.0, le=1.0)
     suche_inhaltstor_aussage_bis: float = Field(default=0.92, ge=0.0, le=1.01)
     suche_inhaltstor_direkt_bis: float = Field(default=0.90, ge=0.0, le=1.01)
+    # Themenvorschlaege (#401, services/themen_vorschlag.py): ein Thema wird
+    # vorgeschlagen ab dieser Aehnlichkeit zu seinem Prototyp (um die Mitte verschoben,
+    # daher Werte um 0 bis 0,5) und hoechstens so weit hinter dem naechsten Thema. Mit
+    # themen_vorschlag_nli streicht das NLI-Modell Kandidaten unter
+    # themen_vorschlag_folgerung_ab; aus, weil es in der Messung mehr Treffer strich
+    # als Fehler. Standard aus, bis es etwa 200 Zuordnungen von Hand gibt (Maintainer,
+    # 22.11.2026): Dann meldet /themen vorschlaege = false, das Frontend fragt nicht,
+    # und der Endpunkt liefert eine leere Liste. Einschalten mit
+    # SEMANTIC_SEARCH_THEMEN_VORSCHLAEGE=true. Gemessen in tests/regression/THEMEN.md.
+    themen_vorschlaege: bool = False
+    themen_vorschlag_ab: float = Field(default=0.10, ge=-1.0, le=1.0)
+    themen_vorschlag_abstand_hoechstens: float = Field(default=0.05, ge=0.0, le=2.0)
+    themen_vorschlag_nli: bool = False
+    themen_vorschlag_folgerung_ab: float = Field(default=0.5, ge=0.0, le=1.0)
+    # Karte "Dein naechster Schritt" (#789, services/naechster_schritt.py): unter so
+    # vielen eigenen Stimmen schlaegt sie Bewerten vor, wenn es so viele frische
+    # Antworten anderer gibt; der Satz nennt die Zahl.
+    naechster_schritt_stimmen: int = Field(default=3, ge=1, le=20)
 
     # Keyword overlap boosting configuration
     enable_keyword_overlap_boost: bool = (

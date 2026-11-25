@@ -84,6 +84,29 @@ listens on 5432 inside the container.
   - `environment.docker.ts` - Docker mode (baseUrl: empty for proxy)
   - `environment.prod.ts` - Production (uses placeholders replaced at runtime)
 
+#### Start page: order and priority of the cards
+
+The start page (`search-view.component.html`) stacks its cards in this fixed order. Rule: per
+visit at most one card that points the person somewhere new (review Spielgefühl 25.11.).
+
+| # | Card | Who sees it | Shown when |
+|---|------|-------------|------------|
+| 1 | Hero and search | everyone | always |
+| 2 | Rundgang line (`app-rundgang-band`, Willkommen) | everyone | until answered; signed in without „Ein Konto brauchst du nicht“ (`WILLKOMMEN_ANGEMELDET`) |
+| 3 | „Seit deinem letzten Besuch“ | signed in | not on the very first visit (`erster_besuch` from `POST /users/me/besuch`); next to a suggestion of card 4 only with news about the person's own Beiträge (`EIGENES_NEUES`: answers, uses, Wirkungs-Echo, ausformulierte Einwürfe) |
+| 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion and card 3 shows no own news |
+| 5 | Saison goal | everyone, Schalter `saison_ziel` | from the threshold (#782) |
+| 6 | Oft genutzt, Konter-Probe, Frisch aus der Community, Mitmachen tiles, Garten, About | everyone | as each card decides |
+
+Cards 3 and 4 are never shown together: own news wins (it is what the person caused), otherwise
+the single suggestion wins and the general numbers (new Einwürfe of others, Aussagen waiting,
+new Beiträge) step back (proposal, open as Fachfrage in #829). One place decides:
+`SeitLetztemBesuchService.start$` (rule in `seit-letztem-besuch/neues-liste.ts`, `startVorrang`);
+both cards only read it, card 4 reports whether it has a suggestion through `naechsterSchrittDa$`.
+Until both answers (Besuch, suggestions) are in, neither card shows, at most `START_WARTEZEIT_MS`
+(1.5 s), so no card appears and vanishes under the finger. Back on the start page the last
+answers apply at once (kept in the service) and are refreshed silently; nothing needs a reload.
+
 ### BFF (Backend-for-Frontend)
 - **Technology**: .NET 9.0, YARP reverse proxy
 - **Purpose**:
@@ -120,7 +143,7 @@ listens on 5432 inside the container.
 
 ### PostgreSQL
 - **Purpose**: Application data — votes, usage tracking, search tracking, moderation reports,
-  Sperren with Sperrgrund and Widerspruch (`sperren`), and per person the usage last shown in the Rückmeldung (`gesehene_nutzung`); for the entdoppelte Nutzung the check values of the current day (`nutzung_heute`, HMAC only), the pair check values of the last seven days (`muster_pruefwerte`, HMAC only) and the Muster-Hinweise for admins (`muster_hinweise`, #352); for „Ja, gepostet“ after copying the check values of the current calendar week (`gepostet_pruefwerte`, HMAC only) and one number per past week (`gepostet_wochen`, #643, switch `SEMANTIC_SEARCH_GEPOSTET_AKTIV`, default off).
+  Sperren with Sperrgrund and Widerspruch (`sperren`), and per person the usage last shown in the Rückmeldung (`gesehene_nutzung`); for the entdoppelte Nutzung the check values of the current day (`nutzung_heute`, HMAC only), the pair check values of the last seven days (`muster_pruefwerte`, HMAC only) and the Muster-Hinweise for admins (`muster_hinweise`, #352); for „Ja, gepostet“ after copying the check values of the current calendar week (`gepostet_pruefwerte`, HMAC only) and one number per past week (`gepostet_wochen`, #643, switch `SEMANTIC_SEARCH_GEPOSTET_AKTIV`, default off); for „Ja, gepostet“ without an account only the number of clicks per week (`gepostet_ohne_konto_wochen`, #799, no check value, no address, no Beitrag; switch `SEMANTIC_SEARCH_GEPOSTET_OHNE_KONTO_AKTIV`, default off, works only with `gepostet`), reported via the neutral path `POST /api/v1/ereignis` with the kind only in the body (`{"art": "gepostet_ohne_konto"}`), throttled in memory per second for all callers together (`SEMANTIC_SEARCH_EREIGNIS_JE_SEKUNDE`, default 10), without an access log line in the frontend nginx (`nginx.protokoll.conf`, like the search), shown next to the Nordstern and the Saison but never added to people or to the threshold; for the Teams the Mitgliedschaften without any reference to the invitation (`team_mitgliedschaften`), the counter per team and Saison (`team_nummern`), the answer on showing teams at the name (`team_oeffentlich`) and admin settings such as the current Saison (`einstellungen`), switch `SEMANTIC_SEARCH_TEAMS_AKTIV`, default off.
   Content and its vector embeddings live in Qdrant, not in PostgreSQL.
 - **Image**: `postgres:16-alpine` (service `postgres-app`, container `gutgesagt-app-postgres`)
 - **Access**:
@@ -211,6 +234,51 @@ On every request with the session cookie the BFF also checks that its issuer is 
 realm (`Keycloak:Authority`) and ends sessions from another realm, e.g. after a realm switch
 (`BFF/Services/KontoPruefung.cs`, `AnmeldeAussteller.cs`).
 
+### Session checks answer visitors with 200, not 401
+`GET /api/check-session` and `GET /api/user-info` always answer 200; whether someone is logged
+in is the field `isAuthenticated` (`false` for visitors, also right after the BFF ended a
+session). The frontend asks on every page view (`AppComponent`, the guards) and reads only the
+field (`src/app/auth/sitzung.ts`). Reason: test and production sit behind the verdigado IPv4
+gateway, whose fail2ban bans an IP for 10 minutes after 20 responses 401 in 5 minutes
+(`haproxy-auth-flood`; 50 × 404 for `haproxy-probing`). In a hall WLAN hundreds of visitors
+share one IP (BDK), so a 401 for every visitor would lock out the whole hall. Real 401s stay
+where a login is needed and missing: the auth gate in front of the proxy (`EndpointPolicy`).
+
+### Automatically requested endpoints never answer 401 or 404 in the normal case
+Rule for every endpoint the frontend calls without a user action (page load, start page, cards,
+self-reloading lists): in the normal case it answers 200, never 401 or 404 (the codes the
+fail2ban counts), also while its Schalter is off or there is nothing yet. The empty case is a clear field
+in the 200 answer, e.g. `{"balken": null, "aktiv": false}`, `{"proben": [], "aktiv": false}`,
+`{"teams": [], "teams_aktiv": false}` or `{"angeboten": false}`. Reason: the gateway fail2ban
+above (`haproxy-probing`: 50 × 404 in 5 minutes, `haproxy-auth-flood`: 20 × 401) counts per IP,
+and a hall WLAN is one IP; one 404 per page view of hundreds of phones locks out the hall within
+minutes. Real 404s stay for unknown resources by id (a Beitrag, a Saison) and for actions
+(`PUT`/`POST`) on a building block that is off; real 401 where a page needs a login. A 403
+for missing consent is not counted, but stays the exception (only `gepostet`, and only while
+it is on).
+
+The frontend asks building blocks behind a public Schalter only when the Schalter is not
+surely off, which saves the request: either through `FunktionenService.stand$()` (one shared
+`GET /api/v1/funktionen`, cached 5 minutes; unknown after an error or timeout, then the card
+asks its endpoint and relies on the 200; Saisonbalken, Gartenansicht) or through
+`FunktionenService.an()`, which treats unknown as off (Konter-Probe, Nächster Schritt). Where a
+page treats "off" as a safe signal (#812, Einwilligung im Moment des Gewinns), only the
+endpoint's own `aktiv: false` counts, not a cached `/api/v1/funktionen`; an error or timeout
+stays "unknown". A 404 from an older backend is still read as off. Cards whose Schalter is
+reported off reload every 5 minutes instead of every 30 seconds (`AUS_NACHLADEN_MS`).
+
+| Endpoint | Asked by | Empty or off |
+|----------|----------|--------------|
+| `GET /api/v1/saisons/aktuell` | start page, every 5 min | `balken: null`, `aktiv: false` |
+| `GET /api/v1/konter-probe` | start page, page Konter-Probe | `proben: []`, `aktiv: false` |
+| `GET /api/v1/search/garten` | page Gartenansicht, every 30 s | `beete: []`, `aktiv: false` |
+| `GET /api/v1/usage/users/me/naechster-schritt` | start page (signed in) | `vorschlaege: []`, `aktiv: false` |
+| `GET /api/v1/usage/users/me/einwilligungs-moment` | Meine Beiträge | `aktiv: false` |
+| `GET /api/v1/teams/meine` | Meine Beiträge, every 30 s | `teams: []`, `teams_aktiv: false` |
+| `GET /api/v1/rangliste` | Meine Beiträge, every 30 s | `aktiv: false`, nothing asked |
+| `GET /api/v1/usage/users/me/punkte`, `/meilensteine`, `/abzeichen-sichtbarkeit`, `/punkte-einwilligung` | Meine Beiträge, Einwilligungen | `aktiv: false` |
+| `GET /api/v1/usage/users/me/gepostet` | after a copy, once per signed-in person until reload | `angeboten: false`; consent checked (403) only while on |
+
 ## Deployment Configurations
 
 ### Docker Compose Files
@@ -286,11 +354,32 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
 - `SEMANTIC_SEARCH_DATA_PATH` - Seed data path
 - `SEMANTIC_SEARCH_METADATA_PATH` - Persistent metadata storage path
 - `SEMANTIC_SEARCH_LOG_LEVEL` - DEBUG/INFO
-- `SEMANTIC_SEARCH_DIESELBE_AUSSAGE_NLI` - NLI-Stufe (#387): `aus`, `schatten` (default: for the
+- `SEMANTIC_SEARCH_TAGESDECKEL_BEITRAEGE` - Tagesdeckel (GLOSSARY.md): Beiträge, Aussagen and
+  Einwürfe a person may create per UTC day (default 20; admins and Startkonten exempt). Above it
+  the creating routes answer 429 with `"error": "TAGESDECKEL"` (`middleware/tagesdeckel.py`).
+- `SEMANTIC_SEARCH_OFT_GENUTZT_MINDEST_NUTZUNGEN` (default 2, at least 2) and
+  `SEMANTIC_SEARCH_OFT_GENUTZT_MINDEST_BEITRAEGE` (default 2, 1 to 5) - „Diese Woche oft genutzt“
+  (GLOSSARY.md „Oft genutzt“): a Beitrag counts from that many entdoppelte Nutzungen in seven days,
+  and the section appears from that many such Beiträge (`services/oft_genutzt_service.py`). The
+  defaults suit the start phase with few active people; raise them once usage grows. Entdoppelt
+  means per person and day, so one person alone can make the section appear by copying the needed
+  Beiträge on two days; the section never shows who copied what.
+- `SEMANTIC_SEARCH_ANLEGE_RATE_LIMIT_JE_MINUTE` / `_JE_STUNDE` - rate limit per person on the
+  creating routes (`middleware/rate_limit.py`, default 10 / 100). Startkonten are exempt (import
+  of the Startbestand), admins are not. Above it: 429 `"error": "TOO_MANY_REQUESTS"`.
+- `SEMANTIC_SEARCH_<LIMIT>_RATE_LIMIT_ANFRAGEN` - requests per window of the rate limits without
+  login, counted per Anschluss (`utils/rate_limiter.py`). In a venue WLAN all visitors share one
+  address, so operations raise them there. `<LIMIT>` and default: `AEHNLICHE_AUSSAGEN` 60 and
+  `SUCHAUSSAGE` 60 (10 min), `FEEDBACK` 5, `MELDUNG` 5, `EINLADUNG` 30, `EINLADUNG_PRUEFEN` 60
+  (15 min each). The windows are fixed: the privacy policy names the periods that follow from them.
+  `SEMANTIC_SEARCH_TEAM_BEITRETEN_RATE_LIMIT_ANFRAGEN` (default 20 in 15 min) limits
+  `POST /api/v1/einladungen/beitreten` per logged-in person instead of per Anschluss, so joins in a
+  venue WLAN do not use up the budget for redeeming without an account.
+- `SEMANTIC_SEARCH_DIESELBE_AUSSAGE_NLI` - NLI-Stufe (#387): `aus`, `schatten` (for the
   same-Aussage check the similarity threshold decides and the NLI model only counts along) or
-  `an` (the NLI model decides whether a new text is the same Aussage). In `schatten` and `an`
-  the model also drops contradicting Aussagen from the "Antwort auf" suggestions; ~1.2 GB extra
-  RAM, threads as `SEMANTIC_SEARCH_EMBEDDING_THREADS`. Thresholds `SEMANTIC_SEARCH_NLI_*` and
+  `an` (default since #575, as on test and production: the NLI model decides whether a new text
+  is the same Aussage). In `schatten` and `an` the model also drops contradicting Aussagen from
+  the "Antwort auf" suggestions; ~1.2 GB extra RAM, threads as `SEMANTIC_SEARCH_EMBEDDING_THREADS`. Thresholds `SEMANTIC_SEARCH_NLI_*` and
   `SEMANTIC_SEARCH_AUSSAGE_VORSCHLAG_*`, measured in `tests/regression/MESSSET.md`.
 - `SEMANTIC_SEARCH_NLI_BESTAETIGER` - Bestätiger, a second NLI model for the same-Aussage check
   (`true`/`false`, default `false`; no effect with the NLI-Stufe `aus`). It only judges
@@ -335,7 +424,176 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   semantic service to arbitrary hosts; only http/https, every resolved address must be global,
   also after redirects, IPv4 embedded in IPv6 included (`utils/sicherer_abruf.py`). No proxy
   from the environment is used. Switched off, the hourly task empties the table once.
+- `SEMANTIC_SEARCH_ANTWORTEN_HINWEIS_AKTIV` - upper bound of the Schalter `antworten_hinweis`
+  (#760, default `false` until the privacy policy names it; nothing is stored); takes effect
+  only when an admin switches it on too.
+  Then the Besuch (`POST /api/v1/usage/users/me/besuch`) also returns
+  `antworten_auf_eigene_aussagen` (answers by others to one's own Aussagen, linked in the last
+  7 days; `null` while off) and `GET /api/v1/usage/users/me/aussagen` lists one's own Aussagen
+  with their answers (404 while off; only opened by a click on its tab, which shows only
+  while on), `services/antworten_hinweis.py`.
+- `SEMANTIC_SEARCH_TEAMS_AKTIV` - upper bound of the Schalter `teams` (Teams over
+  invitations, GLOSSARY.md "Team", "Teamlink", "Mitgliedschaft", "Saison"; default `false`: a
+  Mitgliedschaft may reveal political leaning and place, so it needs its own consent, the DSFA
+  addendum and the privacy policy section "Teams"); takes effect only when an admin switches it
+  on too (`services/team_service.py`, `domain/teams.py`). While off, team fields of invitations
+  are ignored, every invitation is a plain account link, and `POST /api/v1/einladungen/beitreten`
+  answers 404. `GET /api/v1/teams/meine` answers an empty list when the person has no
+  Mitgliedschaft (200, never 404, see "Automatically requested endpoints"); existing ones are
+  still listed (`teams_aktiv: false`, no public toggle) so that leaving a team
+  stays as easy as joining (Art. 7(3) GDPR). While on:
+  - Admin: `GET /api/v1/einladungen` adds `team` `{name, motiv, saison, art, zustimmung_am,
+    mitglieder}` per invitation (`mitglieder` is only a count; no member list, export or API on
+    other people's memberships exists, admins included), plus `teams_aktiv`, `aktuelle_saison`,
+    `motive` and `teamname_hinweis`; `POST` and `PATCH /api/v1/einladungen` accept `team_name`
+    (at most 40 characters, requires `team_motiv`), `team_motiv` (one of the Meilenstein motifs),
+    `team_saison` (at most 20, default the current Saison), `team_art` (`anlass`, the default,
+    or `gruppe`, GLOSSARY.md "Team") and `team_zustimmung_am` (date the written consent of the
+    group's leadership was given; required with `gruppe`, not in the future, rejected with
+    `anlass`). Stored at the invitation (`einladungen.team_art`, `team_zustimmung_am`,
+    migration `2026-11-26-teams-nach-gruppe.sql`) as evidence for admins only, no names; the
+    Mitgliedschaft carries neither. A `PATCH` with `team_name` replaces the whole team: without
+    `team_art` it becomes `anlass` and the date is cleared, like a missing `team_motiv` is
+    rejected. With `gruppe` the team name is exactly the group's public name (no place or
+    year, the Saison is separate); the greeting uses it as {gruppe}. Renaming a team
+    everywhere (invitations, memberships, number counter) after a group withdraws its
+    consent: `mvp/scripts/manual/team_umbenennen.sql`, only into a neutral name (requires
+    `-v art=anlass`, aborts otherwise; renaming into another group needs new consent of the
+    members).
+  - Redeeming: `POST /api/v1/einladungen/pruefen` returns `team` with the greeting, the next
+    number, `art` (with `gruppe` the greeting shows the sentence that the team is named after the
+    group with its consent; `zustimmung_am` is never sent here) and the consent wording
+    `team-2026-11-26` plus both button texts. For a logged-in
+    member it returns `team` with `eigene_nummer` even when the invitation is no longer
+    redeemable ("schon dabei"); everyone else gets no team then.
+    `POST /api/v1/einladungen/einloesen` stores a Mitgliedschaft only with
+    `team_einwilligung: true` plus `team_einwilligung_kennung` (the wording id shown; unknown, earlier
+    or missing: 422) and only when Keycloak creates a new account. New consents accept only the
+    ids in `EINWILLIGUNG_GELTEND` (the current one); earlier ids stay in `EINWILLIGUNG_WORTLAUTE`
+    for existing memberships, which keep them.
+  - Joining while logged in: `POST /api/v1/einladungen/beitreten` `{code, einwilligung: true,
+    einwilligung_kennung, oeffentlich?, oeffentlich_kennung?}` counts against the invitation's
+    limit once; a second join returns the existing number (`neu: false`). Own rate limit per
+    person (see above).
+  - Own teams only: `GET /api/v1/teams/meine` (all Saisons, newest first),
+    `DELETE /api/v1/teams/meine/{id}` ("Team verlassen", deletes at once, also with the switch
+    off; the number is never reassigned) and `PUT /api/v1/teams/oeffentlich` (second consent
+    `team-oeffentlich-2026-11-25`; withdrawing always works).
+  - Admin setting `aktuelle_saison` (table `einstellungen`, default the current UTC year):
+    `GET /api/v1/moderation/schalter` lists it under `einstellungen`,
+    `PUT /api/v1/moderation/schalter/einstellungen/{name}` `{wert}` changes it.
+- `SEMANTIC_SEARCH_TEAM_FORTSCHRITT_AKTIV` / `SEMANTIC_SEARCH_TEAM_QUESTS_AKTIV` - upper bounds
+  of the Schalter `team_fortschritt` (#784) and `team_quests` (#792), default `false`; switch on
+  only after DSFA addendum V29 and the legal OK. `team_fortschritt` works only with `teams`,
+  `team_quests` only with `team_fortschritt`. While on, the endpoints for Beiträge, Stimmen and
+  "Ja, gepostet" raise the weekly counter `team_wochen` (team, Saison, week, no Kennung), and
+  `GET /api/v1/teams/meine` carries `wirkung` (last closed week, rounded texts, from 5 members)
+  and `quest` per own team of the current Saison (`services/team_fortschritt_service.py`). The
+  first `GET /api/v1/teams/meine` of a week writes that week's quest (`team_quests`). The weekly
+  check values for deduplication live in process memory, so this assumes one uvicorn worker
+  (as "Ja, gepostet" does); a restart mid-week can count something twice (too high, never too
+  low). `team_wochen` and `team_quests` go with the team (docs/LOESCHKONZEPT.md). Deleting a
+  team does not exist yet (invitations can only be switched off or changed, memberships go one
+  by one); when it comes, the rows must go with it via `TeamFortschrittRepository.team_loeschen`
+  (pass the caller's session to keep one transaction).
+  `tests/unit/test_team_loeschung_nimmt_zaehler_mit.py` fails on Python, SQL and shell code that
+  deletes `einladungen` or `team_nummern` in the usual forms without them (not on table names
+  built at run time).
+- `SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV` - upper bound of the Schalter `teams_oeffentlich`
+  (default `false`; stays off on production until the data protection officer has advised).
+  Own bound, deliberately not coupled to `SEMANTIC_SEARCH_ABZEICHEN_SICHTBAR_AKTIV`; works only
+  together with `teams`, and an admin has to switch it on too. While on, logged-in viewers get
+  `autor_teams` `[{name, motiv, motiv_name}]` at a post, the teams of the current Saison of
+  authors who gave the second consent (no number); visitors never. While off, the second
+  question is not asked, `GET /api/v1/teams/meine` reports `oeffentlich_verfuegbar: false` and
+  `autor_teams` stays `null`.
 - `DOCKER_CONTAINER` - set to `true` inside containers to enforce strict path validation
+
+#### Schalter für das Spielgefühl (#782 to #793)
+
+One Schalter per building block for the BDK, registered in `SPIEL_SCHALTER`
+(`services/schalter_service.py`). Upper bound `SEMANTIC_SEARCH_<NAME>_AKTIV`, default `false`
+everywhere; like every Schalter it also needs the admin value (Admin, "Schalter"), which is off
+without an entry. The building blocks arrive in their own PRs; until then a switch changes
+nothing. "public" means `GET /api/v1/funktionen` reports the effective value without login.
+Team progress (#784) and team quests (#792) get their switches later.
+
+The admin page groups all switches by `Schalterart.gruppe` (Grundfunktionen, Teams, Spielgefühl,
+Punkte & Anerkennung, order in `GRUPPEN`) and shows a status per switch: on, free to switch on,
+waiting for legal clearance (`wartet_auf_recht`: a hint is set and the switch is not
+`rechtlich_freigegeben`) or locked by the server. `teams` is legally cleared (25.11.) and may be
+switched on before the DSFA is adopted; `teams_oeffentlich` stays off until the data protection
+officer has advised.
+
+| Schalter | Upper bound | Default | Public | Condition for switching on (issue) |
+|----------|-------------|---------|--------|------------------------------------|
+| `saison_ziel` | `SEMANTIC_SEARCH_SAISON_ZIEL_AKTIV` | off | yes | none; privacy policy sentence ships with #782 (see below) |
+| `gartenansicht` | `SEMANTIC_SEARCH_GARTENANSICHT_AKTIV` | off | yes | none (#783) |
+| `kopiert_erfolg` | `SEMANTIC_SEARCH_KOPIERT_ERFOLG_AKTIV` | off | yes | none (#785) |
+| `konter_probe` | `SEMANTIC_SEARCH_KONTER_PROBE_AKTIV` | off | yes | none (#786) |
+| `luecke_zu_gross` | `SEMANTIC_SEARCH_LUECKE_ZU_GROSS_AKTIV` | off | yes | none; while on (or while the browser holds the entry), the privacy policy shows the paragraph on the browser entry `gutgesagt-ton-bei-erfolgen`, DSFA V21 names it (#787) |
+| `einwilligung_im_gewinn` | `SEMANTIC_SEARCH_EINWILLIGUNG_IM_GEWINN_AKTIV` | off | yes | none, wordings stay (#788) |
+| `naechster_schritt` | `SEMANTIC_SEARCH_NAECHSTER_SCHRITT_AKTIV` | off | yes | DSFA addendum Spielgefühl (V10); privacy policy sentences ship with #789 |
+| `wirkungs_echo` | `SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV` | off | no | DSFA addendum V31 (#790) |
+| `danke_knopf` | `SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV` | off | yes | DSFA addendum V31 (#791) |
+| `danke_ohne_konto` | `SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV` | off | yes | V31 and visitor marker (#495); works only with `danke_knopf` |
+| `rangliste` | `SEMANTIC_SEARCH_RANGLISTE_AKTIV` | off | no | legal OK (wording, DSFA V28, privacy policy) and Punkte on (#793); works only with `punkte` |
+
+#### Saisons and Gemeinschaftsziel (#782)
+
+Table `saisons` (name, first and last day, goal in Widerspruchs-Wochen; no personal data),
+rules in `domain/saisons.py`, `repositories/saison_repository.py` (overlap check under a table
+lock, so at most one season runs on any day) and `services/saison_service.py`. The running season
+replaces the setting "aktuelle Saison" for teams (`einstellungen_service.aktuelle_saison()`),
+whether or not `saison_ziel` is effective (the switch only governs the bar); in a gap between two
+seasons the last ended season stays the current one until the next begins, before the first season
+the setting applies. New team links get the running or else the next planned season as suggestion
+(`einstellungen_service.saison_vorschlag()`, field `saison_vorschlag` of `GET /api/v1/einladungen`,
+also used when the admin leaves the season empty); "Meine Teams" does not count teams of that next
+season as past. The
+count is the sum of the existing weekly numbers of "Ja, gepostet" (`gepostet_wochen`) over the
+closed weeks of the season; a boundary week shared by two seasons counts only for the season that
+contains its Monday (`domain.saisons.wochen_der_saison`); nothing new is stored.
+
+- `GET /api/v1/saisons/aktuell` (anonymous at the BFF): `{"balken": {name, ziel, erreicht}}`,
+  `{"balken": null}` without a running season or below the threshold, `{"balken": null,
+  "aktiv": false}` while the switch is off (never 404, the start page asks on every view).
+- `GET|POST /api/v1/moderation/saisons`, `PUT|DELETE /api/v1/moderation/saisons/{id}` (admins):
+  list with state, create, change (running: only goal and end), delete (only before the start).
+- Threshold for the public bar: `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_WOCHEN` (default 3) closed
+  weeks in a row with at least `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_MENSCHEN` (default 25) people
+  each, reached once at any time. The privacy notice names these numbers (section „Rückmeldung
+  ‚Ja, gepostet‘“, wording by the legal review 25.11.): whoever changes either variable must update
+  that sentence in `datenschutz.component.html` in the same change.
+- For later building blocks (Rangliste per season): `SaisonService.alle()`, `.laufende(heute)`
+  and the dataclass `domain.saisons.Saison` (`id`, `name`, `beginn`, `ende`, `ziel`, `wochen()`).
+
+#### Rangliste per season (#793)
+
+Consent table `rangliste_einwilligung` (yes/no, choice of the display name, wording id, time,
+the random Ranglistenname rolled on the first yes and carried into every later row; newest row
+counts, every change is a new row), rules in `domain/rangliste.py`, assembly in
+`services/rangliste_service.py`. Who is in is decided on every request: newest answer yes, Art. 9
+consent and "Punkte und Meilensteine" both valid (one query each for all participants), no
+Startkonto. Points are those of ADR 0004
+within the days of the running season (`PunkteService.punkte(user, zeitraum)`): usage from
+`usage_events` with `entdoppelt` (so only within their retention, `usage_retention_days` while
+the cleanup job runs), approvals by the day of their last change, Tun and ratings by their day,
+Team-Quest points by their quest week (its Monday within the season, not the Monday they are
+credited, so a quest of the last season week still counts for that season).
+A season used with the Rangliste should therefore not be longer than that retention, otherwise
+usage from its first days drops out near its end. Season points of all participants are cached
+in memory once per season for 120 s; one request recomputes (at most 8 people in parallel), the
+others wait for it. Neither points nor places are stored.
+
+- `GET /api/v1/rangliste` (signed in; while `rangliste` is not effective 200 with `aktiv: false`
+  and nothing asked, never 404; the `PUT` answers 404 then): own answer, random
+  Ranglistenname, and for participants the top 10 plus the own place (only from 10 participants)
+  and past seasons as own sums (only seasons that started within the retention). If the own points
+cannot be computed, the request fails with 500 instead of showing a list without the person.
+- `PUT /api/v1/rangliste/einwilligung` `{teilnehmen, mit_anzeigename, wortlaut}`: yes only to the
+  current wording; withdrawing the Art. 9 consent or "Punkte und Meilensteine" records an earlier
+yes as no.
 
 ## Startup Scripts
 

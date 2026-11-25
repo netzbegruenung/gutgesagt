@@ -50,6 +50,7 @@ JE_SPALTE_EINE = {
     "art9_ohne_einwilligung.user_id": 1,
     "abzeichen_sichtbarkeit.user_id": 1,
     "punkte_einwilligung.user_id": 1,
+    "rangliste_einwilligung.user_id": 1,
     "nutzungsbedingungen_zustimmungen.user_id": 1,
     "loeschauftraege.user_id": 1,
     "votes.user_id": 1,
@@ -61,6 +62,9 @@ JE_SPALTE_EINE = {
     "content_reports.reviewed_by": 1,
     "schalter.geaendert_von": 1,
     "schalter_verlauf.geaendert_von": 1,
+    "einstellungen.geaendert_von": 1,
+    "team_mitgliedschaften.konto_kennung": 1,
+    "team_oeffentlich.konto_kennung": 1,
     "sperren.autor": 1,
     "sperren.gesperrt_von": 1,
     "sperren.geprueft_von": 1,
@@ -174,6 +178,58 @@ class TestPostgresUmschreiben:
                 (z.user_id, z.erledigt_am is None) for z in s.query(LoeschauftragZeile)
             )
         assert zeilen == [(NEU, False), (NEU, True)]
+        assert _kennung_irgendwo(datenbank, PERSON) == []
+
+    def test_teams_der_neuen_kennung_gewinnen(self, datenbank, spuren):
+        """
+        Hat die neue Kennung schon dieselbe Mitgliedschaft (Team und Saison) oder eine
+        Antwort auf "Team oeffentlich am Namen zeigen", bleibt ihre, die alte geht; der
+        Lauf bricht nicht am eindeutigen Schluessel ab. Andere Teams ziehen um.
+        """
+        from datetime import date, datetime, timezone
+
+        from infrastructure.database.models import (
+            TeamMitgliedschaftZeile,
+            TeamOeffentlichZeile,
+        )
+
+        jetzt = datetime.now(timezone.utc)
+        with datenbank.get_session() as s:
+            # spuren: PERSON ist in "BDK 26 Berlin" 2026 (Nr. 1) und zeigt oeffentlich
+            for kennung, team, nummer in (
+                (NEU, "BDK 26 Berlin", 2),
+                (PERSON, "Bayreuth", 1),
+            ):
+                s.add(
+                    TeamMitgliedschaftZeile(
+                        konto_kennung=kennung,
+                        team_name=team,
+                        team_motiv="vogel",
+                        saison="2026",
+                        nummer=nummer,
+                        eingetreten_am=date(2026, 11, 25),
+                        einwilligung_kennung="team-2026-11-26",
+                        einwilligung_zeitpunkt=jetzt,
+                    )
+                )
+            s.add(
+                TeamOeffentlichZeile(
+                    konto_kennung=NEU,
+                    zeigen=False,
+                    einwilligung_kennung="team-oeffentlich-2026-11-25",
+                    beantwortet_am=jetzt,
+                )
+            )
+
+        _umschreiben(datenbank)
+
+        with datenbank.get_session() as s:
+            teams = sorted(
+                (z.konto_kennung, z.team_name, z.nummer)
+                for z in s.query(TeamMitgliedschaftZeile)
+            )
+            assert s.get(TeamOeffentlichZeile, NEU).zeigen is False
+        assert teams == [(NEU, "BDK 26 Berlin", 2), (NEU, "Bayreuth", 1)]
         assert _kennung_irgendwo(datenbank, PERSON) == []
 
     def test_satz_beider_kennungen_am_selben_einwurf_bleibt_stehen(

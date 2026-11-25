@@ -5,7 +5,7 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import { AuthService, UserInfo } from '../auth/auth.service';
 import { Art9EinwilligungService } from '../services/art9-einwilligung.service';
 import { RundgangService } from './rundgang.service';
-import { MITMACHEN_ANGEBOT, RUNDGAENGE, WILLKOMMEN } from './rundgang-daten';
+import { MITMACHEN_ANGEBOT, RUNDGAENGE, WILLKOMMEN, WILLKOMMEN_ANGEMELDET } from './rundgang-daten';
 import { STARTBEISPIEL } from '../shared/startbeispiel';
 import { MITMACHEN_SCHLUESSEL, WILLKOMMEN_SCHLUESSEL } from './rundgang-merker';
 
@@ -381,7 +381,28 @@ describe('RundgangService', () => {
     it('zeigt angemeldet weiter das Willkommen auf der Startseite, wenn es noch offen ist', () => {
       navigiert('/search');
       angemeldetGeklaert();
-      expect(service.band()).toBe(WILLKOMMEN);
+      expect(service.band()).toBe(WILLKOMMEN_ANGEMELDET);
+    });
+
+    it('sagt Angemeldeten nicht „Ein Konto brauchst du nicht“ (Review Spielgefühl 25.11.)', () => {
+      navigiert('/search');
+      expect(service.band()?.satz).toBe('Ein Konto brauchst du nicht');
+      angemeldetGeklaert();
+      expect(service.band()?.satz).not.toContain('Konto');
+      expect(service.band()?.titel).toBe(WILLKOMMEN.titel);
+      expect(service.band()?.rundgang).toBe('antwort-finden');
+      // Die schlanke Zeile bricht nicht um: am Handy nicht länger als der Satz für Besucher
+      expect(WILLKOMMEN_ANGEMELDET.satz.length).toBeLessThanOrEqual(WILLKOMMEN.satz.length);
+    });
+
+    it('gilt angemeldet beantwortet auch für Besucher, ein Schlüssel für beide', () => {
+      navigiert('/search');
+      angemeldetGeklaert();
+      service.bandBeantworten(false);
+      expect(localStorage.getItem(WILLKOMMEN_SCHLUESSEL)).toBe('1');
+      userInfo.next(besucher);
+      navigiert('/search');
+      expect(service.band()).toBeNull();
     });
 
     it('wartet auf die Einwilligung, auch mit dem Neu-Punkt (#587)', () => {

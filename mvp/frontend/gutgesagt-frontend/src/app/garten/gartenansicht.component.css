@@ -1,0 +1,112 @@
+/* Gartenansicht (#783): Kacheln im Stil der Kacheln auf der Startseite, dieselben Tokens
+   fuer Flaeche, Rand und Schatten. Mobil (ab 360 px) eine Spalte, breiter so viele, wie
+   passen. Touch-Ziele mindestens 44 px. */
+.garten {
+  margin: var(--spacing-lg, 24px) max(var(--spacing-md, 16px), calc((100% - var(--lesespalte, 720px)) / 2));
+}
+
+.garten h2 {
+  margin-bottom: var(--spacing-sm, 8px);
+}
+
+.garten-einleitung,
+.garten-hinweis,
+.garten-konto {
+  margin: 0 0 var(--spacing-md, 16px);
+  color: var(--text);
+}
+
+.beete {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-md, 16px);
+  margin: 0 0 var(--spacing-md, 16px);
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 479px) {
+  .beete {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.beet {
+  display: flex;
+  flex-direction: column;
+  border: 2px solid var(--kachel-rand, var(--linie-tanne));
+  border-radius: 12px;
+  background: var(--karte-kommentar, var(--flaeche));
+  box-shadow: var(--elevation-2, 0 2px 4px rgba(0, 0, 0, 0.15));
+  overflow: hidden;
+}
+
+.beet-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-height: 44px;
+  padding: var(--spacing-md, 16px);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.beet-link:hover,
+.beet-link:focus-visible {
+  background: color-mix(in srgb, var(--karte-kommentar, var(--flaeche)) 92%, var(--akzent-tanne, #00563a));
+}
+
+.beet-link:focus-visible,
+.beet-antworten:focus-visible {
+  outline: 3px solid var(--akzent-tanne);
+  outline-offset: -3px;
+}
+
+.beet-kopf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.beet-motiv {
+  flex-shrink: 0;
+}
+
+.beet-name {
+  font-weight: 700;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.beet-zahl {
+  font-size: 15px;
+}
+
+.beet-ohne {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--primaer-text, var(--text));
+}
+
+.beet-antworten {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--spacing-md, 16px);
+  border-top: 1px solid var(--kachel-rand, var(--linie-tanne));
+  color: var(--primaer-text, var(--text));
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.garten-laedt {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-lg, 24px);
+}
+
+.garten-fehler:empty {
+  margin: 0;
+}

@@ -26,7 +26,7 @@ import { RouteConfigService } from './shared/services/route-config.service';
 import { Subject } from 'rxjs';
 import { takeUntil, filter } from 'rxjs/operators';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
-import { ROUTES } from './shared/constants/app.constants';
+import { PAGE_TITLES, ROUTES } from './shared/constants/app.constants';
 import { RundgangComponent } from './rundgang/rundgang.component';
 import { RundgangBandComponent } from './rundgang/rundgang-band.component';
 import { RundgangService } from './rundgang/rundgang.service';
@@ -68,11 +68,13 @@ export class AppComponent implements OnInit, OnDestroy {
   isMobile: boolean = false;
   isTablet: boolean = false;
 
-  /** Laengere Titel setzt der Desktop-Kopf kleiner, damit sie in eine Zeile passen. */
-  static readonly LANGER_TITEL = 16;
-
-  get titelLang(): boolean {
-    return this.pageTitle.length > AppComponent.LANGER_TITEL;
+  /**
+   * Am Desktop steht die Marke „Gut gesagt“ im Kopf. Seiten ohne eigenen Titel (Start,
+   * Ergebnis, Admin) tragen denselben Namen: Dort nennt die Ueberschrift ihn nur dem
+   * Screenreader, statt ihn sichtbar zu wiederholen.
+   */
+  get titelNurVorgelesen(): boolean {
+    return this.pageTitle === PAGE_TITLES.HOME;
   }
 
   /** Kommt aus dem ProfilbildService: abgeleitet oder selbst gewaehlt (#437). */
@@ -153,9 +155,14 @@ export class AppComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (userInfo) => {
-          // User is authenticated
           this.userInfo = userInfo;
           this.profilbild.setzePerson(userInfo);
+
+          // Besucher bekommen hier 200 mit isAuthenticated = false (keine 401, sitzung.ts).
+          // Das Rueckkehrziel gehoert zur Anmeldung und bleibt fuer sie liegen.
+          if (!userInfo.isAuthenticated) {
+            return;
+          }
 
           // Check if we have a stored return URL from login (including Keycloak)
           const returnUrl = rueckkehrzielLesen();

@@ -126,7 +126,7 @@ Wenn dieselbe Behauptung als mehrere Aussagen im Bestand liegt, etwa weil eine S
 _Avoid_: Fragmentierung, Dubletten (Dubletten sind gleiche Beiträge)
 
 **NLI-Stufe**:
-Die zweite Stufe der Prüfung, ob ein neuer Text dieselbe Aussage ist wie eine vorhandene (#387): Die Einbettung sucht wenige ähnliche Aussagen als Kandidaten, ein lokales NLI-Modell prüft je Paar, ob beide Texte einander folgern und keiner dem anderen widerspricht. Fragen gegen Behauptungen und Texte mit anderen Quantoren („manche“, „alle“, „nie“) prüft es nicht, sie bleiben getrennt. Bei einer Übernahme bleibt der Wortlaut der vorhandenen Aussage. Im **Schattenbetrieb** entscheidet weiter die Ähnlichkeitsschwelle, die NLI-Stufe urteilt nur mit und wird gezählt, bis die Auswertung die Umstellung trägt. Ist das Modell nicht verfügbar, gilt die Schwelle. Dasselbe Modell filtert die Vorschläge im Feld „Antwort auf“: Eine Aussage, die dem Getippten widerspricht, wird nicht vorgeschlagen. In der Suche kann es die Polaritätsstrafe übernehmen (#574, schaltbar): Eine Aussage, die einer Suchanfrage in beiden Richtungen widerspricht, rückt nach hinten, und ihre Antworten zeigt die Suche nicht; Fragen und Schlagwörter prüft es dort nicht. Dasselbe Modell prüft auch den Bezug (siehe dort) knapp über dessen Untergrenze.
+Die zweite Stufe der Prüfung, ob ein neuer Text dieselbe Aussage ist wie eine vorhandene (#387): Die Einbettung sucht wenige ähnliche Aussagen als Kandidaten, ein lokales NLI-Modell prüft je Paar, ob beide Texte einander folgern und keiner dem anderen widerspricht. Fragen gegen Behauptungen und Texte mit anderen Quantoren („manche“, „alle“, „nie“) prüft es nicht, sie bleiben getrennt. Bei einer Übernahme bleibt der Wortlaut der vorhandenen Aussage. Seit #575 entscheidet sie standardmäßig (`an`, wie auf Test und Produktion); im **Schattenbetrieb** entscheidet weiter die Ähnlichkeitsschwelle, die NLI-Stufe urteilt nur mit und wird gezählt. Ist das Modell nicht verfügbar, gilt die Schwelle. Dasselbe Modell filtert die Vorschläge im Feld „Antwort auf“: Eine Aussage, die dem Getippten widerspricht, wird nicht vorgeschlagen. In der Suche kann es die Polaritätsstrafe übernehmen (#574, schaltbar): Eine Aussage, die einer Suchanfrage in beiden Richtungen widerspricht, rückt nach hinten, und ihre Antworten zeigt die Suche nicht; Fragen und Schlagwörter prüft es dort nicht. Dasselbe Modell prüft auch den Bezug (siehe dort) knapp über dessen Untergrenze.
 _Avoid_: Paraphrasen-Erkennung, KI-Prüfung (es erzeugt keinen Text)
 
 **Bestätiger**:
@@ -168,6 +168,10 @@ _Avoid_: Entwurf, KI-Entwurf, Draft, generierte Antwort
 
 ## Schreiben
 
+**Tagesdeckel**:
+Die Obergrenze, wie viele Beiträge, Aussagen und Einwürfe eine Person an einem UTC-Tag anlegen darf, gegen Spam (Entscheidung Maintainer 23.11.2026; Standard 20, `SEMANTIC_SEARCH_TAGESDECKEL_BEITRAEGE`). Gezählt wird jede Anlage einmal: ein Kommentar, eine Hintergrundinfo, ein Post, ein Bild, ein Einwurf, eine Aussage vorab oder über die Schnittstelle. Herkünfte, die ein Beitrag mitbringt, zählen nicht eigens, ebenso wenig eine Dublette, bei der nichts angelegt wird, oder ein gescheitertes Speichern. Admins und Startkonten sind ausgenommen (Redaktion, Import). Darüber antwortet der Suchdienst mit 429 und der Kennung `TAGESDECKEL`, die App sagt „Für heute ist Schluss mit neuen Beiträgen, morgen geht’s weiter.“ Die Zähler liegen nur im Arbeitsspeicher und fallen am Tageswechsel (UTC) oder bei einem Neustart weg. Nicht zu verwechseln mit dem Rate-Limit, das je Minute und Stunde bremst, und mit den Deckeln der Punkte.
+_Avoid_: Tageslimit, Quota, Kontingent
+
 **Formularhilfe**:
 Die Erklärung oben in einem Beitragsformular: eine Zeile, worauf es beim Beitragstyp ankommt, und hinter dem ? die Regeln dazu, bei Kommentar und Post auch die Schreibregeln und Schreibhilfen. Sie lenkt sanft und sperrt kein Speichern.
 _Avoid_: Tooltip, Anleitung, Hilfetext
@@ -193,7 +197,7 @@ Die Stelle in eckigen Klammern im Text eines Beitrags, „[Hier …]“, die die
 _Avoid_: Lücke (das ist eine unbeantwortete Aussage), Vorlagen-Lücke, Leerstelle
 
 **Lücke**:
-Eine Aussage in „Hier fehlt eine Antwort“, auf die noch keine Antwort passt. Wer sie beantwortet, schließt die Lücke: Die Ergebnisseite sagt dann „Lücke zu“ mit der Zahl der Personen, die ohne Treffer danach gesucht haben, und bietet die nächste an. Die Startseite nennt Angemeldeten unter „Seit deinem letzten Besuch“, wie viele Lücken warten. Im Code steht das Wort nur in `shared/luecke-texte.ts`. Bis 13.11. hieß so der Platzhalter.
+Eine Aussage in „Hier fehlt eine Antwort“, auf die noch keine Antwort passt. Wer sie beantwortet, schließt die Lücke: Die Ergebnisseite sagt dann „Lücke zu“ mit der Zahl der Personen, die ohne Treffer danach gesucht haben, und bietet die nächste an; mit dem Schalter `luecke_zu_gross` (#787) steht das einmal je Antwort groß als „Lücke zu!“. Die Startseite nennt Angemeldeten unter „Seit deinem letzten Besuch“, wie viele Lücken warten. Im Code steht das Wort nur in `shared/luecke-texte.ts`. Bis 13.11. hieß so der Platzhalter.
 _Avoid_: Platzhalter (das ist die Stelle „[Hier …]“ im Text), offene Frage
 
 **Schreibhilfe**:
@@ -335,6 +339,10 @@ _Avoid_: Tag, Schlagwort, Keyword
 Die Zuordnungen von Hand mit dem Text ihrer Aussage, als Datei für Admins. Damit wird geprüft, wie gut spätere Themenvorschläge treffen. Es enthält keine Personendaten; Aussagen aus Suchanfragen gehören nicht dazu.
 _Avoid_: Eval-Set, Trainingsdaten, Goldstandard
 
+**Themenvorschlag**:
+Ein Thema, das die Themenwahl beim Anlegen einer Aussage oder beim Einwerfen in einer eigenen Zeile „Vorschlag:“ über der Liste anbietet (gestrichelter Chip „+ Thema“, dazu „Übernehmen“), weil der getippte Text den Aussagen mit diesem Thema und seinem Namen nahekommt; höchstens drei, beim Einwerfen zwei. Die Liste selbst hebt nichts hervor. Ein Tipp übernimmt es; von selbst gesetzt wird nichts, die Zuordnung bleibt von Hand. Beim nachträglichen Zuordnen (Ergebnis- und Detailseite, Admin-Seite) gibt es keine Vorschläge, damit das Testset möglichst unbeeinflusst bleibt. Vorerst aus, bis es etwa 200 Zuordnungen von Hand gibt. Messung in `tests/regression/THEMEN.md` des Semantic-Search-Service.
+_Avoid_: Auto-Tagging, Klassifikation, automatische Zuordnung
+
 ## Nutzung und Bewertung
 
 **Nutzung**:
@@ -356,8 +364,20 @@ Der Prüfwert der Muster-Hinweise für „ein Konto hat einen Beitrag eines ande
 Was eine angemeldete Person nach dem Kopieren mit „Ja, gepostet“ meldet: Sie hat den Text öffentlich als Antwort gepostet. Gezählt wird je Kalenderwoche jede Person einmal, nicht jeder Klick, und ohne den Beitrag; das ist der Nordstern (verschiedene Menschen je Woche, die öffentlich kontern). Gemerkt wird dafür bis Wochenende nur ein Prüfwert aus der Kennung mit einem Wochenschlüssel im Arbeitsspeicher, danach nur die Zahl der Woche. Nur mit Art.-9-Einwilligung, ohne Startkonten, hinter einem Schalter (#643). Den Link zum eigenen Post fragt Gut gesagt nicht ab.
 _Avoid_: geteilt (das ist Nutzung), Conversion
 
+**Meldung ohne Konto**:
+Ein Klick auf „Ja, gepostet“ nach dem Kopieren ohne Anmeldung (#799). Gezählt wird je Kalenderwoche nur die Zahl der Klicks, ohne Prüfwert, ohne Beitrag, ohne Adresse; im Browser wird nichts gespeichert. Entdoppelt wird nur auf der offenen Seite: Nach dem Klick fragt die Karte nicht mehr. Meldungen ohne Konto sind keine Menschen: Sie zählen nicht zum Nordstern, nicht zum Gemeinschaftsziel und nicht zu dessen Schwelle, sondern stehen getrennt daneben. Hinter dem Unterschalter `gepostet_ohne_konto`, der nur mit `gepostet` wirkt.
+_Avoid_: anonym gekontert, Besucher-Konter (es zählt keine Person)
+
+**Wirkungs-Echo**:
+Die Summe „öffentlich gepostet“ je Beitrag, die nur die Autorin sieht, in „Meine Beiträge“ und in „Seit deinem letzten Besuch“ als Zuwachs über alle eigenen Beiträge seit dem letzten Besuch (ein Zählerstand am Konto wie bei der Nutzung, kein Zeitpunkt). Sie entsteht, wenn jemand nach dem Kopieren „Ja, gepostet“ meldet und dabei der Beitrag mitgeht; getrennt von der Wochenzahl unter „Öffentlich gekontert“, die keinen Beitrag kennt. Am Zähler stehen nur Beitrag und Summe, keine Kennung, kein Zeitpunkt; entdoppelt je Person, Beitrag und Tag nur im Arbeitsspeicher. Eigene Beiträge und Startkonten zählen nicht. Angezeigt als „3-mal öffentlich gepostet“, nie als Zahl von Menschen. Schalter `wirkungs_echo` (#790).
+_Avoid_: Reichweite, Shares
+
+**Danke**:
+Ein Klick auf „Danke an die Autorin“ nach dem Kopieren. Die Autorin sieht je Beitrag nur die Summe („5 Danke“), nie von wem. Höchstens ein Danke je Person (ohne Konto: Besuchermerkmal), Beitrag und Tag, entdoppelt wie die Nutzung über einen Tages-Prüfwert; keine Punkte, eigene Beiträge und Startkonten zählen nicht. Angemeldet nur mit Art.-9-Einwilligung, ohne Konto nur mit dem Unterschalter. Schalter `danke_knopf`, Unterschalter `danke_ohne_konto` (#791).
+_Avoid_: Like (das ist eine Stimme), Kudos
+
 **Oft genutzt**:
-Ein Beitrag, der in den letzten sieben Tagen (nicht der Kalenderwoche) mehrfach genutzt wurde, gezählt als entdoppelte Nutzung. „Diese Woche oft genutzt“ auf der Startseite zeigt die meistgenutzten zuerst und nur, wenn genug Beiträge oft genutzt wurden; sonst gibt es den Bereich nicht. Gesperrte und gelöschte Beiträge stehen dort nie. Die Schwellen (Mindestnutzung, Mindestzahl, Höchstzahl) sind Stellschrauben und stehen in `services/oft_genutzt_service.py`, nicht hier.
+Ein Beitrag, der in den letzten sieben Tagen (nicht der Kalenderwoche) mehrfach genutzt wurde, gezählt als entdoppelte Nutzung. „Diese Woche oft genutzt“ auf der Startseite zeigt die meistgenutzten zuerst und nur, wenn genug Beiträge oft genutzt wurden; sonst gibt es den Bereich nicht. Gesperrte und gelöschte Beiträge stehen dort nie. Die Schwellen (Mindestnutzung, Mindestzahl, Höchstzahl) sind Stellschrauben und stehen nicht hier: Mindestnutzung und Mindestzahl in der Konfiguration (`SEMANTIC_SEARCH_OFT_GENUTZT_*`, `docs/ARCHITECTURE.md`), die Höchstzahl in `services/oft_genutzt_service.py`.
 _Avoid_: Trending, Trend, beliebt, Top-Beiträge
 
 **Stimme**:
@@ -411,6 +431,14 @@ _Avoid_: Duplikat, Doppelung
 **Unbeantwortete Aussage**:
 Eine Aussage ohne Kommentar, auch eine, nach der mindestens zwei Personen ohne Treffer gesucht haben; stammt sie aus einer noch unbeantworteten Suchanfrage, erst nach Freigabe in der Vormoderation. Mitwirkende sehen sie in „Hier fehlt eine Antwort“ und dürfen dort Aussagen auch vorab anlegen. Sobald ein sichtbarer Kommentar an ihr hängt, ist sie beantwortet und verschwindet von der Liste, auch wenn ihre Suchen ohne Treffer noch gezählt sind; ein gesperrter oder gelöschter Kommentar zählt nicht.
 _Avoid_: Offene Aussage (offen ist eine Stufe eines Einwurfs), Wunsch, Anfrage
+
+**Gartenansicht**:
+Die Seite „Themen im Überblick“ (#783): je Thema eine Kachel mit Motiv und Name, der Zahl der Antworten (sichtbare Kommentare) und der Zahl der unbeantworteten Aussagen, für alle. Besucher sehen nur Zahlen; den Wortlaut zeigt weiter nur „Hier fehlt eine Antwort“. Im Bild des Gartens ist ein Thema ein Beet und eine unbeantwortete Aussage eine Brachfläche; in der Oberfläche steht das höchstens einmal je Bildschirm, sonst „Antworten“ und „ohne Antwort“. Schalter `gartenansicht`.
+_Avoid_: Lagekarte, Karte, Dashboard
+
+**Nächster Schritt**:
+Die Karte „Dein nächster Schritt“ auf der Startseite (#789): genau ein Vorschlag aus dem eigenen Stand (suchen, einwerfen, bewerten, eine unbeantwortete Aussage beantworten, eine Kurzfassung ergänzen), ohne Frist und ohne Zähler. Wegklicken zeigt den nächsten Vorschlag; das merkt sich nur der Browser für sieben Tage. Schalter `naechster_schritt`.
+_Avoid_: Tagesaufgabe, Quest (eine Quest ist eine gestellte Aufgabe mit Punkten), Mission
 
 **Suchanfrage**:
 Der Text, mit dem jemand nach passenden Beiträgen sucht. Keine Aussage, aber häufige Suchanfragen ohne Treffer zeigen, welche Aussagen noch Antworten brauchen.
@@ -475,6 +503,10 @@ _Avoid_: Hinweis (das ist der Freitext an einem Einwurf), Benachrichtigung, Noti
 **Willkommen**:
 Das gelbe Band beim ersten Besuch auf der Startseite, unter dem Suchfeld (vorher darüber; mobil stand das Suchfeld dann erst weit unten), kein Fenster (#587; seit #599 nicht mehr über den Treffern): ein Satz, wofür Gut gesagt da ist, und das Angebot des Rundgangs „Antwort finden“, daneben „Ausblenden“. Ob die Person reagiert hat (Rundgang gestartet oder ausgeblendet), merkt sich nur der Browser; danach kommt das Band nicht wieder. Nach der Anmeldung kommt nur die Art.-9-Einwilligung; „Selbst beitragen“ bietet erst ein Band auf Beitragen an (#587, gestaffelt; seit #644 nicht mehr im Fangkorb).
 
+**App-Abkürzung**:
+Ein Eintrag im Menü, das langes Drücken aufs Symbol der installierten App öffnet: Einwerfen, Suchen, Fangkorb. Das Gerät liest sie beim Installieren aus dem Manifest und zeigt sie immer; ist ihr Schalter aus, öffnet jede die Startseite wie das Symbol selbst (#757).
+_Avoid_: Shortcut, Schnellzugriff
+
 **App-Hinweis**:
 Das Band „Gut gesagt als App“ auf der Startseite, unter dem Suchfeld, frühestens im Besuch nach dem Willkommen und nie zugleich mit einem anderen Band. Auf iPhone und iPad in Safari ist es eine Anleitung (Teilen, dann „Zum Home-Bildschirm“); in Chrome und Edge auf Android und Computer steht es nur da, wenn der Browser das Installieren anbietet, und hat dann einen Knopf „Installieren“ (18.11.). Nach „Ausblenden“ kommt es nicht wieder; der Browser merkt sich das unter demselben Vermerk auf allen Geräten, und nur, solange der Schalter für diesen Merker an ist. Nach dem Installieren ist es weg. Die Hilfe erklärt das Installieren je Gerät im Abschnitt „Als App aufs Handy“, mit demselben Knopf, wenn der Browser ihn anbietet.
 _Avoid_: PWA-Banner, Install-Prompt
@@ -500,8 +532,12 @@ Der Hinweis an Admins, dass zwei Konten sich gegenseitig nutzen: Innerhalb von s
 _Avoid_: Betrugsverdacht, Alarm, Sockenpuppen-Erkennung
 
 **Rangliste**:
-Die Reihenfolge der Mitwirkenden nach Punkten einer Woche oder eines Monats. Nur Angemeldete sehen sie, und dort erscheint nur, wer ausdrücklich zugestimmt hat.
+Die Reihenfolge der Mitwirkenden nach ihren Punkten in der laufenden Saison (#793, ersetzt Woche und Monat). Darin steht und sie sieht nur, wer angemeldet ist, ausdrücklich eingewilligt hat (Wortlaut `rangliste-2026-11-25`) und die Art.-9-Einwilligung und „Punkte und Meilensteine“ gegeben hat; fällt eine weg, ist die Person beim nächsten Abruf draußen. Gezeigt werden die ersten zehn Plätze und der eigene, erst ab zehn Teilnehmenden, mit dem Ranglistennamen; vergangene Saisons nur als eigene Summe. Schalter `rangliste`, wirkt nur mit den Punkten.
 _Avoid_: Leaderboard, Highscore
+
+**Ranglistenname**:
+Der Name einer Person in der Rangliste: zufällig aus festen Listen (Eigenschaft, Tier, Zahl, etwa „Flinke Amsel 42“), beim ersten Ja echt zufällig gewürfelt und mit der Einwilligung gespeichert, ohne Freitext. Aus der Kennung lässt er sich nicht ausrechnen; die Person behält ihn, auch über Saisons hinweg. Stehen zwei gleiche Namen in einer Liste, bekommt der zweite eine Nummer („(2)“). Den Anzeigenamen zeigt die Rangliste nur, wenn die Person ihn unter „Meine Beiträge“ selbst wählt.
+_Avoid_: Spitzname, Nickname
 
 **Quest**:
 Eine Aufgabe mit prüfbarem Ergebnis, die Punkte bringt, etwa eine unbeantwortete Aussage beantworten. Tagesaufgaben sind Quests für einen Tag, das Wochenziel ist eine gemeinsame Quest aller.
@@ -528,20 +564,32 @@ Eine erreichte Schwelle bei der eigenen Mitwirkung, etwa die erste Nutzung durch
 _Avoid_: Achievement, Badge, Erfolg
 
 **Einwilligung Punkte und Meilensteine**:
-Die eigene, freiwillige Einwilligung einer angemeldeten Person, dass Gut gesagt aus ihrer Mitwirkung Punkte und Meilensteine berechnet, die nur sie sieht, und dass Admins einen Muster-Hinweis bekommen, wenn sich zwei Konten auffällig oft gegenseitig nutzen (Art. 9 Abs. 2 lit. a DSGVO, #351). Getrennt von der Art.-9-Einwilligung zur Mitwirkung, damit niemand Punkte hinnehmen muss, um beitragen zu dürfen (Art. 7 Abs. 4); ohne sie kann die Person genauso beitragen und bewerten. Ein eigenes Häkchen in „Meine Beiträge“ und in den Datenschutz-Einstellungen, nichts vorausgewählt, nur mit eingeschalteten Punkten angeboten; gespeichert wird jede Antwort mit Kennung des Wortlauts und Zeitpunkt, ein Widerruf ist eine neue Antwort und wirkt sofort. Ohne sie keine Punkte, keine Meilensteine (auch keine Wegmarken), kein Abzeichen und kein Muster-Hinweis, der das Konto nennt. Das Abzeichen am Namen braucht zusätzlich die Zustimmung zur Sichtbarkeit.
+Die eigene, freiwillige Einwilligung einer angemeldeten Person, dass Gut gesagt aus ihrer Mitwirkung Punkte und Meilensteine berechnet, die nur sie sieht, und dass Admins einen Muster-Hinweis bekommen, wenn sich zwei Konten auffällig oft gegenseitig nutzen (Art. 9 Abs. 2 lit. a DSGVO, #351). Getrennt von der Art.-9-Einwilligung zur Mitwirkung, damit niemand Punkte hinnehmen muss, um beitragen zu dürfen (Art. 7 Abs. 4); ohne sie kann die Person genauso beitragen und bewerten. Ein eigenes Häkchen in „Meine Beiträge“ und in den Datenschutz-Einstellungen, mit dem Schalter `einwilligung_im_gewinn` in „Meine Beiträge“ stattdessen eine Frage mit zwei gleichwertigen Knöpfen nach dem Einwilligungs-Budget; nichts vorausgewählt, nur mit eingeschalteten Punkten angeboten; gespeichert wird jede Antwort mit Kennung des Wortlauts und Zeitpunkt, ein Widerruf ist eine neue Antwort und wirkt sofort. Ohne sie keine Punkte, keine Meilensteine (auch keine Wegmarken), kein Abzeichen und kein Muster-Hinweis, der das Konto nennt. Das Abzeichen am Namen braucht zusätzlich die Zustimmung zur Sichtbarkeit.
 _Avoid_: Opt-in, Gamification-Einwilligung
 
 **Wegmarke**:
 Ein Meilenstein für das eigene Tun, nicht für die Wirkung bei anderen (#351): der erste Einwurf (nicht verworfen), der erste Beitrag, der heute sichtbar und mindestens drei Tage alt ist (dieselbe Regel wie für die Punkte), der erste Kommentar, den eine sichtbare Aussage als Antwort führt, und die ersten 10 Stimmen zu fremden Beiträgen („Erste 10 Bewertungen“, 20.11.2026). Wegmarken sieht nur die Person selbst; sie zählen nicht für das Abzeichen am Anzeigenamen und lösen die Frage nach der Zustimmung zur Sichtbarkeit nicht aus. Nicht zu verwechseln mit dem Weg eines Einwurfs.
 _Avoid_: Achievement, Erfolg
 
+**Konter-Probe**:
+Ein kleines Spiel ohne Konto (#786, Schalter `konter_probe`): Zu einer Aussage stehen drei sichtbare Kommentare in verschiedenen Stilen; wer spielt, tippt an, welcher bei Mitlesenden am besten wirkt, und sieht danach die echte Nutzung aller drei und die Karten zum Kopieren. Ausgewählt werden nur Kommentare für die Kommentarspalte, die drei zusammen mindestens sechsmal genutzt, mit einem klaren Spitzenreiter; dafür zählt die Nutzung je Person, Beitrag und Tag einmal (#352). Der Tipp wird nur im Browser ausgewertet und nirgends gespeichert; keine Punkte, kein Countdown, keine Rangliste. Ohne passende Aussage gibt es keinen Einstieg auf der Startseite.
+_Avoid_: Quiz, Ratespiel
+
 **Zustimmung zur Sichtbarkeit**:
 Die gesonderte Einwilligung einer Person, dass andere Angemeldete ihre Meilenstein-Abzeichen am Anzeigenamen sehen (#351, ADR 0004). Ab dem ersten erreichten Meilenstein, der keine Wegmarke ist, fragt „Meine Beiträge“ einmal mit einer kurzen Frage und zwei gleichwertigen Knöpfen, nichts ist vorbelegt; was die Einwilligung außerdem wissen muss (nicht nur Mitglieder sind angemeldet, Screenshots, Datenschutzerklärung), steht aufklappbar unter „Mehr dazu“ direkt darunter; die Antwort lässt sich dort jederzeit ändern, ein Nein wirkt sofort. Gespeichert wird jede Antwort mit Zeitpunkt und Kennung des Wortlauts. Sie setzt die Art.-9-Einwilligung voraus, ersetzt sie aber nicht: Ohne Art.-9-Einwilligung gibt es keine Meilensteine und damit nichts zu zeigen, und ein Widerruf der Art.-9-Einwilligung hält ein früheres Ja als Nein fest. Gilt bisher nur für Abzeichen; Punkte, Level, Quests und Ranglisten bekommen ihre eigene.
 _Avoid_: Opt-in, Freigabe, Sichtbarkeitseinstellung
 
+**Einwilligungs-Budget**:
+Die Regel, wann die App eine Einwilligungsfrage stellen darf (#788, nur mit dem Schalter `einwilligung_im_gewinn`): höchstens eine neue Frage je Besuch und höchstens vier im ersten Monat des Kontos. Ein Besuch ist ein Laden der App im Tab; was schon gefragt wurde, steht nur im Arbeitsspeicher, nicht im Browser und nicht auf dem Server. Die Art.-9-Einwilligung und das Team beim Einlösen eines Teamlinks gehören zum Beitreten und kommen immer, verbrauchen aber den Besuch. Die Frage nach Punkten und Meilensteinen kommt erst beim Öffnen von „Meine Beiträge“ nach der ersten Stimme oder einem „Ja, gepostet“ im selben Besuch, nie direkt nach einem Lob; die Zustimmung zur Sichtbarkeit wartet, wenn im Besuch schon eine Frage kam. Die Wortlaute bleiben dieselben. Die Regel steht an einer Stelle im Frontend (`shared/einwilligungs-budget`).
+_Avoid_: Consent-Management, Einwilligungswand
+
 **Meine Einwürfe**:
 Der Tab in „Meine Beiträge“, in dem eine Person ihre eigenen Einwürfe mit ihrer Stufe sieht: Ausformulierte führen zu ihren Beiträgen, verworfene sind als solche erkennbar. Ist keiner der Beiträge eines ausformulierten Einwurfs mehr sichtbar, steht statt „Ausformuliert“ „Beitrag gesperrt“ oder „Beitrag gelöscht“, und es gibt nichts anzusehen; so auch beim Einwerfen. Im Fangkorb steht Ausformuliertes nicht. Nach dem Ausformulieren des eigenen Einwurfs führt „Zu meinen Einwürfen“ hierher; nach einem fremden geht es mit „Zum Fangkorb“ in den Fangkorb. Hier erfährt der Einwerfer, was aus seinen Fundstücken geworden ist. Die Karten bieten dieselben Griffe wie im Fangkorb; ein offener Einwurf lässt sich von hier aus gleich destillieren.
 _Avoid_: Meine Funde, Mein Fangkorb, Eingereichtes
+
+**Meine Aussagen**:
+Der dritte Tab in „Meine Beiträge“, nur mit dem Schalter `antworten_hinweis`: die Aussagen, die eine Person selbst angelegt hat, je mit den Beiträgen, die darauf antworten. Antworten anderer aus den letzten sieben Tagen tragen „Neu“; ihre Zahl steht als Kachel unter „Seit deinem letzten Besuch“, und ein Punkt am Ziel „Meine“ der Hauptnavigation zeigt sie an, bis „Meine Beiträge“ offen war. Wer geantwortet hat, steht nicht da, nur ob es die Person selbst war (#760).
+_Avoid_: Meine Behauptungen, Meine Fragen
 
 **Nutzungsstatistik**:
 Wie oft die Beiträge einer Person genutzt wurden, insgesamt und je Beitrag; unter Meine Beiträge steht die Gesamtzahl. Jede Person sieht nur die eigene; wessen Statistik gemeint ist, ergibt sich aus der Anmeldung, nie aus einer Kennung in der Adresse.
@@ -586,7 +634,7 @@ Der eigene Bereich von Gut gesagt im Identitätsdienst Keycloak, der Realm „gu
 _Avoid_: Mandant, Tenant, Keycloak (für den Realm allein)
 
 **Einladung**:
-Ein Link, mit dem Personen ohne Netzbegrünung-Mitgliedschaft selbst ein Konto in Gut gesagt anlegen: Vor- und Nachname und Mail-Adresse eingeben, Passwort über die Mail von Keycloak festlegen (der Link bestätigt dabei die Adresse), danach anmelden. Ein Admin legt sie im Admin-Dashboard an, mit einer Notiz für Admins (wofür sie ist, ohne Namen; nicht zu verwechseln mit dem Hinweis an einem Einwurf), der Zahl erlaubter Einlösungen und dem letzten gültigen Tag, und kann sie ab- und wieder einschalten. Gruppenlink und persönlicher Link sind dieselbe Einladung mit anderen Zahlen. Gezählt wird nur, wie oft sie eingelöst wurde, auch für eine Adresse, die schon ein Konto hat; von wem, steht nirgends. Ein Konto aus einer Einladung, für das nie ein Passwort gesetzt wurde (Link nie geöffnet oder danach abgebrochen), wird nach der Frist im Löschkonzept gelöscht.
+Ein Link, mit dem Personen ohne Netzbegrünung-Mitgliedschaft selbst ein Konto in Gut gesagt anlegen: Vor- und Nachname und Mail-Adresse eingeben, Passwort über die Mail von Keycloak festlegen (der Link bestätigt dabei die Adresse), danach anmelden. Nach dem Anmelden (und der Frage nach Nutzungsbedingungen und Einwilligung) begrüßt die App mit einem Satz zum Gewinn und dem Knopf „Ersten Spruch suchen“, der ins Suchfeld der Startseite führt; bei einem Teamlink steht nach dem Teamergebnis derselbe Knopf als „Spruch suchen“ vor „Zu meinen Teams“. Ein Admin legt sie im Admin-Dashboard an, mit einer Notiz für Admins (wofür sie ist, ohne Namen; nicht zu verwechseln mit dem Hinweis an einem Einwurf), der Zahl erlaubter Einlösungen und dem letzten gültigen Tag, und kann sie ab- und wieder einschalten. Gruppenlink und persönlicher Link sind dieselbe Einladung mit anderen Zahlen. Trägt sie zusätzlich ein Team, ist sie ein Teamlink. Gezählt wird nur, wie oft sie eingelöst wurde, auch für eine Adresse, die schon ein Konto hat; von wem, steht nirgends. Ein Konto aus einer Einladung, für das nie ein Passwort gesetzt wurde (Link nie geöffnet oder danach abgebrochen), wird nach der Frist im Löschkonzept gelöscht.
 _Avoid_: Einladungscode, Registrierungslink, Invite, Gutschein
 
 **Warteliste**:
@@ -597,6 +645,42 @@ _Avoid_: Anmeldeliste, Vormerkung
 Ein Aufruf einer Einladung mit einer Mail-Adresse, solange sie gilt. Sie zählt, auch wenn es zur Adresse schon ein Konto gibt oder die Adresse einen Tippfehler hat; nur wenn Keycloak das Konto nicht anlegen konnte, wird sie zurückgenommen. Die Zahl erlaubter Einlösungen begrenzt eine Einladung.
 _Avoid_: Platz, Anmeldung (für den Zähler), Registrierung
 
+**Team**:
+Eine Gruppe, die eine Einladung stiftet. Es gibt zwei **Teamarten**, die der Admin an der Einladung wählt: ein **Team nach Anlass, Ort oder Saison** (Standard), etwa „Team BDK 26 Berlin“ oder „Team Bayreuth“, und ein **Team nach Gruppe**, benannt nach einer Gruppe, etwa „Netzfeuerwehr“ oder „Die grüne Welle“. Für ein Team nach Gruppe gelten vier Bedingungen (juristische Prüfung 25.11.2026): 1. nur Gruppen, die öffentlich unter diesem Namen auftreten; 2. vorher schriftliche, widerrufliche Zustimmung der Gruppenleitung, nach Widerruf wird das Team umbenannt; 3. die Gruppe bekommt nie Namen, Listen oder eigene Zahlen und steuert nichts; 4. keine Namen, die eine weitere besondere Kategorie erkennen lassen. Bei einem Team nach Gruppe ist der Teamname genau der Name der Gruppe, so wie sie öffentlich heißt, ohne Zusätze wie Ort oder Jahr (die Saison steht getrennt); so nennt ihn die Begrüßung. Nach einem Widerruf wird nur in einen neutralen Namen nach Anlass, Ort oder Saison umbenannt; eine Umbenennung in eine andere Gruppe braucht eine neue Einwilligung der Mitglieder. Umbenannt wird an Einladungen, Mitgliedschaften und Nummernzähler zugleich (`mvp/scripts/manual/team_umbenennen.sql`, nur mit Teamart „anlass“). Den Tag der schriftlichen Zustimmung trägt der Admin an der Einladung ein, als Nachweis nur für Admins, ohne Namen; die Begrüßung sagt dann über der Frage, dass das Team mit Zustimmung der Gruppe nach ihr benannt ist, allein die Netzbegrünung verantwortlich ist und die Gruppe keine Daten bekommt. Kein Team trägt den Namen einer Person oder einen Namen zu Religion, Gesundheit, sexueller Orientierung, Herkunft oder Gewerkschaft. Ein Team ist kein eigener Datensatz: Es besteht aus Name, Motiv (eines der Motive der Meilensteine, immer mit seinem Namen daneben) und Saison an den Einladungen und an den Mitgliedschaften; dasselbe Team in einer anderen Saison zählt neu. Ein Konto kann in mehreren Teams sein. Die Zugehörigkeit kann zusammen mit dem Namen auf politische Haltung und Ort schließen lassen (Art. 9 DSGVO), deshalb sehen Admins je Team nur die Zahl der Mitglieder, keine Liste und keinen Export, und die Person selbst sieht ihre Teams unter „Meine Teams“. Am Anzeigenamen erscheinen die Teams der aktuellen Saison nur, wenn der Schalter `teams_oeffentlich` an ist und die Person dafür gesondert eingewilligt hat, und nur für Angemeldete. Alles nur mit dem Schalter `teams`; ist er aus, ist jede Einladung ein reiner Kontolink.
+_Avoid_: Gruppe, Clan, Gilde, Community
+
+**Teamlink**:
+Eine Einladung mit einem Team (Name, Motiv, Saison, Teamart; bei einem Team nach Gruppe dazu der Tag der schriftlichen Zustimmung der Gruppenleitung). Ohne Konto legt sie wie jede Einladung ein Konto an; wer schon angemeldet ist, tritt über sie nur dem Team bei, ohne neues Konto, und das zählt wie eine Einlösung gegen die erlaubten Einlösungen. Zweimal derselbe Teamlink zählt einmal. Ob die Person dem Team beitritt, entscheidet sie auf der Begrüßung mit zwei gleichwertigen Knöpfen („Ja, speichert, dass ich im Team X bin“ und „Nein, ohne Team weiter“); ohne Ja bleibt es bei der Einlösung wie bei jeder Einladung. Welche Einladung jemand genutzt hat, steht auch hier nirgends.
+_Avoid_: Team-Einladung, Gruppenlink (das ist eine Einladung für viele), Invite
+
+**Mitgliedschaft**:
+Der Eintrag, dass ein Konto in einem Team ist: Kennung, Teamname, Motiv, Saison, laufende Nummer, Tag des Beitritts sowie Kennung des Wortlauts und Zeitpunkt der Einwilligung, ohne Bezug zur Einladung. Sie entsteht nur nach der eigenen, ausdrücklichen Einwilligung (Wortlaut `team-2026-11-26`, Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a DSGVO), die auch abdeckt, dass die Zahl der Beiträge, Bewertungen und Kommentare und der Meldungen „Ja, gepostet“ in eine Summe des Teams eingeht, die nur Mitglieder des Teams sehen (Team-Fortschritt), getrennt von der Art.-9-Einwilligung und von „Punkte und Meilensteine“. Beim Einlösen ohne Anmeldung entsteht sie nur, wenn Keycloak dabei ein neues Konto anlegt; wer schon ein Konto hat, tritt angemeldet bei. Je Konto, Team und Saison gibt es höchstens eine. Die Nummer zählt je Team und Saison ab 1 und wird nie neu vergeben, auch nicht nach „Team verlassen“; am Anzeigenamen steht sie nicht. „Team verlassen“ unter „Meine Teams“ widerruft die Einwilligung und löscht die Mitgliedschaft sofort, die Löschung des Kontos alle (Löschkonzept). Ob die Teams am Namen erscheinen dürfen, ist eine zweite, eigene Einwilligung je Konto (Wortlaut `team-oeffentlich-2026-11-25`), die nur gefragt wird, solange der Schalter `teams_oeffentlich` an ist.
+_Avoid_: Mitglied (ohne Zusatz meint es die Netzbegrünung), Membership
+
+**Saison**:
+Der Zeitraum, zu dem ein Team gehört, frei benannt, höchstens 20 Zeichen, etwa „Winter 26/27“ oder das Jahr „2026“. Saisons laufen im Jahreszeiten-Takt, je etwa drei Monate (etwa „Winter 26/27“ vom 30.11.2026 bis 28.02.2027); Ereignisse wie BDK oder Wahlkämpfe sind keine eigene Saison, sondern Teams nach Anlass innerhalb der laufenden. Pflicht an jedem Teamlink und jeder Mitgliedschaft. Ein Admin kann Saisons auf der Admin-Seite „Schalter“ anlegen, mit Name, erstem und letztem Tag und einem Gemeinschaftsziel (#782); sie überschneiden sich nie, es läuft also höchstens eine. Die laufende Saison ist die **aktuelle Saison**, in einer Lücke zwischen zwei Saisons die zuletzt beendete, bis die nächste beginnt, unabhängig vom Schalter `saison_ziel` (der steuert nur den Balken); solange noch keine Saison begonnen hat, gilt die Einstellung „Aktuelle Saison“ auf derselben Seite (Standard: das laufende Jahr). Die aktuelle Saison entscheidet, welche Teams am Anzeigenamen erscheinen. Neue Teamlinks bekommen als Vorschlag die laufende Saison, sonst die nächste angelegte, ohne beides die aktuelle Saison; lässt der Admin die Saison leer, trägt der Dienst diesen Vorschlag ein. So trägt ein Teamlink, der vor dem Saisonbeginn angelegt wird, schon den Namen der Saison, in die er fällt, und „Meine Teams“ zählt Teams dieser nächsten Saison nicht zu den vergangenen. Name und erster Tag stehen fest, sobald eine Saison läuft, weil Teamlinks und Mitgliedschaften den Namen als Kopie tragen; löschen lässt sie sich nur vor ihrem Beginn. „Meine Teams“ zeigt alle Saisons, vergangene als Abzeichen.
+_Avoid_: Season, Staffel, Spielzeit
+
+**Gemeinschaftsziel**:
+Das Ziel aller zusammen in einer Saison, gezählt in Widerspruchs-Wochen und auf der Startseite als Fortschrittsbalken gezeigt, auch ohne Konto. Für alle sichtbar erst, wenn es einmal drei abgeschlossene Wochen hintereinander mit je mindestens 25 verschiedenen Menschen gab, die „Ja, gepostet“ gemeldet haben (Stellschrauben `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_WOCHEN` und `_MENSCHEN`; die Datenschutzerklärung nennt die Zahlen; wer eine der beiden ändert, zieht den Satz dort nach); vorher sehen nur Admins den Stand. Weil die Schwelle aus Wochen vor der Saison stammen kann, kann der Bereich schon am Saisonstart erscheinen; solange die Saisonzahl 0 ist, zeigt er statt „0-mal“ und leerem Balken einen Startsatz mit dem Ziel. Kein Ende und keine Frist im Balken, nichts verfällt. Nur mit dem Schalter `saison_ziel`.
+_Avoid_: Challenge, Quest (die bringt Punkte)
+
+**Widerspruchs-Woche**:
+Die Einheit der Saisonzahl: je Kalenderwoche eine Person, die öffentlich gekontert hat. Die Saisonzahl ist die Summe der Wochenzahlen von „Öffentlich gekontert“ über die abgeschlossenen Wochen der Saison, angebrochene Wochen am Rand eingeschlossen; grenzen zwei Saisons in einer Woche aneinander, zählt diese Woche nur für die Saison, in der ihr Montag liegt; die laufende Woche zählt erst nach ihrem Ende. Wer drei Wochen dabei ist, zählt dreimal, deshalb heißt es „Woche für Woche zusammen N-mal widersprochen“, nie „N Menschen“: Verschiedene Menschen über die ganze Saison lassen sich ohne neue Datenspur nicht zählen. Hat nichts mit dem Widerspruch gegen eine Sperre zu tun.
+_Avoid_: Menschen, Teilnehmende, Widerspruch (das ist der Einwand gegen eine Sperre)
+
+**Team-Fortschritt**:
+Was ein Team in der letzten abgeschlossenen Woche gemeinsam bewirkt hat, unter „Meine Teams“ je Team der aktuellen Saison: die Zahl der Beiträge (jeder Beitragstyp, Kommentare eingeschlossen), Bewertungen und Meldungen „Ja, gepostet“ seiner Mitglieder, aus dem Wochenzähler. Nur Mitglieder sehen ihn, nie die laufende Woche, und erst ab 5 Mitgliedern mit Einwilligung `team-2026-11-26`; darunter steht „Euer Team wächst noch, ab 5 zeigen wir eure gemeinsame Wirkung“. Keine genaue Zahl: unter 10 „weniger als 10“, darüber auf 5 gerundet. Nie Team gegen Team, keine Teamnamen öffentlich. Hinter dem Schalter `team_fortschritt` (#784).
+_Avoid_: Team-Statistik, Team-Score, Teamrangliste
+
+**Wochenzähler**:
+Die Zahlen eines Teams je Saison und Woche, aus denen Team-Fortschritt und Team-Quests rechnen: wie viele Beiträge, Bewertungen und Meldungen „Ja, gepostet“ seine Mitglieder mit Einwilligung `team-2026-11-26` in der Woche hatten, ohne Kennung und ohne Beitrag. Gezählt wird nur für Teams ab 5 solchen Mitgliedern, keine Startkonten, „Ja, gepostet“ nur mit Art.-9-Einwilligung. Entdoppelt wird über einen Wochen-Prüfwert im Arbeitsspeicher (ein Beitrag einmal, eine Stimme je Person und Beitrag einmal, „Ja, gepostet“ je Person einmal je Woche); in der Datenbank steht keiner. Er bleibt bei „Team verlassen“ und bei der Löschung eines Kontos.
+_Avoid_: Team-Summe (umgangssprachlich ok), Zählerstand
+
+**Team-Quest**:
+Ein gemeinsames Wochenziel je Team aus dem Bedarf (#792): Ziel ist die Zahl der unbeantworteten Aussagen im Thema mit dem meisten Bedarf, höchstens die Zahl der Mitglieder mit Einwilligung geteilt durch 3 (aufgerundet), mindestens 3; das Thema nennt die Quest als Beet. Sie entsteht beim ersten Abruf von „Meine Teams“ in der Woche, nur ab 5 Mitgliedern mit Einwilligung, und zählt mit dem Wochenzähler. Während der Woche steht nur das Ziel da, nie der Stand; nach Wochenende nur, ob sie geschafft ist. Verfehlt passiert nichts, kein Hinweis. Geschafft bekommen Mitglieder mit Einwilligung, die in der Woche einen Beitrag gespeichert haben, der heute sichtbar und mindestens drei Tage alt ist, Quest-Punkte (ADR 0004, Stufe 2), nur mit Einwilligung „Punkte und Meilensteine“. Nie Team gegen Team. Hinter dem Schalter `team_quests`, der nur mit `team_fortschritt` wirkt.
+_Avoid_: Team-Challenge, Mission, Wettbewerb
+
 **Startbeispiel**:
 Die Aussage, die das leere Suchfeld auf der Startseite als erste vortippt und hinter „Beispiel ausprobieren“ sucht; danach tippt es weitere Aussagen des Startbestands vor (im Code `HOT_TAKES`) und bleibt am Ende beim Startbeispiel stehen. Der Rundgang „Antwort finden“ füllt sie in Schritt 1 ins Suchfeld und zeigt ihre Treffer. Sie steht wörtlich im Startbestand und in den Testdaten des Dev-Stacks (`mvp/data/seed`), damit die Suche sicher Kommentare findet.
 _Avoid_: Beispielsuche, Demo-Aussage
@@ -606,7 +690,7 @@ Die Kommentare zu häufigen Aussagen, die das Gründungsteam vor dem Start schre
 _Avoid_: Seed, Grundbestand, Demo-Inhalt
 
 **Startkonto**:
-Ein Beta-Zugang, unter dem das Gründungsteam den Startbestand schreibt, damit er nicht von einer einzigen Person zu kommen scheint. Admins kennen die Person dahinter. Ein Startkonto vergibt keine Stimmen und keine Nutzung und sammelt keine Punkte: Seine Nutzung wird gar nicht gezählt, seine Stimmen stehen in keinem Zähler und bringen keine Punkte. Ein Startkonto ist ein Funktionskonto, keine Person: Sein Anzeigename ist der volle Name aus der Anmeldung, nicht Vorname und Initial. Welche Beta-Zugänge Startkonten sind, steht in der Konfiguration.
+Ein Beta-Zugang, unter dem das Gründungsteam den Startbestand schreibt, damit er nicht von einer einzigen Person zu kommen scheint. Admins kennen die Person dahinter. Ein Startkonto vergibt keine Stimmen und keine Nutzung und sammelt keine Punkte: Seine Nutzung wird gar nicht gezählt, seine Stimmen stehen in keinem Zähler und bringen keine Punkte. Vom Tagesdeckel und vom Rate-Limit beim Anlegen ist es ausgenommen, damit der Startbestand per Import in einem Zug hineinkommt. Ein Startkonto ist ein Funktionskonto, keine Person: Sein Anzeigename ist der volle Name aus der Anmeldung, nicht Vorname und Initial. Welche Beta-Zugänge Startkonten sind, steht in der Konfiguration.
 _Avoid_: Persona, Sammelkonto, Redaktionskonto, Bot
 
 **Art.-9-Einwilligung**:
@@ -658,7 +742,7 @@ Eine Person, die Meldungen bearbeitet, Beiträge sperrt, Widersprüche prüft, E
 _Avoid_: Moderator, Redaktion
 
 **Schalter**:
-Eine Funktion, die sich ein- und ausschalten lässt, ohne den Code zu ändern. Bei Punkten, Abzeichen am Anzeigenamen, „Ja, gepostet“ und „Herkunft prüfen“ (`herkunft_pruefen`, #759) hat ein Schalter zwei Teile: die **Obergrenze**, die der Server aus seiner Umgebung setzt, und den **Admin-Wert**, den ein Admin auf der Admin-Seite „Schalter“ setzt. Wirksam ist der Schalter nur, wenn beide an sind; ohne Admin-Wert ist er aus. Über die Obergrenze hinaus einschalten kann kein Admin, ausschalten jederzeit; jede Änderung steht mit Zeitpunkt und Kennung des Admins im Verlauf (#708). Abzeichen wirken nur zusammen mit den Punkten. Schalter, deren Stand die App ohne Anmeldung abfragt, um eine Funktion ein- oder auszublenden, haben eine Obergrenze, die von Haus aus an ist; aus sind sie trotzdem, bis ein Admin sie einschaltet (#756).
+Eine Funktion, die sich ein- und ausschalten lässt, ohne den Code zu ändern. Bei Punkten, Abzeichen am Anzeigenamen, „Ja, gepostet“, „Herkunft prüfen“ (`herkunft_pruefen`, #759) und dem Hinweis auf neue Antworten zu eigenen Aussagen (`antworten_hinweis`, #760), Teams (`teams`) und Teams am Anzeigenamen (`teams_oeffentlich`, wirkt nur zusammen mit `teams`, unabhängig von den Abzeichen) hat ein Schalter zwei Teile: die **Obergrenze**, die der Server aus seiner Umgebung setzt, und den **Admin-Wert**, den ein Admin auf der Admin-Seite „Schalter“ setzt. Wirksam ist der Schalter nur, wenn beide an sind; ohne Admin-Wert ist er aus. Über die Obergrenze hinaus einschalten kann kein Admin, ausschalten jederzeit; jede Änderung steht mit Zeitpunkt und Kennung des Admins im Verlauf (#708). Abzeichen wirken nur zusammen mit den Punkten. Schalter, deren Stand die App ohne Anmeldung abfragt, um eine Funktion ein- oder auszublenden, haben eine Obergrenze, die von Haus aus an ist; aus sind sie trotzdem, bis ein Admin sie einschaltet (#756). Ausnahme sind die Schalter für das Spielgefühl (#782 bis #793): Ihre Obergrenze ist von Haus aus aus, auch bei denen, die die App ohne Anmeldung abfragt; die Liste mit den Bedingungen fürs Einschalten steht in `docs/ARCHITECTURE.md`.
 _Avoid_: Feature-Flag, Toggle, Flag
 
 **Teilen als Bild**:

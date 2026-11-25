@@ -1,13 +1,39 @@
 import {
   SHAREPIC_FARBEN,
   SHAREPIC_MASSE,
+  SHAREPIC_ZEITGRENZE_MS,
+  SharepicDaten,
+  SharepicLader,
+  SharepicZeitueberschreitung,
   kartenText,
   kuerzen,
   kurzeAdresse,
+  mitZeitgrenze,
   motivAdresse,
   sharepicDatei,
   umbrechen,
 } from './sharepic';
+
+const DATEN: SharepicDaten = {
+  titel: 'Windkraft schafft Arbeitsplätze',
+  text: 'In der Windbranche arbeiten heute mehr Menschen als in der Kohle. '.repeat(3),
+  aussage: 'Windräder kosten nur Jobs.',
+  thema: { name: 'Klima', motiv: 'themen/klima.svg' },
+  link: 'https://gut-gesagt.example/beitrag/11111111-1111-4111-8111-111111111111',
+};
+
+/**
+ * Lader ohne Netz und ohne Schriftladen (#819): Logo und Motiv sind ein im Test gemaltes
+ * Canvas, die Schriften gelten sofort als geladen. So hängt das Malen nur am Canvas selbst.
+ */
+function testLader(): SharepicLader & { bild: jasmine.Spy } {
+  const bild = document.createElement('canvas');
+  bild.width = bild.height = 192;
+  const ctx = bild.getContext('2d')!;
+  ctx.fillStyle = SHAREPIC_FARBEN.tanne;
+  ctx.fillRect(0, 0, 192, 192);
+  return { bild: jasmine.createSpy('bild').and.resolveTo(bild), schriften: () => Promise.resolve() };
+}
 
 /** Jedes Zeichen ist 10 breit: Umbruch ohne Canvas nachrechenbar. */
 const messen = (text: string) => text.length * 10;
@@ -82,20 +108,50 @@ describe('Sharepic (#756)', () => {
 
   for (const format of ['quadrat', 'story'] as const) {
     it(`malt ein PNG im Format ${format}`, async () => {
-      const datei = await sharepicDatei(
-        {
-          titel: 'Windkraft schafft Arbeitsplätze',
-          text: 'In der Windbranche arbeiten heute mehr Menschen als in der Kohle. '.repeat(3),
-          aussage: 'Windräder kosten nur Jobs.',
-          thema: { name: 'Klima', motiv: 'themen/klima.svg' },
-          link: 'https://gut-gesagt.example/beitrag/11111111-1111-4111-8111-111111111111',
-        },
-        format,
-      );
+      const lader = testLader();
+      // Zeitgrenze unter dem Jasmine-Timeout (5 s): Haengt toBlob, nennt der Fehler den Schritt.
+      const datei = await sharepicDatei(DATEN, format, lader, 3000);
+      expect(lader.bild.calls.allArgs()).toEqual([['/marke/icon-192-v3.png'], ['/themen/klima.svg']]);
       expect(datei.type).toBe('image/png');
       expect(datei.size).toBeGreaterThan(1000);
       const bild = await createImageBitmap(datei);
       expect([bild.width, bild.height]).toEqual([SHAREPIC_MASSE[format].breite, SHAREPIC_MASSE[format].hoehe]);
     });
   }
+
+  it('laesst einen rechtzeitigen Schritt der Zeitgrenze unveraendert durch und raeumt die Uhr ab (#819)', async () => {
+    // Ohne jasmine.clock: die Spione umhuellen die echten Timer, nicht die der Test-Uhr
+    const setzen = spyOn(window, 'setTimeout').and.callThrough();
+    const abraeumen = spyOn(window, 'clearTimeout').and.callThrough();
+    await expectAsync(mitZeitgrenze(Promise.resolve('fertig'), 'Test')).toBeResolvedTo('fertig');
+    expect(abraeumen).toHaveBeenCalledWith(setzen.calls.mostRecent().returnValue);
+  });
+
+  describe('Zeitgrenze (#819)', () => {
+    beforeEach(() => jasmine.clock().install());
+    afterEach(() => jasmine.clock().uninstall());
+
+    it('bricht ab, wenn ein Bild nie fertig laedt', async () => {
+      const lader: SharepicLader = { bild: () => new Promise(() => undefined), schriften: () => Promise.resolve() };
+      const datei = sharepicDatei(DATEN, 'story', lader);
+      let fertig = false;
+      datei.catch(() => undefined).finally(() => (fertig = true));
+
+      jasmine.clock().tick(SHAREPIC_ZEITGRENZE_MS - 1);
+      await Promise.resolve();
+      expect(fertig).toBeFalse();
+
+      jasmine.clock().tick(1);
+      await expectAsync(datei).toBeRejectedWithError(SharepicZeitueberschreitung, /Logo laden/);
+    });
+
+    it('bricht ab, wenn die Schriften nie fertig laden', async () => {
+      const lader: SharepicLader = { bild: () => Promise.resolve(null), schriften: () => new Promise(() => undefined) };
+      const datei = sharepicDatei(DATEN, 'quadrat', lader);
+
+      jasmine.clock().tick(SHAREPIC_ZEITGRENZE_MS);
+      await expectAsync(datei).toBeRejectedWithError(SharepicZeitueberschreitung, /Schriften laden/);
+    });
+
+  });
 });

@@ -46,20 +46,32 @@ main * {
     flex-shrink: 0;
 }
 
-/* Der Titel bricht nicht um und weicht nicht: Platz macht die rechte Box (#512). */
-.desktop-header-title {
-    white-space: nowrap;
-    flex-shrink: 0;
-    margin: 0;
-    font-size: var(--font-size-h2-desktop); /* Match h2 size: 40px */
-    font-weight: 400; /* Match h2 weight */
-    color: var(--akzent-schrift);
-    display: inline-flex;
+/* Seitentitel unter dem Kopf, mit Zurueck davor, wo es eins gibt (23.11.2026) */
+.seitenkopf {
+    display: flex;
     align-items: center;
     gap: 12px;
+    padding: 0 var(--page-margin);
+    margin-bottom: var(--spacing-sm);
 }
 
-/* Logo vor dem Seitentitel; Bild ohne Namen, der Titel nennt die Seite (#416) */
+/* Ohne Zurueck und mit nur vorgelesenem Titel (Start) nimmt die Zeile keinen Platz ein */
+.seitenkopf--leer {
+    margin-bottom: 0;
+}
+
+/* Jeder Seitentitel in derselben Groesse wie h2, egal wie lang. Passt er nicht in eine
+   Zeile (etwa bei 200 % Schrift), bricht er ausgewogen um, statt kleiner zu werden. */
+.desktop-header-title {
+    min-width: 0;
+    margin: 0;
+    font-size: var(--font-size-h2-desktop);
+    font-weight: 400; /* Match h2 weight */
+    color: var(--akzent-schrift);
+    text-wrap: balance;
+}
+
+/* Logo mit dem Namen „Gut gesagt“; Bild ohne Namen, der Link heisst „Startseite“ (#416, #620) */
 .kopf-logo {
     display: block;
     width: 44px;
@@ -69,9 +81,20 @@ main * {
 
 /* Logo als Link zur Startseite (#620) */
 .logo-link {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     flex-shrink: 0;
     border-radius: 8px;
+    color: var(--akzent-schrift);
+    text-decoration: none;
+}
+
+.marke-text {
+    font-family: GrueneType, Roboto, sans-serif;
+    font-size: var(--font-size-h3-desktop, 28px);
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .logo-link:focus-visible {
@@ -97,11 +120,6 @@ main * {
     flex-shrink: 0;
 }
 
-/* Lange Titel ("Hintergrundinfo verfassen") eine Stufe kleiner, damit sie in eine Zeile passen */
-.desktop-header-title--lang {
-    font-size: var(--font-size-h2-tablet);
-}
-
 
 .profile-avatar {
     width: var(--avatar-size-desktop);
@@ -116,35 +134,38 @@ main * {
 
 /* ===== Navigation Variante 3 (22.11.2026) ===== */
 
-/* Unter 1440 px steht die Navigation immer in einer eigenen zweiten Zeile, statt Text
-   gegen Icons zu tauschen (Icons stehen immer mit Text) und ohne je nach Seitentitel
-   zwischen ein- und zweizeilig zu springen. */
+/* Eine Zeile (23.11.2026): Marke links, Ziele und Konto rechts, nie eine zweite Zeile. Wird
+   es eng, gibt erst der Name am Profilbild nach, dann der Schriftzug neben dem Logo; die Ziele
+   selbst behalten Icon und Text. Gemessen wird die Breite des Kopfs, nicht des Fensters. */
+.kopf-box {
+    container: kopf / inline-size;
+}
+
 .header {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    align-items: center;
 }
 
 .right-header-box {
-    flex: 1 0 auto;
+    flex: 1 1 auto;
     height: auto;
     min-height: var(--header-height-desktop);
 }
 
-@media (max-width: 1439px) {
-    .right-header-box {
-        flex-basis: 100%;
-    }
-}
-
-/* Ab 1440 px (main ist hoechstens 1400 px breit) in einer Zeile mit dem Titel: Neben
-   einem langen Titel steht der Name am Profilbild nur fuer Screenreader */
-@media (min-width: 1440px) {
-    .header--titel-lang .konto-name {
+@container kopf (max-width: 1139px) {
+    .konto-name {
         position: absolute;
         width: 1px;
         height: 1px;
         overflow: hidden;
         clip: rect(0 0 0 0);
         white-space: nowrap;
+    }
+}
+
+@container kopf (max-width: 979px) {
+    .marke-text {
+        display: none;
     }
 }
 
@@ -199,6 +220,9 @@ main * {
 /* Untere Leiste am Handy: Inhalt und Fusszeile nie dahinter (WCAG 2.4.11). Die Hoehe
    meldet die Leiste selbst, mit Safe Area und bei grosser Schrift. */
 main.mit-unterleiste {
+    /* Der Kopf steht am Handy vor main: main fuellt nur den Rest, sonst scrollte jede
+       kurze Seite um die Kopfhoehe (#app-container ist mindestens 100vh hoch) */
+    min-height: 0;
     padding-bottom: var(--unterleiste-hoehe, calc(64px + env(safe-area-inset-bottom)));
     /* viewport-fit=cover: im Querformat nichts unter der Kamera-Aussparung */
     padding-left: env(safe-area-inset-left);

@@ -16,10 +16,27 @@ export interface Schalter {
   admin_wert: boolean;
   wirksam: boolean;
   dsfa_hinweis: string | null;
+  /** Abschnitt der Admin-Seite (Backend schalter_service.GRUPPEN). */
+  gruppe: string;
+  /** Hinweis steht und der Schalter ist nicht rechtlich freigegeben. */
+  wartet_auf_recht: boolean;
+}
+
+/** Eine Admin-Einstellung mit Textwert, etwa ``aktuelle_saison`` (Teams). */
+export interface Einstellung {
+  name: string;
+  erklaerung: string;
+  wert: string;
+  standard: string;
+  max_laenge: number;
+  /** Warum der Wert gerade nicht gilt, etwa weil eine Saison läuft (#782); fehlt sonst. */
+  hinweis?: string | null;
 }
 
 export interface SchalterListe {
   schalter: Schalter[];
+  /** Admin-Einstellungen mit Textwert; fehlt bei älteren Servern. */
+  einstellungen?: Einstellung[];
 }
 
 export interface ReportContentRequest {
@@ -277,6 +294,11 @@ export class ModerationService {
   /** Admin-Wert setzen; Einschalten über die Obergrenze hinaus lehnt der Server mit 409 ab. */
   schalterSetzen(name: string, an: boolean): Observable<SchalterListe> {
     return this.http.put<SchalterListe>(`${this.baseUrl}/schalter/${encodeURIComponent(name)}`, { an });
+  }
+
+  /** Textwert einer Einstellung setzen (etwa aktuelle_saison); 422: ungültig, 404: unbekannt. */
+  einstellungSetzen(name: string, wert: string): Observable<SchalterListe> {
+    return this.http.put<SchalterListe>(`${this.baseUrl}/schalter/einstellungen/${encodeURIComponent(name)}`, { wert });
   }
 
   /**

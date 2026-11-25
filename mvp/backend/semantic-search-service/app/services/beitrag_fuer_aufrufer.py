@@ -14,7 +14,9 @@ from typing import Iterable, List, Optional, Sequence, Tuple, Type, TypeVar
 from pydantic import BaseModel
 
 from services.abzeichen_service import get_abzeichen_service
+from domain.teams import TeamPille
 from services.anzeigename_service import angemeldet, get_anzeigename_service
+from services.team_service import get_team_service
 
 # Ein Response-DTO mit den Feldern eines Personenbezugs (dtos/beitrag.py u. a.);
 # die Service-Schicht kennt die DTOs selbst nicht.
@@ -55,6 +57,9 @@ class Personenbezug:
     name_feld: Optional[str] = None
     eigen_feld: Optional[str] = None
     abzeichen_feld: Optional[str] = None
+    # Teams der aktuellen Saison am Namen (services/team_service.py): nur Angemeldete,
+    # nur mit wirksamem Schalter teams_oeffentlich und Einwilligung der Person.
+    teams_feld: Optional[str] = None
 
     def nur_kennung(self) -> "Personenbezug":
         """Derselbe Bezug ohne Anzeigename und Kennzeichen: nur die Kennung leeren."""
@@ -62,7 +67,11 @@ class Personenbezug:
 
 
 BEITRAG = Personenbezug(
-    "original_author", "autor_name", "ist_eigener_beitrag", "autor_abzeichen"
+    "original_author",
+    "autor_name",
+    "ist_eigener_beitrag",
+    "autor_abzeichen",
+    "autor_teams",
 )
 AUSSAGE = Personenbezug("original_author", "autor_name", "ist_eigene_aussage")
 HERKUNFT = Personenbezug("original_author", "autor_name", "ist_eigene_herkunft")
@@ -96,6 +105,7 @@ def personen_fuer_aufrufer(aufrufer: Aufrufer, *gruppen: Gruppe) -> None:
             setattr(objekt, bezug.name_feld, namen.get(kennung))
             setattr(objekt, bezug.eigen_feld, kennung == aufrufer.kennung)
         _abzeichen_setzen(benannt)
+        _teams_setzen(benannt)
     if not aufrufer.ist_admin:
         for objekt, bezug in paare:
             setattr(objekt, bezug.kennung_feld, None)
@@ -116,6 +126,24 @@ def _abzeichen_setzen(paare: List[Tuple[BaseModel, Personenbezug]]) -> None:
             bezug.abzeichen_feld,
             abzeichen.get(getattr(objekt, bezug.kennung_feld)),
         )
+
+
+def _teams_setzen(paare: List[Tuple[BaseModel, Personenbezug]]) -> None:
+    """Teams der aktuellen Saison am Anzeigenamen, nur fuer Angemeldete."""
+    mit_feld = [(o, b) for o, b in paare if b.teams_feld]
+    if not mit_feld:
+        return
+    teams = get_team_service().pillen(getattr(o, b.kennung_feld) for o, b in mit_feld)
+    if not teams:
+        return
+    for objekt, bezug in mit_feld:
+        eintraege = teams.get(getattr(objekt, bezug.kennung_feld))
+        if eintraege:
+            setattr(
+                objekt,
+                bezug.teams_feld,
+                [TeamPille.aus(name, motiv) for name, motiv in eintraege],
+            )
 
 
 def fuer_aufrufer(

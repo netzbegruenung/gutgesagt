@@ -23,6 +23,7 @@ public class AuthGateTests
     [InlineData("/api/v1/usage/trending")]
     [InlineData("/api/v1/moderation/report")]
     [InlineData("/api/v1/metrics/getMetrics")]
+    [InlineData("/api/v1/ereignis")]
     public void PublicPath_IsAnonymousAllowed(string path)
     {
         Assert.True(EndpointPolicy.IsAnonymousAllowed(path));
@@ -44,6 +45,7 @@ public class AuthGateTests
     [InlineData("/api/v1/metrics/gepostet")]
     [InlineData("/api/v1/metrics/mvp-dashboard")]
     [InlineData("/api/v1/metrics/helpful-rate")]
+    [InlineData("/api/v1/ereignisse")]
     public void ProtectedPath_IsNotAnonymousAllowed(string path)
     {
         Assert.False(EndpointPolicy.IsAnonymousAllowed(path));
