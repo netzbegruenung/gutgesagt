@@ -293,6 +293,8 @@
                 [nichtHilfreich]="guete?.nichtHilfreich ?? null"
                 [eigeneStimmeImZaehler]="!istEigen"
                 [stimmenZaehlen]="guete ? guete.stimmenZaehlen : null"
+                [nutzung]="nutzung"
+                [andereTonlage]="daten.andereTonlage ?? null"
                 [album]="eigenesAlbum"
                 [aenderbar]="aenderbar"
                 (aendern)="aendern.emit(daten)"
