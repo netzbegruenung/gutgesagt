@@ -200,3 +200,34 @@ def test_schalter_wirksam_nimmt_den_globalen_dienst():
     schalter_service_setzen(dienst)
 
     assert schalter_wirksam("punkte", Settings(punkte_aktiv=True)) is False
+
+
+def test_stand_nach_gruppen_geordnet_jeder_schalter_in_einer_gruppe():
+    from services.schalter_service import GRUPPEN, SCHALTER
+
+    dienst, _, _ = _dienst()
+    stand = dienst.stand(Settings())
+
+    assert {s.name for s in stand} == set(SCHALTER)
+    assert all(s.gruppe in GRUPPEN for s in stand)
+    reihenfolge = [GRUPPEN.index(s.gruppe) for s in stand]
+    assert reihenfolge == sorted(reihenfolge)
+    gruppe = {s.name: s.gruppe for s in stand}
+    assert gruppe["sharepic"] == "Grundfunktionen"
+    # Unterschalter bei seiner Voraussetzung "gepostet"
+    assert gruppe["gepostet_ohne_konto"] == gruppe["gepostet"] == "Grundfunktionen"
+    assert gruppe["team_quests"] == "Teams"
+    assert gruppe["naechster_schritt"] == "Spielgefühl"
+    assert gruppe["rangliste"] == "Punkte & Anerkennung"
+
+
+def test_wartet_auf_recht_nur_mit_hinweis_und_ohne_freigabe():
+    dienst, _, _ = _dienst()
+    stand = {s.name: s for s in dienst.stand(Settings())}
+
+    assert stand["punkte"].wartet_auf_recht is True
+    assert stand["teams_oeffentlich"].wartet_auf_recht is True
+    # Teams: Hinweis steht, aber rechtlich freigegeben (25.11.)
+    assert stand["teams"].dsfa_hinweis
+    assert stand["teams"].wartet_auf_recht is False
+    assert stand["sharepic"].wartet_auf_recht is False

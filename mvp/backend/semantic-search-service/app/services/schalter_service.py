@@ -30,6 +30,14 @@ DSFA_HINWEIS = (
     "Vor dem Einschalten auf Prod: DSFA beschlossen (docs/DSFA.md Abschnitt 7)"
 )
 
+# Gruppen der Admin-Seite "Schalter", in dieser Reihenfolge (Sebastian 25.11.: die
+# lange Liste gruppieren). Die Seite zeigt je Gruppe einen Abschnitt.
+GRUNDFUNKTIONEN = "Grundfunktionen"
+TEAMS = "Teams"
+SPIELGEFUEHL = "Spielgefühl"
+PUNKTE_ANERKENNUNG = "Punkte & Anerkennung"
+GRUPPEN = (GRUNDFUNKTIONEN, TEAMS, SPIELGEFUEHL, PUNKTE_ANERKENNUNG)
+
 
 @dataclass(frozen=True)
 class Schalterart:
@@ -46,6 +54,16 @@ class Schalterart:
     # Eigene Bedingung fuers Einschalten auf Prod, die die Admin-Seite statt des
     # allgemeinen DSFA-Hinweises zeigt (etwa ein DSFA-Nachtrag oder ein Jura-OK).
     einschalt_hinweis: Optional[str] = None
+    # Abschnitt auf der Admin-Seite, einer aus GRUPPEN
+    gruppe: str = GRUNDFUNKTIONEN
+    # Rechtlich freigegeben, obwohl ein Hinweis steht (der Hinweis sagt dann, was
+    # weiter gilt): Die Admin-Seite zeigt den Schalter nicht als "wartet auf Recht".
+    rechtlich_freigegeben: bool = False
+
+    def __post_init__(self):
+        # Beim Import auffallen statt mit 500 auf der Admin-Seite
+        if self.gruppe not in GRUPPEN:
+            raise ValueError(f"Unbekannte Gruppe {self.gruppe!r} fuer {self.name}")
 
 
 # Spielgefuehl zur BDK (#782 bis #793, docs/ARCHITECTURE.md "Schalter fuer das
@@ -54,6 +72,7 @@ class Schalterart:
 SPIEL_SCHALTER = (
     Schalterart(
         name="saison_ziel",
+        gruppe=SPIELGEFUEHL,
         feld="saison_ziel_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_SAISON_ZIEL_AKTIV",
         erklaerung=(
@@ -64,6 +83,7 @@ SPIEL_SCHALTER = (
     ),
     Schalterart(
         name="gartenansicht",
+        gruppe=SPIELGEFUEHL,
         feld="gartenansicht_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_GARTENANSICHT_AKTIV",
         erklaerung=(
@@ -74,6 +94,7 @@ SPIEL_SCHALTER = (
     ),
     Schalterart(
         name="kopiert_erfolg",
+        gruppe=SPIELGEFUEHL,
         feld="kopiert_erfolg_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_KOPIERT_ERFOLG_AKTIV",
         erklaerung=(
@@ -84,6 +105,7 @@ SPIEL_SCHALTER = (
     ),
     Schalterart(
         name="konter_probe",
+        gruppe=SPIELGEFUEHL,
         feld="konter_probe_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_KONTER_PROBE_AKTIV",
         erklaerung=(
@@ -94,6 +116,7 @@ SPIEL_SCHALTER = (
     ),
     Schalterart(
         name="luecke_zu_gross",
+        gruppe=SPIELGEFUEHL,
         feld="luecke_zu_gross_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_LUECKE_ZU_GROSS_AKTIV",
         erklaerung=(
@@ -104,6 +127,7 @@ SPIEL_SCHALTER = (
     ),
     Schalterart(
         name="einwilligung_im_gewinn",
+        gruppe=SPIELGEFUEHL,
         feld="einwilligung_im_gewinn_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_EINWILLIGUNG_IM_GEWINN_AKTIV",
         erklaerung=(
@@ -115,16 +139,19 @@ SPIEL_SCHALTER = (
     ),
     Schalterart(
         name="naechster_schritt",
+        gruppe=SPIELGEFUEHL,
         feld="naechster_schritt_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_NAECHSTER_SCHRITT_AKTIV",
         erklaerung=(
             "Karte „Dein nächster Schritt“ auf der Startseite: ein Vorschlag aus den "
             "eigenen Beiträgen, ohne Frist; speichert auf dem Server nichts zusätzlich."
         ),
+        einschalt_hinweis=("Einschalten erst nach dem DSFA-Nachtrag Spielgefühl (V10)"),
         oeffentlich=True,
     ),
     Schalterart(
         name="wirkungs_echo",
+        gruppe=PUNKTE_ANERKENNUNG,
         feld="wirkungs_echo_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV",
         erklaerung=(
@@ -137,6 +164,7 @@ SPIEL_SCHALTER = (
     ),
     Schalterart(
         name="danke_knopf",
+        gruppe=PUNKTE_ANERKENNUNG,
         feld="danke_knopf_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV",
         erklaerung=(
@@ -150,6 +178,7 @@ SPIEL_SCHALTER = (
     ),
     Schalterart(
         name="danke_ohne_konto",
+        gruppe=PUNKTE_ANERKENNUNG,
         feld="danke_ohne_konto_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV",
         erklaerung=(
@@ -164,6 +193,7 @@ SPIEL_SCHALTER = (
     ),
     Schalterart(
         name="rangliste",
+        gruppe=PUNKTE_ANERKENNUNG,
         feld="rangliste_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_RANGLISTE_AKTIV",
         erklaerung=(
@@ -183,6 +213,7 @@ SCHALTER: Dict[str, Schalterart] = {
     for s in (
         Schalterart(
             name="punkte",
+            gruppe=PUNKTE_ANERKENNUNG,
             feld="punkte_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_PUNKTE_AKTIV",
             erklaerung=(
@@ -193,6 +224,7 @@ SCHALTER: Dict[str, Schalterart] = {
         ),
         Schalterart(
             name="abzeichen_sichtbar",
+            gruppe=PUNKTE_ANERKENNUNG,
             feld="abzeichen_sichtbar_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_ABZEICHEN_SICHTBAR_AKTIV",
             erklaerung=(
@@ -265,6 +297,8 @@ SCHALTER: Dict[str, Schalterart] = {
         ),
         Schalterart(
             name="teams",
+            gruppe=TEAMS,
+            rechtlich_freigegeben=True,
             feld="teams_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_TEAMS_AKTIV",
             erklaerung=(
@@ -272,11 +306,16 @@ SCHALTER: Dict[str, Schalterart] = {
                 "eigener Einwilligung und „Meine Teams“. Aus: Einladungen wie bisher, "
                 "Teamfelder werden ignoriert."
             ),
-            dsfa_hinweis=True,
+            einschalt_hinweis=(
+                "Rechtlich freigegeben (25.11.): darf vor dem Beschluss der DSFA "
+                "eingeschaltet werden. Die Anzeige am Namen (teams_oeffentlich) "
+                "bleibt aus."
+            ),
             oeffentlich=True,
         ),
         Schalterart(
             name="teams_oeffentlich",
+            gruppe=TEAMS,
             feld="teams_oeffentlich_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV",
             erklaerung=(
@@ -298,6 +337,7 @@ SCHALTER: Dict[str, Schalterart] = {
 TEAM_SCHALTER = (
     Schalterart(
         name="team_fortschritt",
+        gruppe=TEAMS,
         feld="team_fortschritt_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_TEAM_FORTSCHRITT_AKTIV",
         erklaerung=(
@@ -310,6 +350,7 @@ TEAM_SCHALTER = (
     ),
     Schalterart(
         name="team_quests",
+        gruppe=TEAMS,
         feld="team_quests_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_TEAM_QUESTS_AKTIV",
         erklaerung=(
@@ -340,6 +381,9 @@ class Schalterstand:
     admin_wert: bool
     wirksam: bool
     dsfa_hinweis: Optional[str]
+    gruppe: str
+    # Ein Hinweis steht und der Schalter ist nicht rechtlich freigegeben
+    wartet_auf_recht: bool
 
 
 class SchalterService:
@@ -395,20 +439,12 @@ class SchalterService:
     def stand(
         self, einstellungen: Settings, frisch: bool = False
     ) -> List[Schalterstand]:
-        """Stand aller Schalter; ``frisch`` liest die Admin-Werte am Cache vorbei."""
+        """Stand aller Schalter nach Gruppen (GRUPPEN); ``frisch`` liest die
+        Admin-Werte am Cache vorbei."""
         werte = self.admin_werte(frisch=frisch)
         return [
-            Schalterstand(
-                name=art.name,
-                erklaerung=art.erklaerung,
-                umgebungsvariable=art.umgebungsvariable,
-                obergrenze=bool(getattr(einstellungen, art.feld)),
-                admin_wert=bool(werte.get(art.name, False)),
-                wirksam=_wirksam(art.name, einstellungen, werte),
-                dsfa_hinweis=art.einschalt_hinweis
-                or (DSFA_HINWEIS if art.dsfa_hinweis else None),
-            )
-            for art in SCHALTER.values()
+            _stand(art, einstellungen, werte)
+            for art in sorted(SCHALTER.values(), key=lambda a: GRUPPEN.index(a.gruppe))
         ]
 
     def setzen(self, name: str, an: bool, admin: str, einstellungen: Settings) -> None:
@@ -419,6 +455,23 @@ class SchalterService:
         self._setzen(name, an, admin)
         with self._sperre:
             self._werte = None
+
+
+def _stand(
+    art: Schalterart, einstellungen: Settings, werte: Dict[str, bool]
+) -> Schalterstand:
+    hinweis = art.einschalt_hinweis or (DSFA_HINWEIS if art.dsfa_hinweis else None)
+    return Schalterstand(
+        name=art.name,
+        erklaerung=art.erklaerung,
+        umgebungsvariable=art.umgebungsvariable,
+        obergrenze=bool(getattr(einstellungen, art.feld)),
+        admin_wert=bool(werte.get(art.name, False)),
+        wirksam=_wirksam(art.name, einstellungen, werte),
+        dsfa_hinweis=hinweis,
+        gruppe=art.gruppe,
+        wartet_auf_recht=bool(hinweis) and not art.rechtlich_freigegeben,
+    )
 
 
 def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool:

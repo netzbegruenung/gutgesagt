@@ -16,6 +16,10 @@ export interface Schalter {
   admin_wert: boolean;
   wirksam: boolean;
   dsfa_hinweis: string | null;
+  /** Abschnitt der Admin-Seite (Backend schalter_service.GRUPPEN). */
+  gruppe: string;
+  /** Hinweis steht und der Schalter ist nicht rechtlich freigegeben. */
+  wartet_auf_recht: boolean;
 }
 
 /** Eine Admin-Einstellung mit Textwert, etwa ``aktuelle_saison`` (Teams). */

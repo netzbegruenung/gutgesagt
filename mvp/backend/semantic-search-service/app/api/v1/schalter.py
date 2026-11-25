@@ -46,6 +46,10 @@ class SchalterResponse(BaseModel):
     admin_wert: bool
     wirksam: bool
     dsfa_hinweis: Optional[str]
+    # Abschnitt der Admin-Seite (schalter_service.GRUPPEN)
+    gruppe: str
+    # Hinweis steht und der Schalter ist nicht rechtlich freigegeben
+    wartet_auf_recht: bool
 
 
 class EinstellungResponse(BaseModel):

@@ -97,6 +97,10 @@ def test_einschalt_hinweise_laut_issue():
     assert "V31" in stand["danke_knopf"].dsfa_hinweis
     assert "Besuchermerkmal" in stand["danke_ohne_konto"].dsfa_hinweis
     assert "Jura" in stand["rangliste"].dsfa_hinweis
+    assert (
+        stand["naechster_schritt"].dsfa_hinweis
+        == "Einschalten erst nach dem DSFA-Nachtrag Spielgefühl (V10)"
+    )
     for name in (
         "saison_ziel",
         "gartenansicht",
@@ -104,7 +108,6 @@ def test_einschalt_hinweise_laut_issue():
         "konter_probe",
         "luecke_zu_gross",
         "einwilligung_im_gewinn",
-        "naechster_schritt",
     ):
         assert stand[name].dsfa_hinweis is None
         assert stand[name].erklaerung
