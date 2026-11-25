@@ -13,7 +13,12 @@ import pytest
 from pydantic import BaseModel, ValidationError
 
 from domain.models.content_type import ContentType
-from services.oft_genutzt_service import OftGenutztService, sichtbaren_beitrag_laden
+from core.config import Settings
+from services.oft_genutzt_service import (
+    ANZAHL,
+    OftGenutztService,
+    sichtbaren_beitrag_laden,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -41,19 +46,57 @@ def _kandidaten(*nutzungen: int) -> List[Dict]:
     ]
 
 
-def _service(kandidaten: List[Dict], unsichtbar: frozenset = frozenset()):
+def _service(
+    kandidaten: List[Dict],
+    unsichtbar: frozenset = frozenset(),
+    mindest_nutzungen: int = 2,
+    mindest_beitraege: int = 3,
+):
     async def beitrag_laden(beitrag_id: uuid.UUID) -> Optional[Dict]:
         if str(beitrag_id) in unsichtbar:
             return None
         return {"id": str(beitrag_id), "title": f"Titel {beitrag_id}"}
 
     nutzung = _Nutzung(kandidaten)
-    return OftGenutztService(nutzung, beitrag_laden), nutzung
+    return (
+        OftGenutztService(
+            nutzung,
+            beitrag_laden,
+            mindest_nutzungen=mindest_nutzungen,
+            mindest_beitraege=mindest_beitraege,
+        ),
+        nutzung,
+    )
 
 
 async def test_beitraege_zu_wenig_nutzung_leer():
     # Nur zwei Beitraege erreichen die Mindestnutzung - zu wenig fuer einen Bereich.
     service, _ = _service(_kandidaten(5, 3, 1, 1))
+
+    assert await service.beitraege() == []
+
+
+async def test_beitraege_mindestzahl_aus_dem_aufruf():
+    """Mit Mindestzahl 2 reichen die zwei Beitraege, die bei 3 nicht reichten."""
+    kandidaten = _kandidaten(5, 3, 1, 1)
+    service, _ = _service(kandidaten, mindest_beitraege=2)
+
+    beitraege = await service.beitraege()
+
+    assert [b["id"] for b in beitraege] == [k["content_id"] for k in kandidaten[:2]]
+
+
+async def test_beitraege_mindestnutzung_aus_dem_aufruf():
+    """Mit Mindestnutzung 3 faellt der Beitrag mit zwei Nutzungen heraus."""
+    service, _ = _service(
+        _kandidaten(5, 3, 2), mindest_beitraege=2, mindest_nutzungen=3
+    )
+
+    assert [b["recent_uses"] for b in await service.beitraege()] == [5, 3]
+
+
+async def test_beitraege_ein_beitrag_reicht_bei_mindestzahl_zwei_nicht():
+    service, _ = _service(_kandidaten(9, 1), mindest_beitraege=2)
 
     assert await service.beitraege() == []
 
@@ -183,3 +226,58 @@ async def test_laden_kaputter_datensatz_fehlt_und_wird_geloggt(caplog):
     with caplog.at_level(logging.ERROR):
         assert await laden(uuid.uuid4()) is None
     assert any("not readable" in r.getMessage() for r in caplog.records)
+
+
+def _ohne_schwellen_aus_der_umgebung(monkeypatch):
+    for feld in ("OFT_GENUTZT_MINDEST_NUTZUNGEN", "OFT_GENUTZT_MINDEST_BEITRAEGE"):
+        monkeypatch.delenv(f"SEMANTIC_SEARCH_{feld}", raising=False)
+
+
+def test_schwellen_standard_fuer_die_startphase(monkeypatch):
+    """Startphase zur BDK: zwei Beitraege mit je zwei Nutzungen (vorher drei Beitraege)."""
+    _ohne_schwellen_aus_der_umgebung(monkeypatch)
+
+    einstellungen = Settings()
+
+    assert einstellungen.oft_genutzt_mindest_nutzungen == 2
+    assert einstellungen.oft_genutzt_mindest_beitraege == 2
+
+
+def test_schwellen_aus_der_umgebung(monkeypatch):
+    """Der Betrieb hebt die Schwellen an, ohne Code zu aendern."""
+    monkeypatch.setenv("SEMANTIC_SEARCH_OFT_GENUTZT_MINDEST_NUTZUNGEN", "4")
+    monkeypatch.setenv("SEMANTIC_SEARCH_OFT_GENUTZT_MINDEST_BEITRAEGE", "3")
+
+    einstellungen = Settings()
+
+    assert einstellungen.oft_genutzt_mindest_nutzungen == 4
+    assert einstellungen.oft_genutzt_mindest_beitraege == 3
+
+
+@pytest.mark.parametrize(
+    "feld,wert",
+    [
+        # Eine einzelne Kopie ist Zufall, kein "oft".
+        ("OFT_GENUTZT_MINDEST_NUTZUNGEN", "1"),
+        ("OFT_GENUTZT_MINDEST_BEITRAEGE", "0"),
+        # Mehr als der Bereich zeigt (ANZAHL), und er erschiene nie.
+        ("OFT_GENUTZT_MINDEST_BEITRAEGE", "6"),
+    ],
+)
+def test_schwellen_ausserhalb_der_grenzen_abgelehnt(monkeypatch, feld, wert):
+    _ohne_schwellen_aus_der_umgebung(monkeypatch)
+    monkeypatch.setenv(f"SEMANTIC_SEARCH_{feld}", wert)
+
+    with pytest.raises(ValueError):
+        Settings()
+
+
+def test_hoechste_mindestzahl_ist_die_anzahl_des_bereichs():
+    """Die Obergrenze in core/config.py folgt ANZAHL; aendert sich eins, das andere mit."""
+    obergrenze = next(
+        m.le
+        for m in Settings.model_fields["oft_genutzt_mindest_beitraege"].metadata
+        if getattr(m, "le", None) is not None
+    )
+
+    assert obergrenze == ANZAHL

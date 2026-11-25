@@ -1389,6 +1389,8 @@ async def oft_genutzt(
                 QdrantRepositoryFactory(),
                 reference_service,
             ),
+            mindest_nutzungen=settings.oft_genutzt_mindest_nutzungen,
+            mindest_beitraege=settings.oft_genutzt_mindest_beitraege,
         )
         angereichert = usage_service.enrich_content_with_usage(
             await service.beitraege()

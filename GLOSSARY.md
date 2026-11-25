@@ -377,7 +377,7 @@ Ein Klick auf „Danke an die Autorin“ nach dem Kopieren. Die Autorin sieht je
 _Avoid_: Like (das ist eine Stimme), Kudos
 
 **Oft genutzt**:
-Ein Beitrag, der in den letzten sieben Tagen (nicht der Kalenderwoche) mehrfach genutzt wurde, gezählt als entdoppelte Nutzung. „Diese Woche oft genutzt“ auf der Startseite zeigt die meistgenutzten zuerst und nur, wenn genug Beiträge oft genutzt wurden; sonst gibt es den Bereich nicht. Gesperrte und gelöschte Beiträge stehen dort nie. Die Schwellen (Mindestnutzung, Mindestzahl, Höchstzahl) sind Stellschrauben und stehen in `services/oft_genutzt_service.py`, nicht hier.
+Ein Beitrag, der in den letzten sieben Tagen (nicht der Kalenderwoche) mehrfach genutzt wurde, gezählt als entdoppelte Nutzung. „Diese Woche oft genutzt“ auf der Startseite zeigt die meistgenutzten zuerst und nur, wenn genug Beiträge oft genutzt wurden; sonst gibt es den Bereich nicht. Gesperrte und gelöschte Beiträge stehen dort nie. Die Schwellen (Mindestnutzung, Mindestzahl, Höchstzahl) sind Stellschrauben und stehen nicht hier: Mindestnutzung und Mindestzahl in der Konfiguration (`SEMANTIC_SEARCH_OFT_GENUTZT_*`, `docs/ARCHITECTURE.md`), die Höchstzahl in `services/oft_genutzt_service.py`.
 _Avoid_: Trending, Trend, beliebt, Top-Beiträge
 
 **Stimme**:
