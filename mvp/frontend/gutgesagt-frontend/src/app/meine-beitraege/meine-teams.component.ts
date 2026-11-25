@@ -10,6 +10,7 @@ import { filter } from 'rxjs/operators';
 import { MeinTeam, MeineTeams, TeamsService } from '../services/teams.service';
 import { nachladeStrom, ohneRechte } from '../shared/selbst-nachladen';
 import { TeamPilleComponent } from '../shared/teams/team-pille.component';
+import { MEINE_TEAMS_TITEL, TEAM_VERLASSEN } from '../shared/team-texte';
 import {
   BestaetigungsDialogComponent,
   BestaetigungsDialogDaten,
@@ -22,7 +23,7 @@ export function verlassenFrage(team: MeinTeam): BestaetigungsDialogDaten {
     text:
       `Wir löschen sofort, dass du im Team ${team.team_name} (Saison ${team.saison}) bist, samt deiner Nr. ${team.nummer}. ` +
       'Die Nummer vergeben wir nicht neu. Damit widerrufst du deine Einwilligung für dieses Team.',
-    ja: 'Team verlassen',
+    ja: TEAM_VERLASSEN,
     nein: 'Abbrechen',
     warnung: true,
   };
@@ -54,6 +55,8 @@ export class MeineTeamsComponent implements OnInit {
   fehler: string | null = null;
   /** Ansage nach einer Handlung, für Screenreader (role="status"). */
   ansage = '';
+  readonly titel = MEINE_TEAMS_TITEL;
+  readonly verlassenText = TEAM_VERLASSEN;
 
   private readonly teamsService = inject(TeamsService);
   private readonly dialog = inject(MatDialog);

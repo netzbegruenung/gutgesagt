@@ -1,6 +1,6 @@
 <!-- Nur mit Schalter teams und nur fuer die Person selbst; fremde Teams gibt keine Schnittstelle heraus -->
 <section *ngIf="stand" class="meine-teams" aria-labelledby="meine-teams-titel" data-testid="meine-teams">
-    <h2 id="meine-teams-titel">Meine Teams<span *ngIf="stand.teams.length" class="meine-teams-zahl">{{ stand.teams.length }}</span></h2>
+    <h2 id="meine-teams-titel">{{ titel }}<span *ngIf="stand.teams.length" class="meine-teams-zahl">{{ stand.teams.length }}</span></h2>
 
     <ng-container *ngIf="stand.teams.length; else leer">
         <p class="meine-teams-hinweis" data-testid="sichtbarkeit">
@@ -32,8 +32,8 @@
                         [saison]="team.saison" [vergangen]="!team.aktuelle_saison"></app-team-pille>
         <span class="team-seit">seit {{ tag(team.eingetreten_am) }}</span>
         <button mat-button type="button" class="team-verlassen" data-testid="verlassen" [disabled]="laeuft"
-                [attr.aria-label]="'Team verlassen: ' + team.team_name + ', Saison ' + team.saison"
-                (click)="verlassen(team)">Team verlassen</button>
+                [attr.aria-label]="verlassenText + ': ' + team.team_name + ', Saison ' + team.saison"
+                (click)="verlassen(team)">{{ verlassenText }}</button>
     </ng-template>
 
     <!-- Nur mit wirksamem Schalter teams_oeffentlich; der Wortlaut steht vor dem Umschalter -->
@@ -42,7 +42,7 @@
         <mat-slide-toggle [checked]="oeffentlich" [disabled]="laeuft"
                           aria-describedby="oeffentlich-wortlaut"
                           (change)="oeffentlichSchalten($event)">Öffentlich am Namen zeigen</mat-slide-toggle>
-        <p class="oeffentlich-mehr"><a routerLink="/datenschutz" target="_blank" rel="noopener">Mehr dazu in der Datenschutzerklärung</a></p>
+        <p class="oeffentlich-mehr"><a routerLink="/datenschutz" fragment="teams" target="_blank" rel="noopener">Mehr dazu in der Datenschutzerklärung</a></p>
     </div>
 
     <!-- Immer da, damit Screenreader den neuen Stand nach einer Handlung ansagen -->

@@ -49,7 +49,7 @@
     </ng-template>
 
     <section *ngIf="kastenZeigen && team" class="team-kasten" aria-labelledby="team-gruss" data-testid="team-kasten">
-      <h2 id="team-gruss" class="team-ueberschrift">Herzlich willkommen im Team {{ team.name }}! Du wärst Nr. {{ team.naechste_nummer }}.</h2>
+      <h2 id="team-gruss" class="team-ueberschrift">{{ begruessungTitel(team) }}</h2>
       <ng-container *ngTemplateOutlet="ticket; context: { zeile: 'Willkommen im', name: team.name, nummer: team.naechste_nummer, nummerText: 'Deine Nummer' }"></ng-container>
       <p class="team-leise">
         <ng-container *ngIf="team.mitglieder > 0; else erstePerson">Schon {{ team.mitglieder }} dabei.</ng-container>
@@ -62,11 +62,7 @@
         </ng-container>
       </p>
       <p id="team-erklaerung">
-        Wenn du willst, speichern wir an deinem Konto, dass du im Team {{ team.name }} bist, mit deiner
-        Nummer und dem Tag. Das siehst nur du, unter „Meine Teams“. Weil Gut gesagt grüne Argumente
-        sammelt, kann das zusammen mit dem Teamnamen auf deine politische Haltung und deinen Ort schließen
-        lassen. Du kannst das jederzeit unter „Meine Teams“ mit „Team verlassen“ widerrufen, dann löschen
-        wir es sofort.
+        <ng-container *ngFor="let satz of begruessungSaetze(team); let letzter = last">{{ satz }}{{ letzter ? '' : ' ' }}</ng-container>
       </p>
       <ng-container *ngIf="team.oeffentlich_text">
         <mat-checkbox name="teamOeffentlich" [(ngModel)]="teamOeffentlich" [disabled]="stand === 'tritt_bei'"
@@ -99,7 +95,7 @@
         <p>{{ team.einwilligung_text }}</p>
       </details>
       <p class="team-leise">
-        Mehr dazu in der <a routerLink="/datenschutz">Datenschutzerklärung</a> unter „Teams“.
+        Mehr dazu in der <a routerLink="/datenschutz" fragment="teams">Datenschutzerklärung</a> unter „Teams“.
       </p>
       <p *ngIf="!angemeldet" class="team-leise">
         Hast du schon ein Konto? Dann <a href="/login" (click)="anmeldenUmBeizutreten()">melde dich an</a>,

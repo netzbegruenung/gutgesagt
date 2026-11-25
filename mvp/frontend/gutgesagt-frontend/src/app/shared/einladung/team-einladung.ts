@@ -1,3 +1,5 @@
+import { TEAM_MOTIVE as MOTIV_LISTE, motivBild } from '../teams/teams';
+
 /**
  * Teams über Einladungen beim Einlösen (api/v1/einladungen.py): was /pruefen zum Team
  * sagt, was /beitreten antwortet. Die Texte der Einwilligungen kommen vom Backend
@@ -46,17 +48,12 @@ export interface BeitretenAntwort {
   neu: boolean;
 }
 
-/** Motive der Teams wie im Backend (domain/teams.py MOTIVE), Schlüssel → Name. */
-export const TEAM_MOTIVE: Record<string, string> = {
-  vogel: 'Vogel',
-  sprechblase: 'Sprechblase',
-  handschlag: 'Handschlag',
-  laufschuh: 'Laufschuh',
-  waage: 'Waage',
-  lautsprecher: 'Lautsprecher',
-};
+/** Motive der Teams, Schlüssel → Name; eine Quelle mit shared/teams/teams.ts. */
+export const TEAM_MOTIVE: Record<string, string> = Object.fromEntries(
+  MOTIV_LISTE.map((m) => [m.schluessel, m.name]),
+);
 
 /** Pfad des Motivbilds oder null, wenn das Motiv unbekannt ist (dann nur der Name). */
 export function teamMotivBild(motiv: string | null | undefined): string | null {
-  return motiv && TEAM_MOTIVE[motiv] ? `/meilensteine/${motiv}.svg` : null;
+  return motivBild(motiv);
 }

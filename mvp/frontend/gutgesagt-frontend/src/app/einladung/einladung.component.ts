@@ -15,6 +15,7 @@ import { PruefenAntwort, TEAM_MOTIVE, TeamBeimPruefen, teamMotivBild } from '../
 import { ROUTES } from '../shared/constants/app.constants';
 import { sitzungPruefen } from '../auth/sitzung';
 import { FunktionenService } from '../services/funktionen.service';
+import { teamBegruessungSaetze, teamBegruessungTitel } from '../shared/team-texte';
 import { TeamMerker, teamMerkerAblegen, teamMerkerLesen, teamMerkerLoeschen, teamMerkerNehmen } from './team-merker';
 
 /**
@@ -141,6 +142,15 @@ export class EinladungComponent implements OnInit {
   nachname = '';
   readonly nameMax = EINLADUNG_NAME_MAX;
   readonly routen = ROUTES;
+
+  /** Begrüßung und Sätze vor der Frage, Wortlaut aus shared/team-texte (Rechtstext). */
+  begruessungTitel(team: TeamBeimPruefen): string {
+    return teamBegruessungTitel(team.name, team.naechste_nummer);
+  }
+
+  begruessungSaetze(team: TeamBeimPruefen): readonly string[] {
+    return teamBegruessungSaetze(team.name);
+  }
   /** Der eingefuegte Link, solange die Seite ohne Code aufgerufen wurde. */
   link = '';
   linkFalsch = false;
