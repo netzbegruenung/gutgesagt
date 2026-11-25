@@ -35,6 +35,29 @@ Einzelne Specs: `npx playwright test tests/04-fangkorb.spec.ts`, ein Projekt:
 | `E2E_EMAIL`, `E2E_PASSWORT` | Testkonto aus `mvp/config/managed-users.example.json` (`tests/konto.ts`) | Anmeldung über `/api/auth/login/managed` |
 | `E2E_SCREENSHOTS` | `e2e/screenshots/` | Ablage der benannten Screenshots |
 | `E2E_DIST` | – | Pfad zu `dist/.../browser` nach `ng build --configuration production`: `13-dunkel-ohne-aufblitzen` prüft dann den Dunkelmodus vor dem Laden des Stylesheets, ohne Stack (alles gemockt); sonst übersprungen |
+| `E2E_TEAMS_STACK` | – | `1` schaltet `16-teams-stack` ein (nur gegen den Teams-Stack, siehe unten) |
+| `E2E_PG_CONTAINER` | `gutgesagt-app-postgres-teams` | PostgreSQL-Container, in dem `16-teams-stack` per `docker exec` nachsieht |
+
+### Teams gegen den echten Stack (`16-teams-stack`)
+
+Spielt Teams über Einladungslinks mit Frontend, BFF, Suchdienst und PostgreSQL durch: Teamlink im
+Admin-Formular anlegen, neues Konto mit „Ja“ (Nummer, „Meine Teams“, Zeile in
+`team_mitgliedschaften` ohne Bezug zur Einladung) und mit „Nein“ (keine Zeile, gezählt), angemeldet
+beitreten und „schon dabei“ ohne zweite Zählung, „Team verlassen“, Kontolöschung über
+`mvp/scripts/manual/person_loeschen.sql` und Schalter teams aus. Keycloak ersetzt ein kleiner
+Nachbau der Admin-Schnittstelle (`mvp/scripts/dev/teams-stack/keycloak-ersatz.py`): Er vergibt die
+Kennungen der Konten aus `mvp/scripts/dev/teams-stack/managed-users.json` und schickt keine Mail.
+Läuft als eigener Stack neben dem Dev-Stack (Ports 38080, 35054, 38000, 35533, 36433, 38181) und
+braucht eine frische Datenbank, weil die Nummern ab 1 geprüft werden:
+
+```bash
+cd mvp
+docker compose -p gg-teams -f docker-compose.dev.yml -f docker-compose.teams-stack.yml up -d --build
+cd frontend/gutgesagt-frontend/e2e
+E2E_TEAMS_STACK=1 E2E_BASE_URL=http://127.0.0.1:38080 npx playwright test --project=teams-stack
+cd ../../..
+docker compose -p gg-teams -f docker-compose.dev.yml -f docker-compose.teams-stack.yml down -v
+```
 
 ## Was man wissen muss
 
