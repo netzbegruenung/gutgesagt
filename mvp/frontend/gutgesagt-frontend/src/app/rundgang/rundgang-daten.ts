@@ -128,7 +128,8 @@ export const WILLKOMMEN: Angebot = {
  */
 export const WILLKOMMEN_ANGEMELDET: Angebot = {
   ...WILLKOMMEN,
-  satz: 'So findest du in Sekunden die passende Antwort',
+  // Höchstens so lang wie der Satz für Besucher: Die Zeile bricht nicht um (rundgang-band.component.css)
+  satz: 'In Sekunden zur Antwort',
 };
 
 export const MITMACHEN_ANGEBOT: Angebot = {

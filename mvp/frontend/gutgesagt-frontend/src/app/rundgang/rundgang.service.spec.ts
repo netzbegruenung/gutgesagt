@@ -391,6 +391,8 @@ describe('RundgangService', () => {
       expect(service.band()?.satz).not.toContain('Konto');
       expect(service.band()?.titel).toBe(WILLKOMMEN.titel);
       expect(service.band()?.rundgang).toBe('antwort-finden');
+      // Die schlanke Zeile bricht nicht um: am Handy nicht länger als der Satz für Besucher
+      expect(WILLKOMMEN_ANGEMELDET.satz.length).toBeLessThanOrEqual(WILLKOMMEN.satz.length);
     });
 
     it('gilt angemeldet beantwortet auch für Besucher, ein Schlüssel für beide', () => {
