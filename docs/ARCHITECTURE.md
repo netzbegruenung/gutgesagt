@@ -422,7 +422,7 @@ Team progress (#784) and team quests (#792) get their switches later.
 | `gartenansicht` | `SEMANTIC_SEARCH_GARTENANSICHT_AKTIV` | off | yes | none (#783) |
 | `kopiert_erfolg` | `SEMANTIC_SEARCH_KOPIERT_ERFOLG_AKTIV` | off | yes | none (#785) |
 | `konter_probe` | `SEMANTIC_SEARCH_KONTER_PROBE_AKTIV` | off | yes | none (#786) |
-| `luecke_zu_gross` | `SEMANTIC_SEARCH_LUECKE_ZU_GROSS_AKTIV` | off | yes | none (#787) |
+| `luecke_zu_gross` | `SEMANTIC_SEARCH_LUECKE_ZU_GROSS_AKTIV` | off | yes | none; while on, the privacy policy shows the paragraph on the browser entry `gutgesagt-ton-bei-erfolgen` (#787) |
 | `einwilligung_im_gewinn` | `SEMANTIC_SEARCH_EINWILLIGUNG_IM_GEWINN_AKTIV` | off | yes | none, wordings stay (#788) |
 | `naechster_schritt` | `SEMANTIC_SEARCH_NAECHSTER_SCHRITT_AKTIV` | off | yes | none; privacy policy sentences ship with #789 |
 | `wirkungs_echo` | `SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV` | off | no | DSFA addendum V31 (#790) |

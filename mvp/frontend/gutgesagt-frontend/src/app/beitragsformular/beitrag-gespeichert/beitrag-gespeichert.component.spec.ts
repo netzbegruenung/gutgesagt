@@ -10,6 +10,7 @@ import { TEILEN_LINK_KOPIERT, TEILEN_NAVIGATOR, TeilenNavigator } from '../../sh
 import { BeitragGespeichertComponent, EINWURF_NICHT_MIT_NEUEM_VERKNUEPFT, beitragLink } from './beitrag-gespeichert.component';
 import { GespeichertZustand, gespeichertEltern, lueckeZuMomentSatz, mitLueckeZuGezeigt } from './gespeichert-adresse';
 import { FunktionenService } from '../../services/funktionen.service';
+import { FEIER_AUDIO, FEIER_TON_SCHLUESSEL } from '../../shared/feier/feier-ton.service';
 import { CommentaryService } from '../../services/commentary.service';
 import { GenericTextService } from '../../services/generic-text.service';
 import { PostService } from '../../services/post.service';
@@ -59,14 +60,20 @@ describe('BeitragGespeichertComponent', () => {
   let lueckeZuGrossAn: Observable<boolean>;
   /** Steht statt router.events, wenn ein Test das Ende der Navigation selbst meldet. */
   let routerEvents: Subject<unknown> | null;
+  /** Baut den AudioContext für „Ton bei Erfolgen“; null: kein Lautsprecher im Test. */
+  let audio: jasmine.Spy;
 
   beforeEach(() => {
+    audio = jasmine.createSpy('audio').and.returnValue(null);
+    localStorage.removeItem(FEIER_TON_SCHLUESSEL);
     nav = {};
     lueckeZuGrossAn = of(false);
     routerEvents = null;
     karteStub = BeitragskarteStubComponent;
     geladenerEinwurf = of({ id: 'e-1', ist_eigener_einwurf: true } as Einwurf);
   });
+
+  afterEach(() => localStorage.removeItem(FEIER_TON_SCHLUESSEL));
 
   async function oeffnen(
     adresse: Record<string, string> = {},
@@ -114,6 +121,7 @@ describe('BeitragGespeichertComponent', () => {
           useValue: { userInfo$: of({ isAuthenticated: true, userId: 'u-1', userName: null, claims: null }) },
         },
         { provide: TEILEN_NAVIGATOR, useFactory: () => nav },
+        { provide: FEIER_AUDIO, useFactory: () => audio },
         {
           provide: FunktionenService,
           useFactory: () => ({ frisch: (name: string) => (name === 'luecke_zu_gross' ? lueckeZuGrossAn : of(false)) }),
@@ -353,11 +361,35 @@ describe('BeitragGespeichertComponent', () => {
       );
     });
 
-    it('bleibt beim kleinen Satz, wenn der Schalter aus ist', async () => {
+    it('bleibt beim kleinen Satz, wenn der Schalter aus ist: kein Keim, kein Umschalter, kein Ton', async () => {
       lueckeZuGrossAn = of(false);
+      localStorage.setItem(FEIER_TON_SCHLUESSEL, '1');
       await oeffnen(vonDort, aussage);
+      await fixture.whenStable();
       expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
       expect(seite().querySelector('.luecke-zu-titel')!.textContent!.trim()).toBe('Lücke zu.');
+      expect(seite().querySelector('app-feier-keim')).toBeNull();
+      expect(seite().querySelector('app-feier-ton-schalter')).toBeNull();
+      expect(audio).not.toHaveBeenCalled();
+    });
+
+    it('zeigt den wachsenden Keim und „Ton bei Erfolgen“, standardmäßig aus und still', async () => {
+      await oeffnen(vonDort, aussage);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const moment = seite().querySelector('.luecke-zu-moment')!;
+      expect(moment.querySelector('app-feier-keim[aria-hidden="true"]')).not.toBeNull();
+      const schalter = moment.querySelector('app-feier-ton-schalter button[role="switch"]')!;
+      expect(schalter.getAttribute('aria-checked')).toBe('false');
+      expect(moment.querySelector('app-feier-ton-schalter')!.textContent!.trim()).toBe('Ton bei Erfolgen');
+      expect(audio).not.toHaveBeenCalled();
+    });
+
+    it('spielt den Ton im Moment, wenn die Person ihn eingeschaltet hat', async () => {
+      localStorage.setItem(FEIER_TON_SCHLUESSEL, '1');
+      await oeffnen(vonDort, aussage);
+      await fixture.whenStable();
+      expect(audio).toHaveBeenCalledTimes(1);
     });
 
     it('steht einmal je Antwort: Neuladen und „Zurück“ bringen den Vermerk mit', async () => {

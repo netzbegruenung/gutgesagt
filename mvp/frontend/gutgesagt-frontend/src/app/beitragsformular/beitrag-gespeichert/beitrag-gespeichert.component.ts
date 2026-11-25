@@ -34,6 +34,9 @@ import { EINWURF_PARAM } from '../../destillieren/einwurf-adresse';
 import { TeilenService } from '../../shared/teilen.service';
 import { AussageMitThemenFeld, ThemenService } from '../../services/themen.service';
 import { AussageThemenComponent } from '../../shared/themen/aussage-themen.component';
+import { FeierKeimComponent } from '../../shared/feier/feier-keim.component';
+import { FeierTonSchalterComponent } from '../../shared/feier/feier-ton-schalter.component';
+import { FeierTonService } from '../../shared/feier/feier-ton.service';
 
 /** Beitragstypen, fuer die es die Ergebnisseite gibt. */
 export type GespeichertTyp = FormularTyp;
@@ -83,7 +86,15 @@ export const EINWURF_NICHT_MIT_NEUEM_VERKNUEPFT =
 @Component({
   standalone: true,
   selector: 'app-beitrag-gespeichert',
-  imports: [...SHARED_IMPORTS, CommonModule, RouterLink, BeitragskarteComponent, AussageThemenComponent],
+  imports: [
+    ...SHARED_IMPORTS,
+    CommonModule,
+    RouterLink,
+    BeitragskarteComponent,
+    AussageThemenComponent,
+    FeierKeimComponent,
+    FeierTonSchalterComponent,
+  ],
   templateUrl: './beitrag-gespeichert.component.html',
   styleUrls: ['./beitrag-gespeichert.component.css'],
 })
@@ -94,6 +105,8 @@ export class BeitragGespeichertComponent implements OnInit {
   readonly lueckeZuTitel = LUECKE_ZU;
   readonly lueckeZuAusruf = LUECKE_ZU_AUSRUF;
   private funktionen = inject(FunktionenService);
+  /** „Ton bei Erfolgen“: spielt im großen Moment nur, wenn die Person ihn eingeschaltet hat. */
+  private feierTon = inject(FeierTonService);
   private injector = inject(Injector);
   /**
    * Der Beitrag ist eben gespeichert (Router-State aus dem Formular) und der große Moment
@@ -291,7 +304,10 @@ export class BeitragGespeichertComponent implements OnInit {
     return lueckeZuMomentSatz(gesuchtAus(this.route.snapshot.queryParamMap));
   }
 
-  /** Erscheint der große Moment, geht der Fokus einmal auf seine Überschrift. */
+  /**
+   * Erscheint der große Moment, geht der Fokus einmal auf seine Überschrift, und der Ton
+   * spielt, wenn die Person ihn eingeschaltet hat (sonst bleibt es still).
+   */
   @ViewChild('lueckeZuMomentTitel')
   set lueckeZuMomentTitel(el: ElementRef<HTMLElement> | undefined) {
     if (el && this.momentFokussieren) {
@@ -304,6 +320,7 @@ export class BeitragGespeichertComponent implements OnInit {
             el.nativeElement.focus();
           }
           this.momentAnsage.set(this.lueckeZuMomentSatz);
+          this.feierTon.spielen();
         },
         { injector: this.injector },
       );
