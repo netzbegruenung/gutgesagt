@@ -111,6 +111,12 @@ export interface GepostetAntwort {
   beitrag_nennen?: boolean;
 }
 
+/**
+ * Was nach „Ja, gepostet“ ohne Konto passiert ist (#799): ``nicht_angeboten`` heißt 404
+ * (Schalter aus) oder angemeldet (dann zählt der Weg mit Konto).
+ */
+export type MeldungOhneKontoErgebnis = 'gezaehlt' | 'nicht_angeboten' | 'fehler';
+
 /** Antwort von POST /content/{id}/danke (#791). */
 export interface DankeAntwort {
   gezaehlt: boolean;
@@ -506,6 +512,27 @@ export class UsageTrackingService {
         return of(null);
       }),
     );
+  }
+
+  /**
+   * „Ja, gepostet“ ohne Konto (#799) an den neutralen Sammelpfad: Die Art steht nur im
+   * Body, nie in Pfad oder Adresszusatz; kein Beitrag, keine Kennung. Gemerkt wird hier
+   * nichts, auch nicht im Browser-Speicher: Entdoppelt wird nur auf der offenen Seite,
+   * indem die Karte nach dem Klick nicht mehr fragt.
+   */
+  gepostetOhneKontoMelden(): Observable<MeldungOhneKontoErgebnis> {
+    return this.http
+      .post<{ gezaehlt: boolean }>(`${environment.baseUrl}/api/v1/ereignis`, { art: 'gepostet_ohne_konto' })
+      .pipe(
+        map((antwort): MeldungOhneKontoErgebnis => (antwort?.gezaehlt === true ? 'gezaehlt' : 'nicht_angeboten')),
+        catchError((error) => {
+          if (error?.status === 404) {
+            return of<MeldungOhneKontoErgebnis>('nicht_angeboten');
+          }
+          this.loggingService.error('Meldung ohne Konto nicht gezählt', error);
+          return of<MeldungOhneKontoErgebnis>('fehler');
+        }),
+      );
   }
 
   /**

@@ -74,6 +74,25 @@ describe('SaisonsComponent', () => {
     expect(text()).toContain('30.11.2026 bis 28.02.2027');
   });
 
+  it('Meldungen ohne Konto nur daneben, nicht im Ziel (#799)', () => {
+    const daten = liste();
+    daten.saisons[1] = { ...daten.saisons[1], meldungen_ohne_konto: 1500, laufende_woche_ohne_konto: 40 };
+    laden(daten);
+
+    const zeilen = fixture.nativeElement.querySelectorAll('[data-testid="saison-ohne-konto"]');
+    expect(zeilen.length).toBe(1);
+    expect(zeilen[0].textContent.replace(/\s+/g, ' ')).toContain(
+      'Daneben, nicht im Ziel: 1.500 Meldungen ohne Konto · laufende Woche bisher 40',
+    );
+    expect(text()).toContain('312 von 1.000 Widerspruchs-Wochen');
+    expect(text()).toContain('laufende Woche bisher 23');
+  });
+
+  it('ohne Meldungen ohne Konto keine Zeile dafür', () => {
+    laden();
+    expect(fixture.nativeElement.querySelector('[data-testid="saison-ohne-konto"]')).toBeNull();
+  });
+
   it('Löschen nur vor dem Beginn', () => {
     laden();
     expect(() => knopf('Saison Frühjahr 27 löschen')).not.toThrow();

@@ -60,6 +60,15 @@ function leer(): SaisonEingabe {
               @if (s.laufende_woche !== null) {
                 <span class="leise"> · laufende Woche bisher {{ zahl(s.laufende_woche) }}</span>
               }
+              @if (s.meldungen_ohne_konto || s.laufende_woche_ohne_konto) {
+                <br />
+                <span class="leise" data-testid="saison-ohne-konto">
+                  Daneben, nicht im Ziel: {{ zahl(s.meldungen_ohne_konto ?? 0) }} Meldungen ohne Konto
+                  @if (s.laufende_woche_ohne_konto != null) {
+                    · laufende Woche bisher {{ zahl(s.laufende_woche_ohne_konto) }}
+                  }
+                </span>
+              }
               @if (s.zustand !== 'vorbei') {
                 <span class="knoepfe">
                   <button mat-stroked-button type="button" (click)="bearbeiten(s)" [attr.aria-label]="'Saison ' + s.name + ' ändern'">

@@ -152,6 +152,20 @@ def schalter_admin_alle_an():
 
 
 @pytest.fixture(autouse=True)
+def gepostet_ohne_konto_ohne_datenbank(monkeypatch):
+    """
+    Meldungen ohne Konto (#799) ohne Datenbank: keine Zahlen. Tests mit Zahlen stellen
+    ``gepostet_ohne_konto_ohne_datenbank.wochen.return_value`` ein.
+    """
+    import services.gepostet_ohne_konto_service as modul
+
+    repository = MagicMock()
+    repository.wochen.return_value = {}
+    monkeypatch.setattr(modul, "_service", modul.GepostetOhneKontoService(repository))
+    yield repository
+
+
+@pytest.fixture(autouse=True)
 def wirkung_ohne_datenbank(monkeypatch):
     """
     Wirkungs-Echo und Danke (#790, #791) ohne Datenbank: keine Summen. Tests mit

@@ -38,6 +38,7 @@ export class PublicEndpoints {
     '/api/v1/funktionen',          // oeffentliche Schalter, ohne Anmeldung lesbar (#756)
     '/api/v1/saisons/aktuell',     // Saisonbalken, ohne Anmeldung lesbar (#782)
     '/api/v1/konter-probe',        // Konter-Probe ohne Konto (#786)
+    '/api/v1/ereignis',            // Meldungen ohne Konto, neutraler Sammelpfad (#799)
     '/api/v1/content/recent',   // oeffentlich am BFF; fehlte hier, ein anonymer
                                 // Besucher wurde deshalb auf /login umgeleitet
     '/api/v1/content/beitrag/', // eigene Adresse eines Beitrags (#300), oeffentlich am BFF

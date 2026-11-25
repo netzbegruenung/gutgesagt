@@ -122,9 +122,10 @@ def test_admin_sieht_die_zahl_je_woche():
     assert antwort.status_code == 200
     assert antwort.json() == {
         "aktiv": True,
+        "ohne_konto_aktiv": False,
         "woechentlich": [
-            {"woche": "2026-11-02", "personen": 3},
-            {"woche": "2026-11-09", "personen": 0},
+            {"woche": "2026-11-02", "personen": 3, "meldungen_ohne_konto": 0},
+            {"woche": "2026-11-09", "personen": 0, "meldungen_ohne_konto": 0},
         ],
     }
     dienst.wochen.assert_called_once_with(2)
@@ -137,5 +138,9 @@ def test_admin_ohne_schalter_leer():
         "/api/v1/metrics/gepostet", headers=ADMIN
     )
 
-    assert antwort.json() == {"aktiv": False, "woechentlich": []}
+    assert antwort.json() == {
+        "aktiv": False,
+        "ohne_konto_aktiv": False,
+        "woechentlich": [],
+    }
     dienst.wochen.assert_not_called()

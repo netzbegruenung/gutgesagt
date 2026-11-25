@@ -461,6 +461,44 @@ describe('UsageTrackingService', () => {
     });
   });
 
+  describe('Meldungen ohne Konto (#799)', () => {
+    const EREIGNIS = `${environment.baseUrl}/api/v1/ereignis`;
+
+    function melden(): () => unknown {
+      let ergebnis: unknown;
+      service.gepostetOhneKontoMelden().subscribe((e) => (ergebnis = e));
+      return () => ergebnis;
+    }
+
+    it('neutrale Adresse: die Art steht nur im Body, kein Beitrag, keine Kennung', () => {
+      const ergebnis = melden();
+      const anfrage = http.expectOne(EREIGNIS);
+
+      expect(anfrage.request.method).toBe('POST');
+      expect(anfrage.request.urlWithParams).toBe(EREIGNIS);
+      expect(anfrage.request.url).not.toMatch(/gepostet|konto|art=/i);
+      expect(anfrage.request.body).toEqual({ art: 'gepostet_ohne_konto' });
+      anfrage.flush({ gezaehlt: true });
+      expect(ergebnis()).toBe('gezaehlt');
+    });
+
+    it('404 und nicht gezählt still als nicht angeboten, sonst Fehler mit Log', () => {
+      const aus = melden();
+      http.expectOne(EREIGNIS).flush({ detail: 'Not found' }, { status: 404, statusText: 'Not Found' });
+      expect(aus()).toBe('nicht_angeboten');
+
+      const angemeldet = melden();
+      http.expectOne(EREIGNIS).flush({ gezaehlt: false });
+      expect(angemeldet()).toBe('nicht_angeboten');
+      expect(TestBed.inject(LoggingService).error).not.toHaveBeenCalled();
+
+      const gedrosselt = melden();
+      http.expectOne(EREIGNIS).flush('zu viele', { status: 429, statusText: 'Too Many Requests' });
+      expect(gedrosselt()).toBe('fehler');
+      expect(TestBed.inject(LoggingService).error).toHaveBeenCalled();
+    });
+  });
+
   describe('Sichtbarkeit der Abzeichen (#351)', () => {
     const SICHTBARKEIT = `${environment.baseUrl}/api/v1/usage/users/me/abzeichen-sichtbarkeit`;
 
