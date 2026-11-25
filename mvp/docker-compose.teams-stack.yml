@@ -1,0 +1,63 @@
+# Teams gegen den echten Stack (e2e/tests/16-teams-stack.spec.ts), als zweiter Stack neben dem
+# Dev-Stack: eigene Containernamen und Ports, Schalter-Obergrenze teams an, und statt Keycloak
+# ein kleiner Ersatz der Admin-Schnittstelle (scripts/dev/teams-stack/keycloak-ersatz.py), der
+# beim Einloesen die Kennungen der Direktanmeldung vergibt und keine Mail schickt.
+#
+#   docker compose -p gg-teams -f docker-compose.dev.yml -f docker-compose.teams-stack.yml up -d --build
+#   docker compose -p gg-teams -f docker-compose.dev.yml -f docker-compose.teams-stack.yml down -v
+#
+# Teststack: kein Neustart nach einem Reboot (restart: "no"). Frontend http://127.0.0.1:38080.
+# Ablauf und Variablen: frontend/gutgesagt-frontend/e2e/README.md.
+services:
+  qdrant:
+    container_name: gutgesagt-qdrant-teams
+    restart: "no"
+    ports: !override
+      - "127.0.0.1:36433:6333"
+  postgres-app:
+    container_name: gutgesagt-app-postgres-teams
+    restart: "no"
+    ports: !override
+      - "127.0.0.1:35533:5432"
+  gutgesagt-semantic-search:
+    container_name: gutgesagt-semantic-search-teams
+    restart: "no"
+    ports: !override
+      - "127.0.0.1:38000:8000"
+    environment:
+      - SEMANTIC_SEARCH_TEAMS_AKTIV=true
+      - SEMANTIC_SEARCH_KEYCLOAK_URL=http://keycloak-ersatz:8080
+      - SEMANTIC_SEARCH_KEYCLOAK_ADMIN_CLIENT_ID=ersatz
+      - SEMANTIC_SEARCH_KEYCLOAK_ADMIN_CLIENT_SECRET=ersatz
+      - SEMANTIC_SEARCH_APP_URL=http://127.0.0.1:38080
+    depends_on:
+      keycloak-ersatz:
+        condition: service_started
+  gutgesagt-bff:
+    container_name: gutgesagt-bff-teams
+    restart: "no"
+    ports: !override
+      - "127.0.0.1:35054:5054"
+    environment:
+      - FRONTEND_URL=http://127.0.0.1:38080
+    volumes: !override
+      # Eigene Konten: die neuen Konten aus dem Ersatz und ein Admin mit bekanntem Passwort
+      - ./scripts/dev/teams-stack:/config:ro
+      - bff_dataprotection_keys:/keys
+  gutgesagt-frontend:
+    container_name: gutgesagt-frontend-teams
+    restart: "no"
+    ports: !override
+      - "127.0.0.1:38080:80"
+  keycloak-ersatz:
+    # Dasselbe Image wie der Suchdienst (aus dem Build-Cache), nur wegen Python
+    build:
+      context: .
+      dockerfile: backend/semantic-search-service/Dockerfile
+    container_name: gutgesagt-keycloak-ersatz-teams
+    entrypoint: ["python", "-u", "/ersatz/keycloak-ersatz.py"]
+    # Nur zum Nachsehen: GET http://127.0.0.1:38181/_log zeigt die Anfragen des Suchdienstes
+    ports:
+      - "127.0.0.1:38181:8080"
+    volumes:
+      - ./scripts/dev/teams-stack:/ersatz:ro
