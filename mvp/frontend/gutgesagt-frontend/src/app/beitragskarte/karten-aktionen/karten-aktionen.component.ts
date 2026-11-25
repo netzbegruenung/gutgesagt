@@ -388,6 +388,9 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
     if (this.kopiertErfolgAn() || angeboten === true) {
       this.kopiertErfolgZeigen();
     } else {
+      // Ein offener Kasten (diese oder eine andere Karte) geht zu: „Kopiert“ steht nur einmal.
+      this.erfolgStelle.ohneKasten(this.erfolgKennung);
+      this.cdr.markForCheck();
       this.kopiertHinweis = this.snackBar.open(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
     }
     if (angeboten !== null || !kennung) {
@@ -408,6 +411,10 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
             this.gepostetStand = 'frage';
             this.cdr.markForCheck();
           }
+          return;
+        }
+        // Inzwischen eine andere Karte kopiert: deren Rückmeldung nicht wegnehmen.
+        if (!this.erfolgStelle.istZuletzt(this.erfolgKennung)) {
           return;
         }
         this.kopiertHinweis?.dismiss();
@@ -455,7 +462,9 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
    * „Ja, gepostet“ im Erfolgskasten: angemeldet an /users/me/gepostet (mit dem Beitrag,
    * falls der Dienst ihn fürs Wirkungs-Echo mitschickt), ohne Konto an den neutralen
    * Sammelpfad (#799). Der Knopf sperrt sich sofort, ein Doppeltipp zählt einmal, und
-   * diese Karte fragt bis zum Neuladen nicht mehr.
+   * diese Karte fragt bis zum Neuladen nicht mehr. Scheitert das Melden (Netz, 5xx), steht
+   * der Knopf wieder bereit: Sonst ginge die Meldung stillschweigend verloren. Doppelt
+   * zählt der Server mit Konto nicht (einmal je Woche).
    */
   jaGepostet(): void {
     if (this.gepostetStand !== 'frage' || this.gepostetGemeldet) {
@@ -465,21 +474,33 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
     this.gepostetStand = 'sendet';
     this.cdr.markForCheck();
     const kennung = this.gepostetKennung;
-    const dank$: Observable<string | null> = kennung
+    // null = nicht (mehr) angeboten, 'fehler' = nicht angekommen, sonst der Dank.
+    const dank$: Observable<string | null | 'fehler'> = kennung
       ? this.usageTrackingService
           .gepostetMelden(kennung, this.inhaltId)
-          .pipe(map((personen) => (personen === GEPOSTET_NICHT_ANGEBOTEN ? null : gepostetDank(personen))))
+          .pipe(
+            map((personen) =>
+              personen === GEPOSTET_NICHT_ANGEBOTEN ? null : personen === null ? 'fehler' : gepostetDank(personen),
+            ),
+          )
       : this.usageTrackingService
           .gepostetOhneKontoMelden()
           .pipe(
             map((ergebnis) =>
-              ergebnis === 'nicht_angeboten' ? null : ergebnis === 'gezaehlt' ? GEPOSTET_OHNE_KONTO_DANK : GEPOSTET_NICHT_GEZAEHLT,
+              ergebnis === 'nicht_angeboten' ? null : ergebnis === 'gezaehlt' ? GEPOSTET_OHNE_KONTO_DANK : 'fehler',
             ),
           );
     dank$.pipe(take(1)).subscribe((dank) => {
-      // Nicht (mehr) angeboten: Die Frage verschwindet ohne Dank.
-      this.gepostetStand = dank === null ? 'aus' : 'gemeldet';
-      this.gepostetDankText = dank;
+      if (dank === 'fehler') {
+        // Nicht angekommen: Knopf wieder bereit, der Hinweis lädt zum zweiten Tippen ein.
+        this.gepostetGemeldet = false;
+        this.gepostetStand = 'frage';
+        this.gepostetDankText = GEPOSTET_NICHT_GEZAEHLT;
+      } else {
+        // Nicht (mehr) angeboten: Die Frage verschwindet ohne Dank.
+        this.gepostetStand = dank === null ? 'aus' : 'gemeldet';
+        this.gepostetDankText = dank;
+      }
       this.cdr.markForCheck();
     });
   }

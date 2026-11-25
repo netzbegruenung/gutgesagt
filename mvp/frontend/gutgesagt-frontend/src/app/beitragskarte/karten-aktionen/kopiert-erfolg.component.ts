@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import {
+  AfterViewChecked,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnChanges,
+  Output,
+  SimpleChanges,
+  ViewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,8 +27,9 @@ import { GEPOSTET_FRAGE, GEPOSTET_GEMELDET, JA_GEPOSTET } from './gepostet-texte
 export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
 
 /**
- * Der Erfolgstext unter der Aktionsleiste nach dem Kopieren (#785). Die Region steht da,
- * solange der Schalter an ist (role="status"), damit Screenreader den Text ansagen, sobald er erscheint;
+ * Der Erfolgstext unter der Aktionsleiste nach dem Kopieren (#785). Die Region steht in
+ * jeder vollen Karte da (role="status"), auch mit Schalter aus, weil dann die Frage
+ * „Gepostet?“ den Kasten braucht; so sagen Screenreader den Text an, sobald er erscheint;
  * er blockiert nichts und bleibt ohne Frist stehen, bis die Person ihn schliesst, damit
  * der Link nicht unter der Hand verschwindet.
  *
@@ -46,12 +58,12 @@ export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
             <p class="erfolg-tonlage" *ngIf="erfolgstext && tonlage as t">
               {{ t.frage }}&ngsp;<a class="erfolg-tonlage-link" [routerLink]="[beitragPfad, andereTonlage!.id]">{{ t.link }}</a>
             </p>
-            <p class="erfolg-gepostet-frage" *ngIf="gepostet !== 'aus'">{{ frage }}</p>
+            <p class="erfolg-gepostet-frage" *ngIf="gepostet === 'frage' || gepostet === 'sendet'">{{ frage }}</p>
           </div>
         </div>
         <!-- Ausserhalb der Status-Region: Knopf und Dank sollen beim Erscheinen nicht mit angesagt werden -->
         <div class="erfolg-gepostet" *ngIf="sichtbar && gepostet !== 'aus'">
-          <button mat-flat-button type="button" class="ja-gepostet"
+          <button #jaKnopf mat-flat-button type="button" class="ja-gepostet"
                   [attr.aria-disabled]="gepostet === 'frage' ? null : 'true'"
                   [class.ja-gepostet--fertig]="gepostet === 'gemeldet'"
                   (click)="gepostetTippen()">
@@ -59,10 +71,11 @@ export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
             <span>{{ gepostet === 'gemeldet' ? gemeldet : jaGepostetWort }}</span>
           </button>
         </div>
-        <p class="erfolg-gepostet-dank" *ngIf="sichtbar" role="status">{{ gepostet === 'gemeldet' ? gepostetDank : '' }}</p>
+        <!-- Dank, oder nach einem Fehler der Hinweis, es noch einmal zu versuchen -->
+        <p class="erfolg-gepostet-dank" *ngIf="sichtbar" role="status">{{ dankZeile }}</p>
       </div>
       <!-- Ausserhalb der Status-Region: Der Knopf soll nicht mit angesagt werden -->
-      <button *ngIf="sichtbar" mat-icon-button type="button" class="erfolg-schliessen" aria-label="Hinweis schließen"
+      <button #schliessenKnopf *ngIf="sichtbar" mat-icon-button type="button" class="erfolg-schliessen" aria-label="Hinweis schließen"
               (click)="schliessen.emit()">
         <mat-icon aria-hidden="true">close</mat-icon>
       </button>
@@ -154,7 +167,7 @@ export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
     `,
   ],
 })
-export class KopiertErfolgComponent {
+export class KopiertErfolgComponent implements OnChanges, AfterViewChecked {
   @Input() sichtbar = false;
   /** Die Nutzung, wie die Karte sie gerade zeigt; null = unbekannt. */
   @Input() nutzung: number | null = null;
@@ -184,6 +197,32 @@ export class KopiertErfolgComponent {
 
   get tonlage(): { frage: string; link: string } | null {
     return tonlagenHinweis(this.andereTonlage);
+  }
+
+  @ViewChild('jaKnopf', { read: ElementRef }) private jaKnopf?: ElementRef<HTMLButtonElement>;
+  @ViewChild('schliessenKnopf', { read: ElementRef }) private schliessenKnopf?: ElementRef<HTMLButtonElement>;
+  /** Der Fokus lag auf „Ja, gepostet“, als der Knopf verschwand (nicht mehr angeboten). */
+  private fokusUmsetzen = false;
+
+  /** Der Dank, nach einem Fehler (Knopf wieder bereit) der Hinweis darauf; leer beim Senden. */
+  get dankZeile(): string {
+    return this.gepostet === 'gemeldet' || this.gepostet === 'frage' ? (this.gepostetDank ?? '') : '';
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Verschwindet der Knopf unter dem Fokus (Server: nicht mehr angeboten), fiele der
+    // Fokus auf <body> (WCAG 2.4.3); er geht stattdessen auf „Hinweis schließen“.
+    const stand = changes['gepostet'];
+    if (stand && !stand.firstChange && stand.currentValue === 'aus' && this.jaKnopf) {
+      this.fokusUmsetzen = document.activeElement === this.jaKnopf.nativeElement;
+    }
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.fokusUmsetzen) {
+      this.fokusUmsetzen = false;
+      this.schliessenKnopf?.nativeElement.focus();
+    }
   }
 
   gepostetTippen(): void {

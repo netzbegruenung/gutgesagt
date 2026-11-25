@@ -18,7 +18,8 @@ import { FunktionenService } from '../../services/funktionen.service';
 import { KOPIERT } from '../../shared/vorlagen-luecke';
 import { TEILEN_LINK_KOPIERT, TEILEN_NAVIGATOR, TeilenNavigator } from '../../shared/teilen.service';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
-import { GEPOSTET_FRAGE, GEPOSTET_GEMELDET, JA_GEPOSTET } from './gepostet-texte';
+import { GEPOSTET_FRAGE, GEPOSTET_GEMELDET, GEPOSTET_NICHT_GEZAEHLT, JA_GEPOSTET } from './gepostet-texte';
+import { KopiertErfolgStelle } from './kopiert-erfolg-stelle';
 import { KOPIERT_ERFOLG } from './kopiert-erfolg';
 import {
   DANK_EIGENER_BEITRAG,
@@ -813,15 +814,49 @@ describe('KartenAktionenComponent - Abstimmen', () => {
       expect(snackBar.open).not.toHaveBeenCalled();
     });
 
-    it('dankt ohne Zahl, wenn das Zählen scheitert', () => {
+    it('scheitert das Zählen, steht der Knopf wieder bereit und ein zweites Tippen meldet erneut', () => {
       usage.gepostetBekannt.and.returnValue(true);
-      usage.gepostetMelden.and.returnValue(of(null));
+      usage.gepostetMelden.and.returnValues(of(null), of(3));
       kopieren();
 
       jaKnopf()!.click();
       fixture.detectChanges();
 
-      expect(dank()).toBe('Danke! Zählen hat gerade nicht geklappt.');
+      expect(dank()).toBe(GEPOSTET_NICHT_GEZAEHLT);
+      expect(jaKnopf()!.textContent!.trim()).toBe(JA_GEPOSTET);
+      expect(jaKnopf()!.getAttribute('aria-disabled')).toBeNull();
+      expect(kasten()!.textContent).toContain(GEPOSTET_FRAGE);
+
+      jaKnopf()!.click();
+      fixture.detectChanges();
+
+      expect(usage.gepostetMelden).toHaveBeenCalledTimes(2);
+      expect(jaKnopf()!.textContent).toContain(GEPOSTET_GEMELDET);
+      expect(dank()).toContain('3 Menschen');
+    });
+
+    it('nach dem Melden steht die Frage nicht mehr über „Gepostet“', () => {
+      usage.gepostetBekannt.and.returnValue(true);
+      usage.gepostetMelden.and.returnValue(of(2));
+      kopieren();
+
+      jaKnopf()!.click();
+      fixture.detectChanges();
+
+      expect(kasten()!.textContent).not.toContain(GEPOSTET_FRAGE);
+    });
+
+    it('verschwindet der Knopf unter dem Fokus, geht der Fokus auf „Hinweis schließen“', () => {
+      usage.gepostetBekannt.and.returnValue(true);
+      usage.gepostetMelden.and.returnValue(of('nicht_angeboten' as const));
+      kopieren();
+
+      jaKnopf()!.focus();
+      jaKnopf()!.click();
+      fixture.detectChanges();
+
+      expect(jaKnopf()).toBeNull();
+      expect(document.activeElement).toBe(fixture.nativeElement.querySelector('.erfolg-schliessen'));
     });
 
     it('zählt erst mit „Ja, gepostet“ und dankt im Kasten mit der echten Zahl der Woche', () => {
@@ -866,12 +901,43 @@ describe('KartenAktionenComponent - Abstimmen', () => {
       usage.gepostetMelden.and.returnValue(of(2));
       kopieren();
       jaKnopf()!.click();
+      fixture.detectChanges();
+      expect(kasten()).not.toBeNull();
 
       kopieren();
 
+      // Der alte Kasten geht zu, sonst stünde „Kopiert“ doppelt da (Snackbar und Kasten).
+      expect(kasten()).toBeNull();
       expect(jaKnopf()).toBeNull();
       expect(snackBar.open).toHaveBeenCalledOnceWith(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
       expect(usage.gepostetMelden).toHaveBeenCalledTimes(1);
+    });
+
+    it('kopiert eine andere Karte über die Snackbar, geht der Kasten dieser Karte zu', () => {
+      usage.gepostetBekannt.and.returnValue(true);
+      kopieren();
+      expect(kasten()).not.toBeNull();
+
+      // Eine andere Karte meldet ihr Kopieren per Snackbar.
+      TestBed.inject(KopiertErfolgStelle).ohneKasten({});
+      fixture.detectChanges();
+
+      expect(kasten()).toBeNull();
+    });
+
+    it('eine späte Antwort holt den Kasten nicht zurück, wenn inzwischen eine andere Karte kopiert wurde', () => {
+      const antwort = new Subject<boolean>();
+      usage.gepostetAngeboten.and.returnValue(antwort.asObservable());
+      kopieren();
+      const andere = {};
+      TestBed.inject(KopiertErfolgStelle).zeigen(andere);
+
+      antwort.next(true);
+      fixture.detectChanges();
+
+      expect(kopiertHinweis.dismiss).not.toHaveBeenCalled();
+      expect(TestBed.inject(KopiertErfolgStelle).aktiv()).toBe(andere);
+      expect(kasten()).toBeNull();
     });
 
     it('eine späte Antwort fragt nicht in ein neueres Kopieren hinein', () => {

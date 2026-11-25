@@ -12,7 +12,8 @@ export const GEPOSTET_FRAGE = 'Gepostet? Dann zählt dein Konter mit.';
 export const JA_GEPOSTET = 'Ja, gepostet';
 /** Der Knopf nach dem Tippen: Er bleibt stehen (Fokus), tut aber nichts mehr. */
 export const GEPOSTET_GEMELDET = 'Gepostet';
-export const GEPOSTET_NICHT_GEZAEHLT = 'Danke! Zählen hat gerade nicht geklappt.';
+/** Melden nicht angekommen: Der Knopf steht wieder bereit (Review 25.11.). */
+export const GEPOSTET_NICHT_GEZAEHLT = 'Danke! Zählen hat gerade nicht geklappt. Versuch es gleich noch einmal.';
 /**
  * Der Dank ohne Konto (#799): ohne Zahl, denn gezählt werden dort nur Meldungen, keine
  * Menschen; und ohne Aufforderung, sich anzumelden.
