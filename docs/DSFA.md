@@ -2,9 +2,9 @@
 
 > **Entwurf, nicht juristisch geprüft, nicht beschlossen.** Keine Rechtsberatung. Entscheiden
 > müssen der Vorstand der Netzbegrünung als Verantwortlicher und die Datenschutzbeauftragte, am
-> besten in derselben Runde wie #296; die Fragen an sie stehen in Abschnitt 6. Bis dahin bleibt
-> der Admin-Schalter der Punkte aus (#708, Abschnitt 7); die Obergrenze
-> `SEMANTIC_SEARCH_PUNKTE_AKTIV` ist in Produktion schon gesetzt. Aussagen ohne Beleg im Repo
+> besten in derselben Runde wie #296; die Fragen an sie stehen in Abschnitt 6. Bis dahin soll
+> der Admin-Schalter der Punkte aus bleiben (#708); ob er aus ist, ist offen (Abschnitt 7). Die
+> Obergrenze `SEMANTIC_SEARCH_PUNKTE_AKTIV` steht in Produktion schon auf an (erlaubt). Aussagen ohne Beleg im Repo
 > oder in der Konfiguration des Betreibers stehen als **offen** da.
 
 Abschnitte 1 bis 7 prüfen Punkte, Quests und Ranglisten, Abschnitte 8 und 9 alle übrigen
@@ -12,20 +12,20 @@ Verarbeitungen des Dienstes (#374). Das Verzeichnis der Verarbeitungstätigkeite
 steht in [`docs/VERARBEITUNGSVERZEICHNIS.md`](./VERARBEITUNGSVERZEICHNIS.md) und verweist je
 Tätigkeit hierher.
 
-**Stand 25.11.2026:** Code `main` @ `23b211b7` (nach #778), letzter Tag `v0.9.11` (20.11.2026,
+**Stand 25.11.2026:** Code `main` @ `23b211b7` (einschließlich #778), letzter Tag `v0.9.11` (20.11.2026,
 auf `088ac0bf`). Seit dem Stand vom 13.11. in diese DSFA eingearbeitet: #657 (Nacharbeit,
 Verzeichnis), #661 (Löschauftrag, R9b), #670 (Wortlaut ohne Spielelemente), #672 und #741
 (Rückmeldung „Seit deinem letzten Besuch“, V10), #686 (Vormoderation der Suchanfragen, V6;
-Meilensteine nur mit eigener Einwilligung, Abschnitt 1), #691 (Schleifensperre, V21), #711 (Admin-Schalter mit Obergrenze, #708,
-Abschnitt 7), #713 und #734 (Gegenlesen, V20), #718 (Wortlaut `2026-11-19`), #739 (Punkte
+Meilensteine nur mit eigener Einwilligung, Abschnitt 1), #691 (Schleifensperre, V21), #711
+(Admin-Schalter mit Obergrenze, #708, Abschnitt 7), #713 und #734 (Gegenlesen, V20), #718 (Wortlaut `2026-11-19`), #739 (Punkte
 fürs Bewerten, Sofort-Dank, V11), #748 (Themen am Einwurf, V4) und #770 (Antworten-Hinweis,
 V10). Neu an diesem Stand: die offenen Fakten F1 bis F6 (8.6), soweit sie sich in der
 Konfiguration des Betreibers belegen lassen, die Haken in Abschnitt 7 und 9 und die geplante
-Verarbeitung „Teams“ (V23, R10, Frage 8). Fundstellen `Salt:<Pfad>:<Zeile>` zeigen auf das
-Konfigurationsrepository des Betreibers (nicht öffentlich), Stand `origin/master` @
-`dc42c183` (24.11.2026). Nicht in diesem Stand geprüft und für den nächsten vorgemerkt:
-#746 (Linkvorschau), #765 (Herkunft prüfen, ausgehende Abrufe), #767 (Teilen als Bild) und
-#778 (Tagesdeckel).
+Verarbeitung „Teams“ (V23, R10, Frage 8). Fundstellen `Salt:<Datei>` zeigen auf die
+Konfiguration des Betreibers (nicht öffentlich, Stand 24.11.2026); die Zeilenbelege liegen
+beim Betreiber. Inhaltlich noch nicht geprüft und für den nächsten Stand vorgemerkt: #746
+(Linkvorschau), #765 (Herkunft prüfen, ausgehende Abrufe), #767 (Teilen als Bild) und #778
+(Tagesdeckel).
 
 **Stand 13.11.2026:** Code `main` @ `5816e358`, Tag `v0.8.4` (Release-PR #656);
 eingearbeitet sind #622, #643, #651 und #655 (Tagespseudonym
@@ -194,7 +194,7 @@ Verhältnismäßigkeit des Grundbetriebs ohne Punkte: 8.5.
 Einschalten = Obergrenze und Admin-Klick (#708): Die Umgebungsvariable (`SEMANTIC_SEARCH_PUNKTE_AKTIV`,
 `SEMANTIC_SEARCH_ABZEICHEN_SICHTBAR_AKTIV`) erlaubt den Schalter nur; wirksam wird er erst, wenn
 ein Admin ihn unter „Admin“, „Schalter“ einschaltet (`docs/DEPLOYMENT.md`). **Stand 25.11.2026:**
-In Produktion sind beide Obergrenzen gesetzt (`Salt:states/gutgesagt/files/docker-compose.yml:48-49`);
+In Produktion sind beide Obergrenzen gesetzt (`Salt:states/gutgesagt/files/docker-compose.yml`);
 ob der Admin-Schalter an ist, steht in der Datenbank, nicht in der Konfiguration (**offen**).
 Empfehlung: aus lassen, bis die Punkte unten unter „Offen“ erledigt sind.
 
@@ -222,7 +222,7 @@ Erledigt:
   `GET /users/me/punkte` liefert ohne Einwilligung 0. Gefragt wird je Kopie und je Abruf.
 - Login-Einwilligung um die Zwecke aus Abschnitt 4 ergänzt (PR #560, Wortlaut `2026-11-05-b`);
   seit `2026-11-13` wieder ohne Spielelemente (PR #670), dafür eine eigene, freiwillige
-  Einwilligung „Punkte und Meilensteine“ (PR #668, V11).
+  Einwilligung „Punkte und Meilensteine“ (#668, über PR #670; V11).
 - Schalter mit Server-Obergrenze und Admin-Klick (#708, PR #711).
 - Nutzungsbedingungen und Art.-9-Einwilligung auf einer Seite der App, zwei getrennte, nicht
   vorbelegte Häkchen, Nachweis samt Stand in der App statt in Keycloak (PR #731, in `v0.9.11`;
@@ -285,50 +285,48 @@ Empfänger und Ort“.
 - verdigado eG als Auftragsverarbeiterin; sonst keine Empfänger (`DSE:66-75`).
   **Ort (Stand 25.11.2026, F1):** Die Hosts gutgesagt* (Test und Produktion) laufen seit dem
   Umzug auf Proxmox im Rechenzentrum von verdigado in Nürnberg (#206, Stand 22.11.2026;
-  Zuordnung `Salt:states/top.sls:607-608`, `Salt:pillars/top.sls:478`). Hetzner betrifft nur
+  Zuordnung `Salt:states/top.sls`, `Salt:pillars/top.sls`). Hetzner betrifft nur
   noch die Altsysteme unter dem früheren Projektnamen, die bis zu ihrem Abbau in der Konfiguration stehen
-  (`Salt:states/top.sls:604-605`, `Salt:pillars/top.sls:475`; Abbau offen in #206). Die
+  (`Salt:states/top.sls`, `Salt:pillars/top.sls`; Abbau offen in #206). Die
   Datenschutzerklärung nennt Hetzner noch als Unterauftragsverarbeiterin (`DSE:66-75`); nach dem
   Abbau anpassen (`docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md`, Frage 3).
-  **AV-Vertrag (F1):** in Abstimmung mit verdigado, als Entwurf mit einer Anlage „Gut gesagt“
-  (Zweck, Datenarten einschließlich politischer Meinung nach Art. 9, Kategorien der
-  Betroffenen); offen ist, wie sich die Anlage zum bestehenden Rahmenvertrag verhält (#506).
-  Bis er unterschrieben ist, bleibt F1 **offen**: Ohne Vertrag, der Gut gesagt erfasst, fehlt die
-  Grundlage für die Verarbeitungen bei verdigado, auch für die Art.-9-Daten.
+  **AV-Vertrag (F1):** verdigado hat am 04.09.2026 bestätigt, dass AV-Verträge vorliegen
+  (`docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md`, Frage 3); die Datenschutzerklärung nennt den Vertrag
+  (`DSE:66-75`). Ob der bestehende Rahmenvertrag Gut gesagt mit Zweck, Datenarten (auch
+  politische Meinung, Art. 9) und Kategorien der Betroffenen erfasst, ist **offen** (#506). Eine
+  Anlage „Gut gesagt“ ist mit verdigado in Abstimmung; offen ist, wie sie sich zum
+  Rahmenvertrag verhält. Erfasst der Rahmenvertrag Gut gesagt nicht, fehlt bis zur Anlage die
+  Grundlage für die Verarbeitungen bei verdigado, auch für die Art.-9-Daten (R4).
 - Keine Übermittlung außerhalb der EU, kein KI-Anbieter (`DSE:1048-1051`, `CLAUDE.md`, Abschnitt
   „Datenschutz — keine KI-Anbieter“). Ausnahme: Bilder von fremden Servern lädt der Browser erst
   nach Klick (`DSE:996-1022`).
 - Mails (Bestätigung einer Meldung, Entscheidung) gehen über einen SMTP-Server aus der Konfiguration
   (`ss/core/config.py:196-198`, auf `c4a95e9c` Zeile 209-214, Standard STARTTLS). **In
   Produktion (F2, belegt):** `mail.verdigado.net`, Port 465 mit TLS, über ein Postfach von Gut
-  gesagt (`Salt:states/gutgesagt/files/docker-compose.yml:59-62`); den Server betreibt verdigado,
-  er fällt damit unter den AV-Vertrag (F1). Über dasselbe Postfach schickt der Anmeldedienst die
-  Mails beim Einlösen einer Einladung (Einstellung des Realms, laut Kommentar in der
-  Konfiguration des Hosts); den übrigen Mailversand des Anmeldedienstes (Passwort) ordnet die
+  gesagt (`Salt:states/gutgesagt/files/docker-compose.yml`); den Server betreibt verdigado,
+  er fällt damit unter den AV-Vertrag (F1). Ob der Anmeldedienst die Mails beim Einlösen einer
+  Einladung über dasselbe Postfach schickt, ist eine Einstellung des Realms und nicht geprüft
+  (**offen**); den übrigen Mailversand des Anmeldedienstes (Passwort) ordnet die
   Datenschutzerklärung verdigado zu (`DSE:66-75`).
 - Admins sehen Kennungen, Meldungen samt Name und E-Mail-Adresse, Sperren und Muster-Hinweise
   (`DSE:268-269`, `DSE:720`, `DSE:759-760`, `DSE:631-632`).
 - **Zugriffe (Stand 25.11.2026, F4):**
   - *Admins in der App:* Admin ist, wessen Kennung in der Liste `ADMIN_USER_IDS` (BFF) und
     `SEMANTIC_SEARCH_ADMIN_USERS` (Suchdienst) steht; beide setzt der Betreiber aus derselben
-    Angabe (`Salt:states/gutgesagt/files/docker-compose.yml:50,99`). In Produktion ist das
-    **eine** Kennung. Den zweiten Weg, einen Admin-Claim aus
+    Angabe (`Salt:states/gutgesagt/files/docker-compose.yml`). In Produktion ist das ein kleiner
+    Kreis. Den zweiten Weg, einen Admin-Claim aus
     dem Realm (`mvp/backend/BFF/Proxy/AdminPolicy.cs`), legt die Realm-Vorlage nicht an: Sie hat
     keinen Protocol-Mapper (`docs/keycloak/gutgesagt-realm.json`). Ob der laufende Realm davon
     abweicht, steht nicht im Repo (**offen**). Startkonten sind keine Admins.
   - *Host, Datenbank, Konfiguration:* Anmelden am Host können nur die Konten, die die Konfiguration
     des Betreibers dort anlegt, alle mit `sudo`: das Betriebsteam von verdigado (eine Gruppe
-    für alle Hosts, `Salt:pillars/top.sls:2-4`) und eine Gruppe mit zwei Konten für
-    gutgesagt*, von denen eines auch im Betriebsteam ist (`Salt:pillars/top.sls:478-479`). Dazu
-    kommt ein technisches Konto des Sicherungsservers, das Dateien liest (V17). Anmelden geht nur
-    mit Schlüssel, nicht mit Passwort (`Salt:states/common/sshd/files/sshd_config.j2:48`);
-    Konten, die nicht mehr in diesen Gruppen stehen, entfernt der nächste Lauf der Konfiguration
-    (`Salt:states/common/users/deleteusers.sls:1-2`). Die Datenbanken
+    für alle Hosts) und eine kleine Gruppe für gutgesagt* (`Salt:pillars/top.sls`), dazu der
+    Sicherungsdienst von verdigado (V17). Anmelden geht nur mit Schlüssel, nicht mit Passwort;
+    Konten, die nicht mehr in diesen Gruppen stehen, entfernt der nächste Lauf der Konfiguration. Die Datenbanken
     haben keinen Port nach außen, Qdrant, BFF und Frontend nur auf `127.0.0.1`
-    (`Salt:states/gutgesagt/files/docker-compose.yml:9,104,122`); Datenbank und Konfiguration
-    erreicht also nur, wer am Host `root` wird. Die Konfiguration mit Secrets liegt mit
-    `0640 root:root` unter `/opt/gutgesagt` (`Salt:states/gutgesagt/init.sls:53-86`), die
-    Secrets selbst in Passbolt, freigegeben für eine Gruppe des Betreibers. Wer dieser Gruppe
+    (`Salt:states/gutgesagt/files/docker-compose.yml`); Datenbank und Konfiguration
+    erreicht also nur, wer am Host `root` wird, die Sicherungen außerdem der Sicherungsdienst (V17). Die Konfiguration mit Secrets ist nur für
+    `root` lesbar (`Salt:states/gutgesagt/init.sls`), die Secrets selbst liegen in Passbolt, freigegeben für eine Gruppe des Betreibers. Wer dieser Gruppe
     angehört und wie Zugänge vergeben und entzogen werden, steht nicht in der Konfiguration
     (**offen**).
 
@@ -552,7 +550,7 @@ Empfänger und Ort“.
   (`ss/services/search_tracking_service.py:52-63,77-88`, `ss/core/config.py:300-305`); nur wenn er
   nicht gesetzt ist, gilt ein Zufallsschlüssel je Prozess. **In Produktion ist er gesetzt** (F5,
   Stand 25.11.2026): Die Konfiguration des Hosts füllt ihn aus Passbolt
-  (`Salt:states/gutgesagt/files/docker-compose.yml:54`), wie es `ss/core/config.py` empfiehlt.
+  (`Salt:states/gutgesagt/files/docker-compose.yml`), wie es `ss/core/config.py` empfiehlt.
   Deshalb kann, wer Datenbank und Konfiguration hat, für eine bekannte Kennung ausrechnen, ob und
   wie oft sie am laufenden Tag gesucht hat und wie oft ohne Treffer (vor der Umstellung zu #495: 90 Tage lang) (`LK:323` nennt
   das „nur für den laufenden Tag nachrechenbar“). An einem ruhigen Tag mit einer neuen Aussage aus einer Suche ohne
@@ -761,19 +759,13 @@ Empfänger und Ort“.
 - **Daten, Frist:** Datenbanken; 7 Tages- und 4 Wochenstände (`mvp/scripts/backup/backup.sh:28-29`),
   Gelöschtes bis zu 28 Tage (`DSE:1031-1034`).
 - **Maßnahmen:** nach jeder Wiederherstellung den Löschlauf wiederholen (`DSE:1037-1039`).
-- **Ablage (Stand 25.11.2026, F3):** Das Skript legt den PostgreSQL-Dump und den
-  Qdrant-Snapshot jede Nacht in `/opt/gutgesagt-backups` auf dem Host ab, Verzeichnisse nur für
-  `root` lesbar (`0700`, `Salt:states/gutgesagt/init.sls:199-251`). Die Tagesstände verlassen den
-  Host: Der zentrale Sicherungsserver von verdigado im selben Rechenzentrum holt sie täglich ab
-  und behält 14 Läufe (`Salt:states/backup/files/config.yml.j2:491-511`); damit liegt dort nichts,
-  was älter als drei Wochen ist, innerhalb der vier Wochen, die die Datenschutzerklärung nennt
-  (`DSE:1031-1034`). Der Server holt ab, die Hosts schicken nichts; dafür hat er ein eigenes
-  technisches Konto auf dem Host.
-- **Zugriff (F3, F4):** auf dem Host, wer dort `root` wird (Betriebsteam von verdigado und die
-  Gruppe für gutgesagt*, „Für alle“, Zugriffe), auf dem Sicherungsserver das Betriebsteam von
-  verdigado.
-- **Verschlüsselung (F3):** Maßnahme in Umsetzung beim Betreiber. Das Skript selbst
-  verschlüsselt nicht (`mvp/scripts/backup/backup.sh`).
+- **Ablage (Stand 25.11.2026, F3):** Sicherungen auf dem Host und als Kopie beim Betreiber
+  im selben Rechenzentrum (`Salt:states/gutgesagt/init.sls`,
+  `Salt:states/backup/files/config.yml.j2`); aufbewahrt innerhalb der vier Wochen, die die
+  Datenschutzerklärung nennt (`DSE:1031-1034`).
+- **Zugriff (F3, F4):** wer am Host `root` wird, und das Betriebsteam von verdigado mit dem
+  Sicherungsdienst („Für alle“, Zugriffe).
+- **Verschlüsselung (F3):** Maßnahme in Umsetzung beim Betreiber.
 
 #### V18 Flüchtige Zähler gegen Missbrauch
 
@@ -781,7 +773,7 @@ Rate-Limits für Suche (samt ähnlichen Aussagen unter „Nicht dabei?“, #642)
 oder Kennung nur gekürzt im Arbeitsspeicher, höchstens etwa 16 Minuten, mit Schlüssel je Neustart
 (`DSE:175-180`, `DSE:344-348`, `DSE:398-403`, `DSE:712-717`, `DSE:793-796`). Risiko gering.
 
-#### V19 Zugang von Hand (Beta-Zugang)
+#### V19 Zugang von Hand (Beta-Zugang; abgelöst am 20.11.2026)
 
 - **Zweck, Rechtsgrundlage:** Anmeldung für einzelne Personen ohne Netzbegrünung-Konto, ohne den
   Identitätsdienst; Art. 6 Abs. 1 lit. b (`DSE:198-209`).
@@ -793,8 +785,8 @@ oder Kennung nur gekürzt im Arbeitsspeicher, höchstens etwa 16 Minuten, mit Sc
 - **Risiko:** Wer die Konfigurationsdatei lesen kann, sieht Adressen und Passwort-Prüfsummen.
 - **Stand 25.11.2026:** In Test und Produktion abgelöst. Seit dem Umzug in den eigenen Realm
   (20.11.2026) entfernt die Konfiguration des Hosts die Datei, und die Direktanmeldung ist aus
-  (`Salt:states/gutgesagt/init.sls:193-197`, `Salt:states/gutgesagt/files/docker-compose.yml:98`;
-  PR #738, Fachfrage Absatz 3). Die Beta-Zugänge sind Konten im Realm (V1, V15). Die
+  (`Salt:states/gutgesagt/init.sls`, `Salt:states/gutgesagt/files/docker-compose.yml`;
+  PR #738: Datenschutzerklärung ohne Abschnitt zum Beta-Zugang). Die Beta-Zugänge sind Konten im Realm (V1, V15). Die
   Direktanmeldung bleibt im Code nur für den Entwicklungsstand (`docs/KEYCLOAK_REALM.md`).
 - **Maßnahmen:** Passwort nur als Prüfsumme (`DSE:203-204`); Sperre nach Fehlversuchen
   (`DSE:215-217`).
@@ -886,7 +878,7 @@ Vor dem Einschalten ist diese Prüfung am gebauten Stand zu wiederholen.
   bin“ wählt; gleichwertig daneben „Nein, ohne Team weiter“, nichts vorausgewählt. Davor steht in
   wenigen Sätzen, was gespeichert wird, dass nur die Person es sieht und wie sie widerruft. Gilt
   beim Einlösen ohne Konto wie beim Beitreten mit Konto. Bei Nein bleibt es beim bloßen Zählen
-  an der Einladung (V15). Kein Abzeichen vor dem Ja.
+  an der Einladung (V15).
 - **Daten:** je Mitgliedschaft Kennung, Teamname, Saison, laufende Nummer und Tag des Beitritts;
   eindeutig je Konto, Team und Saison. **Keine Kennung der Einladung** an der Mitgliedschaft:
   Sie verriete den Link und damit, wer eingeladen hat. Als Nachweis (Art. 7 Abs. 1) Kennung des
@@ -896,7 +888,7 @@ Vor dem Einschalten ist diese Prüfung am gebauten Stand zu wiederholen.
 - **Öffentliche Anzeige am Namen:** wird mitgebaut, bleibt aber hinter einem eigenen Schalter
   aus und braucht eine zweite, gesonderte Einwilligung („Team öffentlich am Namen zeigen“,
   Standard nein). Eingeschaltet wird sie erst nach dem Rat der Datenschutzbeauftragten
-  (Abschnitt 6, Frage 8). Kleine Teams nicht öffentlich zeigen.
+  (Abschnitt 6, Frage 8). Mindestgröße eines Teams für die Anzeige: offen (Frage 8).
 - **Frist:** „Team verlassen“ widerruft die Einwilligung für dieses Team und löscht die
   Mitgliedschaft sofort; ebenso mit dem Konto. Die Nummer wird nicht neu vergeben. Nachweise der
   Einwilligung bis zur Kontolöschung. In Sicherungen bis zu deren Ablauf (V17).
@@ -911,8 +903,8 @@ Vor dem Einschalten ist diese Prüfung am gebauten Stand zu wiederholen.
   (Obergrenze `SEMANTIC_SEARCH_TEAMS_AKTIV`) und der Schalter der Anzeige Standard aus;
   Datenschutzerklärung mit eigenem Abschnitt „Teams“ und angepasstem Satz in „Konto aus einer
   Einladung“, Löschkonzept nachgezogen, beides vor dem Einschalten in Produktion.
-- **Rest:** geringes Risiko, solange die Zugehörigkeit nur für die Person selbst sichtbar ist
-  (R10, 8.4); mit öffentlicher Anzeige neu zu prüfen.
+- **Rest:** Risiko (mittlere Klasse, R10, 8.4), hinnehmbar, solange die Zugehörigkeit nur für die
+  Person selbst sichtbar ist; mit öffentlicher Anzeige neu zu prüfen.
 
 #### Geplant, nicht gebaut
 
@@ -929,13 +921,13 @@ empfiehlt sie schon vor dem Einschalten der Punkte.
 | R1 | **Politische Haltung wird sichtbar**: Anzeigename an Beiträgen, Einwürfen und Sätzen für alle Angemeldeten, darunter Nicht-Mitglieder (V1, V3, V4) | nur Angemeldete, nur Vorname und Initial, Kennung nur für Admins; Einwilligung vor dem Beitragen (V2) | geringes Risiko |
 | R2 | **Zuordnung pseudonymer Daten**: Tagespseudonym der Angemeldeten am laufenden Tag nachrechenbar, der Schlüssel ist in Produktion gesetzt (V7, F5), Uhrzeiten im vorgelagerten Webserver (V16) | Tag statt Uhrzeit, Verdichten am Tagesende, Schlüssel der Besucher nur im Speicher, Besucher ohne User-Agent; für Angemeldete am laufenden Tag **offen** | Risiko; geringes Risiko, sobald V7 umgestellt ist |
 | R3 | **Daten Dritter** in Beiträgen, Einwürfen und Suchtexten, auch deren politische Zuordnung (V3, V4, V6), darunter „Gepostet von“ am Post | Hinweise im Formular und in der Erklärung; „Gepostet von“ freiwillig; Melden; Einzelfall-Löschung | Risiko, hinnehmbar |
-| R4 | **Datenpanne oder Zugriff durch Admins**: Kennungen, Meldungen mit Name und E-Mail-Adresse, Muster-Hinweise | Fristen (`LK:150-164`), Kennungen nur gekürzt im Log, keine Weitergabe (`DSE:74-75`); Host nur für benannte Gruppen mit Schlüssel, Datenbanken ohne Port nach außen, eine Admin-Kennung in der App, Sicherungen auch außerhalb des Hosts (F3, F4, Stand 25.11.); AV-Vertrag in Abstimmung (F1), Verschlüsselung der Sicherungen in Umsetzung (F3) | Risiko unter Vorbehalt von 8.6; **hoch**, wenn kein AV-Vertrag Gut gesagt erfasst |
+| R4 | **Datenpanne oder Zugriff durch Admins**: Kennungen, Meldungen mit Name und E-Mail-Adresse, Muster-Hinweise | Fristen (`LK:150-164`), Kennungen nur gekürzt im Log, keine Weitergabe (`DSE:74-75`); Host nur für benannte Gruppen mit Schlüssel, Datenbanken ohne Port nach außen, kleiner Kreis von Admins in der App (F4, Stand 25.11.); Anlage zum AV-Vertrag in Abstimmung (F1), Verschlüsselung der Sicherungen in Umsetzung (F3) | Risiko unter Vorbehalt von 8.6; **hoch**, wenn der bestehende AV-Vertrag Gut gesagt nicht erfasst |
 | R5 | **Protokolle ohne wirksame Frist** mit Altbestand aus Suchtexten und Kennungen (V16) | Ziel 14 Tage (`LK` „Protokolle“), Maßnahme in Umsetzung beim Betreiber (F6); Löschung des Altbestands offen | Risiko, bis umgesetzt und Altbestand gelöscht |
 | R6 | **Löschung von Hand, nie an echten Daten erprobt** (`LK:3-13`, `DSE:1161-1163`) | Skript getestet gegen Testdaten (`LK:531-532`); Backup und Protokoll beim ersten Lauf | Risiko; geringes Risiko nach dem ersten belegten Lauf |
 | R7 | **Scoring und Zweckentfremdung** durch Punkte (V11) | Abschnitt 3 | Risiko (wie Risiko 3) |
 | R8 | **Rückschluss auf einzelne Stimmen** über kleine Zähler oder die Güte (V5) | M5: Summen und Stimmenanteil der Güte erst ab drei verschiedenen Stimmenden, darunter keine Zahl in der Antwort; ohne Startkonten und eigene Stimme; Gewicht der Stimmen gedeckelt (#427) | geringes Risiko |
 | R9 | **Widerruf ohne volle Folgen**: Beiträge, Einwürfe, Sätze (und ohne #658 auch Stimmen) bleiben nach dem Widerruf der Art.-9-Einwilligung mit Kennung und Anzeigenamen (V2) | R9a (#658, gebaut): Stimmen werden beim Widerruf gelöscht; R9b (#661, gebaut als Löschauftrag): ein Admin anonymisiert Beiträge, Einwürfe und Sätze wie bei der Kontolöschung binnen sieben Tagen (V2) | Risiko; geringes Risiko, wenn der Ablauf ohne Admin läuft |
-| R10 | **Teamzugehörigkeit** (geplant, V23): Zuordnung Person – Gruppe – Ort | eigene Einwilligung vor dem Speichern, keine Kennung der Einladung, nur selbst sichtbar, Admins nur Zahlen, Schalter aus; öffentliche Anzeige erst nach Frage 8 | geringes Risiko, solange nur selbst sichtbar |
+| R10 | **Teamzugehörigkeit** (geplant, V23): Zuordnung Person – Gruppe – Ort | eigene Einwilligung vor dem Speichern, keine Kennung der Einladung, nur selbst sichtbar, Admins nur Zahlen, Schalter aus; öffentliche Anzeige erst nach Frage 8 | Risiko, hinnehmbar, solange nur selbst sichtbar |
 
 ### 8.4 Risikomethode und Einstufung (DSK-Kurzpapier Nr. 18)
 
@@ -974,18 +966,20 @@ Entwurfs; sie zu bestätigen oder zu ändern, ist Teil der Beratung (Abschnitt 6
 | R1 Haltung sichtbar | überschaubar | überschaubar: Vorname und Initial, nur Angemeldete | gering | gering |
 | R2 Zuordnung pseudonymer Daten | überschaubar: braucht Datenbank und Konfiguration, nur der laufende Tag | substanziell: kann auf einen Suchtext führen | **Risiko** | gering (V7 umgestellt) |
 | R3 Daten Dritter | substanziell: Beiträge nennen oft Dritte | überschaubar: öffentliche Äußerungen, Melden möglich | **Risiko** | Risiko, hinnehmbar |
-| R4 Datenpanne, Zugriff durch Admins | überschaubar, unter Vorbehalt von 8.6 (F2 und F5 belegt, F3 und F4 teilweise, Stand 25.11.); substanziell, wenn kein AV-Vertrag Gut gesagt erfasst | substanziell: Art.-9-Daten, Name und E-Mail in Meldungen | **Risiko**, im genannten Fall **hoch** | gering (8.6 belegt, Zugriff geregelt) |
+| R4 Datenpanne, Zugriff durch Admins | überschaubar, unter Vorbehalt von 8.6 (F2 und F5 belegt, F3 und F4 teilweise, Stand 25.11.); substanziell, wenn der bestehende AV-Vertrag Gut gesagt nicht erfasst | substanziell: Art.-9-Daten, Name und E-Mail in Meldungen | **Risiko**, im genannten Fall **hoch** | gering (8.6 belegt, Zugriff geregelt) |
 | R5 Protokolle ohne Frist | überschaubar | substanziell: Altbestand mit Suchtexten und Kennungen | **Risiko** | gering (14 Tage ausgerollt, Altbestand gelöscht) |
 | R6 Löschung von Hand | überschaubar: nie an echten Daten gelaufen | substanziell: Art.-9-Daten bleiben | **Risiko** | gering (erster Lauf belegt) |
 | R8 Rückschluss auf Stimmen | geringfügig: Schwelle drei | überschaubar | gering | gering |
 | R9 Widerruf ohne volle Folgen | überschaubar: mit dem Löschauftrag (#661) bleibt die Zuordnung bis zur Ausführung, höchstens sieben Tage, länger nur, wenn ein Admin die Frist versäumt (überfällige hervorgehoben) | substanziell: in dieser Zeit bleibt die Zuordnung politischer Beiträge zur Person ohne Rechtsgrundlage (wie R6), für alle Angemeldeten sichtbar | **Risiko** (vor #661 **hoch**) | gering, wenn der Ablauf ohne Admin läuft: Wahrscheinlichkeit geringfügig |
-| R10 Teamzugehörigkeit (geplant, V23) | geringfügig: nur selbst sichtbar, keine Liste, keine Kennung der Einladung | substanziell: politische Meinung und Ort | gering | gering; mit öffentlicher Anzeige neu einstufen |
+| R10 Teamzugehörigkeit (geplant, V23) | überschaubar: in der App nur selbst sichtbar, keine Liste, keine Kennung der Einladung; wer Zugang zur Datenbank hat, sieht sie aber (wie R2) | substanziell: politische Meinung und Ort | **Risiko** | Risiko; mit öffentlicher Anzeige neu einstufen |
 
 **Gesamtrisiko heute: Risiko**, unter dem Vorbehalt der offenen Fakten (8.6): Mit dem
 Löschauftrag (#661) liegt R9 in der mittleren Klasse, vorher war es **hoch**. **Folgerung zu
 Art. 36:** Nach den Maßnahmen bleibt kein hohes Risiko, solange die offenen Fakten F1 bis F6 (8.6)
-R4 nicht auf hoch heben, also ein AV-Vertrag Gut gesagt erfasst (F1, in Abstimmung) und die
-Maßnahmen zu F3 und F6 umgesetzt sind. Ob die Ausführung von Hand binnen sieben Tagen dafür genügt oder erst der
+R4 nicht auf hoch heben, also der bestehende AV-Vertrag Gut gesagt erfasst (F1, offen; Anlage in
+Abstimmung). Bis das geklärt ist, ist das Gesamtrisiko nicht abschließend eingestuft: Erfasst der
+Vertrag Gut gesagt nicht, sind R4 und das Gesamtrisiko bis zur Anlage **hoch** (Art. 36). Für
+„gering“ bei R4 und R5 braucht es zusätzlich die Maßnahmen zu F3 und F6. Ob die Ausführung von Hand binnen sieben Tagen dafür genügt oder erst der
 vollautomatische Ablauf, ist Frage 7 an die Datenschutzbeauftragte.
 Nach den offenen Maßnahmen bleibt Risiko bei Risiko 3 und R3;
 beide sind hinnehmbar, Risiko 3 nur, solange die Punkte aus sind oder die Bilanz nichts
@@ -1039,15 +1033,15 @@ Angemeldeten (V7), Protokolle, bis die Frist umgesetzt ist (V16).
 
 Diese Angaben standen am 13.11.2026 nicht im Repo. Die DSFA erfindet sie nicht; wer sie belegt,
 trägt sie hier und an den genannten Stellen nach. Spalte „Stand 25.11.2026“: belegt aus der
-Konfiguration des Betreibers (`Salt:…` @ `dc42c183`) oder aus Tickets dieses Repos.
+Konfiguration des Betreibers (`Salt:…`, Stand 24.11.2026) oder aus Tickets dieses Repos.
 
 | # | Offen | Warum es zählt | Stand 25.11.2026 | Stellen |
 |---|---|---|---|---|
-| F1 | **AV-Vertrag** mit verdigado: erfasst er Gut gesagt mit Zweck, Datenarten (auch Art. 9) und Betroffenen (Art. 28 Abs. 3)? Rolle von Hetzner? | Ohne Vertrag fehlt die Grundlage für die Verarbeitung bei verdigado, und die Aussage der Datenschutzerklärung stimmt nicht. | **offen:** AV-Vertrag mit verdigado in Abstimmung (Entwurf mit Anlage „Gut gesagt“, Verhältnis zum Rahmenvertrag offen). **Belegt:** gutgesagt* im Rechenzentrum von verdigado in Nürnberg; Hetzner nur noch für die Altsysteme unter dem früheren Projektnamen bis zum Abbau (#206). | „Für alle“, R4, #506 |
-| F2 | **SMTP-Server** in Produktion: welcher, wer betreibt ihn? Ebenso der Mailversand des Anmeldedienstes. | Mails tragen E-Mail-Adresse und Anlass (Meldung, Entscheidung). | **belegt:** `mail.verdigado.net`, betrieben von verdigado, Port 465 mit TLS (`Salt:states/gutgesagt/files/docker-compose.yml:59-62`); Mails beim Einlösen einer Einladung über dasselbe Postfach. | „Für alle“ |
-| F3 | **Sicherungen**: Verschlüsselung, Ablage außerhalb des Hosts, Zugriff. Das Skript selbst verschlüsselt nicht. | Sicherungen halten alles bis zu 28 Tage, auch Gelöschtes. | **belegt:** Ablage auf dem Host nur für `root`, Tagesstände zusätzlich auf dem Sicherungsserver von verdigado, 14 Läufe (`Salt:states/gutgesagt/init.sls:199-251`, `Salt:states/backup/files/config.yml.j2:491-511`). **Verschlüsselung:** Maßnahme in Umsetzung. | V17, R4 |
-| F4 | **Rollen und Zugriff**: wer Admin ist, wer an Host, Datenbank, Konfiguration und die Datei der Beta-Zugänge kommt, wie Zugänge vergeben und entzogen werden. | Admins sehen Kennungen, Meldungen mit Name und E-Mail-Adresse, Muster-Hinweise. | **belegt:** eine Admin-Kennung in Produktion, nur über die Liste, die Realm-Vorlage setzt keinen Claim; Host nur für das Betriebsteam von verdigado und eine Gruppe von zwei Konten (eines davon im Betriebsteam), Anmeldung nur mit Schlüssel; Datenbank und Konfiguration nur über `root`; Datei der Beta-Zugänge entfernt. **offen:** Admin-Claim im laufenden Realm, Mitglieder der Passbolt-Gruppe, Ablauf für Vergabe und Entzug. | „Für alle“, R4, V19 |
-| F5 | **Schlüssel des Tagespseudonyms** der Angemeldeten (`SEMANTIC_SEARCH_ACTOR_HASH_SECRET`): in Produktion gesetzt? | Davon hängt ab, ob das Pseudonym am laufenden Tag nachrechenbar ist. | **belegt: ja** (`Salt:states/gutgesagt/files/docker-compose.yml:54`, aus Passbolt). Folge: V7 und R2 gelten wie beschrieben; Abhilfe ist Abschnitt 9, Punkt 3. | V7, R2 |
+| F1 | **AV-Vertrag** mit verdigado: erfasst er Gut gesagt mit Zweck, Datenarten (auch Art. 9) und Betroffenen (Art. 28 Abs. 3)? Rolle von Hetzner? | Ohne Vertrag fehlt die Grundlage für die Verarbeitung bei verdigado, und die Aussage der Datenschutzerklärung stimmt nicht. | **offen:** ob der bestehende Rahmenvertrag Gut gesagt erfasst; Anlage „Gut gesagt“ mit verdigado in Abstimmung, Verhältnis zum Rahmenvertrag offen. **Belegt:** gutgesagt* im Rechenzentrum von verdigado in Nürnberg; Hetzner nur noch für die Altsysteme unter dem früheren Projektnamen bis zum Abbau (#206). | „Für alle“, R4, #506 |
+| F2 | **SMTP-Server** in Produktion: welcher, wer betreibt ihn? Ebenso der Mailversand des Anmeldedienstes. | Mails tragen E-Mail-Adresse und Anlass (Meldung, Entscheidung). | **belegt:** `mail.verdigado.net`, betrieben von verdigado, Port 465 mit TLS (`Salt:states/gutgesagt/files/docker-compose.yml`). **offen:** Mailversand des Anmeldedienstes (Einstellung des Realms). | „Für alle“ |
+| F3 | **Sicherungen**: Verschlüsselung, Ablage außerhalb des Hosts, Zugriff. | Sicherungen halten alles bis zu 28 Tage, auch Gelöschtes. | **belegt:** Ablage auf dem Host und als Kopie beim Betreiber im selben Rechenzentrum, innerhalb der Frist der Datenschutzerklärung (`Salt:states/gutgesagt/init.sls`, `Salt:states/backup/files/config.yml.j2`). **Verschlüsselung:** Maßnahme in Umsetzung. | V17, R4 |
+| F4 | **Rollen und Zugriff**: wer Admin ist, wer an Host, Datenbank, Konfiguration und die Datei der Beta-Zugänge kommt, wie Zugänge vergeben und entzogen werden. | Admins sehen Kennungen, Meldungen mit Name und E-Mail-Adresse, Muster-Hinweise. | **belegt:** Admins in Produktion ein kleiner Kreis, nur über die Liste, die Realm-Vorlage setzt keinen Claim; Host nur für das Betriebsteam von verdigado und eine kleine Gruppe für gutgesagt*, Anmeldung nur mit Schlüssel; Datenbank und Konfiguration nur über `root`; Datei der Beta-Zugänge entfernt. **offen:** Admin-Claim im laufenden Realm, Mitglieder der Passbolt-Gruppe, Ablauf für Vergabe und Entzug. | „Für alle“, R4, V19 |
+| F5 | **Schlüssel des Tagespseudonyms** der Angemeldeten (`SEMANTIC_SEARCH_ACTOR_HASH_SECRET`): in Produktion gesetzt? | Davon hängt ab, ob das Pseudonym am laufenden Tag nachrechenbar ist. | **belegt: ja** (`Salt:states/gutgesagt/files/docker-compose.yml`, aus Passbolt). Folge: V7 und R2 gelten wie beschrieben; Abhilfe ist Abschnitt 9, Punkt 3. | V7, R2 |
 | F6 | **Frist der Protokolle** am Host: 14 Tage ausgerollt, Altbestand gelöscht? | Speicherbegrenzung, Altbestand mit Suchtexten. | **Frist:** Maßnahme in Umsetzung (#485, #336). **Altbestand:** offen, Prüfung durch den Betreiber. | V16, R5 |
 
 ## 9. Offene Entscheidungen für den Maintainer
@@ -1065,7 +1059,7 @@ Konfiguration des Betreibers (`Salt:…` @ `dc42c183`) oder aus Tickets dieses R
    offen.** Der Code nimmt weiter den Schlüssel aus der Konfiguration
    (`ss/services/search_tracking_service.py`), und er ist in Produktion gesetzt (F5).
 4. **Frist für Protokolle** (V16): 14 Tage für Anwendung und Frontend-nginx am Host ausrollen
-   (`LK:511-519`, Stand 30.10.2026; Tickets #485 und #336) und den Altbestand mit Suchtexten und
+   (`LK` „Protokolle“; Tickets #485 und #336) und den Altbestand mit Suchtexten und
    Kennungen löschen. Das ist Betrieb am Host, nicht Code. **Stand 25.11.2026:** Maßnahme in
    Umsetzung beim Betreiber; Löschung des Altbestands offen, Prüfung durch den Betreiber (F6).
 5. **Formales:** Wer übernimmt die DSFA (Vorstand mit Datenschutzbeauftragter, Art. 35 Abs. 2)?
@@ -1081,7 +1075,7 @@ Konfiguration des Betreibers (`Salt:…` @ `dc42c183`) oder aus Tickets dieses R
    Empfehlung: eigenes Ticket. **Stand 25.11.2026: offen.** Der Löschauftrag wird weiter von
    einem Admin ausgeführt (`ss/services/loeschauftrag_service.py`, `ausfuehren`); der tägliche
    Lauf räumt nur erledigte Aufträge nach einem Jahr ab (`ss/services/loeschfristen_service.py`).
-   In Produktion gibt es eine Admin-Kennung (F4); an ihr hängt die Frist von sieben Tagen.
+   Die Frist von sieben Tagen hängt am kleinen Kreis der Admins (F4); Vertretung regeln.
 8. **Offene Fakten** (8.6): F1 bis F6 belegen, vor allem den AV-Vertrag (F1), bevor Art.-9-Daten
    echter Personen verarbeitet werden. **Stand 25.11.2026:** F2 und F5 belegt, F3 und F4
    teilweise, F1 (AV-Vertrag in Abstimmung) und F6 offen (8.6).
