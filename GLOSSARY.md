@@ -662,7 +662,7 @@ Der Zeitraum, zu dem ein Team gehört, frei benannt, höchstens 20 Zeichen, etwa
 _Avoid_: Season, Staffel, Spielzeit
 
 **Gemeinschaftsziel**:
-Das Ziel aller zusammen in einer Saison, gezählt in Widerspruchs-Wochen und auf der Startseite als Fortschrittsbalken gezeigt, auch ohne Konto. Für alle sichtbar erst, wenn es einmal drei abgeschlossene Wochen hintereinander mit je mindestens 25 verschiedenen Menschen gab, die „Ja, gepostet“ gemeldet haben (Stellschrauben `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_WOCHEN` und `_MENSCHEN`; die Datenschutzerklärung nennt die Zahlen; wer eine der beiden ändert, zieht den Satz dort nach); vorher sehen nur Admins den Stand. Kein Ende und keine Frist im Balken, nichts verfällt. Nur mit dem Schalter `saison_ziel`.
+Das Ziel aller zusammen in einer Saison, gezählt in Widerspruchs-Wochen und auf der Startseite als Fortschrittsbalken gezeigt, auch ohne Konto. Für alle sichtbar erst, wenn es einmal drei abgeschlossene Wochen hintereinander mit je mindestens 25 verschiedenen Menschen gab, die „Ja, gepostet“ gemeldet haben (Stellschrauben `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_WOCHEN` und `_MENSCHEN`; die Datenschutzerklärung nennt die Zahlen; wer eine der beiden ändert, zieht den Satz dort nach); vorher sehen nur Admins den Stand. Weil die Schwelle aus Wochen vor der Saison stammen kann, kann der Bereich schon am Saisonstart erscheinen; solange die Saisonzahl 0 ist, zeigt er statt „0-mal“ und leerem Balken einen Startsatz mit dem Ziel. Kein Ende und keine Frist im Balken, nichts verfällt. Nur mit dem Schalter `saison_ziel`.
 _Avoid_: Challenge, Quest (die bringt Punkte)
 
 **Widerspruchs-Woche**:

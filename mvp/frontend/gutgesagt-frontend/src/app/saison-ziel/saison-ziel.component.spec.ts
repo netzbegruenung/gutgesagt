@@ -98,6 +98,38 @@ describe('SaisonZielComponent', () => {
     expect(balken.getAttribute('aria-describedby')).toBe('saison-ziel-stand');
   });
 
+  it('am Saisonstart: Startsatz statt „0-mal“, kein leerer Balken', () => {
+    fixture.detectChanges();
+    http.expectOne(URL).flush({ balken: { name: 'Winter 26/27', ziel: 500, erreicht: 0 } });
+    fixture.detectChanges();
+
+    expect(bereich()).not.toBeNull();
+    expect(text()).toContain(
+      'Saison Winter 26/27 hat begonnen: Jedes „Ja, gepostet“ nach dem Kopieren zählt für unser gemeinsames Ziel.',
+    );
+    expect(text()).toContain('Ziel: 500 Widerspruchs-Wochen.');
+    expect(text()).not.toMatch(/\b0-mal|\b0 von/);
+    expect(text()).not.toMatch(/verfehlt|noch \d+ Tage|bis zum|endet/);
+    expect(fixture.nativeElement.querySelector('progress')).toBeNull();
+    // Die Überschrift benennt den Bereich weiter für Screenreader
+    expect(bereich()!.getAttribute('aria-labelledby')).toBe('saison-ziel-titel');
+  });
+
+  it('wechselt nach der ersten gezählten Woche von selbst zum Balken', fakeAsync(() => {
+    fixture.detectChanges();
+    http.expectOne(URL).flush({ balken: { name: 'Winter 26/27', ziel: 500, erreicht: 0 } });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('progress')).toBeNull();
+
+    tick(SAISON_NACHLADEN_MS);
+    http.expectOne(URL).flush({ balken: { name: 'Winter 26/27', ziel: 500, erreicht: 1 } });
+    fixture.detectChanges();
+    expect(text()).toContain('Woche für Woche zusammen 1-mal öffentlich widersprochen.');
+    const balken: HTMLProgressElement = fixture.nativeElement.querySelector('progress');
+    expect(balken.value).toBe(1);
+    fixture.destroy();
+  }));
+
   it('nennt kein Ende und keine Frist', () => {
     fixture.detectChanges();
     http.expectOne(URL).flush({ balken: { name: 'Winter 26', ziel: 100, erreicht: 10 } });
