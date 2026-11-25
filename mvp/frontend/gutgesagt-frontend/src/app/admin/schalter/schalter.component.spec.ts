@@ -199,6 +199,20 @@ describe('SchalterComponent', () => {
       );
     });
 
+    it('erklärt die Kette Teams → Team-Fortschritt → Team-Quests', () => {
+      mitEinstellungen([
+        schalter({ name: 'teams', admin_wert: false, wirksam: false }),
+        schalter({ name: 'team_fortschritt', admin_wert: true, wirksam: false }),
+        schalter({ name: 'team_quests', admin_wert: true, wirksam: false }),
+      ]);
+
+      const [, fortschritt, quests] = karten().map((k) =>
+        (k.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim(),
+      );
+      expect(fortschritt).toBe('Admin: an · wirksam: aus, weil Teams aus');
+      expect(quests).toBe('Admin: an · wirksam: aus, weil Team-Fortschritt aus');
+    });
+
     it('sagt, wenn eine laufende Saison die Einstellung ersetzt (#782)', () => {
       const hinweis = 'Gilt gerade nicht: Die Saison „Winter 26“ ist die aktuelle Saison der Teams, bis die nächste beginnt (Abschnitt Saisons).';
       mitEinstellungen([schalter({ name: 'teams' })], [{ ...SAISON, hinweis }]);
