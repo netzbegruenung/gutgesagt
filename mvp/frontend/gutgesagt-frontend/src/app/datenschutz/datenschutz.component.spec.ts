@@ -1028,12 +1028,22 @@ describe('DatenschutzComponent', () => {
       const text = mitSchalter(true);
       expect(text).toContain(`unter dem Schlüssel „${FEIER_TON_SCHLUESSEL}“`);
       expect(text).toContain('Der Eintrag enthält nur, dass der Ton an ist, und keine Angaben über dich');
-      expect(text).toContain('schaltest du ihn aus, löschen wir den Eintrag');
+      expect(text).toContain('schaltest du ihn dort wieder aus, löschen wir den Eintrag');
       expect(text).toContain('bis du ihn änderst');
     });
 
     it('Schalter aus: kein Absatz', () => {
+      localStorage.removeItem(FEIER_TON_SCHLUESSEL);
       expect(mitSchalter(false)).not.toContain('Ton bei Erfolgen');
+    });
+
+    it('Schalter aus, Eintrag aber noch im Browser: der Absatz bleibt', () => {
+      localStorage.setItem(FEIER_TON_SCHLUESSEL, '1');
+      try {
+        expect(mitSchalter(false)).toContain(`unter dem Schlüssel „${FEIER_TON_SCHLUESSEL}“`);
+      } finally {
+        localStorage.removeItem(FEIER_TON_SCHLUESSEL);
+      }
     });
   });
 });

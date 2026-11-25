@@ -106,6 +106,33 @@ describe('Feier-Moment (#787)', () => {
       expect(attrappe.gestartet.length).toBe(3);
     });
 
+    it('bleibt still, wenn die Freigabe erst nach mehr als einer Sekunde kommt', async () => {
+      localStorage.setItem(FEIER_TON_SCHLUESSEL, '1');
+      attrappe.state = 'suspended';
+      let freigeben: () => void = () => undefined;
+      attrappe.resume.and.callFake(
+        () =>
+          new Promise<void>((fertig) => {
+            freigeben = () => {
+              attrappe.state = 'running';
+              fertig();
+            };
+          }),
+      );
+      jasmine.clock().install();
+      try {
+        jasmine.clock().mockDate(new Date(2026, 10, 25, 12, 0, 0));
+        ton().spielen();
+        jasmine.clock().tick(1500);
+        freigeben();
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(attrappe.gestartet.length).toBe(0);
+      } finally {
+        jasmine.clock().uninstall();
+      }
+    });
+
     it('bleibt still ohne Web Audio', () => {
       localStorage.setItem(FEIER_TON_SCHLUESSEL, '1');
       gebaut.and.returnValue(null);
@@ -135,11 +162,8 @@ describe('Feier-Moment (#787)', () => {
       TestBed.configureTestingModule({ providers: [{ provide: FEIER_BEWEGUNG, useValue: bewegung }] });
       const fixture = TestBed.createComponent(FeierKeimComponent);
       fixture.detectChanges();
-      document.body.appendChild(fixture.nativeElement);
       return fixture.nativeElement as HTMLElement;
     }
-
-    afterEach(() => document.querySelectorAll('app-feier-keim').forEach((el) => el.remove()));
 
     it('ist reine Zierde: für Screenreader verborgen', () => {
       expect(keim(true).getAttribute('aria-hidden')).toBe('true');

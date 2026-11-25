@@ -1158,11 +1158,11 @@
         Browser, welche du schon gesehen hast. Der Vermerk enthält keine Angaben über dich,
         geht nicht an uns und wird beim Abmelden und beim nächsten Anmelden gelöscht.
       </p>
-      <p *ngIf="tonBeiErfolgen()">
+      <p *ngIf="tonBeiErfolgen() || feierTon.an()">
         Schaltest du bei einem Erfolg, etwa „Lücke zu!“, den „Ton bei Erfolgen“ ein, merkt sich
         dein Browser das unter dem Schlüssel „gutgesagt-ton-bei-erfolgen“, damit der kurze Ton
         auch beim nächsten Mal spielt. Der Eintrag enthält nur, dass der Ton an ist, und keine
-        Angaben über dich; schaltest du ihn aus, löschen wir den Eintrag. Er bleibt, <strong>bis
+        Angaben über dich; schaltest du ihn dort wieder aus, löschen wir den Eintrag. Er bleibt, <strong>bis
         du ihn änderst</strong> oder die Websitedaten dieser Seite löschst, und geht nicht an uns.
         Den Ton erzeugt dein Browser selbst, dafür wird nichts geladen.
       </p>
