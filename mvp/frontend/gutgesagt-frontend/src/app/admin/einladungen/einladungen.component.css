@@ -23,7 +23,11 @@
   width: 260px;
 }
 
+/* Die Tabelle richtet sich nach ihrer eigenen Breite, nicht nach dem Fenster: neben der
+   Admin-Navigation ist sie auf dem Tablet schmaler als das Fenster. Unter 900 px Karten,
+   darueber Tabelle; wird es doch zu eng, scrollt nur sie. */
 .tabelle-rahmen {
+  container: einladungen / inline-size;
   overflow-x: auto;
 }
 
@@ -172,11 +176,27 @@ td.text {
 
 .link-text {
   flex: 1 1 auto;
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+/* Der Ursprung ist in jeder Zeile gleich und wird zuerst gekuerzt; danach erst der Code,
+   dessen Anfang die Links unterscheidet */
+.link-ursprung,
+.link-pfad {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
+}
+
+.link-ursprung {
+  flex: 0 1000 auto;
+}
+
+.link-pfad {
+  flex: 0 1 auto;
 }
 
 .kopieren {
@@ -209,8 +229,8 @@ tr.inaktiv td {
   margin-top: 12px;
 }
 
-/* Mobil jede Einladung als Karte statt Tabelle, in der die Notiz einen Buchstaben je Zeile bekam */
-@media (max-width: 599px) {
+/* Schmal jede Einladung als Karte statt Tabelle, in der die Notiz einen Buchstaben je Zeile bekam */
+@container einladungen (max-width: 899px) {
   table,
   tbody,
   tr,
@@ -250,7 +270,13 @@ tr.inaktiv td {
   }
 
   .link-text {
+    display: block;
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  .link-ursprung,
+  .link-pfad {
+    overflow: visible;
   }
 }

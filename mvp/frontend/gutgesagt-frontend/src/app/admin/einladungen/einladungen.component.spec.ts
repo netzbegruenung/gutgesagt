@@ -374,16 +374,46 @@ describe('EinladungenComponent', () => {
       expect(el().querySelectorAll('[data-testid="einladung"]').length).toBe(1);
     });
 
-    it('bricht die Team-Pille in der Tabelle nicht mitten im Wort um', () => {
-      mitTeams([{ ...TEAMLINK, team: { ...TEAMLINK.team!, name: 'Selbsttest' } }]);
+    it('setzt ohne Schalter teams das Formular ebenso ohne Fehleranzeige zurück', async () => {
+      mitTeams([], false);
+      await ruhe();
+      const k = fixture.componentInstance;
+      tippen('notiz', 'Persönlicher Link');
+      tippen('erlaubteEinloesungen', '5');
+      tippen('gueltigBis', '2026-12-24');
+      fixture.detectChanges();
 
-      const zelle = el().querySelector('[data-testid="team"]') as HTMLElement;
-      const name = zelle.querySelector('app-team-pille .name') as HTMLElement;
-      expect(getComputedStyle(zelle).overflowWrap).toBe('normal');
-      expect(getComputedStyle(name).overflowWrap).toBe('break-word');
-      // Eine Zeile: der Name ist so hoch wie eine Zeile seiner Schrift, nicht drei
-      const zeile = parseFloat(getComputedStyle(name).lineHeight);
-      expect(name.getBoundingClientRect().height).toBeLessThan(zeile * 1.5);
+      (el().querySelector('button[type="submit"]') as HTMLButtonElement).click();
+      http.expectOne((r) => r.method === 'POST' && r.url === URL).flush({ ...GRUPPE, id: 'e2', notiz: 'Persönlicher Link' });
+      fixture.detectChanges();
+      await ruhe();
+      fixture.detectChanges();
+
+      expect(k.notiz).toBe('');
+      expect(k.erlaubteEinloesungen).toBe(1);
+      expect(k.gueltigBis).not.toBe('2026-12-24');
+      expect((el().querySelector('input[name="erlaubteEinloesungen"]') as HTMLInputElement).value).toBe('1');
+      expect(el().querySelector('form .mat-form-field-invalid')).toBeNull();
+    });
+
+    it('bricht die Team-Pille in einer engen Tabelle nicht mitten im Wort um', () => {
+      // Knapp über der Kartenbreite, mit langer Notiz: die Tabelle ist zu eng und gibt jeder
+      // Spalte nur ihre Mindestbreite. Vorher war die der Pille ein Buchstabe („Sel / bstt / est“).
+      (fixture.nativeElement as HTMLElement).style.display = 'block';
+      (fixture.nativeElement as HTMLElement).style.width = '960px';
+      mitTeams([
+        { ...TEAMLINK, team: { ...TEAMLINK.team!, name: 'Selbsttest' } },
+        { ...TEAMLINK, id: 't2', notiz: 'Kreisverband Beispielstadt, Infostand am Wochenmarkt', team: { ...TEAMLINK.team!, name: 'Grüne Jugend Beispielstadt' } },
+      ]);
+
+      expect(el().querySelector('thead')!.getBoundingClientRect().height).toBeGreaterThan(0);
+      for (const name of Array.from(el().querySelectorAll('[data-testid="team"] app-team-pille .name')) as HTMLElement[]) {
+        // Jedes Wort passt in die Breite der Pille: kein Wort ist breiter als sein Kasten
+        expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth + 1);
+      }
+      const selbsttest = el().querySelector('[data-testid="team"] app-team-pille .name') as HTMLElement;
+      const zeile = parseFloat(getComputedStyle(selbsttest).lineHeight);
+      expect(selbsttest.getBoundingClientRect().height).toBeLessThan(zeile * 1.5);
     });
 
     it('zeigt den Kopier-Knopf neben dem gekürzten Link, mit Namen und mindestens 24 px', () => {

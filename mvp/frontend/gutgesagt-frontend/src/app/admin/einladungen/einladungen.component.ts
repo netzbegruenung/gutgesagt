@@ -215,7 +215,8 @@ export class EinladungenComponent implements OnInit {
    * Alles wieder auf Standard (persoenlicher Link, zwei Wochen, Saison-Vorschlag, erstes Motiv).
    * resetForm nimmt auch "abgeschickt" und "beruehrt" zurueck: Sonst stand die geleerte
    * Pflicht-Notiz sofort rot im Fehlerzustand. Felder ohne Steuerelement (Teamblock aus)
-   * bekommen den Wert direkt.
+   * bekommen den Wert direkt. Ein neues Formularfeld gehoert hier mit hinein: Fehlt es, setzt
+   * resetForm es auf null, und kannAnlegen scheitert an null.trim().
    */
   private zuruecksetzen() {
     const standard = {
@@ -244,6 +245,17 @@ export class EinladungenComponent implements OnInit {
 
   link(einladung: Einladung): string {
     return einladungslink(einladung.code);
+  }
+
+  /** Der Link in zwei Teilen: Ursprung (gleich in jeder Zeile, wird zuerst gekuerzt) und Pfad mit Code. */
+  ursprung(einladung: Einladung): string {
+    const link = this.link(einladung);
+    return link.slice(0, link.lastIndexOf('/einladung#'));
+  }
+
+  pfad(einladung: Einladung): string {
+    const link = this.link(einladung);
+    return link.slice(link.lastIndexOf('/einladung#'));
   }
 
   kopieren(einladung: Einladung) {

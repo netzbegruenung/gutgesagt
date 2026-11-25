@@ -99,55 +99,56 @@
     </p>
 
     <ng-container *ngIf="einladungen">
-      <!-- Wird es doch zu eng (Tablet), scrollt nur die Tabelle, nicht die Seite -->
+      <!-- Schmal Karten, breit Tabelle (Container-Abfrage im CSS); zu eng scrollt nur die Tabelle -->
       <div class="tabelle-rahmen" *ngIf="einladungen.length > 0; else leer">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Notiz</th>
-            <th *ngIf="teamsAktiv" scope="col">Team</th>
-            <th *ngIf="teamsAktiv" scope="col">Mitglieder</th>
-            <th scope="col">Eingelöst</th>
-            <th scope="col">Gültig bis</th>
-            <th scope="col">Zustand</th>
-            <th scope="col">Link</th>
-            <th scope="col"><span class="unsichtbar">Aktion</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let e of einladungen" data-testid="einladung" [class.inaktiv]="e.zustand !== 'aktiv'">
-            <td class="text" data-label="Notiz">{{ e.notiz }}</td>
-            <td *ngIf="teamsAktiv" class="team" data-label="Team" data-testid="team">
-              <app-team-pille *ngIf="e.team; else ohneTeam" [name]="e.team.name" [motiv]="e.team.motiv"
-                              [saison]="e.team.saison" [klein]="true"></app-team-pille>
-              <span *ngIf="e.team?.art === 'gruppe'" class="hinweis team-art" data-testid="team-art-zeile">
-                Nach Gruppe<ng-container *ngIf="e.team?.zustimmung_am">, Zustimmung vom {{ tag(e.team!.zustimmung_am!) }}</ng-container>
-              </span>
-            </td>
-            <td *ngIf="teamsAktiv" class="eng" data-label="Mitglieder" data-testid="mitglieder">
-              <ng-container *ngIf="e.team; else ohneTeam">{{ e.team.mitglieder }}</ng-container>
-            </td>
-            <td class="eng" data-label="Eingelöst">{{ e.einloesungen }} von {{ e.erlaubte_einloesungen }}</td>
-            <td class="eng" data-label="Gültig bis">{{ tag(e.gueltig_bis) }}</td>
-            <td class="eng" data-label="Zustand">{{ e.zustand | titlecase }}</td>
-            <td class="link" data-label="Link">
-              <!-- Link gekuerzt in einer Zeile, ganz im Titel und beim Markieren; der Knopf daneben, nie darueber -->
-              <div class="link-zeile">
-                <code class="link-text" [title]="link(e)" data-testid="link-text">{{ link(e) }}</code>
-                <button mat-icon-button type="button" class="kopieren" data-testid="kopieren" (click)="kopieren(e)"
-                        [attr.aria-label]="'Link kopieren: ' + e.notiz">
-                  <mat-icon>{{ kopiert === e.id ? 'check' : 'content_copy' }}</mat-icon>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Notiz</th>
+              <th *ngIf="teamsAktiv" scope="col">Team</th>
+              <th *ngIf="teamsAktiv" scope="col">Mitglieder</th>
+              <th scope="col">Eingelöst</th>
+              <th scope="col">Gültig bis</th>
+              <th scope="col">Zustand</th>
+              <th scope="col">Link</th>
+              <th scope="col"><span class="unsichtbar">Aktion</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let e of einladungen" data-testid="einladung" [class.inaktiv]="e.zustand !== 'aktiv'">
+              <td class="text" data-label="Notiz">{{ e.notiz }}</td>
+              <td *ngIf="teamsAktiv" class="team" data-label="Team" data-testid="team">
+                <app-team-pille *ngIf="e.team; else ohneTeam" [name]="e.team.name" [motiv]="e.team.motiv"
+                                [saison]="e.team.saison" [klein]="true"></app-team-pille>
+                <span *ngIf="e.team?.art === 'gruppe'" class="hinweis team-art" data-testid="team-art-zeile">
+                  Nach Gruppe<ng-container *ngIf="e.team?.zustimmung_am">, Zustimmung vom {{ tag(e.team!.zustimmung_am!) }}</ng-container>
+                </span>
+              </td>
+              <td *ngIf="teamsAktiv" class="eng" data-label="Mitglieder" data-testid="mitglieder">
+                <ng-container *ngIf="e.team; else ohneTeam">{{ e.team.mitglieder }}</ng-container>
+              </td>
+              <td class="eng" data-label="Eingelöst">{{ e.einloesungen }} von {{ e.erlaubte_einloesungen }}</td>
+              <td class="eng" data-label="Gültig bis">{{ tag(e.gueltig_bis) }}</td>
+              <td class="eng" data-label="Zustand">{{ e.zustand | titlecase }}</td>
+              <td class="link" data-label="Link">
+                <!-- Link gekuerzt in einer Zeile: erst der Ursprung, dann der Code; ganz im Titel und beim Markieren.
+                   Der Knopf daneben, nie darueber. Zwischen den Spans kein Leerzeichen. -->
+                <div class="link-zeile">
+                  <code class="link-text" [title]="link(e)" data-testid="link-text"><span class="link-ursprung">{{ ursprung(e) }}</span><span class="link-pfad">{{ pfad(e) }}</span></code>
+                  <button mat-icon-button type="button" class="kopieren" data-testid="kopieren" (click)="kopieren(e)"
+                          [attr.aria-label]="'Link kopieren: ' + e.notiz">
+                    <mat-icon>{{ kopiert === e.id ? 'check' : 'content_copy' }}</mat-icon>
+                  </button>
+                </div>
+              </td>
+              <td class="eng">
+                <button mat-stroked-button type="button" data-testid="schalten" (click)="schalten(e)">
+                  {{ e.abgeschaltet ? 'Einschalten' : 'Abschalten' }}
                 </button>
-              </div>
-            </td>
-            <td class="eng">
-              <button mat-stroked-button type="button" data-testid="schalten" (click)="schalten(e)">
-                {{ e.abgeschaltet ? 'Einschalten' : 'Abschalten' }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
       <ng-template #ohneTeam><span class="hinweis"><span aria-hidden="true">–</span><span class="unsichtbar">kein Team</span></span></ng-template>
       <ng-template #leer>
