@@ -91,6 +91,40 @@ class GeseheneNutzungRepository:
             )
             return 0 if gesehen is None else einwuerfe_jetzt - gesehen
 
+    def neues_echo_seit_letztem_besuch(self, user_id: str, echo_jetzt: int) -> int:
+        """
+        Wie oft die eigenen Beitraege seit dem zuletzt gezeigten Stand als oeffentlich
+        gepostet gemeldet wurden (Wirkungs-Echo, #790); danach gilt ``echo_jetzt`` als
+        gezeigt.
+
+        Ohne Stand (neue Zeile oder NULL nach der Migration) ist der Stand 0 wie bei
+        der Nutzung: Die Summe zaehlt erst seit dem Schalter, nichts davon war schon
+        Thema. Wie bei der Nutzung sinkt der Stand nie, und die Antwort ist nie negativ
+        (ein geloeschter Beitrag nimmt seine Summe mit).
+        """
+        with self.db.get_session() as session:
+            session.execute(
+                insert(GeseheneNutzung)
+                .values(user_id=user_id, nutzung=0, echo=None)
+                .on_conflict_do_nothing(index_elements=[GeseheneNutzung.user_id])
+            )
+            gesehen = (
+                session.execute(
+                    select(GeseheneNutzung.echo)
+                    .where(GeseheneNutzung.user_id == user_id)
+                    .with_for_update()
+                ).scalar_one()
+                or 0
+            )
+            if echo_jetzt <= gesehen:
+                return 0
+            session.execute(
+                update(GeseheneNutzung)
+                .where(GeseheneNutzung.user_id == user_id)
+                .values(echo=echo_jetzt)
+            )
+            return echo_jetzt - gesehen
+
 
 _repository: Optional[GeseheneNutzungRepository] = None
 

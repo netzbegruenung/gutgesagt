@@ -421,7 +421,7 @@ describe('UsageTrackingService', () => {
       return () => ergebnis;
     }
 
-    it('gezaehlt oder schon', () => {
+    it('gezaehlt oder nicht gezaehlt, ohne Grund zu behaupten', () => {
       const erstes = danke();
       const anfrage = http.expectOne(DANKE);
       expect(anfrage.request.method).toBe('POST');
@@ -431,7 +431,7 @@ describe('UsageTrackingService', () => {
 
       const zweites = danke();
       http.expectOne(DANKE).flush({ gezaehlt: false });
-      expect(zweites()).toBe('schon');
+      expect(zweites()).toBe('nicht_gezaehlt');
     });
 
     it('403 und 404 still als nicht angeboten, sonst Fehler mit Log', () => {

@@ -142,10 +142,11 @@ class BesuchResponse(BaseModel):
     # (#760, services/antworten_hinweis.py). None, solange der Schalter
     # antworten_hinweis aus ist: Dann zeigt das Frontend weder Kachel noch Reiter.
     antworten_auf_eigene_aussagen: Optional[int] = None
-    # Wirkungs-Echo (#790): wie oft die eigenen Beitraege insgesamt als oeffentlich
-    # gepostet gemeldet wurden. Eine Summe, kein Stand und kein Zeitraum (am Zaehler
-    # steht kein Zeitpunkt). None, solange der Schalter wirkungs_echo aus ist.
-    oeffentlich_gepostet: Optional[int] = None
+    # Wirkungs-Echo (#790): wie oft die eigenen Beitraege seit dem letzten Besuch als
+    # oeffentlich gepostet gemeldet wurden, als Zaehlerstand wie die Nutzung
+    # (gesehene_nutzung.echo, kein Zeitpunkt). None, solange der Schalter
+    # wirkungs_echo aus ist.
+    neu_oeffentlich_gepostet: Optional[int] = None
 
 
 # So lange warten die Nebenzahlen (alles ausser der Nutzung) hoechstens; danach gilt
@@ -832,7 +833,7 @@ async def besuch(
     try:
         echo = (
             _hoechstens(
-                _oeffentlich_gepostet(current_user, settings), 0, "Wirkungs-Echo"
+                _neues_echo(current_user, settings, gesehen), 0, "Wirkungs-Echo"
             )
             if mit_echo
             else _keine()
@@ -881,21 +882,27 @@ async def besuch(
         ausformulierte_einwuerfe=max(0, ausformuliert),
         neue_beitraege=max(0, beitraege),
         antworten_auf_eigene_aussagen=max(0, antworten) if mit_antworten else None,
-        oeffentlich_gepostet=max(0, gepostet) if mit_echo else None,
+        neu_oeffentlich_gepostet=max(0, gepostet) if mit_echo else None,
     )
 
 
-async def _oeffentlich_gepostet(person: str, settings: Settings) -> int:
+async def _neues_echo(
+    person: str, settings: Settings, gesehen: GeseheneNutzungRepository
+) -> int:
     """
-    Wirkungs-Echo (#790): die Summe "oeffentlich gepostet" ueber die eigenen
-    Beitraege. Liest nur; bei einem Fehler 0.
+    Wirkungs-Echo (#790): der Zuwachs der Summe "oeffentlich gepostet" ueber die
+    eigenen Beitraege seit dem letzten Besuch, als Zaehlerstand wie die Nutzung. So
+    steht die Kachel nur da, wenn wirklich etwas dazukam. Bei einem Fehler 0.
     """
     try:
         eigene = await get_content_repository(settings).getByAuthor(
             user_id=person, limit=10000, offset=0, content_types=BEITRAGSTYPEN_WERTE
         )
         ids = [uuid.UUID(str(beitrag.id)) for beitrag in eigene]
-        return await asyncio.to_thread(get_wirkung_service().gepostet_summe, ids)
+        summe = await asyncio.to_thread(get_wirkung_service().gepostet_summe, ids)
+        return await asyncio.to_thread(
+            gesehen.neues_echo_seit_letztem_besuch, person, summe
+        )
     except Exception as e:
         logger.warning(f"Wirkungs-Echo nicht gezaehlt: {type(e).__name__}")
         return 0

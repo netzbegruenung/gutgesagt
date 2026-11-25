@@ -15,7 +15,7 @@ import { VotingService } from '../../services/voting.service';
 import { FunktionenService } from '../../services/funktionen.service';
 import { TEILEN_NAVIGATOR } from '../../shared/teilen.service';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
-import { DANKE_ANGEKOMMEN, DANKE_FEHLER, DANKE_SCHON_HEUTE } from '../../shared/wirkung-texte';
+import { DANKE_ANGEKOMMEN, DANKE_FEHLER, DANKE_GESAGT, DANKE_NICHT_GEZAEHLT } from '../../shared/wirkung-texte';
 
 /** „Danke an die Autorin“ nach dem Kopieren (#791): nur mit Schalter, nie am eigenen Beitrag. */
 describe('KartenAktionenComponent - Danke an die Autorin', () => {
@@ -121,21 +121,40 @@ describe('KartenAktionenComponent - Danke an die Autorin', () => {
     fixture.detectChanges();
 
     expect(usage.dankeSagen).toHaveBeenCalledOnceWith(INHALT_ID);
-    expect(knopf()).toBeNull();
+    // Der Knopf bleibt stehen (Fokus, WCAG 2.4.3), gesperrt und neu beschriftet
+    expect(knopf()!.getAttribute('aria-disabled')).toBe('true');
+    expect(knopf()!.textContent).toContain(DANKE_GESAGT);
     const status = fixture.nativeElement.querySelector('app-danke-knopf [role="status"]');
     expect(status.textContent).toContain(DANKE_ANGEKOMMEN);
   });
 
-  it('heute schon gedankt: ehrlich sagen, kein zweiter Knopf', () => {
+  it('nicht gezaehlt: nur die Regel nennen, nichts ueber die Person behaupten, kein zweites Senden', () => {
     schalter['danke_knopf'].set(true);
-    usage.dankeSagen.and.returnValue(of<DankeErgebnis>('schon'));
+    usage.dankeSagen.and.returnValue(of<DankeErgebnis>('nicht_gezaehlt'));
     kopieren();
 
     knopf()!.click();
     fixture.detectChanges();
+    knopf()!.click();
 
-    expect(knopf()).toBeNull();
-    expect(fixture.nativeElement.textContent).toContain(DANKE_SCHON_HEUTE);
+    expect(usage.dankeSagen).toHaveBeenCalledTimes(1);
+    expect(knopf()!.getAttribute('aria-disabled')).toBe('true');
+    expect(fixture.nativeElement.textContent).toContain(DANKE_NICHT_GEZAEHLT);
+    expect(DANKE_NICHT_GEZAEHLT).not.toContain('Dein');
+  });
+
+  it('der Fokus bleibt nach dem Danke auf dem Knopf', () => {
+    schalter['danke_knopf'].set(true);
+    usage.dankeSagen.and.returnValue(of<DankeErgebnis>('gezaehlt'));
+    kopieren();
+    document.body.appendChild(fixture.nativeElement);
+
+    knopf()!.focus();
+    knopf()!.click();
+    fixture.detectChanges();
+
+    expect(document.activeElement).toBe(knopf());
+    fixture.nativeElement.remove();
   });
 
   it('bei einem Fehler bleibt der Knopf zum erneuten Versuch', () => {
@@ -160,7 +179,8 @@ describe('KartenAktionenComponent - Danke an die Autorin', () => {
     fixture.detectChanges();
     knopf()!.click();
 
-    expect(knopf()!.disabled).toBeTrue();
+    expect(knopf()!.getAttribute('aria-disabled')).toBe('true');
+    expect(knopf()!.disabled).toBeFalse();
     expect(usage.dankeSagen).toHaveBeenCalledTimes(1);
   });
 

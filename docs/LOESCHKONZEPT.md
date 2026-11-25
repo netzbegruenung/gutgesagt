@@ -222,7 +222,7 @@ macht für diese Person dasselbe wie der Ablauf oben, beschränkt auf die Mitwir
 Was **bleibt**: das Konto, der Anzeigename in `users`, die Einwilligungen samt Widerruf als
 Nachweis (Art. 7 Abs. 1; der Vermerk „ohne Einwilligung weiter“ in `art9_ohne_einwilligung`
 geht dagegen mit dem Löschablauf), Meldungen der Person und Muster-Hinweise (beide gehen mit ihrer
-Frist) sowie `gesehene_nutzung` (nur Zählerstände: Nutzung und Einwürfe anderer beim letzten Besuch, kein Zeitpunkt, ohne Frist, geht mit dem Konto). Erst Qdrant, dann PostgreSQL: Scheitert ein Schritt, bleibt der Auftrag offen,
+Frist) sowie `gesehene_nutzung` (nur Zählerstände: Nutzung, Einwürfe anderer und Wirkungs-Echo beim letzten Besuch, kein Zeitpunkt, ohne Frist, geht mit dem Konto). Erst Qdrant, dann PostgreSQL: Scheitert ein Schritt, bleibt der Auftrag offen,
 und ein zweiter Klick holt nach, was fehlt; beide Teile sind wiederholbar. Danach wie in
 Schritt 3 die Texte durchsehen; macht einer die Person erkennbar, wird er einzeln entfernt. Die
 Beiträge stehen danach nicht mehr in „Meine Beiträge“ der Person, sie kann sie also nicht mehr

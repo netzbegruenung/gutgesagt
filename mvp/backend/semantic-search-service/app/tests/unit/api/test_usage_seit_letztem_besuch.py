@@ -58,6 +58,7 @@ def inhalte():
 def gesehen():
     repo = Mock()
     repo.neue_einwuerfe_seit_letztem_besuch = Mock(return_value=3)
+    repo.neues_echo_seit_letztem_besuch = Mock(side_effect=lambda _p, jetzt: jetzt)
     return repo
 
 
@@ -110,7 +111,7 @@ class TestSeitLetztemBesuch:
             # Obergrenze aus (Standard, #760): keine Zahl
             "antworten_auf_eigene_aussagen": None,
             # Wirkungs-Echo aus (Standard, #790): keine Summe
-            "oeffentlich_gepostet": None,
+            "neu_oeffentlich_gepostet": None,
         }
         dienst.nutzung_seit_letztem_besuch.assert_awaited_once_with("kim-1")
 
@@ -186,7 +187,7 @@ class TestSeitDeinemLetztenBesuch:
             # Obergrenze aus (Standard, #760): keine Zahl
             "antworten_auf_eigene_aussagen": None,
             # Wirkungs-Echo aus (Standard, #790): keine Summe
-            "oeffentlich_gepostet": None,
+            "neu_oeffentlich_gepostet": None,
         }
         assert "kim-1" not in caplog.text
 
@@ -305,8 +306,8 @@ class TestKachelnMitZeitraum:
 class TestWirkungsEcho:
     """#790: die Summe "oeffentlich gepostet" ueber die eigenen Beitraege, nur mit Schalter."""
 
-    def test_mit_schalter_die_summe_der_eigenen_beitraege(
-        self, client, inhalte, wirkung_ohne_datenbank
+    def test_mit_schalter_der_zuwachs_der_eigenen_beitraege(
+        self, client, inhalte, gesehen, wirkung_ohne_datenbank
     ):
         eigene = [
             SimpleNamespace(id="11111111-1111-4111-8111-111111111111"),
@@ -324,8 +325,21 @@ class TestWirkungsEcho:
         antwort = client.post(URL, headers={"X-User": "kim-1"})
 
         assert antwort.status_code == 200
-        assert antwort.json()["oeffentlich_gepostet"] == 5
+        # Die Summe 5 geht als Stand an gesehene_nutzung, gezeigt wird der Zuwachs
+        gesehen.neues_echo_seit_letztem_besuch.assert_called_once_with("kim-1", 5)
+        assert antwort.json()["neu_oeffentlich_gepostet"] == 5
         assert inhalte.getByAuthor.await_args.kwargs["user_id"] == "kim-1"
+
+    def test_ohne_neues_echo_keine_zahl(self, client, inhalte, gesehen):
+        inhalte.getByAuthor = AsyncMock(return_value=[])
+        gesehen.neues_echo_seit_letztem_besuch = Mock(return_value=0)
+        client.app.dependency_overrides[get_settings] = lambda: Settings(
+            wirkungs_echo_aktiv=True
+        )
+
+        antwort = client.post(URL, headers={"X-User": "kim-1"})
+
+        assert antwort.json()["neu_oeffentlich_gepostet"] == 0
 
     def test_fehler_kostet_nur_die_summe(self, client, inhalte):
         inhalte.getByAuthor = AsyncMock(side_effect=RuntimeError("weg"))
@@ -336,5 +350,5 @@ class TestWirkungsEcho:
         antwort = client.post(URL, headers={"X-User": "kim-1"})
 
         assert antwort.status_code == 200
-        assert antwort.json()["oeffentlich_gepostet"] == 0
+        assert antwort.json()["neu_oeffentlich_gepostet"] == 0
         assert antwort.json()["nutzung_seit_letztem_besuch"] == 4

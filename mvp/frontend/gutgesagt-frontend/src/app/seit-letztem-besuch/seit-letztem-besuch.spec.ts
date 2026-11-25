@@ -50,15 +50,18 @@ describe('Seit deinem letzten Besuch (Nutzerfuehrung 13.11.)', () => {
       );
     });
 
-    it('Wirkungs-Echo (#790): Summe nach der Nutzung, als „insgesamt“, ehrlich ohne Menschen', () => {
-      const liste = neuesListe({ nutzung_seit_letztem_besuch: 3, oeffentlich_gepostet: 12, neue_beitraege: 1 });
+    it('Wirkungs-Echo (#790): Zuwachs seit dem letzten Besuch nach der Nutzung, ehrlich ohne Menschen', () => {
+      const liste = neuesListe({ nutzung_seit_letztem_besuch: 3, neu_oeffentlich_gepostet: 2, neue_beitraege: 1 });
       expect(liste.map((e) => e.art)).toEqual(['nutzung', 'echo', 'beitraege']);
       const echo = liste[1];
-      expect([echo.zahl, echo.wort, echo.zeitraum, echo.ziel]).toEqual(['12', 'mal öffentlich gepostet', 'insgesamt', '/contributions']);
-      expect(echo.satz).toBe('12 mal öffentlich gepostet, insgesamt');
+      // Seit dem letzten Besuch wie die Nutzung: kein Zeitraum, keine Summe „insgesamt“
+      expect([echo.zahl, echo.wort, echo.zeitraum, echo.ziel]).toEqual(['2', 'mal öffentlich gepostet', undefined, '/contributions']);
+      expect(echo.satz).toBe('2 mal öffentlich gepostet');
       expect(echo.satz).not.toContain('Menschen');
-      expect(neuesListe({ nutzung_seit_letztem_besuch: 0, oeffentlich_gepostet: null })).toEqual([]);
-      expect(neuesListe({ nutzung_seit_letztem_besuch: 0, oeffentlich_gepostet: 0 })).toEqual([]);
+      expect(echo.zeile).not.toContain('insgesamt');
+      // Ohne Schalter (null) und ohne Zuwachs (0) keine Kachel: der Block bleibt leer
+      expect(neuesListe({ nutzung_seit_letztem_besuch: 0, neu_oeffentlich_gepostet: null })).toEqual([]);
+      expect(neuesListe({ nutzung_seit_letztem_besuch: 0, neu_oeffentlich_gepostet: 0 })).toEqual([]);
     });
 
     it('zeigt ohne Schalter (null) und ohne neue Antworten keine Kachel dafuer (#760)', () => {

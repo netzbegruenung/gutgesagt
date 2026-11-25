@@ -871,6 +871,10 @@ class GeseheneNutzung(Base):
     # NULL: noch nie gezaehlt; der erste Besuch nennt dann nichts als neu.
     # Migration: postgres-app/migrations/2026-11-13-gesehene-einwuerfe.sql.
     einwuerfe = Column(Integer, nullable=True)
+    # Wirkungs-Echo (#790): die Summe "oeffentlich gepostet" der eigenen Beitraege beim
+    # letzten Besuch; die Startseite nennt nur den Zuwachs. NULL: noch nie gezeigt (0).
+    # Migration: postgres-app/migrations/2026-11-25-790-gesehenes-echo.sql.
+    echo = Column(Integer, nullable=True)
 
 
 class Art9EinwilligungZeile(Base):

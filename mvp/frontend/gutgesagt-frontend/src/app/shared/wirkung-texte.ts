@@ -4,8 +4,15 @@
  */
 
 export const DANKE_KNOPF = 'Danke an die Autorin';
+/** Beschriftung des Knopfs nach dem Klick; er bleibt stehen, damit der Fokus nicht verloren geht. */
+export const DANKE_GESAGT = 'Danke gesagt';
 export const DANKE_ANGEKOMMEN = 'Dein Danke ist angekommen.';
-export const DANKE_SCHON_HEUTE = 'Dein Danke von heute ist schon angekommen.';
+/**
+ * Hat der Server nicht gezaehlt (heute schon ein Danke von hier, derselbe Anschluss ohne
+ * Konto, Beitrag gerade nicht lesbar), nennt der Text nur die Regel und behauptet nichts
+ * ueber diese Person.
+ */
+export const DANKE_NICHT_GEZAEHLT = 'Danke! Gezählt wird höchstens ein Danke am Tag.';
 export const DANKE_FEHLER = 'Das Danke hat gerade nicht geklappt. Versuch es gleich noch einmal.';
 
 /** „3-mal öffentlich gepostet“; null bei 0 oder ohne Zahl: dann steht nichts da. */

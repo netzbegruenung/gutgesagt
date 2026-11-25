@@ -365,7 +365,7 @@ Was eine angemeldete Person nach dem Kopieren mit „Ja, gepostet“ meldet: Sie
 _Avoid_: geteilt (das ist Nutzung), Conversion
 
 **Wirkungs-Echo**:
-Die Summe „öffentlich gepostet“ je Beitrag, die nur die Autorin sieht, in „Meine Beiträge“ und als Summe über alle eigenen Beiträge in „Seit deinem letzten Besuch“. Sie entsteht, wenn jemand nach dem Kopieren „Ja, gepostet“ meldet und dabei der Beitrag mitgeht; getrennt von der Wochenzahl unter „Öffentlich gekontert“, die keinen Beitrag kennt. Am Zähler stehen nur Beitrag und Summe, keine Kennung, kein Zeitpunkt; entdoppelt je Person, Beitrag und Tag nur im Arbeitsspeicher. Eigene Beiträge und Startkonten zählen nicht. Angezeigt als „3-mal öffentlich gepostet“, nie als Zahl von Menschen. Schalter `wirkungs_echo` (#790).
+Die Summe „öffentlich gepostet“ je Beitrag, die nur die Autorin sieht, in „Meine Beiträge“ und in „Seit deinem letzten Besuch“ als Zuwachs über alle eigenen Beiträge seit dem letzten Besuch (ein Zählerstand am Konto wie bei der Nutzung, kein Zeitpunkt). Sie entsteht, wenn jemand nach dem Kopieren „Ja, gepostet“ meldet und dabei der Beitrag mitgeht; getrennt von der Wochenzahl unter „Öffentlich gekontert“, die keinen Beitrag kennt. Am Zähler stehen nur Beitrag und Summe, keine Kennung, kein Zeitpunkt; entdoppelt je Person, Beitrag und Tag nur im Arbeitsspeicher. Eigene Beiträge und Startkonten zählen nicht. Angezeigt als „3-mal öffentlich gepostet“, nie als Zahl von Menschen. Schalter `wirkungs_echo` (#790).
 _Avoid_: Reichweite, Shares
 
 **Danke**:

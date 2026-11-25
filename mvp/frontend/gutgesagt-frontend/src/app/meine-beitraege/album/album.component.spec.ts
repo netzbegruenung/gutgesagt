@@ -93,7 +93,8 @@ describe('AlbumComponent', () => {
   const karten = (): HTMLElement[] => alle('app-beitragskarte article');
 
   describe('Wirkungs-Echo und Danke (#790, #791)', () => {
-    const sichtbar = (): HTMLElement[] => alle('[data-testid="wirkung-echo"]').filter((e) => !e.hidden);
+    // Nicht nur versteckt: ohne Zahl steht die Liste gar nicht im DOM (keine leere Liste fuer Screenreader)
+    const sichtbar = (): HTMLElement[] => alle('[data-testid="wirkung-echo"]');
 
     it('zeigt unter der Karte nur Summen, mit Symbol und Namen', () => {
       erstellen(viele(2, (i) => (i === 0 ? { oeffentlich_gepostet: 3, danke: 1 } : {})));

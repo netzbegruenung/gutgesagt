@@ -116,7 +116,7 @@ export interface DankeAntwort {
 }
 
 /** Was nach „Danke an die Autorin“ passiert ist (#791). */
-export type DankeErgebnis = 'gezaehlt' | 'schon' | 'nicht_angeboten' | 'fehler';
+export type DankeErgebnis = 'gezaehlt' | 'nicht_gezaehlt' | 'nicht_angeboten' | 'fehler';
 
 export interface BesuchResponse {
   nutzung_seit_letztem_besuch: number;
@@ -136,10 +136,11 @@ export interface BesuchResponse {
    */
   antworten_auf_eigene_aussagen?: number | null;
   /**
-   * Wirkungs-Echo (#790): wie oft die eigenen Beiträge insgesamt als öffentlich gepostet
-   * gemeldet wurden (Summe, kein Zeitraum). null oder fehlend: Schalter aus.
+   * Wirkungs-Echo (#790): wie oft die eigenen Beiträge seit dem letzten Besuch als
+   * öffentlich gepostet gemeldet wurden (Zählerstand wie die Nutzung, kein Zeitraum).
+   * null oder fehlend: Schalter aus.
    */
-  oeffentlich_gepostet?: number | null;
+  neu_oeffentlich_gepostet?: number | null;
 }
 
 export interface TrendingContent {
@@ -503,8 +504,9 @@ export class UsageTrackingService {
   }
 
   /**
-   * „Danke an die Autorin“ (#791): ``gezaehlt``, ``schon`` (heute schon gedankt, eigener
-   * Beitrag, Startkonto), ``nicht_angeboten`` (403 ohne Einwilligung, die meldet der
+   * „Danke an die Autorin“ (#791): ``gezaehlt``, ``nicht_gezaehlt`` (der Server sagt nicht,
+   * warum: heute schon gedankt, derselbe Anschluss ohne Konto, Beitrag nicht lesbar,
+   * Startkonto), ``nicht_angeboten`` (403 ohne Einwilligung, die meldet der
    * Auth-Interceptor selbst mit Knopf zur Einwilligung, oder 404, Schalter aus) und
    * ``fehler`` für alles andere.
    */
@@ -512,7 +514,7 @@ export class UsageTrackingService {
     return this.http
       .post<DankeAntwort>(`${this.apiUrl}/content/${encodeURIComponent(inhaltId)}/danke`, {})
       .pipe(
-        map((antwort): DankeErgebnis => (antwort?.gezaehlt === true ? 'gezaehlt' : 'schon')),
+        map((antwort): DankeErgebnis => (antwort?.gezaehlt === true ? 'gezaehlt' : 'nicht_gezaehlt')),
         catchError((error) => {
           if (error?.status === 403 || error?.status === 404) {
             return of<DankeErgebnis>('nicht_angeboten');

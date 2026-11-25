@@ -11,9 +11,11 @@
 -- Start an. Das Skript dokumentiert das Schema und laeuft dann ohne Wirkung durch.
 -- Vorhandene Daten gibt es keine.
 --
--- Rueckweg: DROP TABLE IF EXISTS wirkung_je_beitrag; entfernt nur die Summen, sonst
--- haengt nichts daran. Danach die Schalter wirkungs_echo und danke_knopf aus lassen,
--- sonst legt create_all die Tabelle beim naechsten Start wieder an.
+-- Rueckweg: ein Code-Revert, der das Modell WirkungJeBeitrag entfernt, dazu
+-- DROP TABLE IF EXISTS wirkung_je_beitrag; (entfernt nur die Summen, sonst haengt
+-- nichts daran). Nur das DROP ohne Revert haelt bis zum naechsten Start: create_all
+-- laeuft unabhaengig von den Schaltern und legt die Tabelle dann leer wieder an,
+-- was unschaedlich ist.
 --
 -- Anwenden: siehe README.md in diesem Verzeichnis.
 
