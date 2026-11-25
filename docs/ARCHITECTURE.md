@@ -466,8 +466,9 @@ contains its Monday (`domain.saisons.wochen_der_saison`); nothing new is stored.
   list with state, create, change (running: only goal and end), delete (only before the start).
 - Threshold for the public bar: `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_WOCHEN` (default 3) closed
   weeks in a row with at least `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_MENSCHEN` (default 25) people
-  each, reached once at any time. The privacy notice names no numbers, so changing them needs no
-  change there.
+  each, reached once at any time. The privacy notice names these numbers (section „Rückmeldung
+  ‚Ja, gepostet‘“, wording by the legal review 25.11.): whoever changes either variable must update
+  that sentence in `datenschutz.component.html` in the same change.
 - For later building blocks (Rangliste per season): `SaisonService.alle()`, `.laufende(heute)`
   and the dataclass `domain.saisons.Saison` (`id`, `name`, `beginn`, `ende`, `ziel`, `wochen()`).
 

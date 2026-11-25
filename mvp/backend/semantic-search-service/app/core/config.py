@@ -344,7 +344,8 @@ class Settings(BaseSettings):
     # Saison und Gemeinschaftsziel (#782, domain/saisons.py): Den Balken sehen alle erst,
     # wenn es einmal so viele abgeschlossene Wochen hintereinander mit je mindestens so
     # vielen verschiedenen Menschen gab, die "Ja, gepostet" gemeldet haben; vorher nur
-    # Admins.
+    # Admins. Die Datenschutzerklaerung nennt beide Zahlen: wer sie aendert, zieht den
+    # Satz in datenschutz.component.html ("Rueckmeldung 'Ja, gepostet'") nach.
     saison_ziel_schwelle_menschen: int = Field(default=25, ge=0)
     saison_ziel_schwelle_wochen: int = Field(default=3, ge=0)
     # Gewichte und Deckel der drei Stufen (domain/punkte.py): Tun klein und je Tag
