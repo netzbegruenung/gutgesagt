@@ -9,7 +9,7 @@ Zuschnitt laut #793:
 - Gezeigt werden die ersten zehn Plaetze und der eigene Platz, und erst ab zehn
   Teilnehmenden (``MIN_TEILNEHMENDE``).
 - Jede Person erscheint mit einem zufaelligen Ranglistennamen ohne Freitext
-  (``ranglistenname``); den Anzeigenamen nur, wenn sie ihn aktiv waehlt.
+  (``neuer_ranglistenname``); den Anzeigenamen nur, wenn sie ihn aktiv waehlt.
 
 Dieses Modul ist rein (keine Datenbank, keine Uhr): Wortlaut, Ranglistenname und wie
 aus Punkten Plaetze werden. Wer teilnimmt, entscheidet services/rangliste_service.py.
@@ -18,9 +18,10 @@ Der Wortlaut traegt eine Kennung wie die anderen Einwilligungen; wer ihn aendert
 legt eine neue Kennung an und laesst die alte stehen.
 """
 
-import hashlib
+import random
+import secrets
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Collection, Dict, List, Optional
 
 AKTUELLER_WORTLAUT = "rangliste-2026-11-25"
 
@@ -88,22 +89,34 @@ class UnbekannterWortlaut(ValueError):
     """Die Kennung gehoert zu keinem bekannten Wortlaut."""
 
 
-def ranglistenname(user_id: str) -> str:
+# So oft wird gewuerfelt, bevor ein schon vergebener Name doch genommen wird; die
+# Liste macht gleiche Namen dann unterscheidbar (``rangliste_bilden``).
+NAMEN_VERSUCHE = 50
+# Ersatz, falls eine Kennung ohne gespeicherten Namen in die Liste kaeme
+OHNE_NAMEN = "Ohne Namen"
+
+_zufall = secrets.SystemRandom()
+
+
+def neuer_ranglistenname(
+    vergeben: Collection[str], zufall: random.Random = _zufall
+) -> str:
     """
-    Der zufaellige Ranglistenname einer Kennung, etwa „Flinke Amsel 42“. Abgeleitet
-    aus einem Hash der Kennung statt gespeichert: dieselbe Person heisst in jeder
-    Saison gleich, und es gibt keine weitere Spalte. Aus dem Namen laesst sich die
-    Kennung nicht zurueckgewinnen. Zwei Personen koennen gleich heissen (selten).
+    Ein zufaelliger Ranglistenname wie „Flinke Amsel 42“, moeglichst keiner aus
+    ``vergeben``. Echt zufaellig und beim ersten Ja gespeichert
+    (rangliste_einwilligung.ranglistenname), nicht aus der Kennung abgeleitet: Wer
+    eine Kennung kennt, etwa aus der Moderation oder aus Logs, kann den Namen nicht
+    ausrechnen (Review zu #793). Die Person behaelt ihn, auch ueber Saisons hinweg.
     """
-    wert = int.from_bytes(
-        hashlib.sha256(f"rangliste-name:{user_id}".encode("utf-8")).digest()[:8],
-        "big",
-    )
-    eigenschaft = EIGENSCHAFTEN[wert % len(EIGENSCHAFTEN)]
-    wert //= len(EIGENSCHAFTEN)
-    tier = TIERE[wert % len(TIERE)]
-    wert //= len(TIERE)
-    return f"{eigenschaft} {tier} {10 + wert % 90}"
+    name = ""
+    for _ in range(NAMEN_VERSUCHE):
+        name = (
+            f"{zufall.choice(EIGENSCHAFTEN)} {zufall.choice(TIERE)} "
+            f"{zufall.randint(10, 99)}"
+        )
+        if name not in vergeben:
+            break
+    return name
 
 
 @dataclass(frozen=True)
@@ -128,9 +141,12 @@ def rangliste_bilden(
     punkte: Dict[str, int], namen: Dict[str, str], ich: str
 ) -> Optional[Rangliste]:
     """
-    Plaetze aus den Saisonpunkten der Teilnehmenden (Kennung -> Punkte). None unter
-    MIN_TEILNEHMENDE. Gleiche Punkte teilen sich den Platz (1, 2, 2, 4); innerhalb
-    gleicher Punkte ordnet der Name, damit die Reihenfolge stabil bleibt.
+    Plaetze aus den Saisonpunkten der Teilnehmenden (Kennung -> Punkte) und ihren
+    Namen in der Liste (Kennung -> Ranglistenname oder gewaehlter Anzeigename). None
+    unter MIN_TEILNEHMENDE. Gleiche Punkte teilen sich den Platz (1, 2, 2, 4);
+    innerhalb gleicher Punkte ordnet der Name, damit die Reihenfolge stabil bleibt.
+    Steht ein Name mehrmals in der Liste, bekommt jeder weitere eine Nummer
+    („Flinke Amsel 42 (2)“), damit sich niemand mit einem anderen verwechselt.
     """
     if len(punkte) < MIN_TEILNEHMENDE:
         return None
@@ -138,14 +154,19 @@ def rangliste_bilden(
     plaetze: List[Platz] = []
     vorige: Optional[int] = None
     platz = 0
+    gezeigt: Dict[str, int] = {}
     for index, kennung in enumerate(reihe):
         if punkte[kennung] != vorige:
             platz = index + 1
             vorige = punkte[kennung]
+        name = namen.get(kennung) or OHNE_NAMEN
+        gezeigt[name] = gezeigt.get(name, 0) + 1
+        if gezeigt[name] > 1:
+            name = f"{name} ({gezeigt[name]})"
         plaetze.append(
             Platz(
                 platz=platz,
-                name=namen.get(kennung) or ranglistenname(kennung),
+                name=name,
                 punkte=punkte[kennung],
                 ich=kennung == ich,
             )

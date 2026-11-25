@@ -962,7 +962,9 @@ class PunkteEinwilligungZeile(Base):
     """
     Eine Antwort auf die Einwilligung "Punkte und Meilensteine" (#351,
     domain/punkte_einwilligung.py): ``eingewilligt`` ja oder nein, ``wortlaut`` die
-    Kennung des Wortlauts, ``beantwortet_am`` der Zeitpunkt. Es gilt die juengste Zeile
+    Kennung des Wortlauts, ``beantwortet_am`` der Zeitpunkt, ``ranglistenname`` der
+    zufaellige Name (beim ersten Ja gewuerfelt, in jede weitere Zeile uebernommen,
+    None vor dem ersten Ja). Es gilt die juengste Zeile
     der Kennung; ein Widerruf ist eine neue Zeile mit nein, damit belegt bleibt, wann
     die Person eingewilligt und wann sie widerrufen hat (Art. 7 Abs. 1 DSGVO).
 
@@ -989,7 +991,9 @@ class RanglisteEinwilligungZeile(Base):
     Eine Antwort auf die Einwilligung zur Rangliste (#793, domain/rangliste.py):
     ``teilnehmen`` ja oder nein, ``mit_anzeigename`` ob die Person statt des
     zufaelligen Ranglistennamens ihren Anzeigenamen gewaehlt hat, ``wortlaut`` die
-    Kennung des Wortlauts, ``beantwortet_am`` der Zeitpunkt. Es gilt die juengste Zeile
+    Kennung des Wortlauts, ``beantwortet_am`` der Zeitpunkt, ``ranglistenname`` der
+    zufaellige Name (beim ersten Ja gewuerfelt, in jede weitere Zeile uebernommen,
+    None vor dem ersten Ja). Es gilt die juengste Zeile
     der Kennung; jede Aenderung ist eine neue Zeile, damit belegt bleibt, wann die
     Person eingewilligt und wann sie widerrufen hat (Art. 7 Abs. 1 DSGVO, wie V22).
     Plaetze und Punkte stehen hier nicht, sie werden je Abruf berechnet.
@@ -1007,6 +1011,7 @@ class RanglisteEinwilligungZeile(Base):
     mit_anzeigename = Column(Boolean, nullable=False)
     wortlaut = Column(String(64), nullable=False)
     beantwortet_am = Column(DateTime(timezone=True), nullable=False)
+    ranglistenname = Column(String(64), nullable=True)
 
     __table_args__ = (
         Index("idx_rangliste_einwilligung_user", "user_id", "beantwortet_am"),

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, OnInit, QueryList, ViewChild, ViewChildren, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
@@ -44,6 +44,8 @@ export class RanglisteComponent implements OnInit {
   readonly nein = RANGLISTE_NEIN;
   /** Nach einer Antwort verschwinden die Knöpfe; der Fokus geht auf die Überschrift. */
   @ViewChild('titel') titel?: ElementRef<HTMLElement>;
+  /** Die beiden Knöpfe für den Namen; nach einem Fehler zurück auf die gespeicherte Wahl. */
+  @ViewChildren('nameWahl') nameWahl?: QueryList<ElementRef<HTMLInputElement>>;
 
   private readonly service = inject(RanglisteService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -103,6 +105,11 @@ export class RanglisteComponent implements OnInit {
     return !!this.stand && this.stand.teilnehmen === true && !this.stand.voraussetzungen;
   }
 
+  /** Gespeichert ist der Anzeigename als Name in der Rangliste (und es gibt einen). */
+  get mitAnzeigename(): boolean {
+    return !!this.stand && this.stand.mit_anzeigename && !!this.stand.anzeigename;
+  }
+
   /** Der eigene Platz unter den ersten zehn oder darunter. */
   get eigener(): RanglistenPlatz | null {
     const liste = this.stand?.rangliste;
@@ -151,8 +158,16 @@ export class RanglisteComponent implements OnInit {
       error: () => {
         this.speichert = false;
         this.fehler = true;
+        // Die Bindung [checked] hat sich nicht geändert, also setzt Angular den angeklickten
+        // Knopf nicht zurück: Sonst sähe die Person eine Wahl, die nicht gespeichert ist.
+        this.nameWahlZuruecksetzen();
         this.cdr.markForCheck();
       },
     });
+  }
+
+  private nameWahlZuruecksetzen(): void {
+    const gespeichert = this.mitAnzeigename ? 'anzeigename' : 'zufall';
+    this.nameWahl?.forEach((ref) => (ref.nativeElement.checked = ref.nativeElement.value === gespeichert));
   }
 }

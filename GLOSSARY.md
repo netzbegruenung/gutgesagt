@@ -516,7 +516,7 @@ Die Reihenfolge der Mitwirkenden nach ihren Punkten in der laufenden Saison (#79
 _Avoid_: Leaderboard, Highscore
 
 **Ranglistenname**:
-Der Name einer Person in der Rangliste: zufällig aus festen Listen (Eigenschaft, Tier, Zahl, etwa „Flinke Amsel 42“), aus ihrer Kennung abgeleitet und nicht gespeichert, ohne Freitext. Den Anzeigenamen zeigt die Rangliste nur, wenn die Person ihn unter „Meine Beiträge“ selbst wählt.
+Der Name einer Person in der Rangliste: zufällig aus festen Listen (Eigenschaft, Tier, Zahl, etwa „Flinke Amsel 42“), beim ersten Ja echt zufällig gewürfelt und mit der Einwilligung gespeichert, ohne Freitext. Aus der Kennung lässt er sich nicht ausrechnen; die Person behält ihn, auch über Saisons hinweg. Stehen zwei gleiche Namen in einer Liste, bekommt der zweite eine Nummer („(2)“). Den Anzeigenamen zeigt die Rangliste nur, wenn die Person ihn unter „Meine Beiträge“ selbst wählt.
 _Avoid_: Spitzname, Nickname
 
 **Quest**:

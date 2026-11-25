@@ -114,7 +114,7 @@ dann jede folgende Anfrage ab, nach dem Entfernen nicht mehr.
    Antwort auf die Frage nach der Sichtbarkeit der Abzeichen, auch ein Nein; #351), in
    `punkte_einwilligung` (jede Antwort auf die Einwilligung „Punkte und Meilensteine“, auch
    ein Widerruf; #351), in `rangliste_einwilligung` (jede Antwort auf die Einwilligung zur
-   Rangliste samt Wahl des Anzeigenamens, auch ein Nein; #793), in `nutzungsbedingungen_zustimmungen` (jede Zustimmung zu den
+   Rangliste samt Wahl des Anzeigenamens und Ranglistenname, auch ein Nein; #793), in `nutzungsbedingungen_zustimmungen` (jede Zustimmung zu den
    Nutzungsbedingungen in der App mit Zeitpunkt und Stand), in `team_mitgliedschaften` (jede
    Mitgliedschaft in einem Team samt Kennung des Wortlauts und Zeitpunkt der Einwilligung), in
    `team_oeffentlich` (die Antwort auf „Team öffentlich am Namen zeigen“) und die in

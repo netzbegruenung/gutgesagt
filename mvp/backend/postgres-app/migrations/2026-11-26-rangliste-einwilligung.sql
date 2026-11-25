@@ -3,9 +3,10 @@
 -- Je Antwort eine Zeile: ob die Person in der Rangliste der laufenden Saison
 -- erscheint (teilnehmen), ob sie dort ihren Anzeigenamen statt des zufaelligen
 -- Ranglistennamens gewaehlt hat (mit_anzeigename), die Kennung des Wortlauts
--- (mvp/backend/semantic-search-service/app/domain/rangliste.py) und wann sie
--- geantwortet hat. Es gilt die juengste Zeile einer Kennung; jede Aenderung ist eine
--- neue Zeile. Plaetze und Punkte werden nicht gespeichert, sondern je Abruf berechnet.
+-- (mvp/backend/semantic-search-service/app/domain/rangliste.py), wann sie
+-- geantwortet hat und ihren zufaelligen Ranglistennamen (ranglistenname: beim ersten
+-- Ja gewuerfelt, in jede weitere Zeile uebernommen; leer, solange sie nie Ja gesagt
+-- hat). Es gilt die juengste Zeile einer Kennung; jede Aenderung ist eine neue Zeile. Plaetze und Punkte werden nicht gespeichert, sondern je Abruf berechnet.
 -- Geloescht werden alle Zeilen mit dem Konto (docs/LOESCHKONZEPT.md, Schritt 2).
 --
 -- Neue Datenbanken brauchen dieses Skript nicht: create_all legt die Tabelle beim
@@ -29,6 +30,7 @@ CREATE TABLE IF NOT EXISTS rangliste_einwilligung (
     mit_anzeigename BOOLEAN NOT NULL,
     wortlaut VARCHAR(64) NOT NULL,
     beantwortet_am TIMESTAMP WITH TIME ZONE NOT NULL,
+    ranglistenname VARCHAR(64),
     PRIMARY KEY (id)
 );
 CREATE INDEX IF NOT EXISTS idx_rangliste_einwilligung_user

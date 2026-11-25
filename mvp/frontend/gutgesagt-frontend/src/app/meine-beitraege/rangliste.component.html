@@ -37,11 +37,11 @@
         <fieldset class="rangliste-name" [disabled]="speichert">
             <legend>Dein Name in der Rangliste</legend>
             <label>
-                <input type="radio" name="rangliste-name" [checked]="!stand.mit_anzeigename || !stand.anzeigename" (change)="nameWaehlen(false)">
-                Zufälliger Ranglistenname: <strong>{{ stand.ranglistenname }}</strong>
+                <input #nameWahl type="radio" name="rangliste-name" value="zufall" data-testid="name-zufall" [checked]="!mitAnzeigename" (change)="nameWaehlen(false)">
+                Zufälliger Ranglistenname: <strong>{{ stand.ranglistenname ?? 'wird gerade vergeben' }}</strong>
             </label>
             <label *ngIf="stand.anzeigename">
-                <input type="radio" name="rangliste-name" [checked]="stand.mit_anzeigename" (change)="nameWaehlen(true)">
+                <input #nameWahl type="radio" name="rangliste-name" value="anzeigename" data-testid="name-anzeigename" [checked]="mitAnzeigename" (change)="nameWaehlen(true)">
                 Mein Anzeigename: <strong>{{ stand.anzeigename }}</strong>
             </label>
         </fieldset>

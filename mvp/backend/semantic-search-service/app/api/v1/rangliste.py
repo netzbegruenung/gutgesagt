@@ -75,7 +75,8 @@ class StandResponse(BaseModel):
     mit_anzeigename: bool
     # Art.-9-Einwilligung und "Punkte und Meilensteine" gelten
     voraussetzungen: bool
-    ranglistenname: str
+    # Erst mit dem ersten Ja vergeben; null davor
+    ranglistenname: Optional[str]
     # Der Anzeigename, wie er gespeichert ist; null ohne
     anzeigename: Optional[str]
     saison: Optional[SaisonResponse]

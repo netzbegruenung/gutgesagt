@@ -1,16 +1,19 @@
 """Rangliste je Saison (#793): Wortlaut, Ranglistenname und Plaetze."""
 
+import random
+
 import pytest
 
 from domain.rangliste import (
     AKTUELLER_WORTLAUT,
     EIGENSCHAFTEN,
     MIN_TEILNEHMENDE,
+    OHNE_NAMEN,
     PLAETZE,
     TIERE,
     WORTLAUTE,
+    neuer_ranglistenname,
     rangliste_bilden,
-    ranglistenname,
 )
 
 pytestmark = pytest.mark.unit
@@ -34,21 +37,54 @@ def test_wortlaut_wortgleich_mit_kennung():
     assert WORTLAUTE[AKTUELLER_WORTLAUT] == WORTLAUT_AUS_DEM_ISSUE
 
 
-def test_ranglistenname_fest_je_kennung_aus_den_listen():
-    name = ranglistenname("kim-1")
+def test_ranglistenname_aus_den_listen():
+    name = neuer_ranglistenname(set())
 
-    assert name == ranglistenname("kim-1")
     eigenschaft, tier, zahl = name.split(" ")
     assert eigenschaft in EIGENSCHAFTEN
     assert tier in TIERE
     assert 10 <= int(zahl) <= 99
-    assert "kim" not in name
 
 
-def test_ranglistennamen_verschieden_fuer_verschiedene_kennungen():
-    namen = {ranglistenname(f"person-{i}") for i in range(50)}
+def test_ranglistenname_zufaellig_nicht_aus_der_kennung():
+    """Wer eine Kennung kennt, kann den Namen nicht ausrechnen (Review zu #793)."""
+    namen = {neuer_ranglistenname(set()) for _ in range(50)}
 
     assert len(namen) > 45
+
+
+def test_ranglistenname_meidet_vergebene():
+    zufall = random.Random(7)
+    erster = neuer_ranglistenname(set(), random.Random(7))
+
+    zweiter = neuer_ranglistenname({erster}, zufall)
+
+    assert zweiter != erster
+
+
+def test_ranglistenname_alle_vergeben_gibt_trotzdem_einen():
+    class Immer:
+        def choice(self, folge):
+            return folge[0]
+
+        def randint(self, a, b):
+            return a
+
+    vergeben = {f"{EIGENSCHAFTEN[0]} {TIERE[0]} 10"}
+
+    assert neuer_ranglistenname(vergeben, Immer()) in vergeben
+
+
+def test_gleiche_namen_in_der_liste_unterscheidbar():
+    punkte = _punkte(10)
+    namen = {k: "Flinke Amsel 42" for k in punkte}
+
+    rangliste = rangliste_bilden(punkte, namen, "p00")
+
+    gezeigt = [p.name for p in rangliste.oben]
+    assert len(set(gezeigt)) == 10
+    assert gezeigt[0] == "Flinke Amsel 42"
+    assert gezeigt[1] == "Flinke Amsel 42 (2)"
 
 
 def _punkte(anzahl: int) -> dict:
@@ -91,8 +127,8 @@ def test_gleiche_punkte_teilen_den_platz():
     assert rangliste.oben[-1].platz == 9
 
 
-def test_namen_nur_wenn_gegeben_sonst_ranglistenname():
+def test_namen_aus_der_zuordnung_ohne_eintrag_ersatz():
     rangliste = rangliste_bilden(_punkte(10), {"p00": "Kim B."}, "p05")
 
     assert rangliste.oben[0].name == "Kim B."
-    assert rangliste.oben[1].name == ranglistenname("p01")
+    assert rangliste.oben[1].name == OHNE_NAMEN

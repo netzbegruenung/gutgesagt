@@ -151,6 +151,41 @@ describe('RanglisteComponent', () => {
     http.expectOne(URL).flush(stand({ gefragt: true, teilnehmen: true, mit_anzeigename: true }));
   });
 
+  it('setzt die Namenswahl zurück, wenn das Speichern scheitert', () => {
+    laden(stand({ gefragt: true, teilnehmen: true }));
+    const zufall = knopf('name-zufall') as unknown as HTMLInputElement;
+    const anzeigename = knopf('name-anzeigename') as unknown as HTMLInputElement;
+
+    anzeigename.click();
+    expect(anzeigename.checked).toBeTrue();
+    http.expectOne((r) => r.method === 'PUT').flush('', { status: 500, statusText: 'Fehler' });
+    fixture.detectChanges();
+
+    expect(el().querySelector('.rangliste-fehler')).not.toBeNull();
+    expect(zufall.checked).toBeTrue();
+    expect(anzeigename.checked).toBeFalse();
+  });
+
+  it('setzt auch die Rückkehr zum Ranglistennamen zurück, wenn das Speichern scheitert', () => {
+    laden(stand({ gefragt: true, teilnehmen: true, mit_anzeigename: true }));
+    const zufall = knopf('name-zufall') as unknown as HTMLInputElement;
+    const anzeigename = knopf('name-anzeigename') as unknown as HTMLInputElement;
+    expect(anzeigename.checked).toBeTrue();
+
+    zufall.click();
+    http.expectOne((r) => r.method === 'PUT').flush('', { status: 500, statusText: 'Fehler' });
+    fixture.detectChanges();
+
+    expect(anzeigename.checked).toBeTrue();
+    expect(zufall.checked).toBeFalse();
+  });
+
+  it('zeigt einen Platzhalter, solange der Ranglistenname noch nicht vergeben ist', () => {
+    laden(stand({ gefragt: true, teilnehmen: true, ranglistenname: null }));
+
+    expect(el().querySelector('.rangliste-name')!.textContent).toContain('wird gerade vergeben');
+  });
+
   it('„Aus der Rangliste nehmen“ wirkt sofort ohne Rückfrage', () => {
     laden(stand({ gefragt: true, teilnehmen: true, mit_anzeigename: true }));
 

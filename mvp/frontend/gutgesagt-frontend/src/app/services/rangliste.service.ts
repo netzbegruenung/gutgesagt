@@ -29,7 +29,8 @@ export interface RanglisteStand {
   mit_anzeigename: boolean;
   /** Art.-9-Einwilligung und „Punkte und Meilensteine“ gelten. */
   voraussetzungen: boolean;
-  ranglistenname: string;
+  /** Erst mit dem ersten Ja vergeben. */
+  ranglistenname: string | null;
   anzeigename: string | null;
   saison: { name: string; ende: string } | null;
   /** Nur für Teilnehmende mit laufender Saison. */

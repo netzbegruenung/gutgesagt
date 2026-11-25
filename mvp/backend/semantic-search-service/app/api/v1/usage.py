@@ -59,6 +59,7 @@ from repositories.punkte_einwilligung_repository import (
 )
 from services.gepostet_service import GepostetService, get_gepostet_service
 from services import antworten_hinweis
+from services import rangliste_service
 from services.art9_einwilligung_service import get_art9_einwilligung_service
 from services.usage_tracking_service import get_usage_service
 from services.beitrag_laden import BeitragLader, BeitragUnlesbar
@@ -777,6 +778,16 @@ async def punkte_einwilligung_antworten(
         dienst = get_abzeichen_service()
         if dienst is not None:
             dienst.vergessen(current_user)
+        # Ohne Punkte keine Rangliste: ein frueheres Ja gilt als Nein, damit eine neue
+        # Einwilligung in die Punkte nicht ungefragt in die Rangliste fuehrt (#793).
+        try:
+            await asyncio.to_thread(rangliste_service.zuruecknehmen, current_user)
+        except Exception as e:
+            logger.error(
+                f"Einwilligung zur Rangliste von {log_pseudonym(current_user)} nicht zurueckgenommen: {type(e).__name__}",
+                exc_info=True,
+            )
+            raise HTTPException(status_code=500, detail="Internal server error")
     return Response(status_code=204)
 
 

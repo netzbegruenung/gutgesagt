@@ -68,7 +68,54 @@ class TestRanglisteEinwilligung:
         repo.antworten("ali-3", False, False, WORTLAUT)
         repo.antworten("eda-4", True, False, WORTLAUT)
 
-        assert repo.teilnehmende() == {"kim-1": True, "eda-4": False}
+        teilnehmende = repo.teilnehmende()
+        assert {k: t.mit_anzeigename for k, t in teilnehmende.items()} == {
+            "kim-1": True,
+            "eda-4": False,
+        }
+
+    def test_ranglistenname_bleibt_ueber_jedes_nein(self, datenbank):  # noqa: F811
+        repo = RanglisteEinwilligungRepository(datenbank)
+        repo.antworten("kim-1", False, False, WORTLAUT)
+        assert repo.lesen("kim-1").ranglistenname is None
+
+        repo.antworten("kim-1", True, False, WORTLAUT, "Kluge Eule 37")
+        repo.antworten("kim-1", False, False, WORTLAUT)
+        repo.antworten("kim-1", True, True, WORTLAUT)
+
+        assert repo.lesen("kim-1").ranglistenname == "Kluge Eule 37"
+        assert repo.teilnehmende()["kim-1"].ranglistenname == "Kluge Eule 37"
+        assert repo.vergebene_namen() == {"Kluge Eule 37"}
+
+
+class TestVoraussetzungenFuerViele:
+    def test_art9_nur_juengste_geltende(self, datenbank):  # noqa: F811
+        from domain.art9_einwilligung import AKTUELLER_WORTLAUT as ART9
+        from repositories.art9_einwilligung_repository import (
+            Art9EinwilligungRepository,
+        )
+
+        repo = Art9EinwilligungRepository(datenbank)
+        repo.einwilligen("kim-1", ART9)
+        repo.einwilligen("bo-2", ART9)
+        repo.widerrufen("bo-2")
+
+        assert repo.zaehlende(["kim-1", "bo-2", "ali-3"]) == {"kim-1"}
+        assert repo.zaehlende([]) == set()
+
+    def test_punkte_nur_juengste_geltende(self, datenbank):  # noqa: F811
+        from domain.punkte_einwilligung import AKTUELLER_WORTLAUT as PUNKTE
+        from repositories.punkte_einwilligung_repository import (
+            PunkteEinwilligungRepository,
+        )
+
+        repo = PunkteEinwilligungRepository(datenbank)
+        repo.antworten("kim-1", True, PUNKTE)
+        repo.antworten("bo-2", True, PUNKTE)
+        repo.antworten("bo-2", False, PUNKTE)
+
+        assert repo.eingewilligte(["kim-1", "bo-2", "ali-3"]) == {"kim-1"}
+        assert repo.eingewilligte([]) == set()
 
 
 def _stimme(datenbank, von, beitrag, am: datetime) -> None:  # noqa: F811
