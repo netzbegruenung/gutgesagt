@@ -107,7 +107,8 @@ def _liste(stand: AdminStand) -> SaisonListeResponse:
 
 @router.get("/aktuell", response_model=AktuellResponse)
 async def aktuell(service: SaisonService = Depends(_service)) -> AktuellResponse:
-    if not service.wirksam():
+    # wirksam() liest bei abgelaufenem Cache die Schalter aus der Datenbank
+    if not await asyncio.to_thread(service.wirksam):
         raise HTTPException(status_code=404, detail="Nicht gefunden")
     try:
         balken = await asyncio.to_thread(service.balken)

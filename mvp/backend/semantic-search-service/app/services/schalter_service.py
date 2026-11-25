@@ -278,6 +278,37 @@ SCHALTER: Dict[str, Schalterart] = {
 }
 
 
+# Team-Fortschritt (#784) und Team-Quests (#792): eigene Obergrenzen, von Haus aus
+# aus. Beide zaehlen und zeigen nur mit Teams; die Quests nur mit dem Team-Fortschritt,
+# weil sie dessen Wochenzaehler nutzen (services/team_fortschritt_service.py).
+TEAM_SCHALTER = (
+    Schalterart(
+        name="team_fortschritt",
+        feld="team_fortschritt_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_TEAM_FORTSCHRITT_AKTIV",
+        erklaerung=(
+            "Team-Fortschritt in „Meine Teams“: Mitglieder sehen, was ihr Team in der "
+            "letzten abgeschlossenen Woche gemeinsam bewirkt hat, gerundet und erst ab "
+            "5 Mitgliedern mit Einwilligung. Zählt dafür je Team und Woche ohne "
+            "Kennung; wirkt nur zusammen mit „teams“."
+        ),
+        dsfa_hinweis=True,
+    ),
+    Schalterart(
+        name="team_quests",
+        feld="team_quests_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_TEAM_QUESTS_AKTIV",
+        erklaerung=(
+            "Team-Quests: ein gemeinsames Wochenziel je Team aus dem Bedarf, mit "
+            "Quest-Punkten für Mitglieder, die beigetragen haben; wirkt nur zusammen "
+            "mit dem Team-Fortschritt."
+        ),
+        dsfa_hinweis=True,
+    ),
+)
+SCHALTER.update({s.name: s for s in TEAM_SCHALTER})
+
+
 class UnbekannterSchalter(KeyError):
     pass
 
@@ -379,6 +410,12 @@ class SchalterService:
 def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool:
     art = _art(name)
     an = bool(getattr(einstellungen, art.feld)) and bool(werte.get(name, False))
+    if name == "team_fortschritt":
+        # Ohne Teams keine Summe des Teams
+        return an and _wirksam("teams", einstellungen, werte)
+    if name == "team_quests":
+        # Die Quests zaehlen mit dem Wochenzaehler des Team-Fortschritts
+        return an and _wirksam("team_fortschritt", einstellungen, werte)
     if name == "abzeichen_sichtbar":
         # Ohne Punkte keine sichtbaren Abzeichen (wie Settings.abzeichen_sichtbar)
         return an and _wirksam("punkte", einstellungen, werte)

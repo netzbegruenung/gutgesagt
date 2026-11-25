@@ -208,7 +208,7 @@ class TestPostgresUmschreiben:
                         saison="2026",
                         nummer=nummer,
                         eingetreten_am=date(2026, 11, 25),
-                        einwilligung_kennung="team-2026-11-25",
+                        einwilligung_kennung="team-2026-11-26",
                         einwilligung_zeitpunkt=jetzt,
                     )
                 )

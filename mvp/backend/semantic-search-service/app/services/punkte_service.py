@@ -17,9 +17,11 @@ Woher die drei Stufen kommen:
   20.11.2026): Stimmen zu den eigenen sichtbaren Beitraegen zaehlen nicht, sonst liesse
   sich der Deckel am eigenen Bestand erklicken. Gezaehlt wird der Tag, an dem die
   Stimme zuletzt gesetzt wurde; eine zurueckgenommene Stimme faellt weg.
-- Quests: ANNAHME (#352): gibt es noch nicht; die Stufe bleibt 0, bis sie kommen.
-  Gewicht und Deckel stehen schon in der Konfiguration, weil ADR 0004 alle drei
-  Stufen dort verlangt.
+- Quests: Team-Quests (#792, services/team_fortschritt_service.py quest_tage): je
+  erreichter Quest eines eigenen Teams mit deckender Einwilligung, wenn die Person in
+  der Woche einen Beitrag gespeichert hat, der heute sichtbar und mindestens
+  BEITRAG_WARTEZEIT alt ist; gezaehlt am Montag nach der Woche, je Tag gedeckelt. Nur
+  mit Schalter team_quests, sonst bleibt die Stufe 0.
 
 Ein Startkonto sammelt keine Punkte, ein Konto ohne geltende Einwilligung "Punkte
 und Meilensteine" (nie erteilt oder widerrufen) auch nicht: Die
@@ -28,7 +30,8 @@ Datenschutzerklaerung stuetzt die Punkte auf diese eigene, freiwillige Einwillig
 Mitwirkung. Gefragt wird je Abruf, damit ein Widerruf sofort wirkt.
 
 Punkte je Saison (Rangliste, #793): Mit ``zeitraum`` zaehlt nur, was in diese Tage
-faellt. Tun und Bewerten nach ihrem Tag, Zustimmung nach dem Tag ihrer letzten
+faellt. Tun und Bewerten nach ihrem Tag, Quests nach dem Montag, an dem sie
+zaehlen (eine Quest der letzten Saisonwoche also nicht mehr), Zustimmung nach dem Tag ihrer letzten
 Aenderung, Nutzung nach den entdoppelten Nutzungsereignissen (usage_events mit
 ``entdoppelt``). Die gibt es nur fuer die Frist der usage_events (90 Tage,
 cleanup_old_events): Was laenger zurueckliegt, zaehlt fuer die Saison nicht mehr.
@@ -51,10 +54,13 @@ from typing import (
 )
 
 from core.config import Settings
+from core.logging import get_logger
 from domain.punkte import Punktegewichte, Punktestand, Wirkungsdaten, punkte_berechnen
 from repositories.punkte_einwilligung_repository import (
     get_punkte_einwilligung_repository,
 )
+
+logger = get_logger(__name__)
 
 BEITRAG_WARTEZEIT = timedelta(days=3)
 """
@@ -134,6 +140,9 @@ class PunkteService:
         settings: Settings,
         jetzt: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
         eingewilligt: Optional[Callable[[str], bool]] = None,
+        quest_tage: Optional[
+            Callable[[str, List[datetime], datetime], Dict[date, int]]
+        ] = None,
     ):
         self._sichtbare_beitraege = sichtbare_beitraege
         self._nutzung = nutzung
@@ -145,6 +154,20 @@ class PunkteService:
         self._eingewilligt = eingewilligt or (
             lambda user_id: get_punkte_einwilligung_repository().eingewilligt(user_id)
         )
+        # Team-Quests (#792); ohne Angabe keine Quest-Punkte.
+        self._quest_tage = quest_tage
+
+    async def _quests(self, user_id, beitraege, grenze) -> Dict[date, int]:
+        """Quest-Punkte der Team-Quests; scheitert das, fehlen nur sie (Fehler im Log)."""
+        if self._quest_tage is None:
+            return {}
+        try:
+            return await asyncio.to_thread(
+                self._quest_tage, user_id, [b.created for b in beitraege], grenze
+            )
+        except Exception as e:
+            logger.error(f"Team quest points not read: {type(e).__name__}")
+            return {}
 
     async def punkte(
         self, user_id: str, zeitraum: Optional[Tuple[date, date]] = None
@@ -198,15 +221,19 @@ class PunkteService:
             if b.created.astimezone(timezone.utc) <= grenze
         ]
         beitraege_je_tag = _je_tag(stehende)
+        quests = await self._quests(user_id, beitraege, grenze)
         if zeitraum is not None:
             beitraege_je_tag = _im_zeitraum(beitraege_je_tag, zeitraum)
             einwuerfe = _im_zeitraum(einwuerfe, zeitraum)
             bewertungen = _im_zeitraum(bewertungen, zeitraum)
+            # Quest-Punkte der Team-Quests (#792) nach ihrem Tag, wie Tun und Bewerten
+            quests = _im_zeitraum(quests, zeitraum)
         daten = Wirkungsdaten(
             nutzungen=nutzung,
             zustimmungen=zustimmungen,
             beitraege_je_tag=beitraege_je_tag,
             einwuerfe_ausformuliert_je_tag=einwuerfe,
+            quests_je_tag=quests,
             bewertungen_je_tag=bewertungen,
         )
         return punkte_berechnen(daten, gewichte)

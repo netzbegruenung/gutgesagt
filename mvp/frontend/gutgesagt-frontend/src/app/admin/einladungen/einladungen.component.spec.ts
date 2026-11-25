@@ -188,6 +188,7 @@ describe('EinladungenComponent', () => {
         team_name: 'BDK 26 Berlin',
         team_motiv: 'waage',
         team_saison: '2026',
+        team_art: 'anlass',
       });
       anfrage.flush({ ...TEAMLINK, team: { ...TEAMLINK.team!, mitglieder: 0 } });
       fixture.detectChanges();
@@ -207,6 +208,110 @@ describe('EinladungenComponent', () => {
       expect(k.kannAnlegen).toBeFalse();
       k.anlegen();
       http.expectNone((r) => r.method === 'POST');
+    });
+
+    it('Teamart: Standard „Team nach Anlass, Ort oder Saison“, Datum nur bei „Team nach Gruppe“', () => {
+      mitTeams([]);
+      const block = el().querySelector('[data-testid="team-block"]') as HTMLElement;
+
+      const arten = Array.from(block.querySelectorAll('[data-testid="team-art"]'));
+      expect(arten.map((a) => a.textContent!.trim())).toEqual(['Team nach Anlass, Ort oder Saison', 'Team nach Gruppe']);
+      expect(fixture.componentInstance.teamArt).toBe('anlass');
+      expect(block.querySelector('[data-testid="team-zustimmung"]')).toBeNull();
+
+      fixture.componentInstance.teamArt = 'gruppe';
+      fixture.detectChanges();
+
+      const feld = block.querySelector('[data-testid="team-zustimmung"]') as HTMLElement;
+      expect(feld.textContent).toContain('Zustimmung der Gruppenleitung liegt schriftlich vor (Datum)');
+      expect((feld.querySelector('input') as HTMLInputElement).type).toBe('date');
+    });
+
+    it('Team nach Gruppe: das Namensfeld heißt „Name der Gruppe …“ mit Hinweis, sonst „Teamname“', () => {
+      mitTeams([]);
+      const feld = () => el().querySelector('.team-name') as HTMLElement;
+      expect(feld().querySelector('mat-label')!.textContent!.trim()).toBe('Teamname');
+      expect(feld().textContent).not.toContain('Ohne Zusätze');
+
+      fixture.componentInstance.teamArt = 'gruppe';
+      fixture.detectChanges();
+
+      expect(feld().querySelector('mat-label')!.textContent!.trim()).toBe(
+        'Name der Gruppe (genau so, wie sie öffentlich heißt)'
+      );
+      const hinweis = feld().querySelector('[data-testid="teamname-hinweis"]')!.textContent!;
+      expect(hinweis).toContain('Ohne Zusätze wie Ort oder Jahr: Die Begrüßung nennt die Gruppe mit genau diesem Namen.');
+      // der allgemeine Hinweis zum Teamnamen bleibt dabei
+      expect(hinweis).toContain('Nur nach Anlass, Ort oder Saison benennen.');
+    });
+
+    it('zeigt am Teamnamen den Hinweis wortgleich, auch ohne Hinweis vom Server', () => {
+      http.expectOne(URL).flush({ einloesen_eingerichtet: true, einladungen: [], teams_aktiv: true, motive: MOTIVE });
+      fixture.detectChanges();
+
+      const name = el().querySelector('.team-name') as HTMLElement;
+      expect(name.textContent).toContain(
+        'Anlass, Ort, Saison oder öffentliche Gruppe mit schriftlicher Zustimmung; keine Namen zu Religion, Gesundheit, sexueller Orientierung, Herkunft oder Gewerkschaft.'
+      );
+      expect(name.textContent).not.toContain('Nie nach Personen');
+    });
+
+    it('Team nach Gruppe: Anlegen nur mit Datum der Zustimmung, höchstens heute; Datum geht mit', () => {
+      mitTeams([]);
+      const k = fixture.componentInstance;
+      k.notiz = 'Gruppe';
+      k.teamName = 'Netzfeuerwehr';
+      k.teamArt = 'gruppe';
+      fixture.detectChanges();
+      expect(k.kannAnlegen).toBeFalse();
+      expect(el().querySelector('[data-testid="team-zustimmung-fehlt"]')).not.toBeNull();
+      k.teamZustimmungAm = '2999-01-01';
+      expect(k.kannAnlegen).toBeFalse();
+      k.anlegen();
+      http.expectNone((r) => r.method === 'POST');
+
+      k.teamZustimmungAm = '2026-11-20';
+      expect(k.kannAnlegen).toBeTrue();
+      k.anlegen();
+
+      const anfrage = http.expectOne((r) => r.method === 'POST' && r.url === URL);
+      expect(anfrage.request.body.team_art).toBe('gruppe');
+      expect(anfrage.request.body.team_zustimmung_am).toBe('2026-11-20');
+      anfrage.flush({ ...TEAMLINK, team: { ...TEAMLINK.team!, art: 'gruppe', zustimmung_am: '2026-11-20' } });
+      fixture.detectChanges();
+      expect(k.teamArt).toBe('anlass');
+      expect(k.teamZustimmungAm).toBe('');
+    });
+
+    it('Team nach Anlass schickt kein Datum mit, auch wenn eines eingetragen war', () => {
+      mitTeams([]);
+      const k = fixture.componentInstance;
+      k.notiz = 'Stand';
+      k.teamName = 'Bayreuth';
+      k.teamZustimmungAm = '2026-11-20';
+
+      k.anlegen();
+
+      const anfrage = http.expectOne((r) => r.method === 'POST' && r.url === URL);
+      expect(anfrage.request.body.team_art).toBe('anlass');
+      expect('team_zustimmung_am' in anfrage.request.body).toBeFalse();
+      anfrage.flush(TEAMLINK);
+    });
+
+    it('zeigt in der Liste bei einem Team nach Gruppe Art und Tag der Zustimmung, sonst nicht', () => {
+      const NACH_GRUPPE: Einladung = {
+        ...TEAMLINK,
+        id: 't2',
+        team: { name: 'Netzfeuerwehr', motiv: 'vogel', saison: '2026', art: 'gruppe', zustimmung_am: '2026-11-20', mitglieder: 4 },
+      };
+      mitTeams([NACH_GRUPPE, TEAMLINK]);
+
+      const [gruppe, anlass] = Array.from(el().querySelectorAll('[data-testid="einladung"]'));
+      expect(gruppe.querySelector('[data-testid="team-art-zeile"]')!.textContent).toContain(
+        'Nach Gruppe, Zustimmung vom 20.11.2026'
+      );
+      expect(anlass.querySelector('[data-testid="team-art-zeile"]')).toBeNull();
+      expect(gruppe.querySelector('[data-testid="mitglieder"]')!.textContent!.trim()).toBe('4');
     });
 
     it('zeigt in der Liste Team mit Motiv und Saison und nur die Zahl der Mitglieder', () => {

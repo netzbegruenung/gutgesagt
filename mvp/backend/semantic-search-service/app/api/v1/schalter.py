@@ -81,15 +81,18 @@ def _einstellungen() -> EinstellungenService:
 
 
 def _hinweis(name: str) -> Optional[str]:
-    """Die laufende Saison ersetzt die Einstellung aktuelle_saison (#782)."""
+    """
+    Eine Saison ersetzt die Einstellung aktuelle_saison (#782): die laufende, in einer
+    Luecke zwischen zwei Saisons die zuletzt beendete.
+    """
     if name != AKTUELLE_SAISON:
         return None
-    laufende = get_saison_service().saison_fuer_teams()
-    if laufende is None:
+    saison = get_saison_service().saison_fuer_teams()
+    if saison is None:
         return None
     return (
-        f"Gilt gerade nicht: Die laufende Saison „{laufende}“ ist die aktuelle "
-        "Saison der Teams (Abschnitt Saisons)."
+        f"Gilt gerade nicht: Die Saison „{saison}“ ist die aktuelle Saison der Teams, "
+        "bis die nächste beginnt (Abschnitt Saisons)."
     )
 
 

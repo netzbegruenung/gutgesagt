@@ -225,6 +225,26 @@ def teams_ohne_datenbank():
 
 
 @pytest.fixture(autouse=True)
+def team_fortschritt_ohne_datenbank():
+    """
+    Der Wochenzaehler der Teams (services/team_fortschritt_service.py) haengt an den
+    Endpunkten fuer Beitraege, Stimmen und "Ja, gepostet". Ohne Ersatz baute er bei
+    wirksamem Schalter das echte Repository. Der Ersatz kennt keine Teams; Tests mit
+    Teams setzen einen eigenen Dienst (team_fortschritt_service_setzen).
+    """
+    from services.team_fortschritt_service import (
+        TeamFortschrittService,
+        team_fortschritt_service_setzen,
+    )
+
+    repository = MagicMock()
+    repository.eigene_teams.return_value = []
+    team_fortschritt_service_setzen(TeamFortschrittService(repository))
+    yield repository
+    team_fortschritt_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
 def anzeigenamen_ohne_datenbank(monkeypatch):
     """
     Der AnzeigenameService haengt an jeder angemeldeten Antwort. Ohne diesen Ersatz

@@ -316,6 +316,12 @@ class Settings(BaseSettings):
     # Mitgliedschaft ist im Zweifel ein Art.-9-Datum; erst mit DSFA-Nachtrag,
     # Loeschkonzept und Abschnitt "Teams" in der Datenschutzerklaerung einschalten.
     teams_aktiv: bool = False
+    # Team-Fortschritt (#784) und Team-Quests (#792), services/team_fortschritt_service.py:
+    # eigene Obergrenzen, Standard aus; erst nach DSFA-Nachtrag V29 und Jura-OK
+    # einschalten. team_fortschritt wirkt nur mit teams, team_quests nur mit
+    # team_fortschritt.
+    team_fortschritt_aktiv: bool = False
+    team_quests_aktiv: bool = False
     # Teams oeffentlich am Namen (eigene Einwilligung, domain/teams.py). Eigene
     # Obergrenze, bewusst nicht an abzeichen_sichtbar_aktiv gekoppelt: Auf Prod bleibt
     # sie aus, bis die Datenschutzbeauftragte geraten hat. Wirkt nur mit teams_aktiv.
@@ -338,7 +344,8 @@ class Settings(BaseSettings):
     # Saison und Gemeinschaftsziel (#782, domain/saisons.py): Den Balken sehen alle erst,
     # wenn es einmal so viele abgeschlossene Wochen hintereinander mit je mindestens so
     # vielen verschiedenen Menschen gab, die "Ja, gepostet" gemeldet haben; vorher nur
-    # Admins.
+    # Admins. Die Datenschutzerklaerung nennt beide Zahlen: wer sie aendert, zieht den
+    # Satz in datenschutz.component.html ("Rueckmeldung 'Ja, gepostet'") nach.
     saison_ziel_schwelle_menschen: int = Field(default=25, ge=0)
     saison_ziel_schwelle_wochen: int = Field(default=3, ge=0)
     # Gewichte und Deckel der drei Stufen (domain/punkte.py): Tun klein und je Tag

@@ -1,0 +1,38 @@
+{
+  "users": [
+    {
+      "email": "test.user@example.com",
+      "passwordHash": "$2b$12$Bee4Pec5pIxKcDQkwQAF2.enRsSttg3b9QCghCx4EZmTUXEjttoCS",
+      "displayName": "Test User",
+      "userId": "user-001",
+      "createdAt": "2025-10-24T11:50:49.279792+00:00"
+    },
+    {
+      "email": "admin@example.com",
+      "passwordHash": "$2b$12$Bee4Pec5pIxKcDQkwQAF2.enRsSttg3b9QCghCx4EZmTUXEjttoCS",
+      "displayName": "Admin User",
+      "userId": "user-002",
+      "createdAt": "2025-10-23T11:50:49.664106+00:00",
+      "isAdmin": true
+    },
+    {
+      "email": "teams.neu1@example.com",
+      "passwordHash": "$2b$12$Bee4Pec5pIxKcDQkwQAF2.enRsSttg3b9QCghCx4EZmTUXEjttoCS",
+      "displayName": "Teams Neu 1",
+      "userId": "teams-neu-1",
+      "createdAt": "2026-11-25T10:00:00+00:00"
+    },
+    {
+      "email": "teams.neu2@example.com",
+      "passwordHash": "$2b$12$Bee4Pec5pIxKcDQkwQAF2.enRsSttg3b9QCghCx4EZmTUXEjttoCS",
+      "displayName": "Teams Neu 2",
+      "userId": "teams-neu-2",
+      "createdAt": "2026-11-25T10:00:00+00:00"
+    }
+  ],
+  "metadata": {
+    "generated": "2025-10-25T11:50:49.664852+00:00",
+    "version": "1.0",
+    "totalUsers": 4
+  }
+}

@@ -4,6 +4,7 @@ import {
   TEAM_VERLASSEN,
   teamBegruessungSaetze,
   teamBegruessungTitel,
+  teamGruppeSatz,
 } from './team-texte';
 
 describe('Texte der Teams', () => {
@@ -20,6 +21,12 @@ describe('Texte der Teams', () => {
     expect(text).toContain('Das siehst nur du, unter „Meine Teams“.');
     expect(text).toContain('auf deine politische Haltung und deinen Ort schließen lassen');
     expect(text).toContain('mit „Team verlassen“ widerrufen, dann löschen wir es sofort');
+  });
+
+  it('Team nach Gruppe: der Satz über der Frage, wortgleich, mit dem Teamnamen an beiden Stellen', () => {
+    expect(teamGruppeSatz('Die grüne Welle')).toBe(
+      'Dieses Team ist mit Zustimmung von Die grüne Welle nach ihr benannt. Verantwortlich für Gut gesagt ist allein die Netzbegrünung; Die grüne Welle bekommt keine Daten über dich.'
+    );
   });
 
   it('nennt dieselben Namen wie die Datenschutzerklärung', () => {

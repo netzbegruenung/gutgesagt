@@ -20,6 +20,7 @@ from domain.saisons import (
     eingabe_pruefen,
     laufende_saison,
     loeschen_pruefen,
+    saison_fuer_teams,
     saisonzahl,
     schwelle_erreicht,
     ueberschneidung,
@@ -167,6 +168,51 @@ class TestSaisonzahl:
 
     def test_ohne_zahlen_null(self):
         assert saisonzahl(_saison(), {}, laufende=MO) == 0
+
+    def test_angrenzende_saisons_teilen_keine_randwoche(self):
+        # Winter endet Mittwoch, Fruehjahr beginnt Donnerstag derselben Woche
+        winter = _saison(MO - timedelta(weeks=2), MO + timedelta(days=2))
+        fruehjahr = _saison(
+            MO + timedelta(days=3), MO + timedelta(weeks=4), name="Frühjahr 27"
+        )
+        alle = [winter, fruehjahr]
+        zahlen = {
+            MO - timedelta(weeks=2): 10,
+            MO - timedelta(weeks=1): 20,
+            MO: 40,  # Randwoche: Montag liegt im Winter
+            MO + timedelta(weeks=1): 5,
+        }
+        laufende = MO + timedelta(weeks=2)
+        assert saisonzahl(winter, zahlen, laufende, alle) == 70
+        assert saisonzahl(fruehjahr, zahlen, laufende, alle) == 5
+
+    def test_angebrochene_erste_woche_ohne_vorgaengerin_zaehlt(self):
+        s = _saison(MO + timedelta(days=3), MO + timedelta(weeks=2))
+        andere = _saison(MO - timedelta(weeks=5), MO - timedelta(weeks=3), name="Alt")
+        zahlen = {MO: 40, MO + timedelta(weeks=1): 5}
+        assert saisonzahl(s, zahlen, MO + timedelta(weeks=2), [s, andere]) == 45
+
+
+class TestSaisonFuerTeams:
+    WINTER = _saison(MO, MO + timedelta(weeks=12) - timedelta(days=1))
+    FRUEHJAHR = _saison(
+        MO + timedelta(weeks=15), MO + timedelta(weeks=26), name="Frühjahr 27"
+    )
+
+    def test_laufende(self):
+        alle = [self.FRUEHJAHR, self.WINTER]
+        assert saison_fuer_teams(alle, MO + timedelta(days=3)) is self.WINTER
+
+    def test_luecke_behaelt_die_zuletzt_beendete(self):
+        alle = [self.FRUEHJAHR, self.WINTER]
+        assert saison_fuer_teams(alle, MO + timedelta(weeks=13)) is self.WINTER
+
+    def test_naechste_beginnt(self):
+        alle = [self.FRUEHJAHR, self.WINTER]
+        assert saison_fuer_teams(alle, MO + timedelta(weeks=15)) is self.FRUEHJAHR
+
+    def test_vor_der_ersten_saison_keine(self):
+        assert saison_fuer_teams([self.WINTER], MO - timedelta(days=1)) is None
 
 
 class TestSchwelle:

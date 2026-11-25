@@ -4,8 +4,9 @@ domain/saisons.py).
 
 Ein Admin legt Saisons an (Name, Beginn, Ende, Ziel in Widerspruchs-Wochen). Solange
 der Schalter wirkt, ist die laufende Saison die aktuelle Saison der Teams
-(``saison_fuer_teams``, gelesen von services/einstellungen_service.py); ohne laufende
-Saison oder bei Schalter aus gilt die Einstellung auf der Seite Schalter wie bisher.
+(``saison_fuer_teams``, gelesen von services/einstellungen_service.py), in einer Luecke
+zwischen zwei Saisons die zuletzt beendete; vor der ersten Saison oder bei Schalter aus
+gilt die Einstellung auf der Seite Schalter wie bisher.
 
 Den Fortschrittsbalken sehen alle erst ab der Schwelle (Settings
 ``saison_ziel_schwelle_menschen`` und ``saison_ziel_schwelle_wochen``), vorher nur
@@ -33,6 +34,7 @@ from domain.saisons import (
     eingabe_pruefen,
     laufende_saison,
     loeschen_pruefen,
+    saison_fuer_teams,
     saisonzahl,
     schwelle_erreicht,
 )
@@ -147,13 +149,16 @@ class SaisonService:
 
     def saison_fuer_teams(self, heute: Optional[date] = None) -> Optional[str]:
         """
-        Name der laufenden Saison, wenn der Schalter wirkt; sonst None (dann gilt die
-        Einstellung "aktuelle Saison"). Ist die Datenbank nicht erreichbar, None.
+        Name der Saison der Teams, wenn der Schalter wirkt: die laufende, in einer
+        Luecke zwischen zwei Saisons die zuletzt beendete (domain/saisons.py
+        ``saison_fuer_teams``). Sonst None (dann gilt die Einstellung "aktuelle
+        Saison"), ebenso ohne begonnene Saison oder wenn die Datenbank nicht
+        erreichbar ist.
         """
         if not self.wirksam():
             return None
         try:
-            saison = self.laufende(heute)
+            saison = saison_fuer_teams(self._gecacht(), heute or heute_utc())
         except Exception as e:
             logger.error(f"Saisons nicht gelesen, Einstellung gilt: {type(e).__name__}")
             return None
@@ -184,7 +189,8 @@ class SaisonService:
                 and self._uhr() - self._balken[1] < self._cache_sekunden
             ):
                 return self._balken[2]
-        saison = self.laufende(heute)
+        saisons = self._gecacht()
+        saison = laufende_saison(saisons, heute)
         ergebnis: Optional[Balken] = None
         if saison is not None:
             laufende = wochenbeginn(heute)
@@ -193,7 +199,7 @@ class SaisonService:
                 ergebnis = Balken(
                     name=saison.name,
                     ziel=saison.ziel,
-                    erreicht=saisonzahl(saison, zahlen, laufende),
+                    erreicht=saisonzahl(saison, zahlen, laufende, saisons),
                 )
         with self._sperre:
             self._balken = (heute, self._uhr(), ergebnis)
@@ -209,7 +215,7 @@ class SaisonService:
                 SaisonStand(
                     saison=s,
                     zustand=s.zustand(heute),
-                    erreicht=saisonzahl(s, zahlen, laufende),
+                    erreicht=saisonzahl(s, zahlen, laufende, saisons),
                     laufende_woche=(
                         zahlen.get(laufende, 0) if s.laeuft(heute) else None
                     ),

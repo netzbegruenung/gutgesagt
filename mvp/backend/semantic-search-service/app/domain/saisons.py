@@ -168,13 +168,39 @@ def loeschen_pruefen(saison: Saison, heute: date) -> None:
         )
 
 
-def saisonzahl(saison: Saison, wochenzahlen: Dict[date, int], laufende: date) -> int:
+def wochen_der_saison(saison: Saison, andere: Iterable[Saison] = ()) -> List[date]:
+    """
+    Die Wochen, die der Saison zaehlen: ihre Kalenderwochen, angebrochene voll. Eine
+    Randwoche, deren Montag in einer anderen Saison liegt, gehoert nur dieser anderen
+    (die Wochenzahl gibt es nur fuer die ganze Woche): Grenzen zwei Saisons in einer
+    Woche aneinander, zaehlt die Woche nur fuer die Saison, in der ihr Montag liegt.
+    Nur die erste Woche kann einen Montag vor dem Beginn haben.
+    """
+    andere = [a for a in andere if a.id != saison.id]
+    return [
+        w
+        for w in saison.wochen()
+        if w >= saison.beginn or not any(a.beginn <= w <= a.ende for a in andere)
+    ]
+
+
+def saisonzahl(
+    saison: Saison,
+    wochenzahlen: Dict[date, int],
+    laufende: date,
+    andere: Iterable[Saison] = (),
+) -> int:
     """
     Widerspruchs-Wochen der Saison: Summe der Wochenzahlen ueber ihre abgeschlossenen
-    Wochen (Montag vor ``laufende``). Die laufende Woche zaehlt erst nach ihrem Ende,
-    wie die Wochenzahl selbst, die erst dann feststeht.
+    Wochen (Montag vor ``laufende``; Randwochen nach ``wochen_der_saison``, dafuer
+    ``andere``: alle Saisons). Die laufende Woche zaehlt erst nach ihrem Ende, wie die
+    Wochenzahl selbst, die erst dann feststeht.
     """
-    return sum(wochenzahlen.get(w, 0) for w in saison.wochen() if w < laufende)
+    return sum(
+        wochenzahlen.get(w, 0)
+        for w in wochen_der_saison(saison, andere)
+        if w < laufende
+    )
 
 
 def schwelle_erreicht(
@@ -210,3 +236,17 @@ def laufende_saison(saisons: Iterable[Saison], heute: date) -> Optional[Saison]:
         if saison.laeuft(heute):
             return saison
     return None
+
+
+def saison_fuer_teams(saisons: Iterable[Saison], heute: date) -> Optional[Saison]:
+    """
+    Die Saison, die fuer Teams als aktuell gilt: die laufende; in einer Luecke zwischen
+    zwei Saisons die zuletzt beendete, bis die naechste beginnt. Ohne begonnene Saison
+    None (dann gilt die Einstellung).
+    """
+    saisons = list(saisons)
+    laufend = laufende_saison(saisons, heute)
+    if laufend is not None:
+        return laufend
+    vorbei = [s for s in saisons if s.ende < heute]
+    return max(vorbei, key=lambda s: s.ende) if vorbei else None

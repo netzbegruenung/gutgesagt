@@ -23,7 +23,7 @@ const zahl = (wert: number): string => wert.toLocaleString('de-DE');
   template: `
     @if (balken; as b) {
       <section class="saison-ziel" aria-labelledby="saison-ziel-titel" data-testid="saison-ziel">
-        <h2 id="saison-ziel-titel">Wir begrünen das Netz, Antwort für Antwort</h2>
+        <h2 id="saison-ziel-titel">Gemeinsam widersprechen, Antwort für Antwort</h2>
         <p class="satz" data-testid="saison-ziel-satz">
           Saison {{ b.name }}: Woche für Woche zusammen <strong>{{ zahl(b.erreicht) }}-mal</strong> öffentlich widersprochen.
         </p>

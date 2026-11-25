@@ -31,6 +31,7 @@ from tests.integration.postgres import Datenbank
 
 MIGRATION = postgres.MIGRATIONEN / "2026-10-30-429-einladungen.sql"
 TEAMS = postgres.MIGRATIONEN / "2026-11-25-teams.sql"
+TEAMS_NACH_GRUPPE = postgres.MIGRATIONEN / "2026-11-26-teams-nach-gruppe.sql"
 
 HEUTE = date(2026, 10, 30)
 LETZTER_TAG = date(2026, 11, 13)
@@ -171,6 +172,9 @@ def test_tabelle_kennt_keine_mail_adresse_und_keinen_namen(neue_datenbank):
         "team_name",
         "team_motiv",
         "team_saison",
+        # Teamart und Tag der Zustimmung der Gruppenleitung, kein Name
+        "team_art",
+        "team_zustimmung_am",
     }
     with neue_datenbank.engine.connect() as c:
         inhalt = c.execute(text("SELECT * FROM einladungen")).all()
@@ -184,6 +188,7 @@ def test_migration_legt_die_tabelle_an_und_darf_zweimal_laufen(postgres_url):
         postgres.migration(db, MIGRATION)
         # Spaeter kamen die Teamspalten dazu (2026-11-25-teams.sql)
         postgres.migration(db, TEAMS)
+        postgres.migration(db, TEAMS_NACH_GRUPPE)
 
         service = _service(db, KontenAttrappe())
         code = service.anlegen("nach der Migration", 1, LETZTER_TAG, heute=HEUTE).code

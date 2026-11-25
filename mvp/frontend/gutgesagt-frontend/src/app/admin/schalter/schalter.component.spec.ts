@@ -200,7 +200,7 @@ describe('SchalterComponent', () => {
     });
 
     it('sagt, wenn eine laufende Saison die Einstellung ersetzt (#782)', () => {
-      const hinweis = 'Gilt gerade nicht: Die laufende Saison „Winter 26“ ist die aktuelle Saison der Teams (Abschnitt Saisons).';
+      const hinweis = 'Gilt gerade nicht: Die Saison „Winter 26“ ist die aktuelle Saison der Teams, bis die nächste beginnt (Abschnitt Saisons).';
       mitEinstellungen([schalter({ name: 'teams' })], [{ ...SAISON, hinweis }]);
       expect(einstellung().querySelector('[data-testid="einstellung-hinweis"]')!.textContent).toContain(hinweis);
     });
