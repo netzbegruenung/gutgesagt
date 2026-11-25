@@ -37,7 +37,7 @@
         <fieldset class="rangliste-name" [disabled]="speichert">
             <legend>Dein Name in der Rangliste</legend>
             <label>
-                <input type="radio" name="rangliste-name" [checked]="!stand.mit_anzeigename" (change)="nameWaehlen(false)">
+                <input type="radio" name="rangliste-name" [checked]="!stand.mit_anzeigename || !stand.anzeigename" (change)="nameWaehlen(false)">
                 Zufälliger Ranglistenname: <strong>{{ stand.ranglistenname }}</strong>
             </label>
             <label *ngIf="stand.anzeigename">
@@ -58,6 +58,12 @@
                     (click)="antworten(false)">Aus der Rangliste nehmen</button>
         </p>
     </ng-container>
+
+    <p *ngIf="ruhend" class="rangliste-stand" data-testid="ruhend">
+        Du hast der Rangliste zugestimmt, stehst aber gerade nicht darin: Dafür braucht es auch deine Einwilligungen zur Mitwirkung und zu „Punkte und Meilensteine“.
+        <button mat-button type="button" class="rangliste-raus" data-testid="raus-ruhend" [disabled]="speichert"
+                (click)="antworten(false)">Aus der Rangliste nehmen</button>
+    </p>
 
     <p *ngIf="stand.gefragt && stand.teilnehmen === false && !fragen" class="rangliste-stand" data-testid="ohne">
         Du bist nicht in der Rangliste.

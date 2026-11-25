@@ -174,6 +174,18 @@ describe('RanglisteComponent', () => {
     expect(el().querySelector('#rangliste-wortlaut')!.textContent).toContain(WORTLAUT);
   });
 
+  it('ohne Voraussetzung nicht in der Liste, Widerruf bleibt erreichbar', () => {
+    laden(stand({ gefragt: true, teilnehmen: true, voraussetzungen: false }));
+
+    expect(el().querySelector('[data-testid="platz"]')).toBeNull();
+    expect(knopf('ruhend').textContent).toContain('stehst aber gerade nicht darin');
+    knopf('raus-ruhend').click();
+    const anfrage = http.expectOne((r) => r.method === 'PUT');
+    expect(anfrage.request.body.teilnehmen).toBeFalse();
+    anfrage.flush(null);
+    http.expectOne(URL).flush(stand({ gefragt: true, teilnehmen: false, voraussetzungen: false }));
+  });
+
   it('vergangene Saisons nur als Summe', () => {
     laden(stand({ gefragt: true, teilnehmen: true, vergangene: [{ name: 'Herbst 26', punkte: 40 }] }));
 

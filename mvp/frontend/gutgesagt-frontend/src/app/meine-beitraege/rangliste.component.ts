@@ -92,7 +92,15 @@ export class RanglisteComponent implements OnInit {
     if (!stand) {
       return false;
     }
-    return this.fragen || this.dabei || (stand.gefragt && stand.voraussetzungen && !!stand.saison);
+    return this.fragen || this.dabei || this.ruhend || (stand.gefragt && stand.voraussetzungen && !!stand.saison);
+  }
+
+  /**
+   * Ja gegeben, aber eine Voraussetzung fehlt gerade: nicht in der Rangliste, der
+   * Widerruf bleibt trotzdem hier erreichbar.
+   */
+  get ruhend(): boolean {
+    return !!this.stand && this.stand.teilnehmen === true && !this.stand.voraussetzungen;
   }
 
   /** Der eigene Platz unter den ersten zehn oder darunter. */
