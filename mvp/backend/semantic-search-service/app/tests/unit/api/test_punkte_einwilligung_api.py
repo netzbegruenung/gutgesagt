@@ -72,6 +72,19 @@ def test_eingewilligt_zum_geltenden_wortlaut(repo):
     assert _client().get(URL, headers=KIM).json()["eingewilligt"] is True
 
 
+def test_nach_einem_nein_ist_die_frage_beantwortet(repo):
+    # #788: Das Nein steht mit Kennung auf dem Server; ``wortlaut`` ist danach gesetzt,
+    # und die App fragt in keinem spaeteren Besuch wieder.
+    repo.lesen.return_value = PunkteEinwilligung(
+        False, AKTUELLER_WORTLAUT, datetime(2026, 11, 25, tzinfo=timezone.utc)
+    )
+
+    stand = _client().get(URL, headers=KIM).json()
+
+    assert stand["eingewilligt"] is False
+    assert stand["wortlaut"] == AKTUELLER_WORTLAUT
+
+
 def test_einwilligen_speichert_mit_wortlaut(repo):
     antwort = _client().put(
         URL, headers=KIM, json={"eingewilligt": True, "wortlaut": AKTUELLER_WORTLAUT}

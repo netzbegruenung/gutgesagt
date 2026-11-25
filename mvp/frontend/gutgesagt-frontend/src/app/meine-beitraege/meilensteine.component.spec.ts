@@ -486,6 +486,56 @@ describe('MeilensteineComponent (#351)', () => {
       element.remove();
     });
 
+    it('nach einem Nein fragt die Seite nie wieder, auch nicht nach einem neuen Gewinn im selben Besuch', fakeAsync(() => {
+      einwilligung.next(NIE_GEANTWORTET);
+      moment = MOMENT;
+      let jetzt = 1_000_000;
+      vorBudget = (b) => (b.jetzt = () => jetzt);
+      const element = erstellen([]);
+
+      knopfMit(element, 'Nein, ohne Punkte').click();
+      fixture.detectChanges();
+      budget.gewinn();
+      jetzt += ABSTAND_NACH_LOB_MS;
+      tick(ABSTAND_NACH_LOB_MS + 100);
+      fixture.detectChanges();
+
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeUndefined();
+      expect(element.querySelector('app-punkte-einwilligung')).toBeNull();
+      expect(punkteGesetzt).toEqual([false]);
+      fixture.destroy();
+    }));
+
+    it('ein gespeichertes Nein gilt in jedem späteren Besuch: keine Frage, kein Häkchen auf der Seite', fakeAsync(() => {
+      // Neuer Besuch: frisches Budget ohne Gezeigtes, ein Gewinn liegt vor, das Nein kommt vom Server.
+      einwilligung.next({ eingewilligt: false, wortlaut: '2026-11-13', aktueller_wortlaut: WORTLAUT });
+      moment = { ...MOMENT, beantwortet: 1 };
+      let jetzt = 1_000_000;
+      vorBudget = (b) => {
+        b.jetzt = () => jetzt;
+        b.gewinn();
+      };
+      const element = erstellen([]);
+      jetzt += ABSTAND_NACH_LOB_MS;
+      tick(ABSTAND_NACH_LOB_MS + 100);
+      fixture.detectChanges();
+
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeUndefined();
+      expect(element.querySelector('app-punkte-einwilligung')).toBeNull();
+      fixture.destroy();
+    }));
+
+    it('die Frage steht ohne Lob daneben und wirbt nicht („Hol dir …“)', () => {
+      einwilligung.next(NIE_GEANTWORTET);
+      moment = MOMENT;
+      const element = erstellen([]);
+
+      const frage = element.querySelector('[aria-labelledby="punkte-frage-titel"]')!;
+      const text = frage.textContent ?? '';
+      expect(text).not.toMatch(/hol dir|glückwunsch|super|toll|danke/i);
+      expect(text).toContain('beitragen und bewerten kannst du genauso ohne');
+    });
+
     it('ein Ja willigt ein; die Frage nach der Sichtbarkeit wartet auf den nächsten Besuch', () => {
       einwilligung.next(NIE_GEANTWORTET);
       moment = MOMENT;
