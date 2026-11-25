@@ -10,6 +10,18 @@
  */
 export const GEPOSTET_FRAGE = 'Gepostet? Dann zählt dein Konter mit.';
 export const JA_GEPOSTET = 'Ja, gepostet';
+/**
+ * Statt der Frage, wenn die Person nach dem Kopieren zurückkommt (Rückkehr-Moment,
+ * Entscheidung 25.11.): einmal je Kopieren, Gewinn statt Druck. Nicht „fürs gemeinsame
+ * Ziel“: Das Gemeinschaftsziel gibt es nur mit laufender Saison, Schalter `saison_ziel`
+ * und erreichter Schwelle; die Meldung zählt aber immer zu „Öffentlich gekontert“.
+ */
+export const GEPOSTET_RUECKKEHR = 'Gepostet? Tipp kurz – dann zählt dein Konter diese Woche mit.';
+/**
+ * Dasselbe ohne Konto (#799): Meldungen ohne Konto sind keine Menschen und zählen weder
+ * zu „Öffentlich gekontert“ noch fürs Gemeinschaftsziel, deshalb ohne „zählt mit“.
+ */
+export const GEPOSTET_RUECKKEHR_OHNE_KONTO = 'Gepostet? Tipp kurz, dann wissen wir, dass es hilft.';
 /** Der Knopf nach dem Tippen: Er bleibt stehen (Fokus), tut aber nichts mehr. */
 export const GEPOSTET_GEMELDET = 'Gepostet';
 /** Melden nicht angekommen: Der Knopf steht wieder bereit (Review 25.11.). */

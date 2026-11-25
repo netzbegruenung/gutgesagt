@@ -4,11 +4,15 @@ import {
   Component,
   ElementRef,
   EventEmitter,
+  HostListener,
   Input,
   OnChanges,
+  OnDestroy,
   Output,
   SimpleChanges,
   ViewChild,
+  inject,
+  ChangeDetectorRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -18,7 +22,21 @@ import { MatIconModule } from '@angular/material/icon';
 import { ROUTES } from '../../shared/constants/app.constants';
 import { KOPIERT } from '../../shared/vorlagen-luecke';
 import { AndereTonlage, KOPIERT_ERFOLG, KOPIERT_ERFOLG_ZEICHEN, nutzungSatz, tonlagenHinweis } from './kopiert-erfolg';
-import { GEPOSTET_FRAGE, GEPOSTET_GEMELDET, JA_GEPOSTET } from './gepostet-texte';
+import {
+  GEPOSTET_FRAGE,
+  GEPOSTET_GEMELDET,
+  GEPOSTET_RUECKKEHR,
+  GEPOSTET_RUECKKEHR_OHNE_KONTO,
+  JA_GEPOSTET,
+} from './gepostet-texte';
+
+/**
+ * So lange nach dem Kopieren gilt das Zurückkommen erst als Rückkehr: Ein kurzer Blick in
+ * einen anderen Tab soll den Kasten nicht flackern lassen.
+ */
+export const RUECKKEHR_AB_MS = 3000;
+/** So lange leuchtet „Ja, gepostet“ bei der Rückkehr auf (die Animation dauert 1,6 s). */
+export const RUECKKEHR_LEUCHTEN_MS = 2000;
 
 /**
  * Wo die Frage „Gepostet?“ im Kasten steht: ``aus`` ohne Frage, ``frage`` mit Knopf,
@@ -39,6 +57,13 @@ export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
  * Tastaturfokus nicht verloren geht (wie „Danke an die Autorin“); der Dank kommt in einer
  * eigenen Status-Zeile. Ohne Schalter `kopiert_erfolg` zeigt der Kasten statt des
  * Erfolgstexts nur die gewohnte Bestätigung, damit die Frage trotzdem bleiben kann.
+ *
+ * Rückkehr-Moment (Entscheidung 25.11.): Wird die Seite frühestens 3 s nach dem Kopieren
+ * wieder sichtbar oder bekommt den Fokus zurück und steht die Frage noch offen, leuchtet
+ * der Knopf einmal kurz auf und die Frage wird zu einem kurzen Hinweis, was das Tippen
+ * bringt; einmal je Kopieren, ohne Speicher und ohne Popup. Mit „Bewegung reduzieren“
+ * wechselt nur der Text. Die Region sagt dabei nur den geänderten Satz an
+ * (``aria-atomic="false"``), nicht den ganzen Kasten noch einmal.
  */
 @Component({
   selector: 'app-kopiert-erfolg',
@@ -48,7 +73,7 @@ export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
   template: `
     <div class="kopiert-erfolg-rahmen" [class.sichtbar]="sichtbar">
       <div class="kopiert-erfolg-inhalt">
-        <div class="kopiert-erfolg-region" role="status">
+        <div class="kopiert-erfolg-region" role="status" aria-atomic="false">
           <div class="kopiert-erfolg" *ngIf="sichtbar">
             <p class="erfolg-satz" *ngIf="erfolgstext; else schlicht">
               {{ erfolg }} <span aria-hidden="true">{{ zeichen }}</span>
@@ -58,7 +83,7 @@ export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
             <p class="erfolg-tonlage" *ngIf="erfolgstext && tonlage as t">
               {{ t.frage }}&ngsp;<a class="erfolg-tonlage-link" [routerLink]="[beitragPfad, andereTonlage!.id]">{{ t.link }}</a>
             </p>
-            <p class="erfolg-gepostet-frage" *ngIf="gepostet === 'frage' || gepostet === 'sendet'">{{ frage }}</p>
+            <p class="erfolg-gepostet-frage" *ngIf="gepostet === 'frage' || gepostet === 'sendet'">{{ frageText }}</p>
           </div>
         </div>
         <!-- Ausserhalb der Status-Region: Knopf und Dank sollen beim Erscheinen nicht mit angesagt werden -->
@@ -66,6 +91,7 @@ export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
           <button #jaKnopf mat-flat-button type="button" class="ja-gepostet"
                   [attr.aria-disabled]="gepostet === 'frage' ? null : 'true'"
                   [class.ja-gepostet--fertig]="gepostet === 'gemeldet'"
+                  [class.ja-gepostet--rueckkehr]="leuchtet"
                   (click)="gepostetTippen()">
             <mat-icon aria-hidden="true" *ngIf="gepostet === 'gemeldet'">check</mat-icon>
             <span>{{ gepostet === 'gemeldet' ? gemeldet : jaGepostetWort }}</span>
@@ -145,6 +171,24 @@ export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
       .ja-gepostet[aria-disabled='true'] {
         cursor: default;
       }
+      /* Rückkehr-Moment: einmal sanft aufleuchten, ohne den Knopf zu verschieben */
+      .ja-gepostet--rueckkehr {
+        animation: ja-gepostet-leuchten 1.6s ease-in-out 1;
+      }
+      @keyframes ja-gepostet-leuchten {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 transparent;
+        }
+        40% {
+          box-shadow: 0 0 0 6px var(--primaer-tint), 0 0 0 8px var(--primaer);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .ja-gepostet--rueckkehr {
+          animation: none;
+        }
+      }
       .erfolg-gepostet-dank {
         margin: var(--spacing-xs) 0 0;
         font-size: 15px;
@@ -167,7 +211,7 @@ export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
     `,
   ],
 })
-export class KopiertErfolgComponent implements OnChanges, AfterViewChecked {
+export class KopiertErfolgComponent implements OnChanges, AfterViewChecked, OnDestroy {
   @Input() sichtbar = false;
   /** Die Nutzung, wie die Karte sie gerade zeigt; null = unbekannt. */
   @Input() nutzung: number | null = null;
@@ -179,17 +223,80 @@ export class KopiertErfolgComponent implements OnChanges, AfterViewChecked {
   @Input() gepostet: GepostetStand = 'aus';
   /** Der Dank nach „Ja, gepostet“, sobald der Server geantwortet hat. */
   @Input() gepostetDank: string | null = null;
+  /** Zählt die Kopiervorgänge der Karte; jeder neue startet den Rückkehr-Moment neu. */
+  @Input() kopierLauf = 0;
+  /** Ohne Konto (#799): der Rückkehr-Hinweis ohne „zählt mit“. */
+  @Input() ohneKonto = false;
   @Output() schliessen = new EventEmitter<void>();
   /** „Ja, gepostet“ getippt; melden und danken macht die Aktionsleiste. */
   @Output() jaGepostet = new EventEmitter<void>();
 
   readonly kopiertSchlicht = KOPIERT;
-  readonly frage = GEPOSTET_FRAGE;
   readonly jaGepostetWort = JA_GEPOSTET;
   readonly gemeldet = GEPOSTET_GEMELDET;
   readonly erfolg = KOPIERT_ERFOLG;
   readonly zeichen = KOPIERT_ERFOLG_ZEICHEN;
   readonly beitragPfad = ROUTES.BEITRAG;
+
+  /** Seit wann der laufende Kopiervorgang steht (Date.now()). */
+  private kopiertUm = 0;
+  /** Der Rückkehr-Moment kam für diesen Kopiervorgang schon. */
+  private rueckkehrGezeigt = false;
+  /** Der Knopf leuchtet gerade auf. */
+  leuchtet = false;
+  private leuchtenFrist: ReturnType<typeof setTimeout> | null = null;
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  /** Die Frage, nach der Rückkehr einmalig der Hinweis, was das Tippen bringt. */
+  get frageText(): string {
+    if (!this.rueckkehrGezeigt) {
+      return GEPOSTET_FRAGE;
+    }
+    return this.ohneKonto ? GEPOSTET_RUECKKEHR_OHNE_KONTO : GEPOSTET_RUECKKEHR;
+  }
+
+  @HostListener('document:visibilitychange')
+  sichtbarGeworden(): void {
+    if (document.visibilityState === 'visible') {
+      this.zurueckgekommen();
+    }
+  }
+
+  @HostListener('window:focus')
+  fokusZurueck(): void {
+    this.zurueckgekommen();
+  }
+
+  /**
+   * Zurück auf der Seite: nur einmal je Kopieren, nur mit offener Frage im offenen Kasten
+   * und frühestens nach RUECKKEHR_AB_MS. Zu früh zählt nicht als verbraucht.
+   */
+  private zurueckgekommen(): void {
+    if (this.rueckkehrGezeigt || !this.sichtbar || this.gepostet !== 'frage' || !this.kopierLauf) {
+      return;
+    }
+    if (Date.now() - this.kopiertUm < RUECKKEHR_AB_MS) {
+      return;
+    }
+    this.rueckkehrGezeigt = true;
+    if (!bewegungReduziert()) {
+      this.leuchtet = true;
+      this.leuchtenFrist = setTimeout(() => {
+        this.leuchtenFrist = null;
+        this.leuchtet = false;
+        this.cdr.markForCheck();
+      }, RUECKKEHR_LEUCHTEN_MS);
+    }
+    this.cdr.markForCheck();
+  }
+
+  private leuchtenBeenden(): void {
+    if (this.leuchtenFrist !== null) {
+      clearTimeout(this.leuchtenFrist);
+      this.leuchtenFrist = null;
+    }
+    this.leuchtet = false;
+  }
 
   get nutzungText(): string | null {
     return nutzungSatz(this.nutzung);
@@ -210,12 +317,21 @@ export class KopiertErfolgComponent implements OnChanges, AfterViewChecked {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['kopierLauf']) {
+      this.kopiertUm = Date.now();
+      this.rueckkehrGezeigt = false;
+      this.leuchtenBeenden();
+    }
     // Verschwindet der Knopf unter dem Fokus (Server: nicht mehr angeboten), fiele der
     // Fokus auf <body> (WCAG 2.4.3); er geht stattdessen auf „Hinweis schließen“.
     const stand = changes['gepostet'];
     if (stand && !stand.firstChange && stand.currentValue === 'aus' && this.jaKnopf) {
       this.fokusUmsetzen = document.activeElement === this.jaKnopf.nativeElement;
     }
+  }
+
+  ngOnDestroy(): void {
+    this.leuchtenBeenden();
   }
 
   ngAfterViewChecked(): void {
@@ -230,4 +346,9 @@ export class KopiertErfolgComponent implements OnChanges, AfterViewChecked {
       this.jaGepostet.emit();
     }
   }
+}
+
+/** „Bewegung reduzieren“ im System: dann nur der Textwechsel, kein Aufleuchten. */
+function bewegungReduziert(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

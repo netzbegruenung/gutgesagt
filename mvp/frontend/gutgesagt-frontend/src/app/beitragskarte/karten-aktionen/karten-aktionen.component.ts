@@ -165,6 +165,14 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
   private gepostetKennung: string | null = null;
   /** Zählt die Kopiervorgänge, damit eine späte Antwort nicht in ein neueres Kopieren fragt. */
   private kopierLauf = 0;
+  /** Der laufende Kopiervorgang für den Erfolgskasten (Rückkehr-Moment). */
+  get erfolgLauf(): number {
+    return this.kopierLauf;
+  }
+  /** Ob die Frage „Gepostet?“ ohne Konto steht (#799): dann ohne „zählt mit“. */
+  get gepostetOhneKonto(): boolean {
+    return this.gepostetKennung === null;
+  }
   /** Die Snackbar „Kopiert“, falls ohne Erfolgstext eine Frage sie ablöst. */
   private kopiertHinweis: MatSnackBarRef<unknown> | null = null;
   /** Seit dem ersten Kopieren auf dieser Karte; kein Zeitlimit. */
