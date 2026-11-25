@@ -436,8 +436,11 @@ Table `saisons` (name, first and last day, goal in Widerspruchs-Wochen; no perso
 rules in `domain/saisons.py`, `repositories/saison_repository.py` (overlap check under a table
 lock, so at most one season runs on any day) and `services/saison_service.py`. With `saison_ziel`
 effective, the running season replaces the setting "aktuelle Saison" for teams
-(`einstellungen_service.aktuelle_saison()`). The count is the sum of the existing weekly numbers
-of "Ja, gepostet" (`gepostet_wochen`) over the closed weeks of the season; nothing new is stored.
+(`einstellungen_service.aktuelle_saison()`); in a gap between two seasons the last ended season
+stays the current one until the next begins, before the first season the setting applies. The
+count is the sum of the existing weekly numbers of "Ja, gepostet" (`gepostet_wochen`) over the
+closed weeks of the season; a boundary week shared by two seasons counts only for the season that
+contains its Monday (`domain.saisons.wochen_der_saison`); nothing new is stored.
 
 - `GET /api/v1/saisons/aktuell` (anonymous at the BFF): `{"balken": {name, ziel, erreicht}}`,
   `{"balken": null}` without a running season or below the threshold, 404 while the switch is off.
@@ -445,7 +448,8 @@ of "Ja, gepostet" (`gepostet_wochen`) over the closed weeks of the season; nothi
   list with state, create, change (running: only goal and end), delete (only before the start).
 - Threshold for the public bar: `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_WOCHEN` (default 3) closed
   weeks in a row with at least `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_MENSCHEN` (default 25) people
-  each, reached once at any time.
+  each, reached once at any time. The privacy notice names no numbers, so changing them needs no
+  change there.
 - For later building blocks (Rangliste per season): `SaisonService.alle()`, `.laufende(heute)`
   and the dataclass `domain.saisons.Saison` (`id`, `name`, `beginn`, `ende`, `ziel`, `wochen()`).
 

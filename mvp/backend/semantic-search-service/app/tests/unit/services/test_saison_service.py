@@ -52,9 +52,39 @@ class TestFuerTeams:
         assert service.saison_fuer_teams(HEUTE) is None
         repository.alle.assert_not_called()
 
-    def test_ohne_laufende_saison(self):
+    def test_vor_der_ersten_saison(self):
         service, _, _ = _service()
         assert service.saison_fuer_teams(MO - timedelta(days=1)) is None
+
+    def test_luecke_behaelt_die_beendete_saison(self):
+        # Einstellung "2026" und alte Teams duerfen in der Luecke nicht zurueckkommen
+        naechste = Saison(
+            uuid.uuid4(),
+            "Frühjahr 27",
+            SAISON.ende + timedelta(days=15),
+            SAISON.ende + timedelta(days=90),
+            10,
+        )
+        service, _, _ = _service(saisons=(naechste, SAISON))
+        assert service.saison_fuer_teams(SAISON.ende + timedelta(days=1)) == "Winter 26"
+        assert service.saison_fuer_teams(naechste.beginn) == "Frühjahr 27"
+
+    def test_hinweis_auch_in_der_luecke(self, einstellungen_ohne_datenbank):
+        from api.v1.schalter import _hinweis
+
+        heute = heute_utc()
+        vorbei = Saison(
+            uuid.uuid4(),
+            "Winter 26",
+            heute - timedelta(days=30),
+            heute - timedelta(days=2),
+            5,
+        )
+        saison_service_setzen(_service(saisons=(vorbei,))[0])
+        assert "„Winter 26“" in _hinweis("aktuelle_saison")
+        assert _hinweis("teams") is None
+        saison_service_setzen(_service(saisons=(vorbei,), wirksam=False)[0])
+        assert _hinweis("aktuelle_saison") is None
 
     def test_datenbank_weg_heisst_einstellung(self):
         service, repository, _ = _service()
