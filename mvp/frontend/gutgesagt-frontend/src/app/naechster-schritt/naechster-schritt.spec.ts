@@ -7,6 +7,8 @@ import { BehaviorSubject } from 'rxjs';
 
 import { AuthService, UserInfo } from '../auth/auth.service';
 import { FunktionenService } from '../services/funktionen.service';
+import { BesuchResponse, UsageTrackingService } from '../services/usage-tracking.service';
+import { SeitLetztemBesuchService } from '../seit-letztem-besuch/seit-letztem-besuch.service';
 import { NAECHSTER_SCHRITT_URL, NaechsterSchrittComponent } from './naechster-schritt.component';
 import {
   Vorschlag,
@@ -131,10 +133,12 @@ describe('Dein nächster Schritt (#789)', () => {
     let http: HttpTestingController;
     let nutzer: BehaviorSubject<UserInfo | null>;
     let an: ReturnType<typeof signal<boolean>>;
+    let besuch: BehaviorSubject<BesuchResponse | null>;
 
     function starten(angemeldet: boolean, schalter: boolean) {
       nutzer = new BehaviorSubject<UserInfo | null>({ isAuthenticated: angemeldet, userId: angemeldet ? 'kim' : null, userName: null, claims: null });
       an = signal(schalter);
+      besuch = new BehaviorSubject<BesuchResponse | null>(null);
       TestBed.configureTestingModule({
         imports: [NaechsterSchrittComponent],
         providers: [
@@ -143,6 +147,7 @@ describe('Dein nächster Schritt (#789)', () => {
           provideRouter([]),
           { provide: AuthService, useValue: { userInfo$: nutzer } },
           { provide: FunktionenService, useValue: { an: () => an } },
+          { provide: UsageTrackingService, useValue: { besuchStand$: besuch } },
         ],
       });
       http = TestBed.inject(HttpTestingController);
@@ -199,6 +204,44 @@ describe('Dein nächster Schritt (#789)', () => {
       } finally {
         feld.remove();
       }
+    });
+
+    describe('nie zugleich mit „Seit deinem letzten Besuch“ (Review Spielgefühl 25.11.)', () => {
+      it('meldet dem Block, ob es einen Vorschlag gibt, und beim Verlassen keinen mehr', () => {
+        const fixture = starten(true, true);
+        const neues = TestBed.inject(SeitLetztemBesuchService);
+        expect(neues.naechsterSchrittDa$.value).toBeFalse();
+        http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [{ art: 'suchen' }] });
+        fixture.detectChanges();
+        expect(neues.naechsterSchrittDa$.value).toBeTrue();
+
+        fixture.destroy();
+        expect(neues.naechsterSchrittDa$.value).toBeFalse();
+      });
+
+      it('tritt hinter Neues zu eigenen Beiträgen zurück und kommt nach dessen Klick wieder', () => {
+        const fixture = starten(true, true);
+        http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [{ art: 'einwerfen' }] });
+        besuch.next({ nutzung_seit_letztem_besuch: 2 });
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.naechster-schritt')).toBeNull();
+
+        TestBed.inject(SeitLetztemBesuchService).erledigen('nutzung');
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.naechster-schritt')).not.toBeNull();
+      });
+
+      it('geht allgemeinen Zahlen und dem ersten Besuch vor', () => {
+        const fixture = starten(true, true);
+        http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [{ art: 'suchen' }] });
+        besuch.next({ nutzung_seit_letztem_besuch: 0, neue_einwuerfe: 4, unbeantwortete_aussagen: 3 });
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.naechster-schritt')).not.toBeNull();
+
+        besuch.next({ nutzung_seit_letztem_besuch: 5, erster_besuch: true });
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.naechster-schritt')).not.toBeNull();
+      });
     });
 
     it('lässt schon Weggeklicktes beim Laden aus', () => {

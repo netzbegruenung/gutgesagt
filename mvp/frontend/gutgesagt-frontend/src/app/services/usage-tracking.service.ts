@@ -150,6 +150,12 @@ export interface BesuchResponse {
    * null oder fehlend: Schalter aus.
    */
   neu_oeffentlich_gepostet?: number | null;
+  /**
+   * Der allererste Besuch dieses Kontos: Dann gibt es kein „seit deinem letzten Besuch“,
+   * die Startseite lässt den Block weg (Review Spielgefühl 25.11.). Fehlt bei älteren
+   * Antworten und gilt dann als false.
+   */
+  erster_besuch?: boolean;
 }
 
 export interface TrendingContent {

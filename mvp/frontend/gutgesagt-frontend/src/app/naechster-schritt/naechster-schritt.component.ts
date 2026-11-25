@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { combineLatest, of } from 'rxjs';
@@ -11,6 +11,9 @@ import { environment } from '../../environments/environment';
 import { AuthService } from '../auth/auth.service';
 import { FunktionenService } from '../services/funktionen.service';
 import { stillerKontext } from '../shared/selbst-nachladen';
+import { UsageTrackingService } from '../services/usage-tracking.service';
+import { SeitLetztemBesuchService } from '../seit-letztem-besuch/seit-letztem-besuch.service';
+import { eigenesNeuesSichtbar } from '../seit-letztem-besuch/seit-letztem-besuch.component';
 import {
   NAECHSTER_SCHRITT_SCHALTER,
   NaechsterSchrittAntwort,
@@ -32,6 +35,10 @@ export const NAECHSTER_SCHRITT_URL = `${environment.baseUrl}/api/v1/usage/users/
  * weggeklickt hat. „Anderer Vorschlag“ zeigt den nächsten; was weggeklickt ist, merkt sich
  * nur der Browser für sieben Tage (naechster-schritt.ts). Scheitert der Abruf, steht
  * nichts da: Die Karte ist Beiwerk.
+ *
+ * Nie zugleich mit „Seit deinem letzten Besuch“ (Review Spielgefühl 25.11.): Zeigt der
+ * Block Neues über die eigenen Beiträge, tritt die Karte zurück; sonst tritt der Block
+ * zurück. Die Reihenfolge der Startseite steht in docs/ARCHITECTURE.md.
  */
 @Component({
   selector: 'app-naechster-schritt',
@@ -39,7 +46,7 @@ export const NAECHSTER_SCHRITT_URL = `${environment.baseUrl}/api/v1/usage/users/
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, MatButtonModule, MatIconModule],
   template: `
-    @if (aktuell(); as eintrag) {
+    @if (sichtbar(); as eintrag) {
       <section class="naechster-schritt" aria-labelledby="naechster-schritt-titel">
         <h2 id="naechster-schritt-titel">Dein nächster Schritt</h2>
         <p class="naechster-schritt-satz">{{ eintrag.anzeige.satz }}</p>
@@ -137,7 +144,23 @@ export class NaechsterSchrittComponent {
     return erster && daten ? { vorschlag: erster, anzeige: daten, weitere: offen.length > 1 } : null;
   });
 
+  private readonly neues = inject(SeitLetztemBesuchService);
+  /** „Seit deinem letzten Besuch“ zeigt Neues über die eigenen Beiträge: Dann geht er vor. */
+  private readonly eigenesNeues = toSignal(
+    combineLatest([inject(UsageTrackingService).besuchStand$, this.neues.erledigt$]).pipe(
+      map(([stand, erledigt]) => eigenesNeuesSichtbar(stand, erledigt)),
+    ),
+    { initialValue: false },
+  );
+
+  /** Was die Karte zeigt: der aktuelle Vorschlag, außer der Block darüber geht vor. */
+  readonly sichtbar = computed(() => (this.eigenesNeues() ? null : this.aktuell()));
+
   constructor() {
+    // Dem Block „Seit deinem letzten Besuch“ melden, ob es einen Vorschlag gibt; beim
+    // Verlassen der Startseite gibt es keinen mehr.
+    effect(() => this.neues.naechsterSchrittDa$.next(this.aktuell() !== null));
+    inject(DestroyRef).onDestroy(() => this.neues.naechsterSchrittDa$.next(false));
     // Aufräumen bei jedem Laden der Startseite, auch ohne Schalter und ohne Anmeldung:
     // Abgelaufenes fällt weg, damit kein Eintrag länger als sieben Tage liegt.
     this.weggeklickt.set(weggeklicktLesen());

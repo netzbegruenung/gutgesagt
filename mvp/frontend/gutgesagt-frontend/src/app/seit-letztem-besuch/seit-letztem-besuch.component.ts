@@ -10,7 +10,7 @@ import { AuthService } from '../auth/auth.service';
 import { BesuchResponse, UsageTrackingService } from '../services/usage-tracking.service';
 import { MEINE_TAB_PARAM } from '../services/navigation.service';
 import { PAGE_TITLES, ROUTES } from '../shared/constants/app.constants';
-import { NeuesArt, SeitLetztemBesuchService } from './seit-letztem-besuch.service';
+import { EIGENES_NEUES, NeuesArt, SeitLetztemBesuchService } from './seit-letztem-besuch.service';
 import { LUECKE } from '../shared/luecke-texte';
 import { MENUE_ICONS } from '../shared/fangkorb-texte';
 
@@ -194,10 +194,44 @@ export function neuesListe(stand: NeuesStand): NeuesEintrag[] {
 }
 
 /**
+ * Ob der Block Neues ueber die eigenen Beitraege zeigt (EIGENES_NEUES), nach den Klicks
+ * dieses App-Starts. Dann tritt „Dein nächster Schritt“ zurueck. Beim ersten Besuch nie.
+ */
+export function eigenesNeuesSichtbar(stand: NeuesStand | null, erledigt: ReadonlySet<NeuesArt>): boolean {
+  if (!stand || stand.erster_besuch) {
+    return false;
+  }
+  return neuesListe(stand).some((e) => EIGENES_NEUES.has(e.art) && !erledigt.has(e.art));
+}
+
+/**
+ * Was der Block zeigt (Review Spielgefühl 25.11., Reihenfolge in docs/ARCHITECTURE.md):
+ * beim allerersten Besuch nichts, denn es gibt keinen letzten Besuch; neben einem
+ * Vorschlag von „Dein nächster Schritt“ nur, wenn es Neues ueber die eigenen Beitraege
+ * gibt. Sonst stuenden zwei Karten mit zwei Richtungen untereinander.
+ */
+export function startKacheln(
+  stand: NeuesStand | null,
+  erledigt: ReadonlySet<NeuesArt>,
+  naechsterSchrittDa: boolean,
+): NeuesEintrag[] {
+  if (!stand || stand.erster_besuch) {
+    return [];
+  }
+  if (naechsterSchrittDa && !eigenesNeuesSichtbar(stand, erledigt)) {
+    return [];
+  }
+  return neuesListe(stand)
+    .filter((e) => !erledigt.has(e.art))
+    .slice(0, MAX_KACHELN);
+}
+
+/**
  * „Seit deinem letzten Besuch“ auf der Startseite, nur fuer Angemeldete (Nutzerfuehrung
  * 13.11.): bis zu vier kleine Kacheln mit Zahl im Stil der Mitmachen-Kacheln, die ganze
  * Kachel ist der Link (Entscheidungen 18.11. und 20.11.). Bleibt nur eine, wird sie eine
- * breite Zeile mit Satz und Knopf. Ohne Neues steht nichts da. Kein roter Zaehler,
+ * breite Zeile mit Satz und Knopf. Ohne Neues steht nichts da, beim ersten Besuch auch
+ * nicht, und neben „Dein nächster Schritt“ nur mit eigenem Neuem (startKacheln). Kein roter Zaehler,
  * nichts, das verfaellt. Alle Zahlen stammen aus der Antwort des Besuchs beim App-Start
  * (RueckmeldungService), ohne eigenen Abruf.
  */
@@ -265,14 +299,8 @@ export class SeitLetztemBesuchComponent {
         return of([]);
       }
       this.neues.fuer(kennung);
-      return combineLatest([this.usage.besuchStand$, this.neues.erledigt$]).pipe(
-        map(([stand, erledigt]) =>
-          stand
-            ? neuesListe(stand)
-                .filter((e) => !erledigt.has(e.art))
-                .slice(0, MAX_KACHELN)
-            : [],
-        ),
+      return combineLatest([this.usage.besuchStand$, this.neues.erledigt$, this.neues.naechsterSchrittDa$]).pipe(
+        map(([stand, erledigt, naechsterSchrittDa]) => startKacheln(stand, erledigt, naechsterSchrittDa)),
       );
     }),
   );

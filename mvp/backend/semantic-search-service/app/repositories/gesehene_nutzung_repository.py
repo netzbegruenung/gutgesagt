@@ -19,6 +19,23 @@ class GeseheneNutzungRepository:
         """``db``: eine AppDatabase; ohne Angabe die globale."""
         self.db = db if db is not None else get_app_database()
 
+    def schon_besucht(self, user_id: str) -> bool:
+        """
+        Ob es fuer die Kennung schon einen Stand gibt, also schon einen Besuch: Die
+        Zeile entsteht beim ersten Besuch. Liest nur und speichert nichts; die Startseite
+        laesst damit "Seit deinem letzten Besuch" beim allerersten Besuch weg (Review
+        Spielgefuehl 25.11.).
+        """
+        with self.db.get_session() as session:
+            return (
+                session.execute(
+                    select(GeseheneNutzung.user_id).where(
+                        GeseheneNutzung.user_id == user_id
+                    )
+                ).first()
+                is not None
+            )
+
     def neu_seit_letztem_besuch(self, user_id: str, nutzung_jetzt: int) -> int:
         """
         Wie viele Nutzungen seit dem zuletzt gezeigten Stand dazugekommen sind;

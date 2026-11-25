@@ -5,6 +5,14 @@ import { BehaviorSubject } from 'rxjs';
 export type NeuesArt = 'antworten' | 'nutzung' | 'echo' | 'ausformuliert' | 'einwuerfe' | 'aussagen' | 'beitraege';
 
 /**
+ * Kacheln mit Neuem über die eigenen Beiträge, Aussagen und Einwürfe. Nur sie gehen
+ * „Dein nächster Schritt“ vor; die übrigen (neue Einwürfe anderer, wartende Aussagen,
+ * neue Beiträge) treten hinter dessen einen Vorschlag zurück (Review Spielgefühl 25.11.,
+ * Reihenfolge der Startseite in docs/ARCHITECTURE.md).
+ */
+export const EIGENES_NEUES: ReadonlySet<NeuesArt> = new Set<NeuesArt>(['antworten', 'nutzung', 'echo', 'ausformuliert']);
+
+/**
  * Vorgaenger-Staende im Browser aus der Entwicklung von #672; nie in einem Release, aber
  * auf Test-Stacks moeglich. Sie werden einmal entfernt, gelesen wird nichts mehr.
  */
@@ -36,6 +44,12 @@ export function alteBesuchMerkerEntfernen(): void {
 export class SeitLetztemBesuchService {
   private kennung: string | null = null;
   readonly erledigt$ = new BehaviorSubject<ReadonlySet<NeuesArt>>(new Set());
+  /**
+   * Ob „Dein nächster Schritt“ gerade einen Vorschlag hat (gesetzt von dessen Karte).
+   * Ohne eigenes Neues tritt „Seit deinem letzten Besuch“ dann zurück: höchstens eine
+   * Karte mit einer Richtung (Review Spielgefühl 25.11.).
+   */
+  readonly naechsterSchrittDa$ = new BehaviorSubject<boolean>(false);
   private aufgeraeumt = false;
 
   /** Einmal je App-Start die alten Merker entfernen; bei neuer Kennung die Klicks vergessen. */

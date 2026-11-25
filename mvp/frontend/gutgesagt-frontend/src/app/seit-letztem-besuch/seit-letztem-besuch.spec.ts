@@ -2,7 +2,14 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 
-import { MAX_KACHELN, SeitLetztemBesuchComponent, ZEITRAUM, neuesListe } from './seit-letztem-besuch.component';
+import {
+  MAX_KACHELN,
+  SeitLetztemBesuchComponent,
+  ZEITRAUM,
+  eigenesNeuesSichtbar,
+  neuesListe,
+  startKacheln,
+} from './seit-letztem-besuch.component';
 import { SeitLetztemBesuchService, alteBesuchMerkerEntfernen } from './seit-letztem-besuch.service';
 import { AuthService, UserInfo } from '../auth/auth.service';
 import { BesuchResponse, UsageTrackingService } from '../services/usage-tracking.service';
@@ -305,6 +312,76 @@ describe('Seit deinem letzten Besuch (Nutzerfuehrung 13.11.)', () => {
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('nav')).toBeNull();
+    });
+
+    it('zeigt beim allerersten Besuch nichts, auch mit wartenden Aussagen (Review 25.11.)', () => {
+      const fixture = erstellen();
+      info.next({ isAuthenticated: true, userId: 'kim-1' } as UserInfo);
+      besuch.next({ nutzung_seit_letztem_besuch: 0, unbeantwortete_aussagen: 1, erster_besuch: true });
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('nav')).toBeNull();
+    });
+
+    it('tritt hinter „Dein nächster Schritt“ zurück und kommt ohne Neuladen wieder (Review 25.11.)', () => {
+      const fixture = erstellen();
+      const neues = TestBed.inject(SeitLetztemBesuchService);
+      info.next({ isAuthenticated: true, userId: 'kim-1' } as UserInfo);
+      besuch.next({ nutzung_seit_letztem_besuch: 0, neue_einwuerfe: 3, unbeantwortete_aussagen: 2 });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('nav')).not.toBeNull();
+
+      neues.naechsterSchrittDa$.next(true);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('nav')).toBeNull();
+
+      neues.naechsterSchrittDa$.next(false);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('nav')).not.toBeNull();
+    });
+
+    it('geht mit Neuem zu eigenen Beiträgen „Dein nächster Schritt“ vor, mit allen Kacheln', () => {
+      const fixture = erstellen();
+      TestBed.inject(SeitLetztemBesuchService).naechsterSchrittDa$.next(true);
+      info.next({ isAuthenticated: true, userId: 'kim-1' } as UserInfo);
+      besuch.next({ nutzung_seit_letztem_besuch: 2, neue_einwuerfe: 3 });
+      fixture.detectChanges();
+
+      expect(links(fixture)).toEqual(['2 Nutzungen deiner Beiträge', '3 neue Einwürfe im Fangkorb']);
+    });
+  });
+
+  describe('Vorrang auf der Startseite (Review Spielgefühl 25.11.)', () => {
+    const keins: ReadonlySet<never> = new Set();
+
+    it('erster Besuch: keine Kacheln und kein eigenes Neues', () => {
+      const stand = { nutzung_seit_letztem_besuch: 3, unbeantwortete_aussagen: 1, erster_besuch: true };
+      expect(startKacheln(stand, keins, false)).toEqual([]);
+      expect(eigenesNeuesSichtbar(stand, keins)).toBeFalse();
+    });
+
+    it('ohne Angabe zum ersten Besuch (ältere Antwort) wie bisher', () => {
+      expect(startKacheln({ nutzung_seit_letztem_besuch: 0, unbeantwortete_aussagen: 1 }, keins, false).length).toBe(1);
+    });
+
+    it('zählt nur Antworten, Nutzung, Echo und Ausformuliertes als eigenes Neues', () => {
+      const allgemein = { nutzung_seit_letztem_besuch: 0, neue_einwuerfe: 2, unbeantwortete_aussagen: 4, neue_beitraege: 5 };
+      expect(eigenesNeuesSichtbar(allgemein, keins)).toBeFalse();
+      for (const feld of ['nutzung_seit_letztem_besuch', 'antworten_auf_eigene_aussagen', 'neu_oeffentlich_gepostet', 'ausformulierte_einwuerfe']) {
+        expect(eigenesNeuesSichtbar({ ...allgemein, [feld]: 1 }, keins)).withContext(feld).toBeTrue();
+      }
+    });
+
+    it('nach dem Klick auf das eigene Neue geht der Vorschlag wieder vor', () => {
+      const stand = { nutzung_seit_letztem_besuch: 2, neue_einwuerfe: 3 };
+      expect(startKacheln(stand, new Set(['nutzung'] as const), true)).toEqual([]);
+      expect(eigenesNeuesSichtbar(stand, new Set(['nutzung'] as const))).toBeFalse();
+      expect(startKacheln(stand, new Set(['nutzung'] as const), false).map((e) => e.art)).toEqual(['einwuerfe']);
+    });
+
+    it('ohne Stand nichts', () => {
+      expect(startKacheln(null, keins, false)).toEqual([]);
+      expect(eigenesNeuesSichtbar(null, keins)).toBeFalse();
     });
   });
 });
