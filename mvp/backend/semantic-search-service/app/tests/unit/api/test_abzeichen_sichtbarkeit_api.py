@@ -65,10 +65,15 @@ def test_gefragt_mit_antwort(dienst):
 
 
 @pytest.mark.parametrize("an,punkte", [(False, True), (True, False)])
-def test_ohne_beide_schalter_404(dienst, an, punkte):
+def test_ohne_beide_schalter_lesen_aus_aendern_404(dienst, an, punkte):
     client = _client(an=an, punkte=punkte)
 
-    assert client.get(URL, headers=KIM).status_code == 404
+    # Lesen fragt die Seite automatisch: 200 mit aktiv false statt 404 (Gateway-fail2ban)
+    antwort = client.get(URL, headers=KIM)
+    assert antwort.status_code == 200
+    assert antwort.json()["aktiv"] is False
+    assert antwort.json()["gefragt"] is False
+    dienst.sichtbarkeit.assert_not_called()
     assert (
         client.put(
             URL, json={"zeigen": True, "wortlaut": "2026-11-09"}, headers=KIM

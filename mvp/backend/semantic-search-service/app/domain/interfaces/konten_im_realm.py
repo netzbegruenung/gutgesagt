@@ -7,7 +7,7 @@ Keycloak-Admin-Schnittstelle steckt dahinter (infrastructure/keycloak_konten.py)
 import enum
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, Iterable, List, Mapping, Optional, Protocol
+from typing import Callable, Dict, Iterable, List, Mapping, Optional, Protocol
 
 
 # So lange gilt der Link in der Mail; danach hilft "Passwort vergessen". Die Loeschfrist
@@ -27,13 +27,20 @@ class IKontenImRealm(Protocol):
         email: str,
         vorname: Optional[str] = None,
         nachname: Optional[str] = None,
+        bei_angelegt: Optional[Callable[[str], None]] = None,
     ) -> KontoErgebnis: ...
 
 
 class INieBenutzteKonten(Protocol):
     """Loeschfrist fuer Konten aus Einladungen: services/loeschfristen_service.py."""
 
-    def nie_benutzte_loeschen(self, angelegt_vor: datetime) -> int: ...
+    def nie_benutzte_loeschen(
+        self,
+        angelegt_vor: datetime,
+        bei_geloescht: Optional[Callable[[str], None]] = None,
+    ) -> int:
+        """``bei_geloescht`` bekommt die Kennung jedes Kontos, das danach weg ist."""
+        ...
 
 
 @dataclass

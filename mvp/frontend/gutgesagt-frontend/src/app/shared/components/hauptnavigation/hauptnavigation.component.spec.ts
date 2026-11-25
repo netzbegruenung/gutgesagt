@@ -305,6 +305,57 @@ describe('HauptnavigationComponent', () => {
       expect(TestBed.inject(SeitLetztemBesuchService).erledigt$.value.has('einwuerfe')).toBeFalse();
     }));
   });
+
+  describe('Punkt an „Meine“ (#760)', () => {
+    function punkt(): HTMLElement | null {
+      return ziel('meine').querySelector('[data-testid="antworten-punkt"]');
+    }
+
+    it('zeigt neue Antworten auf eigene Aussagen als Punkt, im zugänglichen Namen als Text', () => {
+      besuch$.next({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: 2 });
+      bauen('leiste');
+
+      expect(punkt()!.getAttribute('aria-hidden')).toBe('true');
+      expect(ziel('meine').textContent).toContain('neue Antworten auf deine Aussagen');
+    });
+
+    it('zeigt ohne Schalter (null) und ohne Neues nichts', () => {
+      besuch$.next({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: null });
+      bauen('kopf');
+      expect(punkt()).toBeNull();
+      expect(ziel('meine').textContent).not.toContain('Antworten');
+
+      besuch$.next({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: 0 });
+      fixture.detectChanges();
+      expect(punkt()).toBeNull();
+    });
+
+    it('verschwindet, sobald Meine Beiträge offen war', fakeAsync(() => {
+      besuch$.next({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: 1 });
+      bauen('leiste');
+      expect(punkt()).not.toBeNull();
+
+      oeffnen('/fangkorb');
+      expect(punkt()).not.toBeNull();
+
+      oeffnen('/contributions');
+
+      expect(punkt()).toBeNull();
+    }));
+
+    it('kommt nach einem Kontowechsel mit neuem Besuchsstand wieder', fakeAsync(() => {
+      besuch$.next({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: 1 });
+      bauen('leiste');
+      oeffnen('/contributions');
+      expect(punkt()).toBeNull();
+
+      person$.next({ ...ANGEMELDET, userId: 'anderes-konto' });
+      besuch$.next({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: 2 });
+      fixture.detectChanges();
+
+      expect(punkt()).not.toBeNull();
+    }));
+  });
 });
 
 describe('oeffnetTastatur', () => {

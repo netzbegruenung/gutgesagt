@@ -184,6 +184,33 @@ class TestVorab:
         assert resp.json()["statement_was_new"] is False
         assert resp.json()["statement_text"] == "Heizungsgesetz = Enteignung"
 
+    @pytest.mark.parametrize("neu,gezaehlt", [(True, 1), (False, 0)])
+    def test_nur_eine_neue_aussage_zaehlt_zum_tagesdeckel(
+        self, statement_service, neu, gezaehlt
+    ):
+        from datetime import date
+
+        from middleware.tagesdeckel import TagesdeckelMiddleware
+        from utils.tagesdeckel import Tagesdeckel
+
+        statement_service.vorab_anlegen = AsyncMock(
+            return_value=(neu, uuid.uuid4(), "Das Heizungsgesetz enteignet uns")
+        )
+        deckel = Tagesdeckel(5, lambda: date(2026, 12, 4))
+        mit_deckel = FastAPI()
+        mit_deckel.include_router(statement_router, prefix="/api/v1/statement")
+        mit_deckel.dependency_overrides = app.dependency_overrides
+        mit_deckel.add_middleware(TagesdeckelMiddleware, deckel=deckel)
+
+        resp = TestClient(mit_deckel).post(
+            VORAB_URL,
+            json={"text": "Das Heizungsgesetz enteignet uns"},
+            headers=ANGEMELDET,
+        )
+
+        assert resp.status_code == 200
+        assert deckel._zaehler.get("person-1", (None, 0))[1] == gezaehlt
+
     @pytest.mark.parametrize("text", ["", "  ", "ab", "x" * 1001])
     def test_text_muss_passen(self, statement_service, text):
         statement_service.vorab_anlegen = AsyncMock()

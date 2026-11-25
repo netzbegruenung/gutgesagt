@@ -798,6 +798,37 @@ class TestNliModellOhneModell:
         assert modell._sperre.acquire(blocking=False)
         modell._sperre.release()
 
+    @pytest.mark.asyncio
+    async def test_folgerungen_nur_in_eine_richtung(self):
+        """Fuer Zero-Shot-Fragen (Themenvorschlaege, #401): Praemisse -> Hypothese, je
+        Paar die Folgerung; die Sperre ist danach frei."""
+        from services.dieselbe_behauptung.nli_modell import NliModell
+
+        modell = NliModell("gibt-es-nicht/modell")
+        modell._modell = object()
+        gerechnet = []
+
+        def rechnen(praemissen, hypothesen):
+            gerechnet.append((praemissen, hypothesen))
+            return [Richtung(0.8, 0.1), Richtung(0.2, 0.3)]
+
+        modell._wahrscheinlichkeiten = rechnen
+        paare = [("Text", "Es geht um A."), ("Text", "Es geht um B.")]
+
+        assert await modell.folgerungen(paare, warte_hoechstens=0.1) == [0.8, 0.2]
+        assert gerechnet == [(["Text", "Text"], ["Es geht um A.", "Es geht um B."])]
+        assert modell._sperre.acquire(blocking=False)
+        modell._sperre.release()
+
+    @pytest.mark.asyncio
+    async def test_folgerungen_none_solange_das_modell_laedt(self):
+        from services.dieselbe_behauptung.nli_modell import NliModell
+
+        modell = NliModell("gibt-es-nicht/modell")
+
+        assert await modell.folgerungen([("a", "b")], warte_hoechstens=0.1) is None
+        assert await modell.folgerungen([]) == []
+
     def test_ein_modell_je_name_und_prozess(self):
         from services.dieselbe_behauptung.nli_modell import nli_modell
 

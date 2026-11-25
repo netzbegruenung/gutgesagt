@@ -5,6 +5,7 @@ import { abschnitt as abschnittIn, istTagesdatum, normalisiert, stand } from '..
 import { DatenschutzComponent } from './datenschutz.component';
 import { SUCHANFRAGEN_ABSCHNITT } from '../search/search.component';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
+import { FEIER_TON_SCHLUESSEL } from '../shared/feier/feier-ton.service';
 
 /** Der Satz zu Widerrufen vor dem Einspielen: mit Platzhalter oder mit Datum („1. Dezember 2026“). */
 const WIDERRUF_VOR_DEM_EINSPIELEN = new RegExp(
@@ -286,6 +287,11 @@ describe('DatenschutzComponent', () => {
 
       expect(text).toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
       expect(text).toContain('nichts ist vorausgewählt');
+      // Mit Schalter einwilligung_im_gewinn auch als Frage mit zwei Knöpfen (#788, Jura 25.11.)
+      expect(text).toContain(
+        'Du gibst sie selbst unter „Meine Beiträge“ (Häkchen oder Frage mit zwei gleichwertigen Knöpfen) ' +
+          'oder mit einem eigenen Häkchen in den „Datenschutz-Einstellungen“',
+      );
       expect(text).toContain('Ohne sie kannst du genauso beitragen und bewerten');
       expect(text).toContain('jederzeit in den „Datenschutz-Einstellungen“ widerrufen; danach wird nichts mehr berechnet');
       expect(text).not.toContain('Bevor wir Punkte einschalten');
@@ -518,6 +524,91 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('Das gilt für beide Anmeldewege: über die Netzbegrünung und mit einem Konto aus einer Einladung.');
       expect(text).toContain('die der Anmeldedienst übermittelt, aber keine Zugangs-Tokens');
       expect(text).not.toContain('selbst anlegen');
+    });
+  });
+
+  describe('Teams über Einladungen', () => {
+    it('Einladung: das Team nur mit ausdrücklicher Zustimmung, nie die Einladung', () => {
+      const text = abschnitt('Konto aus einer Einladung');
+
+      expect(text).toContain('Am Konto steht nicht, über welche Einladung es entstand');
+      expect(text).toContain(
+        'Nur wenn eine Einladung zu einem Team gehört und du ausdrücklich zustimmst, speichern wir dein Team (siehe „Teams“), nicht aber die Einladung.'
+      );
+    });
+
+    it('Teams: was gespeichert wird, ohne Einladung, nur für dich, Admins nur die Zahl', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain(
+        'deine Kennung, den Namen des Teams, deine laufende Nummer im Team und den Tag, an dem du beigetreten bist'
+      );
+      expect(text).toContain('Welche Einladung du genutzt hast, speichern wir nicht.');
+      expect(text).toContain('Sagst du nein, speichern wir nichts davon');
+      expect(text).toContain('Deine Teams siehst nur du, unter „Meine Teams“.');
+      expect(text).toContain('sehen je Team nur, wie viele dabei sind, keine Namen und keine Liste');
+    });
+
+    it('Teams: auch nach einer Gruppe, die zugestimmt hat; die Gruppe bekommt keine Daten', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Manche Einladungen gehören zu einem Team, etwa einem Treffen, einem Ort oder einer Gruppe, die zugestimmt hat. Die Gruppe bekommt keine Daten über dich.'
+      );
+      expect(text).not.toContain('etwa einem Treffen oder einem Ort.');
+    });
+
+    it('Teams: eigene Einwilligung nach Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a, getrennt von den anderen', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain('Artikel 6 Absatz 1 Buchstabe a und Artikel 9 Absatz 2 Buchstabe a DSGVO');
+      expect(text).toContain('Du gibst sie mit dem Knopf „Ja, speichert …“, nichts ist vorausgewählt.');
+      expect(text).toContain('getrennt von der Einwilligung zu deiner Mitwirkung und von „Punkte und Meilensteine“');
+      expect(text).toContain('mit der Kennung des Wortlauts und dem Zeitpunkt als Nachweis');
+    });
+
+    it('Teams: der Nachweis bleibt, solange du im Team bist, nicht bis zur Kontolöschung (25.11.2026)', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Deine Antwort speichern wir mit der Kennung des Wortlauts und dem Zeitpunkt als Nachweis, solange du im Team bist.'
+      );
+      expect(text).not.toContain('als Nachweis, bis dein Konto gelöscht wird');
+    });
+
+    it('Teams: Zweck mit der Summe des Teams (25.11.2026)', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Zweck: dir zu zeigen, in welchen Teams du dabei bist, und die Nummer in deinem Team zu vergeben und die Summe deines Teams zu bilden.'
+      );
+    });
+
+    it('Teams: die Team-Summe mit derselben Einwilligung, mit Kommentaren und „Ja, gepostet“, noch nicht eingeschaltet (26.11.2026)', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Diese Anzeige am Namen ist noch nicht eingeschaltet. ' +
+          'Mit derselben Einwilligung darf die Zahl deiner Beiträge, Bewertungen und Kommentare und deiner Meldungen „Ja, gepostet“ in eine Summe deines Teams eingehen. ' +
+          'Diese Summe sehen nur Mitglieder des Teams, nur für abgeschlossene Wochen, erst wenn mindestens fünf ' +
+          'Mitglieder eingewilligt haben, gerundet und nie mit einzelnen Namen. Die Team-Summe ist noch nicht eingeschaltet.'
+      );
+    });
+
+    it('Teams: „Team verlassen“ löscht sofort, Nummer nicht neu, Sicherungskopien bis zum Ablauf', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain('„Team verlassen“');
+      expect(text).toContain('wir löschen den Eintrag sofort');
+      expect(text).toContain('Deine Nummer vergeben wir nicht neu.');
+      expect(text).toContain('siehe „Sicherungskopien“');
+    });
+
+    it('Teams: die Anzeige am Namen ist noch nicht eingeschaltet und braucht eine eigene Frage', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain('fragen wir dich vorher gesondert');
+      expect(text).toContain('Diese Anzeige am Namen ist noch nicht eingeschaltet.');
     });
   });
 
@@ -783,6 +874,27 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('Ohne eigene Wahl speichern wir nichts');
     });
 
+    it('Gerätespeicher: der Merker einer Einladung mit Team, höchstens drei Tage, nach dem Lesen gelöscht (team-merker.ts)', () => {
+      const text = abschnitt('Weitere Einträge').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Sagst du ohne Konto bei einer Einladung zu einem Team „Ja, speichert …“, merkt sich dein Browser, auch über ' +
+          'das Schließen des Tabs hinaus, den Code der Einladung, die Kennung des Wortlauts, dem du zugestimmt hast, ' +
+          'ob du der zweiten Frage zugestimmt hast, ob deine Teams an deinem Namen erscheinen dürfen (ohne diese ' +
+          'Frage: nein), und bis wann der Eintrag gilt.'
+      );
+      expect(text).toContain('Damit trägt er deine Antwort bis zur Anmeldung nach dem Anlegen deines Kontos.');
+      expect(text).toContain(
+        'Hast du schon ein Konto und willst dich zum Beitreten erst anmelden, merkt er sich nur den Code, bis du angemeldet zurückkommst.'
+      );
+      expect(text).toContain('Den Namen des Teams und deine Nummer enthält der Eintrag nie.');
+      expect(text).toContain('Er gilt höchstens drei Tage, so lange wie der Link in der Mail.');
+      expect(text).toContain(
+        'Wir löschen ihn, sobald die Seite der Einladung ihn nach deiner Anmeldung gelesen hat, und einen abgelaufenen ' +
+          'Eintrag beim nächsten Aufruf der Einladung.'
+      );
+    });
+
     it('Gerätespeicher: Willkommen und Rundgang „Mitmachen“ als zwei Vermerke ohne Übertragung (#516)', () => {
       const text = abschnitt('Weitere Einträge');
 
@@ -906,6 +1018,21 @@ describe('DatenschutzComponent', () => {
       const text = mitMerker(true);
       expect(text).toContain(ABSATZ);
       expect(text).toContain('sie schon gesehen hast. Das sind zwei Vermerke ohne Angaben über dich.');
+    });
+  });
+
+  describe('Ton bei Erfolgen (#787)', () => {
+    it('steht immer unter „Speicherung auf deinem Gerät“, unabhängig von Schalter und Browserzustand', () => {
+      localStorage.removeItem(FEIER_TON_SCHLUESSEL);
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ imports: [DatenschutzComponent], providers: [provideRouter([])] });
+      const fixture = TestBed.createComponent(DatenschutzComponent);
+      fixture.detectChanges();
+      const text = abschnittIn(fixture.nativeElement as HTMLElement, 'Weitere Einträge');
+      expect(text).toContain(`unter dem Schlüssel „${FEIER_TON_SCHLUESSEL}“`);
+      expect(text).toContain('Der Eintrag enthält nur, dass der Ton an ist, und keine Angaben über dich');
+      expect(text).toContain('schaltest du ihn wieder aus, löschen wir den Eintrag');
+      expect(text).toContain('bis du ihn änderst');
     });
   });
 });

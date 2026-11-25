@@ -1,3 +1,18 @@
+/*
+ * Der Kopf klebt oben, und zwar am Host: position: sticky wirkt nur innerhalb des
+ * Elternelements, und das ist #app-container (der Kopf steht vor main, das mit
+ * overflow: hidden ein Scroll-Container ist). Mit viewport-fit=cover (index.html) haelt
+ * der Rand oben die Seite unter der Statusleiste fern; scrollt man, laeuft der Inhalt
+ * unter dem Kopf durch statt unter der Statusleiste.
+ */
+:host {
+  display: block;
+  position: sticky;
+  top: 0;
+  /* Ueber dem Inhalt, unter Dialogen, Menues und Rundgang (cdk-overlay 1000) */
+  z-index: 100;
+}
+
 .mobile-header {
   display: flex;
   align-items: center;
@@ -6,14 +21,11 @@
   padding: 0 4px;
   background-color: var(--flaeche);
   border-bottom: 1px solid var(--linie);
-  position: sticky;
-  top: 0;
   /* viewport-fit=cover (index.html): nichts unter Statusleiste oder Kamera-Aussparung */
   box-sizing: content-box;
   padding-top: env(safe-area-inset-top);
   padding-left: max(4px, env(safe-area-inset-left));
   padding-right: max(4px, env(safe-area-inset-right));
-  z-index: 100;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 

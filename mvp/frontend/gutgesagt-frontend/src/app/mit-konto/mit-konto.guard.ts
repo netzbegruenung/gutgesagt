@@ -1,10 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivateFn, Router, UrlTree } from '@angular/router';
-import { Observable, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
-import { environment } from '../../environments/environment';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
+import { sitzungPruefen } from '../auth/sitzung';
 import { ZIEL_PARAM, vorschauZiel } from './vorschau-schritte';
 
 /**
@@ -16,11 +16,13 @@ export const mitKontoVorschauGuard: CanActivateFn = (route: ActivatedRouteSnapsh
   const http = inject(HttpClient);
   const router = inject(Router);
   const auth = inject(AuthService);
-  return http.get(`${environment.baseUrl}/api/check-session`).pipe(
-    map(() => router.parseUrl(vorschauZiel(route.queryParamMap.get(ZIEL_PARAM)))),
-    catchError(() => {
+  return sitzungPruefen(http).pipe(
+    map((angemeldet) => {
+      if (angemeldet) {
+        return router.parseUrl(vorschauZiel(route.queryParamMap.get(ZIEL_PARAM)));
+      }
       auth.setUserInfo({ isAuthenticated: false, userId: null, userName: null, claims: null });
-      return of(true);
+      return true;
     }),
   );
 };

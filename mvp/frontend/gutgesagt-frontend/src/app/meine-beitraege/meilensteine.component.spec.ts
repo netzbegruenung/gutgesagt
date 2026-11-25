@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, of } from 'rxjs';
 
@@ -13,6 +13,8 @@ import {
 } from '../shared/punkte-einwilligung/punkte-einwilligung.service';
 
 import { AbzeichenSichtbarkeit, Meilenstein, UsageTrackingService } from '../services/usage-tracking.service';
+import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
+import { ABSTAND_NACH_LOB_MS, EinwilligungsMoment } from '../shared/einwilligungs-budget/einwilligungs-budget';
 
 describe('MeilensteineComponent (#351)', () => {
   let fixture: ComponentFixture<MeilensteineComponent>;
@@ -42,6 +44,18 @@ describe('MeilensteineComponent (#351)', () => {
   const WORTLAUT = { kennung: '2026-11-13', text: 'Freiwillig: …' };
   let einwilligung: BehaviorSubject<PunkteEinwilligungStand | null | undefined>;
   let ladenAnzahl = 0;
+  // Einwilligungs-Budget (#788): ohne Moment (null) ist der Schalter aus.
+  let moment: EinwilligungsMoment | null = null;
+  let budget: EinwilligungsBudgetService;
+  let vorBudget: ((b: EinwilligungsBudgetService) => void) | null = null;
+  let punkteGesetzt: boolean[] = [];
+  let punkteSetzenOk = true;
+  afterEach(() => {
+    moment = null;
+    vorBudget = null;
+    punkteGesetzt = [];
+    punkteSetzenOk = true;
+  });
   beforeEach(() => {
     einwilligung = new BehaviorSubject<PunkteEinwilligungStand | null | undefined>({
       eingewilligt: true,
@@ -64,6 +78,14 @@ describe('MeilensteineComponent (#351)', () => {
           useValue: {
             stand$: einwilligung.asObservable(),
             laden: () => new BehaviorSubject(einwilligung.value ?? null),
+            setzen: (ja: boolean) => {
+              punkteGesetzt.push(ja);
+              if (punkteSetzenOk) {
+                const stand = einwilligung.value!;
+                einwilligung.next({ ...stand, eingewilligt: ja, wortlaut: stand.aktueller_wortlaut.kennung });
+              }
+              return of(punkteSetzenOk);
+            },
           },
         },
         {
@@ -79,6 +101,9 @@ describe('MeilensteineComponent (#351)', () => {
         },
       ],
     });
+    budget = TestBed.inject(EinwilligungsBudgetService);
+    spyOn(budget, 'moment').and.returnValue(of(moment));
+    vorBudget?.(budget);
     fixture = TestBed.createComponent(MeilensteineComponent);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
@@ -343,6 +368,225 @@ describe('MeilensteineComponent (#351)', () => {
 
       expect(element.querySelector('.sichtbarkeit-fehler')).not.toBeNull();
       expect(element.querySelector('.sichtbarkeit-frage')).not.toBeNull();
+    });
+  });
+
+  describe('Einwilligung im Moment des Gewinns (#788, Schalter einwilligung_im_gewinn)', () => {
+    const NIE_GEANTWORTET: PunkteEinwilligungStand = { eingewilligt: false, wortlaut: null, aktueller_wortlaut: WORTLAUT };
+    const SICHT_NIE_GEFRAGT: AbzeichenSichtbarkeit = {
+      gefragt: false,
+      zeigen: null,
+      aktueller_wortlaut: { kennung: '2026-11-09-b', text: 'Sollen andere es sehen?', mehr_dazu: 'Mehr.' },
+    };
+    const MOMENT: EinwilligungsMoment = { abgestimmt: true, beantwortet: 1, konto_seit: '2026-11-20T12:00:00Z' };
+
+    function knopfMit(element: HTMLElement, text: string): HTMLButtonElement {
+      return Array.from(element.querySelectorAll('button')).find((b) => b.textContent?.trim() === text)!;
+    }
+
+    it('ohne Schalter bleibt das Häkchen wie bisher', () => {
+      einwilligung.next(NIE_GEANTWORTET);
+      const element = erstellen([]);
+
+      expect(element.querySelector('app-punkte-einwilligung')).not.toBeNull();
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeUndefined();
+    });
+
+    it('fragt nach der ersten Stimme mit zwei gleichwertigen Knöpfen und unverändertem Wortlaut', () => {
+      einwilligung.next(NIE_GEANTWORTET);
+      moment = MOMENT;
+      const element = erstellen([]);
+
+      expect(element.querySelector('app-punkte-einwilligung')).toBeNull();
+      const ja = knopfMit(element, 'Ja, einwilligen');
+      const nein = knopfMit(element, 'Nein, ohne Punkte');
+      expect(ja.className).toBe(nein.className);
+      expect(element.querySelector('#punkte-frage-text')?.textContent?.trim()).toBe(WORTLAUT.text);
+    });
+
+    it('fragt vor dem ersten Gewinn nicht', () => {
+      einwilligung.next(NIE_GEANTWORTET);
+      moment = { ...MOMENT, abgestimmt: false };
+      const element = erstellen([]);
+
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeUndefined();
+      expect(element.querySelector('app-punkte-einwilligung')).toBeNull();
+    });
+
+    it('fragt nicht direkt nach dem Lob für „Ja, gepostet“, sondern erst, wenn es vorbei ist', fakeAsync(() => {
+      einwilligung.next(NIE_GEANTWORTET);
+      moment = { ...MOMENT, abgestimmt: false };
+      let jetzt = 1_000_000;
+      vorBudget = (b) => {
+        b.jetzt = () => jetzt;
+        b.gewinn();
+      };
+      const element = erstellen([]);
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeUndefined();
+
+      jetzt += ABSTAND_NACH_LOB_MS;
+      tick(ABSTAND_NACH_LOB_MS + 100);
+      fixture.detectChanges();
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeDefined();
+      fixture.destroy();
+    }));
+
+    it('eine offene Frage tritt bei einem neuen Lob auf der Seite zurück', fakeAsync(() => {
+      einwilligung.next(NIE_GEANTWORTET);
+      moment = MOMENT;
+      let jetzt = 1_000_000;
+      vorBudget = (b) => (b.jetzt = () => jetzt);
+      const element = erstellen([]);
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeDefined();
+
+      budget.gewinn();
+      fixture.detectChanges();
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeUndefined();
+
+      jetzt += ABSTAND_NACH_LOB_MS;
+      tick(ABSTAND_NACH_LOB_MS + 100);
+      fixture.detectChanges();
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeDefined();
+      fixture.destroy();
+    }));
+
+    it('fragt nicht, wenn im Besuch schon eine andere Frage kam', () => {
+      einwilligung.next(NIE_GEANTWORTET);
+      moment = MOMENT;
+      vorBudget = (b) => b.gezeigt('art9');
+      const element = erstellen([]);
+
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeUndefined();
+    });
+
+    it('fragt nicht noch einmal, wenn die Person schon geantwortet hat', () => {
+      einwilligung.next({ ...NIE_GEANTWORTET, wortlaut: '2026-11-13' });
+      moment = MOMENT;
+      const element = erstellen([]);
+
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeUndefined();
+      expect(element.querySelector('app-punkte-einwilligung')).toBeNull();
+    });
+
+    it('ein Nein speichert die Antwort, die Frage verschwindet und der Stand wird angesagt', () => {
+      einwilligung.next(NIE_GEANTWORTET);
+      moment = MOMENT;
+      const element = erstellen([]);
+      document.body.appendChild(element);
+
+      knopfMit(element, 'Nein, ohne Punkte').click();
+      fixture.detectChanges();
+
+      expect(punkteGesetzt).toEqual([false]);
+      expect(knopfMit(element, 'Nein, ohne Punkte')).toBeUndefined();
+      const status = element.querySelector('.punkte-frage-status')!;
+      expect(status.getAttribute('role')).toBe('status');
+      expect(status.textContent).toContain('bleiben aus');
+      expect(document.activeElement).toBe(status.querySelector('p'));
+      element.remove();
+    });
+
+    it('nach einem Nein fragt die Seite nie wieder, auch nicht nach einem neuen Gewinn im selben Besuch', fakeAsync(() => {
+      einwilligung.next(NIE_GEANTWORTET);
+      moment = MOMENT;
+      let jetzt = 1_000_000;
+      vorBudget = (b) => (b.jetzt = () => jetzt);
+      const element = erstellen([]);
+
+      knopfMit(element, 'Nein, ohne Punkte').click();
+      fixture.detectChanges();
+      budget.gewinn();
+      jetzt += ABSTAND_NACH_LOB_MS;
+      tick(ABSTAND_NACH_LOB_MS + 100);
+      fixture.detectChanges();
+
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeUndefined();
+      expect(element.querySelector('app-punkte-einwilligung')).toBeNull();
+      expect(punkteGesetzt).toEqual([false]);
+      fixture.destroy();
+    }));
+
+    it('ein gespeichertes Nein gilt in jedem späteren Besuch: keine Frage, kein Häkchen auf der Seite', fakeAsync(() => {
+      // Neuer Besuch: frisches Budget ohne Gezeigtes, ein Gewinn liegt vor, das Nein kommt vom Server.
+      einwilligung.next({ eingewilligt: false, wortlaut: '2026-11-13', aktueller_wortlaut: WORTLAUT });
+      moment = { ...MOMENT, beantwortet: 1 };
+      let jetzt = 1_000_000;
+      vorBudget = (b) => {
+        b.jetzt = () => jetzt;
+        b.gewinn();
+      };
+      const element = erstellen([]);
+      jetzt += ABSTAND_NACH_LOB_MS;
+      tick(ABSTAND_NACH_LOB_MS + 100);
+      fixture.detectChanges();
+
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeUndefined();
+      expect(element.querySelector('app-punkte-einwilligung')).toBeNull();
+      fixture.destroy();
+    }));
+
+    it('ist der Schalter nicht sicher aus (Fehler, keine Antwort), lädt die Seite nach einem Nein nicht wieder ein', () => {
+      einwilligung.next({ eingewilligt: false, wortlaut: '2026-11-13', aktueller_wortlaut: WORTLAUT });
+      moment = null;
+      const element = erstellen([]);
+
+      expect(element.querySelector('.meilensteine-einladung')).toBeNull();
+      expect(element.querySelector('app-punkte-einwilligung')).toBeNull();
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeUndefined();
+    });
+
+    it('ist der Schalter sicher aus (404), bleibt die Einladung mit Häkchen wie bisher', () => {
+      einwilligung.next({ eingewilligt: false, wortlaut: '2026-11-13', aktueller_wortlaut: WORTLAUT });
+      moment = null;
+      vorBudget = (b) => (b.schalterAus = true);
+      const element = erstellen([]);
+
+      expect(element.querySelector('app-punkte-einwilligung')).not.toBeNull();
+    });
+
+    it('die Frage steht ohne Lob daneben und wirbt nicht („Hol dir …“)', () => {
+      einwilligung.next(NIE_GEANTWORTET);
+      moment = MOMENT;
+      const element = erstellen([]);
+
+      const frage = element.querySelector('[aria-labelledby="punkte-frage-titel"]')!;
+      const text = frage.textContent ?? '';
+      expect(text).not.toMatch(/hol dir|glückwunsch|super|toll|danke/i);
+      expect(text).toContain('beitragen und bewerten kannst du genauso ohne');
+    });
+
+    it('ein Ja willigt ein; die Frage nach der Sichtbarkeit wartet auf den nächsten Besuch', () => {
+      einwilligung.next(NIE_GEANTWORTET);
+      moment = MOMENT;
+      const element = erstellen([meilenstein({ erreicht: true, stand: 1 })], SICHT_NIE_GEFRAGT);
+
+      knopfMit(element, 'Ja, einwilligen').click();
+      fixture.detectChanges();
+
+      expect(punkteGesetzt).toEqual([true]);
+      expect(element.querySelector('.punkte-frage-status')?.textContent).toContain('sind an');
+      expect(element.querySelector('.meilenstein')).not.toBeNull();
+      expect(element.querySelector('.sichtbarkeit-frage')).toBeNull();
+    });
+
+    it('fragt die Sichtbarkeit, wenn sie die einzige Frage im Besuch ist', () => {
+      moment = MOMENT;
+      const element = erstellen([meilenstein({ erreicht: true, stand: 1 })], SICHT_NIE_GEFRAGT);
+
+      expect(element.querySelector('.sichtbarkeit-frage')).not.toBeNull();
+    });
+
+    it('meldet einen Fehler beim Speichern und lässt die Frage stehen', () => {
+      einwilligung.next(NIE_GEANTWORTET);
+      moment = MOMENT;
+      punkteSetzenOk = false;
+      const element = erstellen([]);
+
+      knopfMit(element, 'Ja, einwilligen').click();
+      fixture.detectChanges();
+
+      expect(element.querySelector('.punkte-frage-fehler')).not.toBeNull();
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeDefined();
     });
   });
 });

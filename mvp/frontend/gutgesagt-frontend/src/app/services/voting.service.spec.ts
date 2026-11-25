@@ -4,6 +4,7 @@ import { VotingService, VoteResponse } from './voting.service';
 import { LoggingService } from './logging.service';
 import { environment } from '../../environments/environment';
 import { NUR_LESEND } from '../auth/cache.interceptor';
+import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 
 describe('VotingService', () => {
   let service: VotingService;
@@ -31,6 +32,34 @@ describe('VotingService', () => {
 
   afterEach(() => {
     httpMock.verify();
+  });
+
+  describe('Gewinn fürs Einwilligungs-Budget (#788)', () => {
+    it('eine gespeicherte Stimme ist ein Gewinn, eine zurückgenommene nicht', () => {
+      const budget = TestBed.inject(EinwilligungsBudgetService);
+      spyOn(budget, 'gewinn');
+      const contentId = '123e4567-e89b-12d3-a456-426614174000';
+
+      service.removeLike(contentId).subscribe();
+      httpMock.expectOne(`${environment.baseUrl}/api/v1/voting/content/${contentId}/like`).flush({});
+      expect(budget.gewinn).not.toHaveBeenCalled();
+
+      service.setDislike(contentId).subscribe();
+      httpMock.expectOne(`${environment.baseUrl}/api/v1/voting/content/${contentId}/dislike`).flush({});
+      expect(budget.gewinn).toHaveBeenCalledTimes(1);
+    });
+
+    it('eine gescheiterte Stimme ist kein Gewinn', () => {
+      const budget = TestBed.inject(EinwilligungsBudgetService);
+      spyOn(budget, 'gewinn');
+      const contentId = '123e4567-e89b-12d3-a456-426614174000';
+
+      service.setLike(contentId).subscribe({ error: () => undefined });
+      httpMock
+        .expectOne(`${environment.baseUrl}/api/v1/voting/content/${contentId}/like`)
+        .flush({}, { status: 403, statusText: 'Forbidden' });
+      expect(budget.gewinn).not.toHaveBeenCalled();
+    });
   });
 
   describe('setLike', () => {

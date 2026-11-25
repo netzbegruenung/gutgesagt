@@ -2,8 +2,9 @@ from domain.models.zeit import utc_jetzt
 import logging
 from typing import List
 from uuid import UUID
-from fastapi import APIRouter, Header, HTTPException, Depends
+from fastapi import APIRouter, Header, HTTPException, Depends, Request
 
+from middleware.tagesdeckel import nichts_angelegt
 from dependencies import (
     require_art9_einwilligung,
     get_aussage_themen_service,
@@ -18,6 +19,8 @@ from dtos.commentary import (
 )
 from dtos.beitrag import VorhandenDto
 from services.dublette import Dublette, VorhandenWeg, entscheidung_anwenden
+from domain.team_fortschritt import Art as TeamArt
+from services.team_fortschritt_service import team_zaehlen_async
 from repositories.varianten_repository import (
     VariantenRepository,
     get_varianten_repository,
@@ -90,6 +93,7 @@ async def get_by_id(
 )
 async def add_commentary(
     request: AddCommentaryRequest,
+    http_request: Request,
     commentary_service: CommentaryService = Depends(get_commentary_service),
     reference_service: ReferenceService = Depends(get_reference_service),
     statement_service: StatementService = Depends(get_statement_service),
@@ -199,6 +203,9 @@ async def add_commentary(
         # zweite Kopie derselben Antwort. Die Zuordnung fremder Antworten bekommt
         # deshalb einen eigenen Weg an der Karte ("Passt auch auf ..."), der immer
         # funktioniert und die gewaehlte Aussage sichtbar macht.
+        if pruefung.vorhanden is not None:
+            # Nichts angelegt: zaehlt nicht zum Tagesdeckel.
+            nichts_angelegt(http_request)
         dublette = Dublette.aus(pruefung.vorhanden, x_user, request.vorhanden_nehmen)
         if dublette:
             commentary_id = dublette.vorhanden.id
@@ -212,6 +219,10 @@ async def add_commentary(
         # Original. Bei einer Dublette ist nichts entstanden, was darauf beruhen
         # koennte - die Person entscheidet erst; speichert sie trotzdem, kommt
         # beruht_auf mit derselben Anfrage wieder.
+        # Neu angelegt: zaehlt fuer die Teams der Person (Team-Fortschritt, #784).
+        if pruefung.vorhanden is None:
+            await team_zaehlen_async(x_user, TeamArt.BEITRAG, str(commentary_id))
+
         if request.beruht_auf is not None and dublette is None:
             await beruht_auf_festhalten(
                 varianten, commentary_id, request.beruht_auf, commentary_service.get

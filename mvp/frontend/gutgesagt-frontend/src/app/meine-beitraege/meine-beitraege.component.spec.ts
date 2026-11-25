@@ -1,13 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideRouter, Router } from '@angular/router';
+import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Observable, of, throwError } from 'rxjs';
+import { BehaviorSubject, NEVER, Observable, of, throwError } from 'rxjs';
 
 import { MeineBeitraegeComponent } from './meine-beitraege.component';
 import { AlbumComponent } from './album/album.component';
 import { MeineBeitraegeService } from '../services/meine-beitraege.service';
+import { MeineAussagenService } from './meine-aussagen.service';
 import { Meilenstein, UsageTrackingService } from '../services/usage-tracking.service';
 import { AuthService } from '../auth/auth.service';
 import { BeitragVerwaltenService } from '../beitragskarte/beitrag-verwalten.service';
@@ -15,6 +16,8 @@ import { EinwurfService } from '../services/einwurf.service';
 import { SperrnachrichtService } from '../services/sperrnachricht.service';
 import { NavigationService } from '../services/navigation.service';
 import { StatementService } from '../services/statement.service';
+import { TeamsService } from '../services/teams.service';
+import { RanglisteService } from '../services/rangliste.service';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { VotingService } from '../services/voting.service';
@@ -30,6 +33,13 @@ describe('MeineBeitraegeComponent', () => {
   let verwalten: jasmine.SpyObj<BeitragVerwaltenService>;
   /** Was "Hier fehlt eine Antwort" liefert; Standard: keine. */
   let unbeantworteteLaden: jasmine.Spy;
+  /** Antwort des Besuchs beim App-Start; sagt, ob es „Meine Aussagen“ gibt (#760). */
+  let besuchStand: BehaviorSubject<any>;
+
+  afterEach(() => {
+    // Je Test frisch; ein Test setzt ihn vor erstellen()
+    besuchStand = undefined as any;
+  });
 
   beforeEach(() => {
     unbeantworteteLaden = jasmine.createSpy('unbeantworteteAussagen').and.returnValue(of([]));
@@ -74,6 +84,7 @@ describe('MeineBeitraegeComponent', () => {
       .createSpy('eigeneLaden')
       .and.returnValue(of({ results_count: 0, results: [], total_records_count: 0 }));
     alleLaden = jasmine.createSpy('alleMeineBeitraege').and.callFake(laden);
+    besuchStand ??= new BehaviorSubject<any>(null);
     TestBed.configureTestingModule({
       imports: [MeineBeitraegeComponent],
       providers: [
@@ -82,6 +93,7 @@ describe('MeineBeitraegeComponent', () => {
         PUNKTE_EINWILLIGUNG_AUS,
         { provide: BreakpointObserver, useValue: { observe: () => of({ matches: false, breakpoints: {} }) } },
         { provide: MeineBeitraegeService, useValue: { alleMeineBeitraege: alleLaden } },
+        { provide: MeineAussagenService, useValue: { laden: () => of({ zeitraum_tage: 7, aussagen: [] }) } },
         {
           provide: UsageTrackingService,
           useValue: {
@@ -90,6 +102,7 @@ describe('MeineBeitraegeComponent', () => {
             getAbzeichenSichtbarkeit: () => of(null),
             trackContentUsage: () => undefined,
             gepostetBekannt: () => false,
+            besuchStand$: besuchStand,
           },
         },
         { provide: BeitragVerwaltenService, useValue: verwalten },
@@ -100,6 +113,10 @@ describe('MeineBeitraegeComponent', () => {
         { provide: LoggingService, useValue: jasmine.createSpyObj('LoggingService', ['error', 'debug', 'info', 'warn']) },
         { provide: EinwurfService, useValue: { eigeneLaden } },
         { provide: SperrnachrichtService, useValue: { meine: () => of([]) } },
+        // Meine Teams laedt nie fertig: keine Karte, kein Nachlade-Takt im Test
+        { provide: TeamsService, useValue: { meine: () => NEVER } },
+        // Die Rangliste ebenso (#793)
+        { provide: RanglisteService, useValue: { laden: () => NEVER } },
         { provide: StatementService, useValue: { unbeantworteteAussagen: unbeantworteteLaden } },
         {
           provide: AuthService,
@@ -331,6 +348,53 @@ describe('MeineBeitraegeComponent', () => {
     expect(meldung).toContain('ließen sich gerade nicht laden');
     expect(meldung).not.toMatch(/neu laden/i);
     expect(fixture.nativeElement.querySelector('.beitraege-leer')).toBeNull();
+  });
+
+  describe('Meine Aussagen (#760)', () => {
+    function reiter(): string[] {
+      return Array.from(fixture.nativeElement.querySelectorAll('[role="tab"]')).map(
+        (el) => (el as HTMLElement).textContent!.trim(),
+      );
+    }
+
+    it('zeigt den Reiter nicht, solange der Schalter aus ist', async () => {
+      besuchStand = new BehaviorSubject<any>({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: null });
+      await erstellen([]);
+
+      expect(reiter()).toEqual(['Meine Beiträge', 'Meine Einwürfe']);
+      expect(fixture.nativeElement.querySelector('app-meine-aussagen')).toBeNull();
+    });
+
+    it('zeigt den Reiter mit Schalter und lädt die Aussagen erst beim Öffnen', async () => {
+      besuchStand = new BehaviorSubject<any>({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: 2 });
+      await erstellen([]);
+
+      expect(reiter()).toEqual(['Meine Beiträge', 'Meine Einwürfe', 'Meine Aussagen']);
+      expect(fixture.nativeElement.querySelector('app-meine-aussagen')).toBeNull();
+      (fixture.nativeElement.querySelector('#meine-tab-aussagen') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('app-meine-aussagen')).not.toBeNull();
+    });
+
+    it('öffnet ?tab=aussagen nur mit Schalter, sonst bleibt „Meine Beiträge“', async () => {
+      besuchStand = new BehaviorSubject<any>({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: null });
+      konfigurieren(() => of({ beitraege: [], gesamt: 0 }));
+      const route = TestBed.inject(ActivatedRoute);
+      spyOn(route.snapshot.queryParamMap, 'get').and.returnValue('aussagen');
+      await TestBed.compileComponents();
+      fixture = TestBed.createComponent(MeineBeitraegeComponent);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.tab).toBe('beitraege');
+      expect(reiter()).toEqual(['Meine Beiträge', 'Meine Einwürfe']);
+      expect(fixture.nativeElement.querySelector('app-meine-aussagen')).toBeNull();
+
+      // Kommt der Besuch mit Schalter, oeffnet sich der gewuenschte Reiter
+      besuchStand.next({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: 1 });
+      fixture.detectChanges();
+      expect(fixture.componentInstance.tab).toBe('aussagen');
+      expect(fixture.nativeElement.querySelector('app-meine-aussagen')).not.toBeNull();
+    });
   });
 
   it('sagt, wenn es noch keine Beitraege gibt', async () => {

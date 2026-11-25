@@ -8,7 +8,10 @@ Nutzungsabfrage zaehlt je Person (Besucher: Besuchermerkmal), Beitrag und Tag nu
 erste Nutzung (UsageTrackingRepository.get_trending_content, #352).
 
 Bei zu wenig Nutzung gibt es keinen Bereich: Eine Liste mit einem einmal kopierten
-Beitrag zeigte nicht, was oft genutzt wird, sondern einen Zufall.
+Beitrag zeigte nicht, was oft genutzt wird, sondern einen Zufall. Die beiden
+Schwellen (Mindestnutzung je Beitrag, Mindestzahl Beitraege) kommen aus der
+Konfiguration (``oft_genutzt_mindest_*`` in core/config.py), damit der Betrieb sie
+nach der Startphase anheben kann, ohne Code zu aendern.
 """
 
 import logging
@@ -21,12 +24,6 @@ logger = logging.getLogger(__name__)
 
 FENSTER_STUNDEN = 7 * 24
 """Diese Woche: die letzten sieben Tage, nicht die Kalenderwoche."""
-
-MINDEST_NUTZUNGEN = 2
-"""So oft muss ein Beitrag in der Woche genutzt worden sein, um als oft genutzt zu gelten."""
-
-MINDEST_BEITRAEGE = 3
-"""Erreichen weniger Beitraege die Mindestnutzung, entfaellt der Bereich."""
 
 ANZAHL = 5
 """So viele Beitraege zeigt der Bereich hoechstens (wie "Neueste Inhalte")."""
@@ -98,9 +95,23 @@ class NutzungsAbfrage(Protocol):
 
 
 class OftGenutztService:
-    def __init__(self, nutzung: NutzungsAbfrage, beitrag_laden: BeitragLaden):
+    def __init__(
+        self,
+        nutzung: NutzungsAbfrage,
+        beitrag_laden: BeitragLaden,
+        *,
+        mindest_nutzungen: int,
+        mindest_beitraege: int,
+    ):
+        """
+        ``mindest_nutzungen``: so oft muss ein Beitrag in der Woche genutzt worden
+        sein, um als oft genutzt zu gelten. ``mindest_beitraege``: erreichen weniger
+        Beitraege die Mindestnutzung, entfaellt der Bereich.
+        """
         self._nutzung = nutzung
         self._beitrag_laden = beitrag_laden
+        self._mindest_nutzungen = mindest_nutzungen
+        self._mindest_beitraege = mindest_beitraege
 
     async def beitraege(self) -> List[Dict[str, Any]]:
         """
@@ -112,7 +123,7 @@ class OftGenutztService:
         )
         beitraege: List[Dict[str, Any]] = []
         for kandidat in kandidaten:
-            if kandidat["recent_uses"] < MINDEST_NUTZUNGEN:
+            if kandidat["recent_uses"] < self._mindest_nutzungen:
                 # Die Nutzungsabfrage sortiert absteigend; danach kommt keiner mehr.
                 break
             beitrag = await self._beitrag_laden(uuid.UUID(kandidat["content_id"]))
@@ -123,7 +134,7 @@ class OftGenutztService:
             if len(beitraege) == ANZAHL:
                 break
 
-        if len(beitraege) < MINDEST_BEITRAEGE:
+        if len(beitraege) < self._mindest_beitraege:
             logger.debug(
                 f"Oft genutzt: nur {len(beitraege)} Beitraege, Bereich entfaellt"
             )

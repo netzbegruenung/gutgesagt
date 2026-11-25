@@ -4,13 +4,16 @@ from typing import FrozenSet, Optional
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from pydantic import ValidationError
 
+from middleware.tagesdeckel import nichts_angelegt
 from dependencies import (
     require_art9_einwilligung,
     require_nutzungsbedingungen,
     get_aufrufer,
     get_aussage_themen_service,
+    get_settings,
     get_statement_service,
     get_suchen_ohne_treffer_service,
+    get_themen_vorschlag_service,
     get_unbeantwortete_aussagen_service,
     require_admin,
     require_user,
@@ -40,6 +43,8 @@ from dtos.statement import (
     ThemaDto,
     ThemenResponse,
     ThemenTestsetResponse,
+    ThemenVorschlagRequest,
+    ThemenVorschlagResponse,
     ThemenZuordnenRequest,
     ThemenZuordnenResponse,
     ThemenZuordnungDto,
@@ -68,7 +73,12 @@ from services.aussage_themen_service import AussageThemenService, themen_beim_an
 from domain.themen import NACH_SCHLUESSEL, THEMEN, ThemaUngueltig
 from core.fehler import INTERNER_FEHLER
 from utils.client_identity import derive_client_key
-from utils.rate_limiter import aehnliche_aussagen_rate_limiter
+from utils.rate_limiter import (
+    aehnliche_aussagen_rate_limiter,
+    themen_vorschlag_rate_limiter,
+)
+from services.themen_vorschlag import ThemenVorschlagService
+from core.config import Settings
 
 logger = get_logger(__name__)
 
@@ -238,6 +248,7 @@ async def unbeantwortet(
 )
 async def vorab_anlegen(
     request: AussageVorabRequest,
+    http_request: Request,
     user_id: str = Depends(require_user),
     statement_service: StatementService = Depends(get_statement_service),
     themen_service: AussageThemenService = Depends(get_aussage_themen_service),
@@ -249,6 +260,9 @@ async def vorab_anlegen(
     except Exception as e:
         logger.error(f"Error in /vorab: {type(e).__name__}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to add statement")
+    if not statement_was_new:
+        # Eine schon bekannte Aussage: nichts angelegt, zaehlt nicht zum Tagesdeckel.
+        nichts_angelegt(http_request)
     themen = await themen_beim_anlegen(themen_service, statement_id, request.themen)
     return AussageVorabResponse(
         statement_was_new=statement_was_new,
@@ -260,13 +274,37 @@ async def vorab_anlegen(
 
 # Die feste Themenliste (domain/themen.json), fuer die Auswahl beim Zuordnen.
 @router.get("/themen", response_model=ThemenResponse)
-async def themen_liste() -> ThemenResponse:
+async def themen_liste(settings: Settings = Depends(get_settings)) -> ThemenResponse:
     return ThemenResponse(
         themen=[
             ThemaDto(schluessel=t.schluessel, name=t.name, motiv=t.motiv)
             for t in THEMEN
-        ]
+        ],
+        vorschlaege=settings.themen_vorschlaege,
     )
+
+
+# Themenvorschlaege (#401) zu einem Text, waehrend jemand eine Aussage anlegt oder
+# einwirft: nur ein Vorschlag, gespeichert wird nichts, auch nicht der Text. Faellt der
+# Vorschlag aus (Modell, Datenbank), ist die Liste leer: Waehlen geht wie vorher.
+@router.post("/themen/vorschlaege", response_model=ThemenVorschlagResponse)
+async def themen_vorschlaege(
+    request: ThemenVorschlagRequest,
+    user_id: str = Depends(require_user),
+    settings: Settings = Depends(get_settings),
+    vorschlag_service: ThemenVorschlagService = Depends(get_themen_vorschlag_service),
+) -> ThemenVorschlagResponse:
+    if await themen_vorschlag_rate_limiter.is_rate_limited(user_id):
+        raise HTTPException(status_code=429, detail="Too many requests")
+    if not settings.themen_vorschlaege:
+        return ThemenVorschlagResponse(themen=[])
+    try:
+        themen = await vorschlag_service.vorschlagen(request.text, request.hoechstens)
+    except Exception as e:
+        # Nur der Typ, nie der Text.
+        logger.warning(f"Themenvorschlag gescheitert: {type(e).__name__}")
+        themen = []
+    return ThemenVorschlagResponse(themen=themen)
 
 
 # Die Themen einer Aussage nachsehen, etwa wenn das Beitragsformular eine vorhandene
@@ -486,6 +524,7 @@ async def aehnliche_aussagen(
 )
 async def add_statement(
     request: AddStatementRequest,
+    http_request: Request,
     statement_service: StatementService = Depends(get_statement_service),
     x_user: str = Header(...),
 ) -> AddStatementResponse:
@@ -516,6 +555,10 @@ async def add_statement(
                 request.source.to_content_origin(),
             )
         )
+
+        if not statement_was_new:
+            # Eine schon bekannte Aussage: nichts angelegt, zaehlt nicht zum Tagesdeckel.
+            nichts_angelegt(http_request)
 
         # Create response object
         response = AddStatementResponse(

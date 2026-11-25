@@ -29,6 +29,29 @@
       "purpose": "maskable"
     }
   ],
+  "shortcuts": [
+    {
+      "name": "Einwerfen",
+      "short_name": "Einwerfen",
+      "description": "Einen Link oder Hinweis in den Fangkorb legen",
+      "url": "/abkuerzung/einwerfen",
+      "icons": [{ "src": "marke/abkuerzung-einwerfen-96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Suchen",
+      "short_name": "Suchen",
+      "description": "Eine Antwort finden",
+      "url": "/abkuerzung/suchen",
+      "icons": [{ "src": "marke/abkuerzung-suchen-96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Fangkorb",
+      "short_name": "Fangkorb",
+      "description": "Die Einwürfe ansehen und bearbeiten",
+      "url": "/abkuerzung/fangkorb",
+      "icons": [{ "src": "marke/abkuerzung-fangkorb-96.png", "sizes": "96x96", "type": "image/png" }]
+    }
+  ],
   "share_target": {
     "action": "/teilen",
     "method": "GET",

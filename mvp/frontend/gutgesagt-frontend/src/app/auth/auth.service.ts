@@ -4,8 +4,10 @@ import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 import { merkerEntfernen } from '../meine-beitraege/meilenstein-merker';
 import { kommentarEntwurfLoeschen } from '../beitragsformular/kommentar-entwurf';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { weggeklicktEntfernen } from '../naechster-schritt/naechster-schritt';
+import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { ANLASS_PARAM, Anmeldeanlass } from './anmeldeanlass';
+import { meldetAnmeldung } from './sitzung';
 
 export interface UserInfo {
   isAuthenticated: boolean;
@@ -79,6 +81,8 @@ export class AuthService {
     merkerEntfernen();
     // Der Kommentar-Entwurf im Tab gehört zu dieser Anmeldung (E1).
     kommentarEntwurfLoeschen();
+    // Was auf der Karte „Dein nächster Schritt“ weggeklickt ist, gehört zu dieser Anmeldung (#789).
+    weggeklicktEntfernen();
     // Use the API logout endpoint which properly handles both Keycloak and managed users
     this.http.post(`${environment.baseUrl}/api/auth/logout`, {}, {
       withCredentials: true
@@ -100,10 +104,17 @@ export class AuthService {
     });
   }
 
+  /**
+   * Fragt das BFF nach der Person. Besucher bekommen 200 mit isAuthenticated = false statt
+   * 401 (sitzung.ts); dann liefert und setzt das hier den Besucher, ohne Kennung und Rechte.
+   */
   fetchUserInfo(): Observable<UserInfo> {
     return this.http.get<UserInfo>(`${environment.baseUrl}/api/user-info`, {
       withCredentials: true // Ensure cookies are sent
     }).pipe(
+      map((userInfo): UserInfo => meldetAnmeldung(userInfo)
+        ? userInfo
+        : { isAuthenticated: false, userId: null, userName: null, claims: null }),
       tap((userInfo) => this.userInfoSubject.next(userInfo)) // Update user info
     );
   }

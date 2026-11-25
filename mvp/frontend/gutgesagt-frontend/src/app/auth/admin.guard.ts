@@ -16,8 +16,8 @@ export class AdminGuard implements CanActivate {
   canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean> {
     // Auf die erste echte Antwort warten: Beim Direktaufruf oder Neuladen ist
     // userInfo$ noch null, bis AppComponent /user-info beantwortet hat (#512).
-    // Schlaegt die Abfrage fehl, setzt AppComponent einen Besucher, also kommt
-    // immer ein Wert.
+    // Besucher bekommen 200 mit isAuthenticated = false; schlaegt die Abfrage fehl,
+    // setzt AppComponent ebenfalls einen Besucher, also kommt immer ein Wert.
     return this.authService.userInfo$.pipe(
       filter((userInfo): userInfo is UserInfo => userInfo !== null),
       take(1),

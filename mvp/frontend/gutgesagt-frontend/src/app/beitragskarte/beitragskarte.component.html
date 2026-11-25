@@ -293,6 +293,8 @@
                 [nichtHilfreich]="guete?.nichtHilfreich ?? null"
                 [eigeneStimmeImZaehler]="!istEigen"
                 [stimmenZaehlen]="guete ? guete.stimmenZaehlen : null"
+                [nutzung]="nutzung"
+                [andereTonlage]="daten.andereTonlage ?? null"
                 [album]="eigenesAlbum"
                 [aenderbar]="aenderbar"
                 (aendern)="aendern.emit(daten)"
@@ -309,7 +311,7 @@
             </a>
             <!-- Ohne Anmeldung ohne Autorzeile: dann steht hier allein das Alter, dazu die Nutzung (#599).
                  Schlank (Startseite) ohne Alter. -->
-            <p class="karte-meta" *ngIf="zeigtAutor || zeigtAlter || nutzungInMeta"><ng-container *ngIf="zeigtAutor">Von: {{ autorAnzeige }}<span *ngIf="autorAbzeichen as abzeichen" class="autor-abzeichen" [attr.title]="abzeichenText(abzeichen)"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M6 .8l1.5 3.3 3.6.4-2.7 2.4.8 3.6L6 8.7 2.8 10.5l.8-3.6L.9 4.5l3.6-.4z" fill="currentColor"></path></svg><span aria-hidden="true">{{ abzeichen }}</span><span class="cdk-visually-hidden">, {{ abzeichenText(abzeichen) }}</span></span></ng-container><ng-container *ngIf="zeigtAutor && zeigtAlter"> · </ng-container><ng-container *ngIf="zeigtAlter">{{ daten.erstellt | relativeTime }}</ng-container><ng-container *ngIf="nutzungInMeta"><ng-container *ngIf="zeigtAutor || zeigtAlter"> · </ng-container><span class="karte-nutzung" [class.nutzung-animiert]="nutzungAnimiert">{{ nutzungAnzeige }} genutzt</span></ng-container></p>
+            <p class="karte-meta" *ngIf="zeigtAutor || zeigtAlter || nutzungInMeta"><ng-container *ngIf="zeigtAutor">Von: {{ autorAnzeige }}<span *ngIf="autorAbzeichen as abzeichen" class="autor-abzeichen" [attr.title]="abzeichenText(abzeichen)"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M6 .8l1.5 3.3 3.6.4-2.7 2.4.8 3.6L6 8.7 2.8 10.5l.8-3.6L.9 4.5l3.6-.4z" fill="currentColor"></path></svg><span aria-hidden="true">{{ abzeichen }}</span><span class="cdk-visually-hidden">, {{ abzeichenText(abzeichen) }}</span></span><span *ngIf="autorTeams.length" class="autor-teams" data-testid="autor-teams"><span class="cdk-visually-hidden">, Teams: </span><app-team-pille *ngFor="let team of autorTeams" [name]="team.name" [motiv]="team.motiv" [klein]="true"></app-team-pille><span *ngIf="weitereTeams" class="autor-teams-mehr" role="img" [attr.aria-label]="weitereTeamsText()" [attr.title]="weitereTeamsText()">+{{ weitereTeams }}</span></span></ng-container><ng-container *ngIf="zeigtAutor && zeigtAlter"> · </ng-container><ng-container *ngIf="zeigtAlter">{{ daten.erstellt | relativeTime }}</ng-container><ng-container *ngIf="nutzungInMeta"><ng-container *ngIf="zeigtAutor || zeigtAlter"> · </ng-container><span class="karte-nutzung" [class.nutzung-animiert]="nutzungAnimiert">{{ nutzungAnzeige }} genutzt</span></ng-container></p>
         </footer>
     </ng-container>
     </div>

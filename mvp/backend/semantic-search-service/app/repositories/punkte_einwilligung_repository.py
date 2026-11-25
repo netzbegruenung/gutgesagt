@@ -5,7 +5,7 @@ Meilensteine" je Kennung (#351, domain/punkte_einwilligung.py).
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Iterable, Optional, Set
 
 from sqlalchemy import func, insert, select
 
@@ -59,6 +59,35 @@ class PunkteEinwilligungRepository:
         """Gilt fuer die Kennung eine Einwilligung? Je Aufruf gefragt: Ein Widerruf wirkt sofort."""
         stand = self.lesen(user_id)
         return stand is not None and stand.gilt
+
+    def eingewilligte(self, kennungen: Iterable[str]) -> Set[str]:
+        """
+        Die Kennungen, fuer die eine Einwilligung gilt (wie ``eingewilligt``), in einer
+        Abfrage fuer viele (Rangliste, #793).
+        """
+        liste = list(set(kennungen))
+        if not liste:
+            return set()
+        with self.db.get_session() as session:
+            zeilen = session.execute(
+                select(
+                    PunkteEinwilligungZeile.user_id,
+                    PunkteEinwilligungZeile.eingewilligt,
+                    PunkteEinwilligungZeile.wortlaut,
+                )
+                .where(PunkteEinwilligungZeile.user_id.in_(liste))
+                .distinct(PunkteEinwilligungZeile.user_id)
+                .order_by(
+                    PunkteEinwilligungZeile.user_id,
+                    PunkteEinwilligungZeile.beantwortet_am.desc(),
+                    PunkteEinwilligungZeile.id.desc(),
+                )
+            ).all()
+        return {
+            zeile.user_id
+            for zeile in zeilen
+            if zeile.eingewilligt and zeile.wortlaut in GELTENDE_WORTLAUTE
+        }
 
     def antworten(self, user_id: str, eingewilligt: bool, wortlaut: str) -> None:
         """

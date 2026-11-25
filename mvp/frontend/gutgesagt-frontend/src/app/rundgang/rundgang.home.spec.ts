@@ -7,7 +7,7 @@ import { Art9EinwilligungService } from '../services/art9-einwilligung.service';
 import { HOME_HINWEIS_MERKER } from '../shared/geraetespeicher-schalter';
 import { HOME_BILDSCHIRM_MOEGLICH } from './home-bildschirm';
 import { RundgangService } from './rundgang.service';
-import { APP_INSTALLIEREN_ANGEBOT, HOME_ANGEBOT, WILLKOMMEN } from './rundgang-daten';
+import { APP_INSTALLIEREN_ANGEBOT, HOME_ANGEBOT, WILLKOMMEN, WILLKOMMEN_ANGEMELDET } from './rundgang-daten';
 import { ALS_APP_GESTARTET } from './app-installieren.service';
 import { installierenEreignis } from '../testing/installieren-ereignis';
 import { HOME_HINWEIS_SCHLUESSEL, MITMACHEN_SCHLUESSEL, WILLKOMMEN_SCHLUESSEL } from './rundgang-merker';
@@ -119,7 +119,7 @@ describe('RundgangService: Hinweis Home-Bildschirm', () => {
     geklaert.next('u1');
     const service = besuch();
     navigiert('/search');
-    expect(service.band()).toBe(WILLKOMMEN);
+    expect(service.band()).toBe(WILLKOMMEN_ANGEMELDET);
   });
 
   it('steht nur auf der Startseite, nicht über den Treffern', () => {

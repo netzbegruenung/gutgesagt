@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 
 import { environment } from '../../environments/environment';
 import { PUNKTE_NICHT_GELADEN, SCHALTER_AUS_MERKEN_MS, UsageTrackingService } from './usage-tracking.service';
+import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 import { AuthService } from '../auth/auth.service';
 import { LoggingService } from './logging.service';
 
@@ -138,7 +139,19 @@ describe('UsageTrackingService', () => {
       expect(ergebnis).toEqual([EINER]);
     });
 
-    it('liefert bei ausgeschalteten Punkten (404) still eine leere Liste', () => {
+    it('liefert bei ausgeschalteten Punkten (200, aktiv false) still eine leere Liste und fragt nicht gleich wieder', () => {
+      let ergebnis: unknown;
+      service.getEigeneMeilensteine().subscribe((liste) => (ergebnis = liste));
+      status();
+
+      http.expectOne(MEILENSTEINE).flush({ meilensteine: [], aktiv: false });
+
+      expect(ergebnis).toEqual([]);
+      service.getEigeneMeilensteine().subscribe();
+      http.expectNone(MEILENSTEINE);
+    });
+
+    it('liefert bei ausgeschalteten Punkten (404, älteres Backend) still eine leere Liste', () => {
       let ergebnis: unknown;
       service.getEigeneMeilensteine().subscribe((liste) => (ergebnis = liste));
       status();
@@ -177,7 +190,18 @@ describe('UsageTrackingService', () => {
       expect(ergebnis).toEqual(STAND);
     });
 
-    it('liefert bei ausgeschalteten Punkten (404) still null', () => {
+    it('liefert bei ausgeschalteten Punkten (200, aktiv false) still null', () => {
+      let ergebnis: unknown = 'unberuehrt';
+      service.getEigenePunkte().subscribe((stand) => (ergebnis = stand));
+      status();
+
+      http.expectOne(PUNKTE).flush({ tun: 0, quests: 0, wirkung: 0, gesamt: 0, sammelt: false, aktiv: false });
+
+      expect(ergebnis).toBeNull();
+      expect(TestBed.inject(LoggingService).error).not.toHaveBeenCalled();
+    });
+
+    it('liefert bei ausgeschalteten Punkten (404, älteres Backend) still null', () => {
       let ergebnis: unknown = 'unberuehrt';
       service.getEigenePunkte().subscribe((stand) => (ergebnis = stand));
       status();
@@ -319,7 +343,18 @@ describe('UsageTrackingService', () => {
       http.expectNone(GEPOSTET);
     });
 
-    it('merkt sich ein 404 (Schalter aus) still', () => {
+    it('merkt sich angeboten false (Schalter aus, 200 statt 404) still', () => {
+      let ergebnis: boolean | undefined;
+      service.gepostetAngeboten('kim-1').subscribe((ja) => (ergebnis = ja));
+      http.expectOne(GEPOSTET).flush({ personen_diese_woche: 0, angeboten: false });
+
+      expect(ergebnis).toBeFalse();
+      expect(angeboten()).toBeFalse();
+      http.expectNone(GEPOSTET);
+      expect(TestBed.inject(LoggingService).error).not.toHaveBeenCalled();
+    });
+
+    it('merkt sich ein 404 (Schalter aus, älteres Backend) still', () => {
       let ergebnis: boolean | undefined;
       service.gepostetAngeboten('kim-1').subscribe((ja) => (ergebnis = ja));
       http.expectOne(GEPOSTET).flush('weg', { status: 404, statusText: 'Not Found' });
@@ -352,6 +387,19 @@ describe('UsageTrackingService', () => {
       expect(ergebnis).toBe(7);
     });
 
+    it('„Ja, gepostet“ ist ein Gewinn fürs Einwilligungs-Budget, ein Fehler nicht (#788)', () => {
+      const budget = TestBed.inject(EinwilligungsBudgetService);
+      spyOn(budget, 'gewinn');
+
+      service.gepostetMelden('kim-1').subscribe();
+      http.expectOne(GEPOSTET).flush('kaputt', { status: 500, statusText: 'Server Error' });
+      expect(budget.gewinn).not.toHaveBeenCalled();
+
+      service.gepostetMelden('kim-1').subscribe();
+      http.expectOne(GEPOSTET).flush({ personen_diese_woche: 3 });
+      expect(budget.gewinn).toHaveBeenCalledTimes(1);
+    });
+
     it('vergisst nach einem 403 beim Melden das gemerkte Angebot', () => {
       service.gepostetAngeboten('kim-1').subscribe();
       http.expectOne(GEPOSTET).flush({ personen_diese_woche: 1 });
@@ -374,6 +422,115 @@ describe('UsageTrackingService', () => {
 
       expect(ergebnis).toBeNull();
     });
+
+    describe('Wirkungs-Echo (#790)', () => {
+      const BEITRAG = '123e4567-e89b-12d3-a456-426614174000';
+
+      it('schickt den Beitrag nur, wenn der Server es verlangt', () => {
+        service.gepostetMelden('kim-1', BEITRAG).subscribe();
+        const ohne = http.expectOne(GEPOSTET);
+        expect(ohne.request.body).toEqual({});
+        ohne.flush({ personen_diese_woche: 1, beitrag_nennen: true });
+
+        service.gepostetMelden('kim-1', BEITRAG).subscribe();
+        const mit = http.expectOne(GEPOSTET);
+        expect(mit.request.body).toEqual({ content_id: BEITRAG });
+        mit.flush({ personen_diese_woche: 1, beitrag_nennen: false });
+
+        service.gepostetMelden('kim-1', BEITRAG).subscribe();
+        expect(http.expectOne(GEPOSTET).request.body).toEqual({});
+      });
+
+      it('merkt sich das Verlangen schon aus dem Stand', () => {
+        service.gepostetAngeboten('kim-1').subscribe();
+        http.expectOne(GEPOSTET).flush({ personen_diese_woche: 1, beitrag_nennen: true });
+
+        service.gepostetMelden('kim-1', BEITRAG).subscribe();
+        expect(http.expectOne(GEPOSTET).request.body).toEqual({ content_id: BEITRAG });
+      });
+
+      it('gilt nur fuer die Kennung, fuer die der Server es gesagt hat', () => {
+        service.gepostetAngeboten('kim-1').subscribe();
+        http.expectOne(GEPOSTET).flush({ personen_diese_woche: 1, beitrag_nennen: true });
+
+        service.gepostetMelden('bo-2', BEITRAG).subscribe();
+        expect(http.expectOne(GEPOSTET).request.body).toEqual({});
+      });
+    });
+  });
+
+  describe('Danke an die Autorin (#791)', () => {
+    const BEITRAG = '123e4567-e89b-12d3-a456-426614174000';
+    const DANKE = `${environment.baseUrl}/api/v1/usage/content/${BEITRAG}/danke`;
+
+    function danke(): () => unknown {
+      let ergebnis: unknown;
+      service.dankeSagen(BEITRAG).subscribe((e) => (ergebnis = e));
+      return () => ergebnis;
+    }
+
+    it('gezaehlt oder nicht gezaehlt, ohne Grund zu behaupten', () => {
+      const erstes = danke();
+      const anfrage = http.expectOne(DANKE);
+      expect(anfrage.request.method).toBe('POST');
+      expect(anfrage.request.body).toEqual({});
+      anfrage.flush({ gezaehlt: true });
+      expect(erstes()).toBe('gezaehlt');
+
+      const zweites = danke();
+      http.expectOne(DANKE).flush({ gezaehlt: false });
+      expect(zweites()).toBe('nicht_gezaehlt');
+    });
+
+    it('403 und 404 still als nicht angeboten, sonst Fehler mit Log', () => {
+      const ohne = danke();
+      http.expectOne(DANKE).flush({ detail: 'art9_einwilligung_fehlt' }, { status: 403, statusText: 'Forbidden' });
+      expect(ohne()).toBe('nicht_angeboten');
+      expect(TestBed.inject(LoggingService).error).not.toHaveBeenCalled();
+
+      const kaputt = danke();
+      http.expectOne(DANKE).flush('kaputt', { status: 500, statusText: 'Server Error' });
+      expect(kaputt()).toBe('fehler');
+      expect(TestBed.inject(LoggingService).error).toHaveBeenCalled();
+    });
+  });
+
+  describe('Meldungen ohne Konto (#799)', () => {
+    const EREIGNIS = `${environment.baseUrl}/api/v1/ereignis`;
+
+    function melden(): () => unknown {
+      let ergebnis: unknown;
+      service.gepostetOhneKontoMelden().subscribe((e) => (ergebnis = e));
+      return () => ergebnis;
+    }
+
+    it('neutrale Adresse: die Art steht nur im Body, kein Beitrag, keine Kennung', () => {
+      const ergebnis = melden();
+      const anfrage = http.expectOne(EREIGNIS);
+
+      expect(anfrage.request.method).toBe('POST');
+      expect(anfrage.request.urlWithParams).toBe(EREIGNIS);
+      expect(anfrage.request.url).not.toMatch(/gepostet|konto|art=/i);
+      expect(anfrage.request.body).toEqual({ art: 'gepostet_ohne_konto' });
+      anfrage.flush({ gezaehlt: true });
+      expect(ergebnis()).toBe('gezaehlt');
+    });
+
+    it('404 und nicht gezählt still als nicht angeboten, sonst Fehler mit Log', () => {
+      const aus = melden();
+      http.expectOne(EREIGNIS).flush({ detail: 'Not found' }, { status: 404, statusText: 'Not Found' });
+      expect(aus()).toBe('nicht_angeboten');
+
+      const angemeldet = melden();
+      http.expectOne(EREIGNIS).flush({ gezaehlt: false });
+      expect(angemeldet()).toBe('nicht_angeboten');
+      expect(TestBed.inject(LoggingService).error).not.toHaveBeenCalled();
+
+      const gedrosselt = melden();
+      http.expectOne(EREIGNIS).flush('zu viele', { status: 429, statusText: 'Too Many Requests' });
+      expect(gedrosselt()).toBe('fehler');
+      expect(TestBed.inject(LoggingService).error).toHaveBeenCalled();
+    });
   });
 
   describe('Sichtbarkeit der Abzeichen (#351)', () => {
@@ -390,7 +547,22 @@ describe('UsageTrackingService', () => {
       expect(ergebnis).toEqual(stand);
     });
 
-    it('liefert ohne Schalter (404) still null', () => {
+    it('liefert ohne Schalter (200, aktiv false) still null', () => {
+      let ergebnis: unknown = 'unberuehrt';
+      service.getAbzeichenSichtbarkeit().subscribe((stand) => (ergebnis = stand));
+      status();
+
+      http.expectOne(SICHTBARKEIT).flush({
+        gefragt: false,
+        zeigen: null,
+        aktueller_wortlaut: { kennung: 'k', text: 'x', mehr_dazu: 'y' },
+        aktiv: false,
+      });
+
+      expect(ergebnis).toBeNull();
+    });
+
+    it('liefert ohne Schalter (404, älteres Backend) still null', () => {
       let ergebnis: unknown = 'unberuehrt';
       service.getAbzeichenSichtbarkeit().subscribe((stand) => (ergebnis = stand));
       status();

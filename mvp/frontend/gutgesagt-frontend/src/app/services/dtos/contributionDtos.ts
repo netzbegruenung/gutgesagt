@@ -2,6 +2,7 @@ import { ContentReference } from './commonDtos';
 import type { NutzungJeFassung } from '../../shared/fassung';
 import type { Stil, Zweck } from '../../shared/zweck-stil';
 import type { Thema } from './themenDtos';
+import type { TeamAmNamen } from '../../shared/teams/teams';
 
 //TODO: Evaluate usage of camel case and transformation in the backend
 
@@ -41,6 +42,11 @@ export interface ContentResult {
      * wenn sie der Sichtbarkeit zugestimmt hat, sonst null.
      */
     autor_abzeichen?: number | null;
+    /**
+     * Teams der aktuellen Saison der Autorin am Namen, neuester Beitritt zuerst; nur fuer
+     * Angemeldete, nur mit Schalter teams_oeffentlich und ihrer Einwilligung, sonst null.
+     */
+    autor_teams?: TeamAmNamen[] | null;
     /** Ob es der eigene Beitrag ist; vom Server berechnet, in Meine Beitraege immer true. */
     ist_eigener_beitrag?: boolean | null;
     /** Leer bei Bildern ohne Bildunterschrift. */
@@ -55,6 +61,9 @@ export interface ContentResult {
     usage_count: number;
     /** Davon in den letzten 7 Tagen (#349); fehlt bei aelteren Antworten. */
     nutzung_letzte_7_tage?: number;
+    /** Nur in Meine Beitraege, nur mit Schalter: Wirkungs-Echo (#790) und Danke (#791) als Summen. */
+    oeffentlich_gepostet?: number | null;
+    danke?: number | null;
     /** Kurz- und Langfassung eines Kommentars (#355). */
     short_text?: string | null;
     long_text?: string | null;

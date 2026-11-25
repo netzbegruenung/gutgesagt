@@ -25,6 +25,8 @@ import { NichtDabeiComponent } from '../nicht-dabei/nicht-dabei.component';
 import { OftGesuchtComponent } from '../oft-gesucht/oft-gesucht.component';
 import { AllesZumThemaComponent } from './alles-zum-thema.component';
 import { KartenDaten, KartenKennzahlen, ausSuchergebnis } from '../beitragskarte/karten-daten';
+import type { AndereTonlage } from '../beitragskarte/karten-aktionen/kopiert-erfolg';
+import { andereTonlagen } from './andere-tonlage';
 import { StatementSearchResult } from '../services/dtos/statementDtos';
 import { TeilenService, sucheLink, suchtextKuerzen } from '../shared/teilen.service';
 import {
@@ -244,10 +246,13 @@ export class ResultViewComponent implements OnInit, OnDestroy {
    * Aufklapper und Nutzung nicht zurueck (ngOnChanges bei neuen Daten).
    */
   private karten = new WeakMap<BaseSearchResult, KartenDaten>();
+  /** Je Kommentar eine Antwort zur selben Aussage in anderem Stil (#785), einmal je Suchantwort. */
+  private tonlagen = new Map<BaseSearchResult, AndereTonlage>();
   private readonly karteZu = (treffer: BaseSearchResult): KartenDaten => {
     let karte = this.karten.get(treffer);
     if (!karte) {
-      karte = ausSuchergebnis(treffer);
+      const andere = this.tonlagen.get(treffer);
+      karte = andere ? { ...ausSuchergebnis(treffer), andereTonlage: andere } : ausSuchergebnis(treffer);
       this.karten.set(treffer, karte);
     }
     return karte;
@@ -336,6 +341,7 @@ export class ResultViewComponent implements OnInit, OnDestroy {
       .subscribe(response => {
         this.antwort = response;
         this.karten = new WeakMap();
+        this.tonlagen = andereTonlagen(response);
         // Eine neue Suche beginnt zugeklappt; den Themenfilter setzt "Alles zum Thema" weiter unten.
         this.aufgeklappt.clear();
         this.alternativenOffen = false;

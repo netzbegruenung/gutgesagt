@@ -86,7 +86,9 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   Vor- und Nachname und Passwort-Hash (DSE „Konto aus einer Einladung“); in der Plattform die
   Zustimmung zu den Nutzungsbedingungen (Kennung, Zeitpunkt, Stand) und das Archiv der bis zur
   Umstellung im Anmeldedienst gespeicherten Zustimmungszeitpunkte; beim Beta-Zugang E-Mail-Adresse, Anzeigename und Prüfsumme des
-  Passworts in einer Konfigurationsdatei; Anmelde-Cookie; an Einladungen nur Zähler und Notiz.
+  Passworts in einer Konfigurationsdatei; Anmelde-Cookie; an Einladungen nur Zähler und Notiz, bei
+  einem Teamlink dazu Teamname, Motiv, Saison und Teamart, bei einem Team nach Gruppe der Tag
+  der schriftlichen Zustimmung der Gruppenleitung ohne Namen (Mitgliedschaften unter T13).
   Im Browser bis zum Tabschluss, höchstens eine Stunde, ein angefangener Kommentar mit Prüfwert
   des Kontos (DSE „Weitere Einträge“, E1).
   Schon das Konto kann eine politische Nähe erkennen lassen (Art. 9).
@@ -180,7 +182,7 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   Art.-9-Einwilligung.
 - **Betroffene:** alle, die kopieren oder teilen; Mitwirkende, deren Beiträge genutzt werden.
 - **Daten:** Nutzungsereignisse ohne Kennung (Beitrag, Art, Zeitpunkt, Geräteklasse, Fassung);
-  Prüfwert der entdoppelten Nutzung; je Kennung zwei Zählerstände für die Rückmeldung und „Seit deinem letzten Besuch“ (Nutzung, Einwürfe anderer; kein Zeitpunkt, aus dem Einwurf-Stand und `raw_inputs.created_at` nur grob ableitbar, für Admins mit DB-Zugriff; zwei weitere Zahlen über 7 Tage nur beim Besuch berechnet, nicht gespeichert, #741); je Person und
+  Prüfwert der entdoppelten Nutzung; je Kennung zwei Zählerstände für die Rückmeldung und „Seit deinem letzten Besuch“ (Nutzung, Einwürfe anderer; kein Zeitpunkt, aus dem Einwurf-Stand und `raw_inputs.created_at` nur grob ableitbar, für Admins mit DB-Zugriff; zwei weitere Zahlen über 7 Tage nur beim Besuch berechnet, nicht gespeichert, #741; mit dem Schalter `antworten_hinweis` eine dritte: neue Antworten anderer auf eigene Aussagen, ebenso nur berechnet, und die Liste „Meine Aussagen“ nur für die Person selbst, #760); je Person und
   Woche ein Prüfwert „Ja, gepostet“, danach nur die Zahl der Woche.
 - **Empfänger:** Zähler an der Karte für alle; die Rückmeldung nur für die Person; Zahlen je
   Woche für Admins.
@@ -280,6 +282,44 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
 - **TOM:** Schalter `herkunft_pruefen` (Standard aus); nur http/https, keine internen Adressen,
   auch nicht nach Weiterleitungen (`utils/sicherer_abruf.py`); höchstens ein Abruf je Sekunde.
   Als Eintrag geführt, weil der Dienst damit fremde Server anspricht.
+
+### T13 Teams über Einladungen (gebaut, ausgeschaltet)
+
+- **Zweck:** der Person zeigen, in welchen Teams sie dabei ist, und die Nummer im Team vergeben
+  (GLOSSARY „Team“, „Teamlink“, „Mitgliedschaft“, „Saison“); mit derselben Einwilligung die
+  Zahl der Beiträge, Bewertungen und Kommentare und der Meldungen „Ja, gepostet“ in eine Summe
+  des Teams einbeziehen (noch nicht gebaut); später, mit eigener Einwilligung
+  und eigenem Schalter, die Teams der aktuellen Saison am Anzeigenamen zeigen.
+- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a über eine eigene,
+  ausdrückliche Einwilligung je Team (Wortlaut `team-2026-11-26`, Knopf „Ja, speichert, dass ich
+  im Team X bin“, gleichwertig „Nein, ohne Team weiter“), getrennt von der Art.-9-Einwilligung
+  und von „Punkte und Meilensteine“; für die Anzeige am Namen eine zweite, eigene Einwilligung
+  (`team-oeffentlich-2026-11-25`). DSE „Teams“.
+- **Betroffene:** angemeldete Personen, die über einen Teamlink beitreten oder ein Konto
+  anlegen und einwilligen.
+- **Daten:** je Mitgliedschaft Kennung, Teamname, Motiv, Saison, laufende Nummer, Tag des
+  Beitritts, Kennung des Wortlauts und Zeitpunkt der Einwilligung (`team_mitgliedschaften`),
+  ohne Bezug zur Einladung; je Konto die jüngste Antwort auf die Anzeige am Namen
+  (`team_oeffentlich`); Zähler je Team und Saison ohne Kennung (`team_nummern`); die aktuelle
+  Saison mit der Kennung des ändernden Admins (`einstellungen`). Zusammen mit dem Teamnamen
+  kann die Mitgliedschaft auf politische Haltung und Ort schließen lassen (Art. 9).
+- **Empfänger:** die Person selbst („Meine Teams“); Admins nur die Zahl der Mitglieder je
+  Team, keine Liste, kein Export, keine API; am Namen für andere Angemeldete nur mit Schalter
+  `teams_oeffentlich` und zweiter Einwilligung, Besucher nie; die Summe des Teams (noch nicht
+  gebaut) nur Mitglieder des Teams, nur für abgeschlossene Wochen, erst ab fünf Einwilligenden,
+  gerundet und ohne Namen.
+- **Fristen:** LK „Teams“ und „Fristen“: „Team verlassen“ löscht sofort, die Kontolöschung
+  alle Mitgliedschaften (LK „Ablauf“, Schritt 2); Sicherungskopien bis zu ihrem Ablauf.
+- **TOM:** DSFA-Nachtrag „Teams“. Schalter `teams` (Obergrenze `SEMANTIC_SEARCH_TEAMS_AKTIV`) und
+  `teams_oeffentlich` (eigene Obergrenze `SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV`, nicht an die
+  Abzeichen gekoppelt), beide Standard aus; die Anzeige am Namen bleibt aus, bis der
+  Datenschutzbeauftragte geraten hat. Teamnamen nach Anlass, Ort oder Saison oder, als Team
+  nach Gruppe, nach einer Gruppe, die öffentlich unter diesem Namen auftritt, mit vorheriger
+  schriftlicher, widerruflicher Zustimmung der Gruppenleitung (Tag der Zustimmung an der
+  Einladung, nur für Admins; nach Widerruf wird das Team umbenannt,
+  `mvp/scripts/manual/team_umbenennen.sql`); die Gruppe bekommt nie Namen, Listen oder
+  eigene Zahlen und steuert nichts; keine Namen, die eine weitere besondere Kategorie erkennen
+  lassen (Hinweis im Admin-Formular, GLOSSARY „Team“). Keine Nummer am Namen.
 
 ## Offen
 

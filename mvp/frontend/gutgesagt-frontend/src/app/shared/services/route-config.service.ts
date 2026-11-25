@@ -17,8 +17,8 @@ export interface RouteConfig {
 export class RouteConfigService {
 
   getRouteConfig(url: string): RouteConfig {
-    // Parse route and query params
-    const urlParts = url.split('?');
+    // Pfad und Query; ein Fragment (etwa /search#suchen) gehoert nicht zur Seite
+    const urlParts = url.split('#')[0].split('?');
     const route = urlParts[0];
     const queryParams = new URLSearchParams(urlParts[1] || '');
 
@@ -88,6 +88,21 @@ export class RouteConfigService {
           showContributeButton: true
         };
 
+      case ROUTES.GARTEN:
+        return {
+          pageTitle: PAGE_TITLES.GARTEN,
+          showBackButton: true,
+          showContributeButton: true
+        };
+
+      // Konter-Probe (#786), ohne Konto spielbar
+      case ROUTES.KONTER_PROBE:
+        return {
+          pageTitle: PAGE_TITLES.KONTER_PROBE,
+          showBackButton: true,
+          showContributeButton: false
+        };
+
       case ROUTES.SHARE_TARGET:
         return {
           pageTitle: PAGE_TITLES.SHARE_TARGET,
@@ -132,6 +147,8 @@ export class RouteConfigService {
       case '/einladung':
       case '/einladung/anmelden':
         return { ...defaultConfig, pageTitle: PAGE_TITLES.EINLADUNG };
+      case ROUTES.WILLKOMMEN:
+        return { ...defaultConfig, pageTitle: PAGE_TITLES.WILLKOMMEN };
 
       default:
         return this.getDynamicRouteConfig(route, queryParams, defaultConfig);

@@ -8,6 +8,7 @@ from domain.models.commentary import CommentaryReference, Stil, Zweck
 from domain.models.content_status import ContentStatus
 from domain.models.content_type import ContentType
 from domain.models.generic_text import GenericTextReference
+from domain.teams import TeamPille
 from utils.aufzaehlung import mit_punkten
 
 if TYPE_CHECKING:
@@ -69,6 +70,10 @@ class BeitragResponse(BaseModel):
     # Zahl der erreichten Meilensteine der Autorin (#351); nur angemeldet, nur wenn
     # sie der Sichtbarkeit zugestimmt hat und beide Schalter an sind, sonst None.
     autor_abzeichen: Optional[int] = None
+    # Teams der aktuellen Saison der Autorin am Namen; nur angemeldet, nur wenn der
+    # Schalter teams_oeffentlich wirkt und sie dem zugestimmt hat, sonst None
+    # (services/team_service.py). Neuester Beitritt zuerst.
+    autor_teams: Optional[List[TeamPille]] = None
     # Die Kennung des Autors, nur fuer Admins (Moderation), sonst None.
     original_author: Optional[str] = None
     # Die Guete fuer das Siegel (#427, services/guete_service.py): 1-10, None = "neu".

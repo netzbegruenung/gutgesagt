@@ -18,7 +18,7 @@ services:
       options:
         max-size: "20m"
         max-file: "3"
-    image: qdrant/qdrant:v1.18.2
+    image: qdrant/qdrant:v1.20.2
     container_name: gutgesagt-qdrant
     restart: unless-stopped
     ports:
@@ -97,6 +97,9 @@ services:
       # huggingface.co that would otherwise stall the boot (#578).
       # Development logging: Verbose for debugging
       - SEMANTIC_SEARCH_LOG_LEVEL=DEBUG
+      # Tagesdeckel (GLOSSARY.md) hoch: Ein E2E-Lauf legt mit demselben Testkonto 20 bis
+      # 30 Eintraege an (e2e/README.md), der Standard von 20 je Tag reichte nicht.
+      - SEMANTIC_SEARCH_TAGESDECKEL_BEITRAEGE=1000
     volumes:
       - ./data:/data:ro  # Mount entire data directory (seed + schemas)
       - semantic_search_metadata:/metadata  # Persistent metadata storage

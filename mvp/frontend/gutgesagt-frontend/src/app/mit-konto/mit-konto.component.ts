@@ -4,6 +4,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ANSICHT_PARAM, VORSCHAU_SCHRITTE, ZIEL_PARAM, vorschauZiel } from './vorschau-schritte';
+import { FunktionenService } from '../services/funktionen.service';
 
 /**
  * Beschriftung des Hauptknopfs. Er führt zur Login-Auswahl mit dem Ziel, wie der Knopf im
@@ -16,6 +17,8 @@ export const WEITER_SUCHEN = 'Erst mal weiter suchen';
 export const VORSCHAU_ETIKETT = 'Vorschau';
 /** Über den Bildern: Es sind Bilder der angemeldeten Oberfläche, nicht die Seite selbst. */
 export const VORSCHAU_SATZ = 'Eine Vorschau: So sieht Gut gesagt aus, wenn du angemeldet bist.';
+/** Unter der Einleitung, solange die Gartenansicht an ist (#783). */
+export const GARTEN_SATZ = 'Mit Konto kannst du Brachflächen begrünen.';
 
 /**
  * „Das erwartet dich mit Konto“ (Entscheidung Sebastian 17.11.): Besucher sehen, was ein
@@ -45,6 +48,9 @@ export class MitKontoComponent {
   readonly weiterSuchen = WEITER_SUCHEN;
   readonly etikett = VORSCHAU_ETIKETT;
   readonly vorschauSatz = VORSCHAU_SATZ;
+  readonly gartenSatz = GARTEN_SATZ;
+  /** Gartenansicht (#783): Dort sehen Besucher nur Zahlen; der Satz sagt, was mit Konto geht. */
+  readonly gartenAn = inject(FunktionenService).an('gartenansicht');
 
   private readonly params = toSignal(this.route.queryParamMap, { initialValue: this.route.snapshot.queryParamMap });
   readonly ziel = computed(() => vorschauZiel(this.params().get(ZIEL_PARAM)));

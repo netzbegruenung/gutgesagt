@@ -5,7 +5,7 @@ Kennung (#489).
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Optional
+from typing import Callable, Iterable, Optional, Set
 
 from sqlalchemy import String, delete, func, insert, literal, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -69,6 +69,34 @@ class Art9EinwilligungRepository:
                 eingewilligt_am=zeile.eingewilligt_am,
                 widerrufen_am=zeile.widerrufen_am,
             )
+
+    def zaehlende(self, kennungen: Iterable[str]) -> Set[str]:
+        """
+        Die Kennungen, deren juengste Einwilligung zaehlt (wie ``Art9Einwilligung.zaehlt``),
+        in einer Abfrage fuer viele (Rangliste, #793).
+        """
+        liste = list(set(kennungen))
+        if not liste:
+            return set()
+        with self.db.get_session() as session:
+            zeilen = session.execute(
+                select(
+                    Art9EinwilligungZeile.user_id,
+                    Art9EinwilligungZeile.wortlaut,
+                    Art9EinwilligungZeile.widerrufen_am,
+                )
+                .where(Art9EinwilligungZeile.user_id.in_(liste))
+                .distinct(Art9EinwilligungZeile.user_id)
+                .order_by(
+                    Art9EinwilligungZeile.user_id,
+                    Art9EinwilligungZeile.eingewilligt_am.desc(),
+                )
+            ).all()
+        return {
+            zeile.user_id
+            for zeile in zeilen
+            if zeile.widerrufen_am is None and geltender_wortlaut(zeile.wortlaut)
+        }
 
     def einwilligen(self, user_id: str, wortlaut: str) -> None:
         """
