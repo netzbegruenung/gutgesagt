@@ -10,7 +10,7 @@ Umleitung bei einem 401 der Suche), den Aufruf eines Beitrags per Direktlink und
 Fluchten bei 360, 390, 1280 und 1440 px (Suchraster, Rundgang-Band, Seitenrahmen, Beitragen-Seite, Zweck-Umschalter,
 Startkacheln, Fuß) samt Umschalter hell/dunkel (liest nur). Ohne Stack, alle Antworten gemockt (`einladung-besucher`, auch gegen `ng serve` ohne Backend): Einladung von der Login-Seite einlösen und Rückkehr nach dem Anmelden aus der Daumen-Snackbar; `datenschutz-sprung-besucher`: Sprung vom Hinweis am Suchfeld zum Abschnitt „Deine Suchanfragen“, mobil und am Desktop; `neue-version-besucher`: fehlt nach einem Deploy ein Chunk (404), lädt die App das Ziel selbst hart neu; fehlt er auch danach, bleibt es bei einem Neuladen und dem Hinweis „Neu laden“ (wartet 15 s); beide prüfen den Merker im sessionStorage. `suchfeld-beschriftung-besucher`: Beschriftung des Suchfelds bei 360 px nicht abgeschnitten, Startseite und Trefferseite (kompakt, mit Text und leer). Teilen (`13-teilen`, Projekt `teilen`: Karte, Beitragsseite,
 „Ergebnis teilen“, mobil mit nachgebautem `navigator.share`, am Desktop Zwischenablage) mockt jede Anfrage an `/api`
-(`route.fulfill`) und braucht nur ein `ng serve` über `E2E_BASE_URL`. Teams über Einladungslinks (`15-teams`, Projekt `teams`, 360 px) baut den Server mit Mitgliedschaften je Konto im Test nach, ebenfalls nur gegen `ng serve`: neu einlösen mit „Ja“ (Nummer, Rücksprung nach Mail und Anmeldung, „Meine Teams“) und mit „Nein“ (keine Mitgliedschaft), angemeldet beitreten, zweimal „schon dabei“, „Team verlassen“, Schalter teams aus (Seite und Anfrage wie vorher) und ohne Schalter teams_oeffentlich keine zweite Frage, Team nach Gruppe mit dem Satz zur Zustimmung der Gruppe über der Frage (neu und angemeldet). Nicht in CI: Die Tests brauchen den vollen Stack.
+(`route.fulfill`) und braucht nur ein `ng serve` über `E2E_BASE_URL`. Teams über Einladungslinks (`15-teams`, Projekt `teams`, 360 px) baut den Server mit Mitgliedschaften je Konto im Test nach, ebenfalls nur gegen `ng serve`: neu einlösen mit „Ja“ (Nummer, Rücksprung nach Mail und Anmeldung, „Meine Teams“) und mit „Nein“ (keine Mitgliedschaft), angemeldet beitreten, zweimal „schon dabei“, „Team verlassen“, Schalter teams aus (Seite und Anfrage wie vorher, vorhandene Mitgliedschaften weiter unter „Meine Teams“ mit Verlassen) und ohne Schalter teams_oeffentlich keine zweite Frage, Team nach Gruppe mit dem Satz zur Zustimmung der Gruppe über der Frage (neu und angemeldet). Nicht in CI: Die Tests brauchen den vollen Stack.
 
 ## Starten
 
@@ -35,6 +35,29 @@ Einzelne Specs: `npx playwright test tests/04-fangkorb.spec.ts`, ein Projekt:
 | `E2E_EMAIL`, `E2E_PASSWORT` | Testkonto aus `mvp/config/managed-users.example.json` (`tests/konto.ts`) | Anmeldung über `/api/auth/login/managed` |
 | `E2E_SCREENSHOTS` | `e2e/screenshots/` | Ablage der benannten Screenshots |
 | `E2E_DIST` | – | Pfad zu `dist/.../browser` nach `ng build --configuration production`: `13-dunkel-ohne-aufblitzen` prüft dann den Dunkelmodus vor dem Laden des Stylesheets, ohne Stack (alles gemockt); sonst übersprungen |
+| `E2E_TEAMS_STACK` | – | `1` schaltet `16-teams-stack` ein, nur zusammen mit `E2E_BASE_URL` (Teams-Stack, siehe unten; nie gegen den Dev-Stack, die Spec schaltet teams um) |
+| `E2E_PG_CONTAINER` | `gutgesagt-app-postgres-teams` | PostgreSQL-Container, in dem `16-teams-stack` per `docker exec` nachsieht |
+
+### Teams gegen den echten Stack (`16-teams-stack`)
+
+Spielt Teams über Einladungslinks mit Frontend, BFF, Suchdienst und PostgreSQL durch: Teamlink im
+Admin-Formular anlegen, neues Konto mit „Ja“ (Nummer, „Meine Teams“, Zeile in
+`team_mitgliedschaften` ohne Bezug zur Einladung) und mit „Nein“ (keine Zeile, gezählt), angemeldet
+beitreten und „schon dabei“ ohne zweite Zählung, „Team verlassen“, Kontolöschung über
+`mvp/scripts/manual/person_loeschen.sql` und Schalter teams aus. Keycloak ersetzt ein kleiner
+Nachbau der Admin-Schnittstelle (`mvp/scripts/dev/teams-stack/keycloak-ersatz.py`): Er vergibt die
+Kennungen der Konten aus `mvp/scripts/dev/teams-stack/managed-users.json` und schickt keine Mail.
+Läuft als eigener Stack neben dem Dev-Stack (Ports 38080, 35054, 38000, 35533, 36433, 38181) und
+braucht eine frische Datenbank, weil die Nummern ab 1 geprüft werden (sonst bricht der erste Test mit „Stack nicht frisch“ ab). Die Anfragen an den Ersatz zeigt `http://127.0.0.1:38181/_log`.
+
+```bash
+cd mvp
+docker compose -p gg-teams -f docker-compose.dev.yml -f docker-compose.teams-stack.yml up -d --build
+cd frontend/gutgesagt-frontend/e2e
+E2E_TEAMS_STACK=1 E2E_BASE_URL=http://127.0.0.1:38080 npx playwright test --project=teams-stack
+cd ../../..
+docker compose -p gg-teams -f docker-compose.dev.yml -f docker-compose.teams-stack.yml down -v
+```
 
 ## Was man wissen muss
 
