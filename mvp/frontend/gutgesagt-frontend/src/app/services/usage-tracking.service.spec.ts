@@ -374,6 +374,77 @@ describe('UsageTrackingService', () => {
 
       expect(ergebnis).toBeNull();
     });
+
+    describe('Wirkungs-Echo (#790)', () => {
+      const BEITRAG = '123e4567-e89b-12d3-a456-426614174000';
+
+      it('schickt den Beitrag nur, wenn der Server es verlangt', () => {
+        service.gepostetMelden('kim-1', BEITRAG).subscribe();
+        const ohne = http.expectOne(GEPOSTET);
+        expect(ohne.request.body).toEqual({});
+        ohne.flush({ personen_diese_woche: 1, beitrag_nennen: true });
+
+        service.gepostetMelden('kim-1', BEITRAG).subscribe();
+        const mit = http.expectOne(GEPOSTET);
+        expect(mit.request.body).toEqual({ content_id: BEITRAG });
+        mit.flush({ personen_diese_woche: 1, beitrag_nennen: false });
+
+        service.gepostetMelden('kim-1', BEITRAG).subscribe();
+        expect(http.expectOne(GEPOSTET).request.body).toEqual({});
+      });
+
+      it('merkt sich das Verlangen schon aus dem Stand', () => {
+        service.gepostetAngeboten('kim-1').subscribe();
+        http.expectOne(GEPOSTET).flush({ personen_diese_woche: 1, beitrag_nennen: true });
+
+        service.gepostetMelden('kim-1', BEITRAG).subscribe();
+        expect(http.expectOne(GEPOSTET).request.body).toEqual({ content_id: BEITRAG });
+      });
+
+      it('gilt nur fuer die Kennung, fuer die der Server es gesagt hat', () => {
+        service.gepostetAngeboten('kim-1').subscribe();
+        http.expectOne(GEPOSTET).flush({ personen_diese_woche: 1, beitrag_nennen: true });
+
+        service.gepostetMelden('bo-2', BEITRAG).subscribe();
+        expect(http.expectOne(GEPOSTET).request.body).toEqual({});
+      });
+    });
+  });
+
+  describe('Danke an die Autorin (#791)', () => {
+    const BEITRAG = '123e4567-e89b-12d3-a456-426614174000';
+    const DANKE = `${environment.baseUrl}/api/v1/usage/content/${BEITRAG}/danke`;
+
+    function danke(): () => unknown {
+      let ergebnis: unknown;
+      service.dankeSagen(BEITRAG).subscribe((e) => (ergebnis = e));
+      return () => ergebnis;
+    }
+
+    it('gezaehlt oder schon', () => {
+      const erstes = danke();
+      const anfrage = http.expectOne(DANKE);
+      expect(anfrage.request.method).toBe('POST');
+      expect(anfrage.request.body).toEqual({});
+      anfrage.flush({ gezaehlt: true });
+      expect(erstes()).toBe('gezaehlt');
+
+      const zweites = danke();
+      http.expectOne(DANKE).flush({ gezaehlt: false });
+      expect(zweites()).toBe('schon');
+    });
+
+    it('403 und 404 still als nicht angeboten, sonst Fehler mit Log', () => {
+      const ohne = danke();
+      http.expectOne(DANKE).flush({ detail: 'art9_einwilligung_fehlt' }, { status: 403, statusText: 'Forbidden' });
+      expect(ohne()).toBe('nicht_angeboten');
+      expect(TestBed.inject(LoggingService).error).not.toHaveBeenCalled();
+
+      const kaputt = danke();
+      http.expectOne(DANKE).flush('kaputt', { status: 500, statusText: 'Server Error' });
+      expect(kaputt()).toBe('fehler');
+      expect(TestBed.inject(LoggingService).error).toHaveBeenCalled();
+    });
   });
 
   describe('Sichtbarkeit der Abzeichen (#351)', () => {

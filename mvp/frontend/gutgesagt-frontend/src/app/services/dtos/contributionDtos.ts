@@ -61,6 +61,9 @@ export interface ContentResult {
     usage_count: number;
     /** Davon in den letzten 7 Tagen (#349); fehlt bei aelteren Antworten. */
     nutzung_letzte_7_tage?: number;
+    /** Nur in Meine Beitraege, nur mit Schalter: Wirkungs-Echo (#790) und Danke (#791) als Summen. */
+    oeffentlich_gepostet?: number | null;
+    danke?: number | null;
     /** Kurz- und Langfassung eines Kommentars (#355). */
     short_text?: string | null;
     long_text?: string | null;

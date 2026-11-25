@@ -23,6 +23,7 @@ import { KartenDaten } from '../../beitragskarte/karten-daten';
 import { Meilenstein } from '../../services/usage-tracking.service';
 import { Stil } from '../../shared/zweck-stil';
 import { wirkungssatz } from '../wirkung';
+import { dankeText, oeffentlichGepostetText } from '../../shared/wirkung-texte';
 import {
   ABSCHNITTE_AB,
   AlbumAbschnitt,
@@ -368,6 +369,19 @@ export class AlbumComponent implements OnChanges, AfterViewInit, OnDestroy {
 
   nachSchluessel(_index: number, abschnitt: AlbumAbschnitt): string {
     return abschnitt.thema.schluessel;
+  }
+
+  /**
+   * Was bei der Autorin ankommt (#790, #791): „3-mal öffentlich gepostet“, „5 Danke“, je
+   * mit Symbol und Namen; leer ohne Zahl oder mit ausgeschaltetem Schalter.
+   */
+  wirkungEcho(karte: KartenDaten): { icon: string; text: string }[] {
+    const gepostet = oeffentlichGepostetText(karte.oeffentlichGepostet);
+    const danke = dankeText(karte.danke);
+    return [
+      ...(gepostet ? [{ icon: 'campaign', text: gepostet }] : []),
+      ...(danke ? [{ icon: 'favorite', text: danke }] : []),
+    ];
   }
 
   nachId(_index: number, eintrag: AlbumEintrag): string {

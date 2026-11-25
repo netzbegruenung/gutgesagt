@@ -23,6 +23,9 @@ export const MAX_KACHELN = 4;
  */
 export const ZEITRAUM = 'letzte 7 Tage';
 
+/** Das Wirkungs-Echo (#790) ist eine Summe ohne Zeitraum; die Kachel sagt das. */
+export const ECHO_ZEITRAUM = 'insgesamt';
+
 /** Eine Kachel im Block: was neu ist und wohin es fuehrt. */
 export interface NeuesEintrag {
   /** Grosse Zahl auf der Kachel, an der Grenze der Lueckenliste etwa „50+“. */
@@ -96,6 +99,23 @@ export function neuesListe(stand: NeuesStand): NeuesEintrag[] {
       wort,
       satz: `${nutzung} ${wort}`,
       zeile: `${wort}. Sieh nach, welche genutzt werden.`,
+      knopf: PAGE_TITLES.MEINE_BEITRAEGE,
+    });
+  }
+
+  // Wirkungs-Echo (#790): eine Summe ueber alle eigenen Beitraege, kein Zeitraum; nur mit Schalter
+  const echo = positiv(stand.oeffentlich_gepostet);
+  if (echo) {
+    const wort = 'mal öffentlich gepostet';
+    liste.push({
+      art: 'echo',
+      ziel: ROUTES.MEINE_BEITRAEGE,
+      icon: 'campaign',
+      zahl: `${echo}`,
+      wort,
+      zeitraum: ECHO_ZEITRAUM,
+      satz: `${echo} ${wort}, ${ECHO_ZEITRAUM}`,
+      zeile: 'mal wurden deine Beiträge insgesamt öffentlich gepostet.',
       knopf: PAGE_TITLES.MEINE_BEITRAEGE,
     });
   }

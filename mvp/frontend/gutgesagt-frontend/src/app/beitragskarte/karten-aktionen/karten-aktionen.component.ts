@@ -42,6 +42,7 @@ import { platzhalterDialogOeffnen } from './platzhalter-dialog.component';
 import { GEPOSTET_FRAGE_MS, JA_GEPOSTET, KOPIERT_GEPOSTET_FRAGE, gepostetDank } from './gepostet-texte';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
 import { STIMM_DANK_MS, stimmDank } from './stimm-dank-texte';
+import { DankeKnopfComponent } from './danke-knopf.component';
 
 /**
  * So lange steht „Kopiert“: Mit 1,5 s war es beim Wechsel in die andere App schon weg
@@ -76,7 +77,7 @@ export interface KopierVariante {
 @Component({
   selector: 'app-karten-aktionen',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, DankeKnopfComponent],
   templateUrl: './karten-aktionen.component.html',
   styleUrls: ['./karten-aktionen.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -140,6 +141,11 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
 
   /** „Als Bild teilen“ steht nur im Menue, wenn der Schalter an ist (#756, Standard aus). */
   readonly sharepicAn = inject(FunktionenService).an('sharepic');
+  /** „Danke an die Autorin“ nach dem Kopieren (#791); ohne Konto nur mit Unterschalter. */
+  readonly dankeKnopfAn = inject(FunktionenService).an('danke_knopf');
+  readonly dankeOhneKontoAn = inject(FunktionenService).an('danke_ohne_konto');
+  /** Seit dem ersten Kopieren auf dieser Karte; kein Zeitlimit. */
+  dankeAngeboten = false;
 
   @Output() likeToggled = new EventEmitter<string>();
   /** Im Album: "Ändern" angetippt; den Dialog oeffnet die Seite. */
@@ -288,8 +294,22 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
     if (this.inhaltId) {
       this.usageTrackingService.trackContentUsage(this.inhaltId, this.fassung ?? undefined);
       this.kopiert.emit();
+      this.dankeAngeboten = true;
     }
     this.cdr.markForCheck();
+  }
+
+  /**
+   * Der Knopf „Danke an die Autorin“ (#791): nach dem Kopieren, nicht am eigenen Beitrag,
+   * nicht in Vorschau und Album; angemeldet mit `danke_knopf`, ohne Konto nur mit
+   * `danke_ohne_konto`.
+   */
+  get dankeSichtbar(): boolean {
+    if (!this.dankeAngeboten || this.vorschau || this.album || !this.eigeneStimmeImZaehler) {
+      return false;
+    }
+    const angemeldet = !!this.authService.getUserInfo()?.isAuthenticated;
+    return angemeldet ? this.dankeKnopfAn() : this.dankeOhneKontoAn();
   }
 
   /**
@@ -348,7 +368,7 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
       .onAction()
       .pipe(
         take(1),
-        switchMap(() => this.usageTrackingService.gepostetMelden(kennung)),
+        switchMap(() => this.usageTrackingService.gepostetMelden(kennung, this.inhaltId)),
       )
       .subscribe((personen) => {
         if (personen === GEPOSTET_NICHT_ANGEBOTEN) {

@@ -148,5 +148,10 @@
                            [abstimmenSichtbar]="false"
                            (aendern)="aendern.emit($event)" (loeschen)="loeschenAngetippt($event)">
         </app-beitragskarte>
+        <!-- Wirkungs-Echo und Danke (#790, #791): nur Summen, nie wer -->
+        <ul class="wirkung-echo" *ngIf="wirkungEcho(eintrag.karte) as echo" [hidden]="!echo.length"
+            aria-label="Was bei dir ankommt" data-testid="wirkung-echo">
+            <li *ngFor="let zeile of echo"><mat-icon aria-hidden="true">{{ zeile.icon }}</mat-icon>{{ zeile.text }}</li>
+        </ul>
     </li>
 </ng-template>
