@@ -18,6 +18,8 @@ import { FunktionenService } from '../../services/funktionen.service';
 import { KOPIERT } from '../../shared/vorlagen-luecke';
 import { TEILEN_LINK_KOPIERT, TEILEN_NAVIGATOR, TeilenNavigator } from '../../shared/teilen.service';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
+import { GEPOSTET_FRAGE, GEPOSTET_GEMELDET, JA_GEPOSTET } from './gepostet-texte';
+import { KOPIERT_ERFOLG } from './kopiert-erfolg';
 import {
   DANK_EIGENER_BEITRAG,
   DANK_SCHLICHT,
@@ -157,16 +159,20 @@ describe('KartenAktionenComponent - Abstimmen', () => {
       expect(meilensteinHinweis.bestaetigen).toHaveBeenCalledTimes(1);
     }));
 
-    it('verdraengt die offene Frage „Gepostet?“ nicht', fakeAsync(() => {
-      (snackBar as unknown as { _openedSnackBarRef: unknown })._openedSnackBarRef = {
-        instance: { data: { message: 'Kopiert. Gepostet?', action: 'Ja, gepostet' } },
-      };
+    it('dankt auch, während im Erfolgskasten die Frage „Gepostet?“ steht', fakeAsync(() => {
+      (TestBed.inject(UsageTrackingService) as jasmine.SpyObj<UsageTrackingService>).gepostetBekannt.and.returnValue(true);
+      component.kopieren();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.ja-gepostet')).not.toBeNull();
       component.stimmenZaehlen = false;
 
       liked();
+      fixture.detectChanges();
 
-      expect(meilensteinHinweis.bestaetigen).not.toHaveBeenCalled();
-      expect(component.isLiked).toBeTrue();
+      expect(meilensteinHinweis.bestaetigen).toHaveBeenCalledTimes(1);
+      // Die Frage bleibt im Kasten stehen, die Dank-Snackbar verdrängt sie nicht.
+      expect(fixture.nativeElement.querySelector('.ja-gepostet')).not.toBeNull();
+      tick(600);
     }));
 
     it('zeigt bei einem Fehler keinen Dank', fakeAsync(() => {
@@ -709,89 +715,183 @@ describe('KartenAktionenComponent - Abstimmen', () => {
     });
   });
 
-  describe('Rückmeldung „Gepostet?“ (#643)', () => {
+  describe('Rückmeldung „Gepostet?“ (#643), Schalter kopiert_erfolg aus', () => {
     let usage: jasmine.SpyObj<UsageTrackingService>;
-    let aktion: Subject<void>;
+    let kopiertHinweis: jasmine.SpyObj<{ dismiss: () => void }>;
 
     beforeEach(() => {
       usage = TestBed.inject(UsageTrackingService) as jasmine.SpyObj<UsageTrackingService>;
-      aktion = new Subject<void>();
-      snackBar.open.and.returnValue({ onAction: () => aktion.asObservable() } as any);
+      kopiertHinweis = jasmine.createSpyObj('MatSnackBarRef', ['dismiss']);
+      snackBar.open.and.returnValue(kopiertHinweis as any);
+      fixture.detectChanges();
     });
 
-    it('bestätigt sofort und fragt, sobald der Server die Rückmeldung anbietet', () => {
+    function kopieren(): void {
+      component.kopieren();
+      fixture.detectChanges();
+    }
+
+    function kasten(): HTMLElement | null {
+      return fixture.nativeElement.querySelector('.kopiert-erfolg');
+    }
+
+    function jaKnopf(): HTMLButtonElement | null {
+      return fixture.nativeElement.querySelector('.ja-gepostet');
+    }
+
+    function dank(): string {
+      return (fixture.nativeElement.querySelector('.erfolg-gepostet-dank')?.textContent ?? '').trim();
+    }
+
+    it('bestätigt sofort und stellt die Frage in den Kasten, sobald der Server sie anbietet', () => {
       const antwort = new Subject<boolean>();
       usage.gepostetAngeboten.and.returnValue(antwort.asObservable());
 
-      component.kopieren();
+      kopieren();
 
-      expect(snackBar.open).toHaveBeenCalledWith('Kopiert – jetzt unter dem Post einfügen.', 'Schließen', { duration: KOPIERT_DAUER_MS });
+      expect(snackBar.open).toHaveBeenCalledOnceWith(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
       expect(usage.gepostetAngeboten).toHaveBeenCalledWith('test-user');
+      expect(jaKnopf()).toBeNull();
+
       antwort.next(true);
-      expect(snackBar.open).toHaveBeenCalledWith('Kopiert. Gepostet?', 'Ja, gepostet', { duration: 8000 });
+      fixture.detectChanges();
+
+      // „Kopiert“ nicht doppelt: Der Kasten löst die Snackbar ab und sagt es selbst.
+      expect(kopiertHinweis.dismiss).toHaveBeenCalled();
+      expect(kasten()!.textContent).toContain(KOPIERT);
+      expect(kasten()!.textContent).toContain(GEPOSTET_FRAGE);
+      expect(kasten()!.textContent).not.toContain(KOPIERT_ERFOLG);
+      expect(jaKnopf()!.textContent!.trim()).toBe(JA_GEPOSTET);
       expect(usage.gepostetMelden).not.toHaveBeenCalled();
     });
 
-    it('fragt sofort, wenn das Angebot schon bekannt ist', () => {
+    it('fragt sofort im Kasten, ohne Snackbar, wenn das Angebot schon bekannt ist', () => {
       usage.gepostetBekannt.and.returnValue(true);
 
-      component.kopieren();
+      kopieren();
 
-      expect(snackBar.open).toHaveBeenCalledOnceWith('Kopiert. Gepostet?', 'Ja, gepostet', { duration: 8000 });
+      expect(snackBar.open).not.toHaveBeenCalled();
+      expect(jaKnopf()).not.toBeNull();
       expect(usage.gepostetAngeboten).not.toHaveBeenCalled();
     });
+
+    it('der Knopf bleibt ohne Frist stehen, bis die Person den Kasten schließt', fakeAsync(() => {
+      usage.gepostetBekannt.and.returnValue(true);
+      kopieren();
+
+      tick(10 * 60 * 1000);
+      fixture.detectChanges();
+      expect(jaKnopf()).not.toBeNull();
+
+      (fixture.nativeElement.querySelector('.erfolg-schliessen') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(jaKnopf()).toBeNull();
+      expect(kasten()).toBeNull();
+    }));
 
     it('fragt den Server nicht, wenn schon feststeht, dass nichts angeboten wird', () => {
       usage.gepostetBekannt.and.returnValue(false);
 
-      component.kopieren();
+      kopieren();
 
-      expect(snackBar.open).toHaveBeenCalledOnceWith('Kopiert – jetzt unter dem Post einfügen.', 'Schließen', { duration: KOPIERT_DAUER_MS });
+      expect(snackBar.open).toHaveBeenCalledOnceWith(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
       expect(usage.gepostetAngeboten).not.toHaveBeenCalled();
+      expect(kasten()).toBeNull();
     });
 
-    it('dankt nicht, wenn der Server die Rückmeldung inzwischen nicht mehr anbietet', () => {
+    it('dankt nicht und nimmt die Frage weg, wenn der Server sie inzwischen nicht mehr anbietet', () => {
       usage.gepostetBekannt.and.returnValue(true);
       usage.gepostetMelden.and.returnValue(of('nicht_angeboten' as const));
-      component.kopieren();
-      snackBar.open.calls.reset();
+      kopieren();
 
-      aktion.next();
+      jaKnopf()!.click();
+      fixture.detectChanges();
 
       expect(usage.gepostetMelden).toHaveBeenCalledWith('test-user', INHALT_ID);
+      expect(jaKnopf()).toBeNull();
+      expect(dank()).toBe('');
       expect(snackBar.open).not.toHaveBeenCalled();
     });
 
     it('dankt ohne Zahl, wenn das Zählen scheitert', () => {
       usage.gepostetBekannt.and.returnValue(true);
       usage.gepostetMelden.and.returnValue(of(null));
-      component.kopieren();
+      kopieren();
 
-      aktion.next();
+      jaKnopf()!.click();
+      fixture.detectChanges();
 
-      expect(snackBar.open).toHaveBeenCalledWith('Danke! Zählen hat gerade nicht geklappt.', 'Schließen', { duration: 5000 });
+      expect(dank()).toBe('Danke! Zählen hat gerade nicht geklappt.');
     });
 
-    it('zählt erst mit „Ja, gepostet“ und dankt mit der echten Zahl der Woche', () => {
+    it('zählt erst mit „Ja, gepostet“ und dankt im Kasten mit der echten Zahl der Woche', () => {
       usage.gepostetAngeboten.and.returnValue(of(true));
       usage.gepostetMelden.and.returnValue(of(7));
-      component.kopieren();
+      kopieren();
+      snackBar.open.calls.reset();
 
-      aktion.next();
+      jaKnopf()!.click();
+      fixture.detectChanges();
 
       expect(usage.gepostetMelden).toHaveBeenCalledTimes(1);
-      expect(snackBar.open).toHaveBeenCalledWith(
-        'Danke! Diese Woche haben 7 Menschen gemeldet, dass sie öffentlich gekontert haben. Du bist dabei.',
-        'Schließen',
-        { duration: 5000 },
-      );
+      expect(dank()).toBe('Danke! Diese Woche haben 7 Menschen gemeldet, dass sie öffentlich gekontert haben. Du bist dabei.');
+      expect(fixture.nativeElement.querySelector('[role="status"].erfolg-gepostet-dank')).not.toBeNull();
+      expect(snackBar.open).not.toHaveBeenCalled();
     });
 
-    it('bleibt ohne Angebot beim Kopier-Hinweis ohne Luecke', () => {
-      component.kopieren();
+    it('nach dem Tippen bleibt der Knopf als „Gepostet“ stehen (Fokus), ein Doppeltipp zählt einmal', () => {
+      const antwort = new Subject<number | null>();
+      usage.gepostetBekannt.and.returnValue(true);
+      usage.gepostetMelden.and.returnValue(antwort.asObservable());
+      kopieren();
 
-      expect(snackBar.open).toHaveBeenCalledWith('Kopiert – jetzt unter dem Post einfügen.', 'Schließen', { duration: KOPIERT_DAUER_MS });
+      jaKnopf()!.focus();
+      jaKnopf()!.click();
+      fixture.detectChanges();
+      jaKnopf()!.click();
+      expect(jaKnopf()!.getAttribute('aria-disabled')).toBe('true');
+      expect(jaKnopf()!.disabled).toBeFalse();
+
+      antwort.next(4);
+      fixture.detectChanges();
+
+      expect(usage.gepostetMelden).toHaveBeenCalledTimes(1);
+      expect(jaKnopf()!.textContent).toContain(GEPOSTET_GEMELDET);
+      expect(jaKnopf()!.getAttribute('aria-disabled')).toBe('true');
+      expect(document.activeElement).toBe(jaKnopf());
+    });
+
+    it('fragt nach dem Tippen auf dieser Karte nicht noch einmal', () => {
+      usage.gepostetBekannt.and.returnValue(true);
+      usage.gepostetMelden.and.returnValue(of(2));
+      kopieren();
+      jaKnopf()!.click();
+
+      kopieren();
+
+      expect(jaKnopf()).toBeNull();
+      expect(snackBar.open).toHaveBeenCalledOnceWith(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
+      expect(usage.gepostetMelden).toHaveBeenCalledTimes(1);
+    });
+
+    it('eine späte Antwort fragt nicht in ein neueres Kopieren hinein', () => {
+      const erste = new Subject<boolean>();
+      usage.gepostetAngeboten.and.returnValues(erste.asObservable(), new Subject<boolean>().asObservable());
+      kopieren();
+      kopieren();
+
+      erste.next(true);
+      fixture.detectChanges();
+
+      expect(jaKnopf()).toBeNull();
+    });
+
+    it('bleibt ohne Angebot beim Kopier-Hinweis', () => {
+      kopieren();
+
+      expect(snackBar.open).toHaveBeenCalledWith(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
       expect(usage.gepostetMelden).not.toHaveBeenCalled();
+      expect(jaKnopf()).toBeNull();
     });
 
     it('fragt nach dem gefuellten Platzhalter wie sonst auch', () => {
@@ -801,18 +901,20 @@ describe('KartenAktionenComponent - Abstimmen', () => {
       } as any);
       component.kopierText = 'Gut. [Hier ein eigenes Erlebnis: …] Ende.';
 
-      component.kopieren();
+      kopieren();
 
-      expect(snackBar.open).toHaveBeenCalledOnceWith('Kopiert. Gepostet?', 'Ja, gepostet', { duration: 8000 });
+      expect(jaKnopf()).not.toBeNull();
+      expect(snackBar.open).not.toHaveBeenCalled();
     });
 
     it('fragt Besucher nicht und fragt auch den Server nicht', () => {
       (TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>).getUserInfo.and.returnValue(null);
 
-      component.kopieren();
+      kopieren();
 
       expect(usage.gepostetAngeboten).not.toHaveBeenCalled();
-      expect(snackBar.open).toHaveBeenCalledWith('Kopiert – jetzt unter dem Post einfügen.', 'Schließen', { duration: KOPIERT_DAUER_MS });
+      expect(snackBar.open).toHaveBeenCalledWith(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
+      expect(jaKnopf()).toBeNull();
     });
   });
 
