@@ -18,8 +18,11 @@ from fastapi.testclient import TestClient
 
 from api.v1 import usage as usage_module
 from api.v1.usage import router as usage_router
+from types import SimpleNamespace
+
+from core.config import Settings
 from core.logging import log_pseudonym
-from dependencies import get_unbeantwortete_aussagen_service
+from dependencies import get_settings, get_unbeantwortete_aussagen_service
 from repositories.einwurf_repository import get_einwurf_repository
 from repositories.gesehene_nutzung_repository import get_gesehene_nutzung_repository
 from services.unbeantwortete_aussagen_service import LIMIT_STANDARD
@@ -106,6 +109,8 @@ class TestSeitLetztemBesuch:
             "neue_beitraege": 6,
             # Obergrenze aus (Standard, #760): keine Zahl
             "antworten_auf_eigene_aussagen": None,
+            # Wirkungs-Echo aus (Standard, #790): keine Summe
+            "oeffentlich_gepostet": None,
         }
         dienst.nutzung_seit_letztem_besuch.assert_awaited_once_with("kim-1")
 
@@ -180,6 +185,8 @@ class TestSeitDeinemLetztenBesuch:
             "neue_beitraege": 0,
             # Obergrenze aus (Standard, #760): keine Zahl
             "antworten_auf_eigene_aussagen": None,
+            # Wirkungs-Echo aus (Standard, #790): keine Summe
+            "oeffentlich_gepostet": None,
         }
         assert "kim-1" not in caplog.text
 
@@ -293,3 +300,41 @@ class TestKachelnMitZeitraum:
         assert antwort.json()["ausformulierte_einwuerfe"] == 2
         assert antwort.json()["nutzung_seit_letztem_besuch"] == 4
         assert "kim-1" not in caplog.text
+
+
+class TestWirkungsEcho:
+    """#790: die Summe "oeffentlich gepostet" ueber die eigenen Beitraege, nur mit Schalter."""
+
+    def test_mit_schalter_die_summe_der_eigenen_beitraege(
+        self, client, inhalte, wirkung_ohne_datenbank
+    ):
+        eigene = [
+            SimpleNamespace(id="11111111-1111-4111-8111-111111111111"),
+            SimpleNamespace(id="22222222-2222-4222-8222-222222222222"),
+        ]
+        inhalte.getByAuthor = AsyncMock(return_value=eigene)
+        wirkung_ohne_datenbank.je_beitrag.return_value = {
+            "11111111-1111-4111-8111-111111111111": (3, 1),
+            "22222222-2222-4222-8222-222222222222": (2, 0),
+        }
+        client.app.dependency_overrides[get_settings] = lambda: Settings(
+            wirkungs_echo_aktiv=True
+        )
+
+        antwort = client.post(URL, headers={"X-User": "kim-1"})
+
+        assert antwort.status_code == 200
+        assert antwort.json()["oeffentlich_gepostet"] == 5
+        assert inhalte.getByAuthor.await_args.kwargs["user_id"] == "kim-1"
+
+    def test_fehler_kostet_nur_die_summe(self, client, inhalte):
+        inhalte.getByAuthor = AsyncMock(side_effect=RuntimeError("weg"))
+        client.app.dependency_overrides[get_settings] = lambda: Settings(
+            wirkungs_echo_aktiv=True
+        )
+
+        antwort = client.post(URL, headers={"X-User": "kim-1"})
+
+        assert antwort.status_code == 200
+        assert antwort.json()["oeffentlich_gepostet"] == 0
+        assert antwort.json()["nutzung_seit_letztem_besuch"] == 4

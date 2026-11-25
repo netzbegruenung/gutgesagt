@@ -231,6 +231,25 @@ class GepostetWoche(Base):
     personen = Column(Integer, nullable=False)
 
 
+class WirkungJeBeitrag(Base):
+    """
+    Was andere mit einem Beitrag tun, nur als Summe je Beitrag fuer die Autorin:
+    wie oft er als "oeffentlich gepostet" gemeldet wurde (Wirkungs-Echo, #790) und
+    wie oft jemand "Danke an die Autorin" gesagt hat (#791). Keine Kennung, kein
+    Pruefwert, kein Zeitpunkt; wer gepostet oder gedankt hat, steht nirgends
+    (services/wirkung_service.py). Getrennt von der Wochenzahl "Ja, gepostet"
+    (``gepostet_wochen``), die keinen Beitrag kennt.
+    """
+
+    __tablename__ = "wirkung_je_beitrag"
+
+    content_id = Column(SQLUUID(as_uuid=True), primary_key=True)
+    oeffentlich_gepostet = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    danke = Column(Integer, default=0, server_default="0", nullable=False)
+
+
 class MusterHinweisZeile(Base):
     """
     Ein auffaelliges Muster fuer Admins (ADR 0004, #352): zwei Konten, die innerhalb

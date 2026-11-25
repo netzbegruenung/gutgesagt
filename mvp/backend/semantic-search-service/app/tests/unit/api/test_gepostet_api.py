@@ -44,7 +44,7 @@ def test_melden_zaehlt_die_person_und_nennt_die_zahl(dienst):
     antwort = _client().post(URL, headers=KIM)
 
     assert antwort.status_code == 200
-    assert antwort.json() == {"personen_diese_woche": 7}
+    assert antwort.json() == {"personen_diese_woche": 7, "beitrag_nennen": False}
     dienst.melden.assert_called_once_with("kim-1")
 
 
@@ -52,7 +52,7 @@ def test_stand_ohne_zu_zaehlen(dienst):
     antwort = _client().get(URL, headers=KIM)
 
     assert antwort.status_code == 200
-    assert antwort.json() == {"personen_diese_woche": 6}
+    assert antwort.json() == {"personen_diese_woche": 6, "beitrag_nennen": False}
     dienst.melden.assert_not_called()
 
 
