@@ -26,7 +26,7 @@ Konfiguration des Betreibers belegen lassen, die Haken in Abschnitt 7 und 9 und 
 Konfiguration des Betreibers (nicht öffentlich, Stand 24.11.2026); die Zeilenbelege liegen
 beim Betreiber. In `main` enthalten, nicht in `v0.9.11` und damit nicht im Betrieb, geprüft als V24 bis V27:
 #746 (Linkvorschau), #765 (Herkunft prüfen), #767 (Teilen als Bild) und #778 (Tagesdeckel).
-Fundstellen dort auf `34f8b1fb`.
+Fundstellen dort auf `34f8b1fb` (Code bis zum Kopf dieses PRs unverändert).
 
 **Stand 13.11.2026:** Code `main` @ `5816e358`, Tag `v0.8.4` (Release-PR #656);
 eingearbeitet sind #622, #643, #651 und #655 (Tagespseudonym
@@ -758,9 +758,10 @@ Empfänger und Ort“.
   Uhrzeit. Der Suchtext steht darin nur, wenn jemand die Ergebnisseite direkt aufruft (Neuladen,
   geteilter Link); normale Suchen laufen per POST, und der Referrer trägt nur den Ursprung
   (`mvp/frontend/gutgesagt-frontend/src/index.html:7`). Gezählt am 25.11.2026: 30 solche Zeilen
-  in 14 Tagen. Mit der Linkvorschau (V24, nicht im Betrieb) ruft auch der Crawler eines
-  Messengers einen geteilten Link auf die Ergebnisseite auf; dann steht der Suchtext mit der
-  IP des Crawlers in diesem Protokoll. Das ist von der Entscheidung unten gedeckt. Das
+  in 14 Tagen. Ein geteilter Link auf die Ergebnisseite wird zur Vorschau abgerufen, vom
+  Crawler des Messengers oder vom Gerät der teilenden Person; dann steht der Suchtext mit
+  dieser IP in diesem Protokoll. Das gilt unabhängig von der Linkvorschau (V24) und fällt
+  unter die Entscheidung unten. Das
   Log-Pseudonym der Anwendung ist ungesalzen und bei bekannten Kennungen
   zurückrechenbar (`LK:402-404`).
 - **Bewusst akzeptiert (Entscheidung Maintainer, 25.11.2026):** die Suchtexte in den Zeilen des
@@ -941,13 +942,13 @@ nicht enthalten. Bedingung für das Einschalten: diese Prüfung am gebauten Stan
   `X-Suchtext`, die interne Anfrage steht in keinem Protokoll
   (`mvp/frontend/gutgesagt-frontend/nginx.docker.conf:93-120`). Der Suchdienst loggt den
   Suchtext nicht (`ss/api/v1/linkvorschau.py:12-13`). Es gibt keinen Abruf fremder Server.
-- **Empfänger:** wer den Link aufruft, auch Crawler von Messengern; sie bekommen nur öffentliche
-  Beitragsinhalte bzw. den Suchtext, der schon in der geteilten Adresse steht.
+- **Empfänger:** wer den Link aufruft, auch Crawler von Messengern und damit der Anbieter des
+  Messengers, der die Vorschau anzeigt; sie bekommen nur öffentliche Beitragsinhalte bzw. den
+  Suchtext, der schon in der geteilten Adresse steht.
 - **Frist:** keine Speicherung; die Seite wird nicht gecacht
   (`nginx.docker.conf:88-90`, `:100-102`). Protokoll des vorgelagerten Webservers wie V16.
-- **Risiko:** gering. Folge für V16: Der Suchtext steht bei geteilten Links auf die
-  Ergebnisseite mit der IP des Crawlers im Protokoll des vorgelagerten Webservers (dort
-  bewusst akzeptiert).
+- **Risiko:** gering. Kein neuer Eintrag im Protokoll des vorgelagerten Webservers: Geteilte
+  Links werden auch ohne Linkvorschau zur Vorschau abgerufen (V16).
 
 #### V25 Herkunft prüfen (#765; in `main`, nicht im Betrieb, Schalter aus)
 
@@ -958,7 +959,8 @@ nicht enthalten. Bedingung für das Einschalten: diese Prüfung am gebauten Stan
 - **Rechtsgrundlage (Vorschlag, nicht juristisch geprüft, #296):** Art. 6 Abs. 1 lit. f.
 - **Abruf fremder Server:** Ausgelöst nachts vom Dienst oder von einem Admin per Knopf, nie von
   einem Aufruf durch Nutzende (`ss/services/herkunft_pruefen.py:1-21`). An den fremden Server
-  gehen die IP-Adresse des Servers, die öffentliche Adresse der Herkunft und die Kopfzeilen
+  gehen die IP-Adresse des Servers, die öffentliche Adresse der Herkunft (bei Weiterleitungen auch deren Ziele, höchstens fünf,
+  `ss/utils/sicherer_abruf.py:16-17`, `:39`) und die Kopfzeilen
   `Host`, `User-Agent` (`GutGesagt-Herkunftspruefung/1.0`, nur das Werkzeug) und `Accept`;
   keine Cookies, kein Referrer, nichts von Nutzenden (`ss/utils/sicherer_abruf.py:20`, `:38`,
   `:228-234`). Gelesen wird nur der Kopf der Antwort, nie der Inhalt
@@ -985,7 +987,9 @@ nicht enthalten. Bedingung für das Einschalten: diese Prüfung am gebauten Stan
   (`mvp/frontend/gutgesagt-frontend/src/app/shared/sharepic/sharepic.ts:1-35`). Der Server
   speichert nichts. Er beantwortet nur `GET /api/v1/funktionen` ohne Anmeldung und ohne
   Personenbezug mit dem Stand öffentlicher Schalter (`ss/api/v1/funktionen.py:1-31`).
-- **Empfänger:** nur wem die Person das Bild über das Teilen-Menü ihres Geräts gibt.
+  Protokolle dieser Abrufe wie V16.
+- **Empfänger:** nur wem die Person das Bild gibt, über das Teilen-Menü ihres Geräts oder als
+  heruntergeladene Datei (`mvp/frontend/gutgesagt-frontend/src/app/shared/sharepic/sharepic-dialog.component.ts:66-67`).
 - **Frist:** keine Speicherung.
 - **Risiko:** gering.
 
@@ -1000,8 +1004,9 @@ nicht enthalten. Bedingung für das Einschalten: diese Prüfung am gebauten Stan
   (`ss/utils/tagesdeckel.py:1-10`, `:28-30`); Admins und Startkonten ausgenommen
   (`ss/middleware/tagesdeckel.py:78-91`). Im Log nur das Log-Pseudonym
   (`ss/middleware/tagesdeckel.py:96-97`).
-- **Frist:** höchstens bis zum Ende des UTC-Tags; Zähler vergangener Tage räumt der Takt der
-  Rate-Limiter ab (`ss/utils/tagesdeckel.py:66-70`, `ss/main.py:177-178`), ein Neustart setzt
+- **Frist:** bis kurz nach dem Ende des UTC-Tags; Zähler vergangener Tage räumt der Takt der
+  Rate-Limiter alle 60 Sekunden ab (`ss/utils/tagesdeckel.py:66-70`, `ss/main.py:177-178`,
+  `ss/utils/rate_limiter.py:164`), ein Neustart setzt
   alle zurück.
 - **Empfänger:** niemand; die Person sieht nur die Meldung am Deckel.
 - **Risiko:** gering.
