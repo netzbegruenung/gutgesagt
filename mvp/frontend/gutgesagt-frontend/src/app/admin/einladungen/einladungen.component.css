@@ -23,6 +23,14 @@
   width: 260px;
 }
 
+/* Die Tabelle richtet sich nach ihrer eigenen Breite, nicht nach dem Fenster: neben der
+   Admin-Navigation ist sie auf dem Tablet schmaler als das Fenster. Unter 900 px Karten,
+   darueber Tabelle; wird es doch zu eng, scrollt nur sie. */
+.tabelle-rahmen {
+  container: einladungen / inline-size;
+  overflow-x: auto;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -144,8 +152,55 @@ th {
   box-shadow: inset 0 0 0 2px var(--akzent-tanne);
 }
 
-.link code {
+/* Team-Pille und Zeile „Nach Gruppe …“ nur an Wortgrenzen umbrechen, sonst rechnet die
+   Tabelle die Spalte auf einen Buchstaben herunter */
+td.team {
+  overflow-wrap: normal;
+}
+
+/* Die Notiz ebenso nur an Wortgrenzen, mit etwas Mindestbreite; ein ueberlanges Wort
+   bricht trotzdem, sobald es nicht mehr passt */
+td.text {
+  overflow-wrap: break-word;
+  min-width: 8rem;
+}
+
+/* Link und Kopier-Knopf nebeneinander: der Link gekuerzt in einer Zeile, der Knopf fest daneben.
+   Die feste Breite haelt die Spalte schmal; den ganzen Link zeigen Titel und Markieren. */
+.link-zeile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 14rem;
+}
+
+.link-text {
+  flex: 1 1 auto;
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
   font-size: 12px;
+}
+
+/* Der Ursprung ist in jeder Zeile gleich und wird zuerst gekuerzt; danach erst der Code,
+   dessen Anfang die Links unterscheidet */
+.link-ursprung,
+.link-pfad {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.link-ursprung {
+  flex: 0 1000 auto;
+}
+
+.link-pfad {
+  flex: 0 1 auto;
+}
+
+.kopieren {
+  flex: none;
 }
 
 tr.inaktiv td {
@@ -174,8 +229,8 @@ tr.inaktiv td {
   margin-top: 12px;
 }
 
-/* Mobil jede Einladung als Karte statt Tabelle, in der die Notiz einen Buchstaben je Zeile bekam */
-@media (max-width: 599px) {
+/* Schmal jede Einladung als Karte statt Tabelle, in der die Notiz einen Buchstaben je Zeile bekam */
+@container einladungen (max-width: 899px) {
   table,
   tbody,
   tr,
@@ -209,19 +264,19 @@ tr.inaktiv td {
     color: var(--text-leise);
   }
 
-  td.link {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px;
+  /* In der Karte ist Platz: der ganze Link, umgebrochen, der Knopf rechts daneben */
+  .link-zeile {
+    width: 100%;
   }
 
-  td.link::before {
-    flex-basis: 100%;
-  }
-
-  td.link code {
-    min-width: 0;
+  .link-text {
+    display: block;
+    white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  .link-ursprung,
+  .link-pfad {
+    overflow: visible;
   }
 }
