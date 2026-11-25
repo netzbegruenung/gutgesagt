@@ -214,6 +214,8 @@ def test_stand_nach_gruppen_geordnet_jeder_schalter_in_einer_gruppe():
     assert reihenfolge == sorted(reihenfolge)
     gruppe = {s.name: s.gruppe for s in stand}
     assert gruppe["sharepic"] == "Grundfunktionen"
+    # Unterschalter bei seiner Voraussetzung "gepostet"
+    assert gruppe["gepostet_ohne_konto"] == gruppe["gepostet"] == "Grundfunktionen"
     assert gruppe["team_quests"] == "Teams"
     assert gruppe["naechster_schritt"] == "Spielgefühl"
     assert gruppe["rangliste"] == "Punkte & Anerkennung"

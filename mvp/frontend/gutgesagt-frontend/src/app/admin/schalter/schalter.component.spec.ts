@@ -313,7 +313,7 @@ describe('SchalterComponent', () => {
     ]);
 
     const ohneKonto = karten()[1];
-    expect(ohneKonto.querySelector('h3')!.textContent).toBe('„Ja, gepostet“ ohne Konto');
+    expect(ohneKonto.querySelector('h4')!.textContent).toBe('„Ja, gepostet“ ohne Konto');
     expect((ohneKonto.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim()).toBe(
       'Admin: an · wirksam: aus, weil Rückfrage „Ja, gepostet“ aus',
     );
