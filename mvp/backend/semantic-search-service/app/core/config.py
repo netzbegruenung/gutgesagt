@@ -378,6 +378,19 @@ class Settings(BaseSettings):
     guete_stimmen_gewicht_max: float = Field(default=0.6, ge=0, le=1)
     guete_stimmen_halbwert: int = Field(default=5, ge=1)
 
+    # "Diese Woche oft genutzt" (services/oft_genutzt_service.py): Ein Beitrag gilt ab so
+    # vielen entdoppelten Nutzungen in sieben Tagen als oft genutzt, und den Bereich gibt
+    # es erst ab so vielen solchen Beitraegen. Entdoppelt wird je Person und Tag, nicht je
+    # Woche: Eine Person allein kann den Bereich ausloesen, wenn sie die noetigen Beitraege
+    # an zwei Tagen kopiert (ohne Anmeldung auch ueber wechselnde Anschluesse). Das galt
+    # auch bei 3 und ist fuer die Startphase in Kauf genommen; wer was kopiert hat, zeigt
+    # der Bereich nicht. Die Mindestnutzung bleibt mindestens 2: eine einzelne Kopie ist
+    # Zufall, kein "oft". Startphase zur BDK (Maintainer 25.11.2026: bei kleinen Zahlen
+    # frueher zeigen): Standard 2 Beitraege; mit mehr Nutzung hebt der Betrieb ihn an.
+    # Hoechstens 5, so viele zeigt der Bereich (ANZAHL dort).
+    oft_genutzt_mindest_nutzungen: int = Field(default=2, ge=2)
+    oft_genutzt_mindest_beitraege: int = Field(default=2, ge=1, le=5)
+
     # Rate-Limit am Zaehl-Endpunkt (POST /usage/content/{id}/usage, #352): so viele
     # Kopien je Person (Besucher: je Adresse) im Fenster. Die Entdoppelung schuetzt
     # Punkte und "oft genutzt", nicht den Zaehler der Karte, der jede Kopie zaehlt.

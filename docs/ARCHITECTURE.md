@@ -358,6 +358,13 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
 - `SEMANTIC_SEARCH_TAGESDECKEL_BEITRAEGE` - Tagesdeckel (GLOSSARY.md): Beiträge, Aussagen and
   Einwürfe a person may create per UTC day (default 20; admins and Startkonten exempt). Above it
   the creating routes answer 429 with `"error": "TAGESDECKEL"` (`middleware/tagesdeckel.py`).
+- `SEMANTIC_SEARCH_OFT_GENUTZT_MINDEST_NUTZUNGEN` (default 2, at least 2) and
+  `SEMANTIC_SEARCH_OFT_GENUTZT_MINDEST_BEITRAEGE` (default 2, 1 to 5) - „Diese Woche oft genutzt“
+  (GLOSSARY.md „Oft genutzt“): a Beitrag counts from that many entdoppelte Nutzungen in seven days,
+  and the section appears from that many such Beiträge (`services/oft_genutzt_service.py`). The
+  defaults suit the start phase with few active people; raise them once usage grows. Entdoppelt
+  means per person and day, so one person alone can make the section appear by copying the needed
+  Beiträge on two days; the section never shows who copied what.
 - `SEMANTIC_SEARCH_ANLEGE_RATE_LIMIT_JE_MINUTE` / `_JE_STUNDE` - rate limit per person on the
   creating routes (`middleware/rate_limit.py`, default 10 / 100). Startkonten are exempt (import
   of the Startbestand), admins are not. Above it: 429 `"error": "TOO_MANY_REQUESTS"`.
