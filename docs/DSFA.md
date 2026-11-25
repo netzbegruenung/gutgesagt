@@ -902,7 +902,7 @@ nicht enthalten. Bedingung für das Einschalten: diese Prüfung am gebauten Stan
 - **Daten:** je Mitgliedschaft Kennung, Teamname, Saison, laufende Nummer und Tag des Beitritts;
   eindeutig je Konto, Team und Saison. **Keine Kennung der Einladung** an der Mitgliedschaft:
   Sie verriete den Link und damit, wer eingeladen hat. Als Nachweis (Art. 7 Abs. 1) Kennung des
-  Wortlauts (`team-2026-11-24`) und Zeitpunkt.
+  Wortlauts (`team-2026-11-25`) und Zeitpunkt.
 - **Empfänger:** nur die Person selbst, unter „Meine Teams“. Admins sehen je Team nur die Zahl
   der Mitglieder: keine Liste, kein Export, keine Schnittstelle für fremde Teams.
 - **Öffentliche Anzeige am Namen:** eigener Schalter, aus; dazu eine zweite, gesonderte
@@ -922,6 +922,8 @@ nicht enthalten. Bedingung für das Einschalten: diese Prüfung am gebauten Stan
   (Obergrenze `SEMANTIC_SEARCH_TEAMS_AKTIV`) und der Schalter der Anzeige Standard aus;
   Bedingung für das Einschalten in Produktion: Datenschutzerklärung mit eigenem Abschnitt
   „Teams“ und angepasstem Satz in „Konto aus einer Einladung“ und Löschkonzept im Repo.
+- **Team-Summe:** von der Einwilligung `team-2026-11-25` umfasst, nicht eingeschaltet; nur
+  Teammitglieder, ab 5, gerundet, abgeschlossene Wochen.
 - **Rest:** Risiko (mittlere Klasse, R10, 8.4), hinnehmbar, solange die Zugehörigkeit nur für die
   Person selbst sichtbar ist; mit öffentlicher Anzeige neu zu prüfen.
 
@@ -1034,7 +1036,7 @@ empfiehlt sie schon vor dem Einschalten der Punkte.
 | R7 | **Scoring und Zweckentfremdung** durch Punkte (V11) | Abschnitt 3 | Risiko (wie Risiko 3) |
 | R8 | **Rückschluss auf einzelne Stimmen** über kleine Zähler oder die Güte (V5) | M5: Summen und Stimmenanteil der Güte erst ab drei verschiedenen Stimmenden, darunter keine Zahl in der Antwort; ohne Startkonten und eigene Stimme; Gewicht der Stimmen gedeckelt (#427) | geringes Risiko |
 | R9 | **Widerruf ohne volle Folgen**: Beiträge, Einwürfe, Sätze (und ohne #658 auch Stimmen) bleiben nach dem Widerruf der Art.-9-Einwilligung mit Kennung und Anzeigenamen (V2) | R9a (#658, gebaut): Stimmen werden beim Widerruf gelöscht; R9b (#661, gebaut als Löschauftrag): ein Admin anonymisiert Beiträge, Einwürfe und Sätze wie bei der Kontolöschung binnen sieben Tagen (V2) | Risiko; geringes Risiko, wenn der Ablauf ohne Admin läuft |
-| R10 | **Teamzugehörigkeit** (V23, nicht im Betrieb): Zuordnung Person – Gruppe – Ort | eigene Einwilligung vor dem Speichern, keine Kennung der Einladung, nur selbst sichtbar, Admins nur Zahlen, Schalter aus; öffentliche Anzeige erst nach Frage 8 | Risiko, hinnehmbar, solange nur selbst sichtbar |
+| R10 | **Teamzugehörigkeit** (V23, nicht im Betrieb): Zuordnung Person – Gruppe – Ort | eigene Einwilligung vor dem Speichern, keine Kennung der Einladung, nur selbst sichtbar, Admins nur Zahlen, Schalter aus; öffentliche Anzeige erst nach Frage 8; Team-Summe: von der Einwilligung team-2026-11-25 umfasst, nicht eingeschaltet; nur Teammitglieder, ab 5, gerundet, abgeschlossene Wochen. | Risiko, hinnehmbar, solange nur selbst sichtbar |
 
 ### 8.4 Risikomethode und Einstufung (DSK-Kurzpapier Nr. 18)
 
