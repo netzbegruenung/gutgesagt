@@ -50,7 +50,7 @@ describe('EinwilligungComponent', () => {
         provideHttpClientTesting(),
         provideNoopAnimations(),
         PUNKTE_EINWILLIGUNG_AUS,
-        { provide: FunktionenService, useValue: { an: () => imGewinn } },
+        { provide: FunktionenService, useValue: { frisch: () => of(imGewinn()) } },
         provideRouter([]),
         {
           provide: ActivatedRoute,

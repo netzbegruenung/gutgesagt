@@ -91,7 +91,10 @@ export class EinwilligungComponent implements OnInit {
   @ViewChild('nbHaekchen') private nbHaekchen?: MatCheckbox;
   private readonly budget = inject(EinwilligungsBudgetService);
   /** Schalter einwilligung_im_gewinn (#788): keine zweite Frage neben der Art.-9-Einwilligung. */
-  private readonly imGewinn = inject(FunktionenService).an('einwilligung_im_gewinn');
+  private readonly funktionen = inject(FunktionenService);
+  private readonly punkteDienst = inject(PunkteEinwilligungService);
+  /** Stand des Schalters vom Server; null, solange er nicht bekannt ist. */
+  private imGewinn: boolean | null = null;
   private punkteEingewilligt = false;
 
   constructor(
@@ -100,8 +103,8 @@ export class EinwilligungComponent implements OnInit {
     private router: Router,
     private dialog: MatDialog,
   ) {
-    inject(PunkteEinwilligungService)
-      .stand$.pipe(takeUntilDestroyed())
+    this.punkteDienst.stand$
+      .pipe(takeUntilDestroyed())
       .subscribe((stand) => (this.punkteEingewilligt = !!stand?.eingewilligt));
   }
 
@@ -135,6 +138,10 @@ export class EinwilligungComponent implements OnInit {
 
   ngOnInit(): void {
     this.laden();
+    this.funktionen.frisch('einwilligung_im_gewinn').subscribe((an) => (this.imGewinn = an));
+    // Der eigene Stand der Punkte-Einwilligung: Wer eingewilligt hat, sieht das Häkchen
+    // zum Widerrufen immer, auch wenn diese Seite die erste im Besuch ist.
+    this.punkteDienst.laden().subscribe();
   }
 
   /**
@@ -143,8 +150,9 @@ export class EinwilligungComponent implements OnInit {
    * (Datenschutz-Einstellungen); wer schon eingewilligt hat, sieht es immer, um zu widerrufen.
    */
   get punkteHaekchenZeigen(): boolean {
-    if (!this.imGewinn() || this.punkteEingewilligt) return true;
-    return this.zustand === 'eingewilligt' || this.zustand === 'widerruft';
+    if (this.punkteEingewilligt || this.zustand === 'eingewilligt' || this.zustand === 'widerruft') return true;
+    // Neben der Frage erst, wenn sicher ist, dass der Schalter aus ist.
+    return this.imGewinn === false;
   }
 
   /**

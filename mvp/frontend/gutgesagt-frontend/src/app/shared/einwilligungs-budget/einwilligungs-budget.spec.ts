@@ -5,6 +5,7 @@ import {
   EinwilligungsMoment,
   frageErlaubt,
   imErstenMonat,
+  lobNochFrisch,
   punkteFrageFaellig,
 } from './einwilligungs-budget';
 
@@ -84,7 +85,13 @@ describe('Einwilligungs-Budget', () => {
     });
 
     it('bleibt stehen, wenn sie in diesem Besuch schon gestellt wurde', () => {
-      expect(punkteFrageFaellig(lage({ gezeigt: new Set(['punkte']), gewinnUm: JETZT }))).toBeTrue();
+      expect(punkteFrageFaellig(lage({ gezeigt: new Set(['punkte']) }))).toBeTrue();
+    });
+
+    it('tritt auch als schon gestellte Frage zurück, solange ein Lob frisch ist', () => {
+      expect(punkteFrageFaellig(lage({ gezeigt: new Set(['punkte']), gewinnUm: JETZT - 1000 }))).toBeFalse();
+      expect(lobNochFrisch({ gewinnUm: JETZT - 1000, jetzt: JETZT })).toBe(ABSTAND_NACH_LOB_MS - 1000);
+      expect(lobNochFrisch({ gewinnUm: null, jetzt: JETZT })).toBe(0);
     });
   });
 });

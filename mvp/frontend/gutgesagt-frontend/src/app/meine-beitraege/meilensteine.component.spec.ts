@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, of } from 'rxjs';
 
@@ -14,7 +14,7 @@ import {
 
 import { AbzeichenSichtbarkeit, Meilenstein, UsageTrackingService } from '../services/usage-tracking.service';
 import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
-import { EinwilligungsMoment } from '../shared/einwilligungs-budget/einwilligungs-budget';
+import { ABSTAND_NACH_LOB_MS, EinwilligungsMoment } from '../shared/einwilligungs-budget/einwilligungs-budget';
 
 describe('MeilensteineComponent (#351)', () => {
   let fixture: ComponentFixture<MeilensteineComponent>;
@@ -413,7 +413,7 @@ describe('MeilensteineComponent (#351)', () => {
       expect(element.querySelector('app-punkte-einwilligung')).toBeNull();
     });
 
-    it('fragt nicht direkt nach dem Lob für „Ja, gepostet“, wohl aber beim nächsten Öffnen', () => {
+    it('fragt nicht direkt nach dem Lob für „Ja, gepostet“, sondern erst, wenn es vorbei ist', fakeAsync(() => {
       einwilligung.next(NIE_GEANTWORTET);
       moment = { ...MOMENT, abgestimmt: false };
       let jetzt = 1_000_000;
@@ -421,14 +421,34 @@ describe('MeilensteineComponent (#351)', () => {
         b.jetzt = () => jetzt;
         b.gewinn();
       };
-      expect(knopfMit(erstellen([]), 'Ja, einwilligen')).toBeUndefined();
+      const element = erstellen([]);
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeUndefined();
 
-      jetzt += 60_000;
-      fixture.destroy();
-      fixture = TestBed.createComponent(MeilensteineComponent);
+      jetzt += ABSTAND_NACH_LOB_MS;
+      tick(ABSTAND_NACH_LOB_MS + 100);
       fixture.detectChanges();
-      expect(knopfMit(fixture.nativeElement, 'Ja, einwilligen')).toBeDefined();
-    });
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeDefined();
+      fixture.destroy();
+    }));
+
+    it('eine offene Frage tritt bei einem neuen Lob auf der Seite zurück', fakeAsync(() => {
+      einwilligung.next(NIE_GEANTWORTET);
+      moment = MOMENT;
+      let jetzt = 1_000_000;
+      vorBudget = (b) => (b.jetzt = () => jetzt);
+      const element = erstellen([]);
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeDefined();
+
+      budget.gewinn();
+      fixture.detectChanges();
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeUndefined();
+
+      jetzt += ABSTAND_NACH_LOB_MS;
+      tick(ABSTAND_NACH_LOB_MS + 100);
+      fixture.detectChanges();
+      expect(knopfMit(element, 'Ja, einwilligen')).toBeDefined();
+      fixture.destroy();
+    }));
 
     it('fragt nicht, wenn im Besuch schon eine andere Frage kam', () => {
       einwilligung.next(NIE_GEANTWORTET);

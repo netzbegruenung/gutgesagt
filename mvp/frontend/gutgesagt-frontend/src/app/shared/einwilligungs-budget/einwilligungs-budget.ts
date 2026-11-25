@@ -86,6 +86,10 @@ export function frageErlaubt(frage: EinwilligungsFrage, lage: BudgetLage): boole
  * Lob und nur, wenn das Budget es erlaubt.
  */
 export function punkteFrageFaellig(lage: BudgetLage): boolean {
+  // Auch eine schon gestellte Frage tritt zurück, solange ein Lob frisch ist.
+  if (lobNochFrisch(lage) > 0) {
+    return false;
+  }
   if (lage.gezeigt.has('punkte')) {
     return true;
   }
@@ -93,8 +97,13 @@ export function punkteFrageFaellig(lage: BudgetLage): boolean {
   if (!gewinn) {
     return false;
   }
-  if (lage.gewinnUm !== null && lage.jetzt - lage.gewinnUm < ABSTAND_NACH_LOB_MS) {
-    return false;
-  }
   return frageErlaubt('punkte', lage);
+}
+
+/** Wie viele Millisekunden das letzte Lob noch als frisch gilt; 0: keins oder vorbei. */
+export function lobNochFrisch(lage: Pick<BudgetLage, 'gewinnUm' | 'jetzt'>): number {
+  if (lage.gewinnUm === null) {
+    return 0;
+  }
+  return Math.max(0, lage.gewinnUm + ABSTAND_NACH_LOB_MS - lage.jetzt);
 }

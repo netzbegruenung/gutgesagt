@@ -1,17 +1,21 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { Observable, Subject, of } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
 import { LoggingService } from '../../services/logging.service';
 import {
   BudgetLage,
+  lobNochFrisch,
   EinwilligungsFrage,
   EinwilligungsMoment,
   frageErlaubt,
   punkteFrageFaellig,
 } from './einwilligungs-budget';
+
+/** So lange wartet moment() auf den Server, dann gilt: Schalter aus. */
+export const MOMENT_WARTEN_MS = 3000;
 
 /**
  * Hält das Einwilligungs-Budget eines Besuchs (einwilligungs-budget.ts): was in diesem
@@ -24,6 +28,9 @@ export class EinwilligungsBudgetService {
   private readonly logger = inject(LoggingService, { optional: true });
   private readonly gezeigtImBesuch = new Set<EinwilligungsFrage>();
   private gewinnUm: number | null = null;
+  private readonly gewinne = new Subject<void>();
+  /** Meldet jeden Gewinn mit Lob, damit eine offene Frage zurücktritt. */
+  readonly gewinn$ = this.gewinne.asObservable();
   /** Für Tests ersetzbar. */
   jetzt: () => number = () => Date.now();
 
@@ -38,8 +45,10 @@ export class EinwilligungsBudgetService {
     return this.http
       .get<EinwilligungsMoment>(`${environment.baseUrl}/api/v1/usage/users/me/einwilligungs-moment`)
       .pipe(
+        // Antwortet der Server nicht, fragt die App wie bisher, statt nichts zu zeigen.
+        timeout(MOMENT_WARTEN_MS),
         catchError((fehler) => {
-          if (fehler?.status !== 404 && fehler?.status !== 401) {
+          if (fehler?.status !== 404 && fehler?.status !== 401 && fehler?.name !== 'TimeoutError') {
             this.logger?.error('Einwilligungs-Moment nicht geladen', fehler);
           }
           return of(null);
@@ -55,6 +64,12 @@ export class EinwilligungsBudgetService {
   /** Ein Gewinn mit Lob: eine Stimme oder „Ja, gepostet“. */
   gewinn(): void {
     this.gewinnUm = this.jetzt();
+    this.gewinne.next();
+  }
+
+  /** Wie lange das letzte Lob noch frisch ist (ms); 0: keins. */
+  lobFrischNoch(): number {
+    return lobNochFrisch({ gewinnUm: this.gewinnUm, jetzt: this.jetzt() });
   }
 
   /** Ob die Frage gestellt werden darf; vermerkt sie nicht. */

@@ -77,6 +77,8 @@ export class MeilensteineComponent implements OnInit, OnDestroy {
   /** Gerade beantwortet: Satz zum neuen Stand, per role="status" angesagt. */
   punkteAntwort: 'ja' | 'nein' | null = null;
   @ViewChild('punkteStatus', { read: ElementRef }) punkteStatus?: ElementRef<HTMLElement>;
+  /** Nach einem frischen Lob: noch einmal entscheiden, sobald es vorbei ist. */
+  private nachLob: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private usageTrackingService: UsageTrackingService,
@@ -115,6 +117,15 @@ export class MeilensteineComponent implements OnInit, OnDestroy {
         this.entscheiden();
         this.cdr.markForCheck();
       });
+    // Ein Lob (Stimme, „Ja, gepostet“) auf dieser Seite: Die offene Frage tritt zurück und
+    // kommt erst wieder, wenn das Lob vorbei ist (Lob und Frage getrennt).
+    this.budget.gewinn$.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      if (this.punkteFrageZeigen) {
+        this.punkteFrageZeigen = false;
+        this.cdr.markForCheck();
+      }
+      this.entscheiden();
+    });
   }
 
   /**
@@ -127,9 +138,12 @@ export class MeilensteineComponent implements OnInit, OnDestroy {
       return;
     }
     const stand = this.punkteStand;
-    if (!this.punkteFrageZeigen && stand && !stand.eingewilligt && !stand.wortlaut && this.budget.punkteFaellig(moment)) {
+    const offen = !this.punkteFrageZeigen && !!stand && !stand.eingewilligt && !stand.wortlaut;
+    if (offen && this.budget.punkteFaellig(moment)) {
       this.punkteFrageZeigen = true;
       this.budget.gezeigt('punkte');
+    } else if (offen) {
+      this.spaeterEntscheiden();
     }
     if (
       !this.sichtbarkeitErlaubt &&
@@ -141,6 +155,19 @@ export class MeilensteineComponent implements OnInit, OnDestroy {
       this.sichtbarkeitErlaubt = true;
       this.budget.gezeigt('sichtbarkeit');
     }
+  }
+
+  /** Hält nur ein frisches Lob die Frage zurück, wird danach noch einmal entschieden. */
+  private spaeterEntscheiden(): void {
+    const warten = this.budget.lobFrischNoch();
+    if (warten <= 0 || this.nachLob !== null) {
+      return;
+    }
+    this.nachLob = setTimeout(() => {
+      this.nachLob = null;
+      this.entscheiden();
+      this.cdr.markForCheck();
+    }, warten + 50);
   }
 
   /** Die alte Einladung mit Häkchen: nur ohne Schalter einwilligung_im_gewinn. */
@@ -179,6 +206,9 @@ export class MeilensteineComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.nachLob !== null) {
+      clearTimeout(this.nachLob);
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }
