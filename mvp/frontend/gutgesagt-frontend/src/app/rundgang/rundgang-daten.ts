@@ -121,6 +121,17 @@ export const WILLKOMMEN: Angebot = {
   ab: 0,
 };
 
+/**
+ * Dasselbe Willkommen für Angemeldete (Review Spielgefühl 25.11., Vorschlag 3): Wer gerade
+ * ein Konto angelegt hat, liest sonst „Ein Konto brauchst du nicht“. Gleicher Schlüssel,
+ * gleicher Rundgang: Beantwortet ist beantwortet, egal ob mit oder ohne Konto.
+ */
+export const WILLKOMMEN_ANGEMELDET: Angebot = {
+  ...WILLKOMMEN,
+  // Höchstens so lang wie der Satz für Besucher: Die Zeile bricht nicht um (rundgang-band.component.css)
+  satz: 'In Sekunden zur Antwort',
+};
+
 export const MITMACHEN_ANGEBOT: Angebot = {
   rundgang: 'mitmachen',
   schluessel: MITMACHEN_SCHLUESSEL,

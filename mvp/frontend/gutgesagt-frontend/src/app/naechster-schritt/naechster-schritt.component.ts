@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { combineLatest, of } from 'rxjs';
@@ -11,6 +11,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from '../auth/auth.service';
 import { FunktionenService } from '../services/funktionen.service';
 import { stillerKontext } from '../shared/selbst-nachladen';
+import { SeitLetztemBesuchService } from '../seit-letztem-besuch/seit-letztem-besuch.service';
 import {
   NAECHSTER_SCHRITT_SCHALTER,
   NaechsterSchrittAntwort,
@@ -32,6 +33,11 @@ export const NAECHSTER_SCHRITT_URL = `${environment.baseUrl}/api/v1/usage/users/
  * weggeklickt hat. „Anderer Vorschlag“ zeigt den nächsten; was weggeklickt ist, merkt sich
  * nur der Browser für sieben Tage (naechster-schritt.ts). Scheitert der Abruf, steht
  * nichts da: Die Karte ist Beiwerk.
+ *
+ * Nie zugleich mit „Seit deinem letzten Besuch“ (Review Spielgefühl 25.11.): Wer Vorrang
+ * hat, entscheidet SeitLetztemBesuchService.start$ an einer Stelle; die Karte meldet dorthin
+ * nur, ob sie einen Vorschlag hat. Die Reihenfolge der Startseite steht in
+ * docs/ARCHITECTURE.md.
  */
 @Component({
   selector: 'app-naechster-schritt',
@@ -39,7 +45,7 @@ export const NAECHSTER_SCHRITT_URL = `${environment.baseUrl}/api/v1/usage/users/
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, MatButtonModule, MatIconModule],
   template: `
-    @if (aktuell(); as eintrag) {
+    @if (sichtbar(); as eintrag) {
       <section class="naechster-schritt" aria-labelledby="naechster-schritt-titel">
         <h2 id="naechster-schritt-titel">Dein nächster Schritt</h2>
         <p class="naechster-schritt-satz">{{ eintrag.anzeige.satz }}</p>
@@ -137,10 +143,26 @@ export class NaechsterSchrittComponent {
     return erster && daten ? { vorschlag: erster, anzeige: daten, weitere: offen.length > 1 } : null;
   });
 
+  private readonly neues = inject(SeitLetztemBesuchService);
+  /** Vorrang und Kacheln des Blocks darüber, aus derselben Quelle wie der Block selbst. */
+  private readonly start = toSignal(this.neues.start$);
+
+  /** Was die Karte zeigt: der aktuelle Vorschlag, nur wenn die Karte den Vorrang hat. */
+  readonly sichtbar = computed(() => (this.start()?.vorrang === 'karte' ? this.aktuell() : null));
+
   constructor() {
+    // Rückkehr auf die Startseite: die letzten Vorschläge sofort, damit nichts springt;
+    // die neue Antwort ersetzt sie still.
+    const gemerkt = this.neues.naechsterSchrittGemerkt;
+    if (gemerkt) {
+      this.vorschlaege.set(gemerkt);
+    }
     // Aufräumen bei jedem Laden der Startseite, auch ohne Schalter und ohne Anmeldung:
     // Abgelaufenes fällt weg, damit kein Eintrag länger als sieben Tage liegt.
     this.weggeklickt.set(weggeklicktLesen());
+    if (gemerkt) {
+      this.melden();
+    }
     const angemeldet$ = inject(AuthService).userInfo$.pipe(
       map((info) => info?.isAuthenticated === true),
       distinctUntilChanged(),
@@ -158,7 +180,19 @@ export class NaechsterSchrittComponent {
         }),
         takeUntilDestroyed(),
       )
-      .subscribe((liste) => this.vorschlaege.set(liste));
+      .subscribe((liste) => {
+        this.vorschlaege.set(liste);
+        this.neues.naechsterSchrittGemerkt = liste;
+        this.melden();
+      });
+  }
+
+  /**
+   * Dem Block melden, ob es einen Vorschlag gibt. Nur aus der Antwort und aus Klicks, nie
+   * während der Change Detection: Der Block steht im Template davor.
+   */
+  private melden(): void {
+    this.neues.naechsterSchrittDa$.next(this.aktuell() !== null);
   }
 
   /** „Zur Suche“: Fokus ins Suchfeld der Startseite, ohne die Seite zu wechseln. */
@@ -171,10 +205,18 @@ export class NaechsterSchrittComponent {
   /** Wegklicken: nur im Browser gemerkt, dann der nächste Vorschlag oder nichts mehr. */
   weg(vorschlag: Vorschlag): void {
     this.weggeklickt.set(wegklicken(vorschlag.art));
+    this.melden();
     // Die Karte bleibt stehen, der Fokus auf dem Knopf; neu ist nur der Satz, die Ansage
-    // liest ihn vor.
+    // liest ihn vor. Ohne Vorschlag kann darüber der Block „Seit deinem letzten Besuch“
+    // erscheinen: Das sagt die Ansage mit.
     const naechster = this.aktuell();
-    this.ansage.set(naechster ? `Anderer Vorschlag: ${naechster.anzeige.satz}` : 'Vorschlag ausgeblendet.');
+    this.ansage.set(
+      naechster
+        ? `Anderer Vorschlag: ${naechster.anzeige.satz}`
+        : this.start()?.kacheln.length
+          ? 'Vorschlag ausgeblendet. Neues seit deinem letzten Besuch steht darüber.'
+          : 'Vorschlag ausgeblendet.',
+    );
     if (!naechster) {
       // Der Knopf verschwindet mit der Karte: Der Fokus geht ins Suchfeld darüber, nicht an
       // den Anfang der Seite (WCAG 2.4.3).

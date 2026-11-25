@@ -1,9 +1,17 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, discardPeriodicTasks, fakeAsync, flush, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 
-import { MAX_KACHELN, SeitLetztemBesuchComponent, ZEITRAUM, neuesListe } from './seit-letztem-besuch.component';
-import { SeitLetztemBesuchService, alteBesuchMerkerEntfernen } from './seit-letztem-besuch.service';
+import {
+  MAX_KACHELN,
+  SeitLetztemBesuchComponent,
+  ZEITRAUM,
+  eigenesNeuesSichtbar,
+  neuesListe,
+  startKacheln,
+  startVorrang,
+} from './seit-letztem-besuch.component';
+import { START_WARTEZEIT_MS, SeitLetztemBesuchService, alteBesuchMerkerEntfernen } from './seit-letztem-besuch.service';
 import { AuthService, UserInfo } from '../auth/auth.service';
 import { BesuchResponse, UsageTrackingService } from '../services/usage-tracking.service';
 
@@ -163,6 +171,8 @@ describe('Seit deinem letzten Besuch (Nutzerfuehrung 13.11.)', () => {
           { provide: UsageTrackingService, useValue: { besuchStand$: besuch } },
         ],
       });
+      // Ohne Karte daneben: Sie hätte schon „kein Vorschlag“ gemeldet
+      TestBed.inject(SeitLetztemBesuchService).naechsterSchrittDa$.next(false);
       const fixture = TestBed.createComponent(SeitLetztemBesuchComponent);
       fixture.detectChanges();
       return fixture;
@@ -306,5 +316,121 @@ describe('Seit deinem letzten Besuch (Nutzerfuehrung 13.11.)', () => {
 
       expect(fixture.nativeElement.querySelector('nav')).toBeNull();
     });
+
+    it('zeigt beim allerersten Besuch nichts, auch mit wartenden Aussagen (Review 25.11.)', () => {
+      const fixture = erstellen();
+      info.next({ isAuthenticated: true, userId: 'kim-1' } as UserInfo);
+      besuch.next({ nutzung_seit_letztem_besuch: 0, unbeantwortete_aussagen: 1, erster_besuch: true });
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('nav')).toBeNull();
+    });
+
+    it('tritt hinter „Dein nächster Schritt“ zurück und kommt ohne Neuladen wieder (Review 25.11.)', () => {
+      const fixture = erstellen();
+      const neues = TestBed.inject(SeitLetztemBesuchService);
+      info.next({ isAuthenticated: true, userId: 'kim-1' } as UserInfo);
+      besuch.next({ nutzung_seit_letztem_besuch: 0, neue_einwuerfe: 3, unbeantwortete_aussagen: 2 });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('nav')).not.toBeNull();
+
+      neues.naechsterSchrittDa$.next(true);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('nav')).toBeNull();
+
+      neues.naechsterSchrittDa$.next(false);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('nav')).not.toBeNull();
+    });
+
+    it('geht mit Neuem zu eigenen Beiträgen „Dein nächster Schritt“ vor, mit allen Kacheln', () => {
+      const fixture = erstellen();
+      TestBed.inject(SeitLetztemBesuchService).naechsterSchrittDa$.next(true);
+      info.next({ isAuthenticated: true, userId: 'kim-1' } as UserInfo);
+      besuch.next({ nutzung_seit_letztem_besuch: 2, neue_einwuerfe: 3 });
+      fixture.detectChanges();
+
+      expect(links(fixture)).toEqual(['2 Nutzungen deiner Beiträge', '3 neue Einwürfe im Fangkorb']);
+    });
+  });
+
+  describe('Vorrang auf der Startseite (Review Spielgefühl 25.11.)', () => {
+    const keins: ReadonlySet<never> = new Set();
+
+    it('erster Besuch: keine Kacheln und kein eigenes Neues', () => {
+      const stand = { nutzung_seit_letztem_besuch: 3, unbeantwortete_aussagen: 1, erster_besuch: true };
+      expect(startKacheln(stand, keins, startVorrang(stand, keins, false))).toEqual([]);
+      expect(eigenesNeuesSichtbar(stand, keins)).toBeFalse();
+      expect(startVorrang(stand, keins, true)).toBe('karte');
+    });
+
+    it('ohne Angabe zum ersten Besuch (ältere Antwort) wie bisher', () => {
+      const stand = { nutzung_seit_letztem_besuch: 0, unbeantwortete_aussagen: 1 };
+      expect(startKacheln(stand, keins, startVorrang(stand, keins, false)).length).toBe(1);
+    });
+
+    it('zählt nur Antworten, Nutzung, Echo und Ausformuliertes als eigenes Neues', () => {
+      const allgemein = { nutzung_seit_letztem_besuch: 0, neue_einwuerfe: 2, unbeantwortete_aussagen: 4, neue_beitraege: 5 };
+      expect(eigenesNeuesSichtbar(allgemein, keins)).toBeFalse();
+      expect(startVorrang(allgemein, keins, true)).toBe('karte');
+      for (const feld of ['nutzung_seit_letztem_besuch', 'antworten_auf_eigene_aussagen', 'neu_oeffentlich_gepostet', 'ausformulierte_einwuerfe']) {
+        expect(eigenesNeuesSichtbar({ ...allgemein, [feld]: 1 }, keins)).withContext(feld).toBeTrue();
+        expect(startVorrang({ ...allgemein, [feld]: 1 }, keins, true)).withContext(feld).toBe('block');
+      }
+    });
+
+    it('nach dem Klick auf das eigene Neue geht der Vorschlag wieder vor', () => {
+      const stand = { nutzung_seit_letztem_besuch: 2, neue_einwuerfe: 3 };
+      const geklickt = new Set(['nutzung'] as const);
+      expect(startVorrang(stand, geklickt, true)).toBe('karte');
+      expect(startKacheln(stand, geklickt, 'karte')).toEqual([]);
+      expect(startKacheln(stand, geklickt, startVorrang(stand, geklickt, false)).map((e) => e.art)).toEqual(['einwuerfe']);
+    });
+
+    it('wartet, solange Besuch oder Vorschläge noch ausstehen, statt etwas zu zeigen und wieder wegzunehmen', () => {
+      const stand = { nutzung_seit_letztem_besuch: 0, neue_einwuerfe: 3 };
+      expect(startVorrang(undefined, keins, true)).toBe('offen');
+      expect(startVorrang(stand, keins, undefined)).toBe('offen');
+      expect(startKacheln(stand, keins, 'offen')).toEqual([]);
+      // Kam keine Antwort zum Besuch (Fehler, Zeitgrenze), bekommt die Karte den Platz
+      expect(startVorrang(null, keins, true)).toBe('karte');
+    });
+
+    it('ohne Stand nichts', () => {
+      expect(startKacheln(null, keins, 'block')).toEqual([]);
+      expect(eigenesNeuesSichtbar(null, keins)).toBeFalse();
+    });
+  });
+
+  describe('SeitLetztemBesuchService.start$: Zeitgrenze', () => {
+    let besuch: BehaviorSubject<BesuchResponse | null>;
+
+    beforeEach(() => {
+      besuch = new BehaviorSubject<BesuchResponse | null>(null);
+      TestBed.configureTestingModule({ providers: [{ provide: UsageTrackingService, useValue: { besuchStand$: besuch } }] });
+    });
+
+    it('entscheidet nach START_WARTEZEIT_MS auch ohne Meldung der Karte', fakeAsync(() => {
+      const service = TestBed.inject(SeitLetztemBesuchService);
+      const gesehen: string[] = [];
+      const abo = service.start$.subscribe((s) => gesehen.push(`${s.vorrang}:${s.kacheln.length}`));
+      besuch.next({ nutzung_seit_letztem_besuch: 0, neue_einwuerfe: 3 });
+      expect(gesehen).toEqual(['offen:0']);
+      tick(START_WARTEZEIT_MS);
+      expect(gesehen).toEqual(['offen:0', 'block:1']);
+      abo.unsubscribe();
+    }));
+
+    it('entscheidet sofort, wenn beide Antworten da sind', fakeAsync(() => {
+      const service = TestBed.inject(SeitLetztemBesuchService);
+      const gesehen: string[] = [];
+      const abo = service.start$.subscribe((s) => gesehen.push(s.vorrang));
+      service.naechsterSchrittDa$.next(true);
+      besuch.next({ nutzung_seit_letztem_besuch: 0, neue_einwuerfe: 3 });
+      expect(gesehen).toEqual(['offen', 'karte']);
+      abo.unsubscribe();
+      discardPeriodicTasks();
+      flush();
+    }));
   });
 });
