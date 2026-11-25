@@ -510,10 +510,14 @@ officer has advised.
 
 Table `saisons` (name, first and last day, goal in Widerspruchs-Wochen; no personal data),
 rules in `domain/saisons.py`, `repositories/saison_repository.py` (overlap check under a table
-lock, so at most one season runs on any day) and `services/saison_service.py`. With `saison_ziel`
-effective, the running season replaces the setting "aktuelle Saison" for teams
-(`einstellungen_service.aktuelle_saison()`); in a gap between two seasons the last ended season
-stays the current one until the next begins, before the first season the setting applies. The
+lock, so at most one season runs on any day) and `services/saison_service.py`. The running season
+replaces the setting "aktuelle Saison" for teams (`einstellungen_service.aktuelle_saison()`),
+whether or not `saison_ziel` is effective (the switch only governs the bar); in a gap between two
+seasons the last ended season stays the current one until the next begins, before the first season
+the setting applies. New team links get the running or else the next planned season as suggestion
+(`einstellungen_service.saison_vorschlag()`, field `saison_vorschlag` of `GET /api/v1/einladungen`,
+also used when the admin leaves the season empty); "Meine Teams" does not count teams of that next
+season as past. The
 count is the sum of the existing weekly numbers of "Ja, gepostet" (`gepostet_wochen`) over the
 closed weeks of the season; a boundary week shared by two seasons counts only for the season that
 contains its Monday (`domain.saisons.wochen_der_saison`); nothing new is stored.

@@ -1,8 +1,8 @@
 """
 Admin-Einstellungen mit Textwert (Seite "Schalter"), neben den Schaltern
-(services/schalter_service.py). Bisher eine: ``aktuelle_saison``, die Saison der
-Teams, die am Namen erscheinen (services/team_service.py). Standard ist das laufende
-Jahr (UTC), solange kein Admin etwas anderes setzt.
+(services/schalter_service.py). Bisher eine: ``aktuelle_saison``, der Ersatz fuer die
+aktuelle Saison der Teams, solange keine Saison begonnen hat (``aktuelle_saison()``
+unten). Standard ist das laufende Jahr (UTC), solange kein Admin etwas anderes setzt.
 
 Gelesen wird mit kurzem Cache wie bei den Schaltern; ist die Datenbank nicht
 erreichbar, gilt der Standard.
@@ -49,8 +49,12 @@ EINSTELLUNGEN: Dict[str, Einstellungsart] = {
         Einstellungsart(
             name=AKTUELLE_SAISON,
             erklaerung=(
-                "Saison der Teams, die am Namen erscheinen; auf dem Profil stehen alle "
-                "Saisons. Neue Teamlinks bekommen sie als Vorschlag."
+                "Gilt nur, solange noch keine Saison begonnen hat. Danach folgt die "
+                "aktuelle Saison der laufenden Saison (Abschnitt Saisons), zwischen zwei "
+                "Saisons der zuletzt beendeten. Sie bestimmt, welche Teams am Namen "
+                "erscheinen und in „Meine Teams“ aktuell sind. Neue Teamlinks bekommen "
+                "die laufende oder nächste Saison als Vorschlag, ohne angelegte Saison "
+                "diesen Wert."
             ),
             max_laenge=SAISON_MAX,
             standard=lambda: str(heute_utc().year),
@@ -168,12 +172,22 @@ def einstellungen_service_setzen(service: Optional[EinstellungenService]) -> Non
 
 def aktuelle_saison() -> str:
     """
-    Die aktuelle Saison der Teams: solange der Schalter ``saison_ziel`` wirkt, die
-    laufende Saison, in einer Luecke die zuletzt beendete (services/saison_service.py,
-    #782); vor der ersten Saison oder bei Schalter aus die Einstellung.
+    Die aktuelle Saison der Teams: die laufende Saison, in einer Luecke die zuletzt
+    beendete (services/saison_service.py, #782), unabhaengig vom Schalter
+    ``saison_ziel``; vor der ersten Saison die Einstellung.
     """
     from services.saison_service import get_saison_service
 
     return get_saison_service().saison_fuer_teams() or get_einstellungen_service().wert(
         AKTUELLE_SAISON
     )
+
+
+def saison_vorschlag() -> str:
+    """
+    Die Saison, die neue Teamlinks als Vorschlag bekommen: die laufende, sonst die
+    naechste geplante Saison; ohne beides die aktuelle Saison (``aktuelle_saison``).
+    """
+    from services.saison_service import get_saison_service
+
+    return get_saison_service().vorschlag() or aktuelle_saison()

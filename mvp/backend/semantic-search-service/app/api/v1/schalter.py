@@ -87,16 +87,24 @@ def _einstellungen() -> EinstellungenService:
 def _hinweis(name: str) -> Optional[str]:
     """
     Eine Saison ersetzt die Einstellung aktuelle_saison (#782): die laufende, in einer
-    Luecke zwischen zwei Saisons die zuletzt beendete.
+    Luecke zwischen zwei Saisons die zuletzt beendete. Vor der ersten Saison gilt die
+    Einstellung, neue Teamlinks bekommen aber schon die naechste geplante als Vorschlag.
     """
     if name != AKTUELLE_SAISON:
         return None
-    saison = get_saison_service().saison_fuer_teams()
-    if saison is None:
+    saisons = get_saison_service()
+    saison = saisons.saison_fuer_teams()
+    if saison is not None:
+        return (
+            f"Gilt gerade nicht: Die Saison „{saison}“ ist die aktuelle Saison der "
+            "Teams, bis die nächste beginnt (Abschnitt Saisons)."
+        )
+    naechste = saisons.vorschlag()
+    if naechste is None:
         return None
     return (
-        f"Gilt gerade nicht: Die Saison „{saison}“ ist die aktuelle Saison der Teams, "
-        "bis die nächste beginnt (Abschnitt Saisons)."
+        f"Gilt bis zum Beginn der Saison „{naechste}“. Neue Teamlinks bekommen "
+        "schon sie als Vorschlag (Abschnitt Saisons)."
     )
 
 
