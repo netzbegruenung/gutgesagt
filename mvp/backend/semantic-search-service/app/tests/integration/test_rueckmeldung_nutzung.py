@@ -94,6 +94,15 @@ class TestSeitLetztemBesuch:
 
         assert repo.neu_seit_letztem_besuch(AUTORIN, nutzung_jetzt=5) == 5
 
+    def test_schon_besucht_erst_nach_dem_ersten_besuch(self, datenbank):  # noqa: F811
+        repo = GeseheneNutzungRepository(datenbank)
+
+        assert repo.schon_besucht(AUTORIN) is False
+        # Nur lesen legt nichts an
+        assert repo.schon_besucht(AUTORIN) is False
+        repo.neu_seit_letztem_besuch(AUTORIN, nutzung_jetzt=0)
+        assert repo.schon_besucht(AUTORIN) is True
+
     def test_neu_seit_letztem_besuch_danach_nur_den_zuwachs(
         self, datenbank
     ):  # noqa: F811

@@ -188,8 +188,8 @@ class TestHinweisAnDerEinstellung:
     def test_laufende_saison_ersetzt_die_einstellung(self, repository):
         assert "Winter 26" in self._hinweis(_client(repository))
 
-    def test_schalter_aus_kein_hinweis(self, repository):
-        assert self._hinweis(_client(repository, wirksam=False)) is None
+    def test_schalter_aus_hinweis_trotzdem(self, repository):
+        assert "Winter 26" in self._hinweis(_client(repository, wirksam=False))
 
     def test_ohne_laufende_saison_kein_hinweis(self, repository):
         assert self._hinweis(_client(repository, saisons=())) is None

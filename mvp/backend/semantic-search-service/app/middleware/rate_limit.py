@@ -4,13 +4,21 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from collections import defaultdict
 from datetime import datetime, timedelta
 import asyncio
-from typing import Dict, Tuple
+from typing import Callable, Dict, Optional, Tuple
+
+from core.config import Settings, settings as standard_settings
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Rate limiting middleware for content creation endpoints.
     Limits the number of requests per user within a time window.
+
+    Ausgenommen sind nur Startkonten (SEMANTIC_SEARCH_STARTKONTEN, GLOSSARY.md
+    "Startkonto"): Unter ihnen spielt die Redaktion den Startbestand per Skript ein
+    (mvp/scripts/manual/beitraege_importieren.py), Hunderte Kommentare am Stueck.
+    Admins bleiben gedrosselt, anders als beim Tagesdeckel. Die Grenzwerte kommen aus
+    der Umgebung (anlege_rate_limit_je_minute/_je_stunde in core/config.py).
     """
 
     def __init__(
@@ -18,14 +26,25 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         app,
         requests_per_minute: int = 10,
         requests_per_hour: int = 100,
+        einstellungen: Optional[Callable[[], Settings]] = None,
     ):
         super().__init__(app)
+        self._einstellungen = einstellungen or (lambda: standard_settings)
         self.requests_per_minute = requests_per_minute
         self.requests_per_hour = requests_per_hour
         self.request_counts: Dict[str, Dict[str, Tuple[int, datetime]]] = defaultdict(
             lambda: {"minute": (0, datetime.now()), "hour": (0, datetime.now())}
         )
         self.cleanup_task = None
+
+    def _ist_startkonto(self, request: Request) -> bool:
+        # Nur mit Kennung: "anonymous" ist der Platzhalter ohne Kopf, nie ein Konto.
+        kennung = request.headers.get("X-User")
+        return (
+            bool(kennung)
+            and kennung != "anonymous"
+            and self._einstellungen().ist_startkonto(kennung)
+        )
 
     async def dispatch(self, request: Request, call_next):
         # Only apply rate limiting to POST endpoints for content creation
@@ -47,8 +66,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             # Extract user identifier from X-User header
             user_id = request.headers.get("X-User", "anonymous")
 
-            # Check rate limits
-            if not self._check_rate_limit(user_id):
+            # Check rate limits (Startkonten ausgenommen, siehe Klassendoku; den
+            # Header X-User setzt allein das BFF aus der Sitzung)
+            if not self._ist_startkonto(request) and not self._check_rate_limit(
+                user_id
+            ):
                 return JSONResponse(
                     status_code=429,
                     content={

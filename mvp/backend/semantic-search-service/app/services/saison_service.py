@@ -2,11 +2,14 @@
 Saisons mit Gemeinschaftsziel (#782, Schalter ``saison_ziel``; Regeln in
 domain/saisons.py).
 
-Ein Admin legt Saisons an (Name, Beginn, Ende, Ziel in Widerspruchs-Wochen). Solange
-der Schalter wirkt, ist die laufende Saison die aktuelle Saison der Teams
-(``saison_fuer_teams``, gelesen von services/einstellungen_service.py), in einer Luecke
-zwischen zwei Saisons die zuletzt beendete; vor der ersten Saison oder bei Schalter aus
-gilt die Einstellung auf der Seite Schalter wie bisher.
+Ein Admin legt Saisons an (Name, Beginn, Ende, Ziel in Widerspruchs-Wochen), im
+Jahreszeiten-Takt (GLOSSARY.md "Saison"). Die laufende Saison ist die aktuelle Saison
+der Teams (``saison_fuer_teams``, gelesen von services/einstellungen_service.py), in
+einer Luecke zwischen zwei Saisons die zuletzt beendete; vor der ersten Saison gilt die
+Einstellung auf der Seite Schalter. Das gilt unabhaengig vom Schalter: Er steuert nur
+den Balken, sonst kippten die Teams einer laufenden Saison beim Ausschalten unter
+"Vergangene Saisons". Neue Teamlinks bekommen die laufende oder die naechste geplante
+Saison als Vorschlag (``vorschlag``).
 
 Den Fortschrittsbalken sehen alle erst ab der Schwelle (Settings
 ``saison_ziel_schwelle_menschen`` und ``saison_ziel_schwelle_wochen``), vorher nur
@@ -37,6 +40,7 @@ from domain.saisons import (
     laufende_saison,
     loeschen_pruefen,
     saison_fuer_teams,
+    saison_fuer_vorschlag,
     saisonzahl,
     schwelle_erreicht,
 )
@@ -162,16 +166,24 @@ class SaisonService:
 
     def saison_fuer_teams(self, heute: Optional[date] = None) -> Optional[str]:
         """
-        Name der Saison der Teams, wenn der Schalter wirkt: die laufende, in einer
-        Luecke zwischen zwei Saisons die zuletzt beendete (domain/saisons.py
-        ``saison_fuer_teams``). Sonst None (dann gilt die Einstellung "aktuelle
-        Saison"), ebenso ohne begonnene Saison oder wenn die Datenbank nicht
-        erreichbar ist.
+        Name der Saison der Teams: die laufende, in einer Luecke zwischen zwei Saisons
+        die zuletzt beendete (domain/saisons.py ``saison_fuer_teams``), unabhaengig vom
+        Schalter. None ohne begonnene Saison oder wenn die Datenbank nicht erreichbar
+        ist; dann gilt die Einstellung "aktuelle Saison".
         """
-        if not self.wirksam():
-            return None
+        return self._name(saison_fuer_teams, heute)
+
+    def vorschlag(self, heute: Optional[date] = None) -> Optional[str]:
+        """
+        Name der Saison, die neue Teamlinks als Vorschlag bekommen: die laufende, sonst
+        die naechste geplante (domain/saisons.py ``saison_fuer_vorschlag``). None ohne
+        beides oder wenn die Datenbank nicht erreichbar ist.
+        """
+        return self._name(saison_fuer_vorschlag, heute)
+
+    def _name(self, waehlen, heute: Optional[date]) -> Optional[str]:
         try:
-            saison = saison_fuer_teams(self._gecacht(), heute or heute_utc())
+            saison = waehlen(self._gecacht(), heute or heute_utc())
         except Exception as e:
             logger.error(f"Saisons nicht gelesen, Einstellung gilt: {type(e).__name__}")
             return None

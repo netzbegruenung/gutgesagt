@@ -166,6 +166,12 @@
     </mat-menu>
 </div>
 
-<!-- Erfolgstext nach dem Kopieren (#785, Schalter kopiert_erfolg): auch im Album, nie in der Vorschau -->
-<app-kopiert-erfolg *ngIf="kopiertErfolgAn() && !vorschau" [sichtbar]="kopiertErfolg()" [nutzung]="nutzungBeimKopieren"
-                    [andereTonlage]="andereTonlage" (schliessen)="kopiertErfolgSchliessen()"></app-kopiert-erfolg>
+<!--
+    Erfolgstext nach dem Kopieren (#785, Schalter kopiert_erfolg) mit der Frage „Gepostet?“ (#643, #799):
+    auch im Album, nie in der Vorschau. Steht immer bereit (leer), damit die Status-Region schon da ist,
+    wenn ohne Erfolgstext nur die Frage erscheint.
+-->
+<app-kopiert-erfolg *ngIf="!vorschau" [sichtbar]="kopiertErfolg()" [erfolgstext]="kopiertErfolgAn()"
+                    [nutzung]="nutzungBeimKopieren" [andereTonlage]="andereTonlage"
+                    [gepostet]="gepostetStand" [gepostetDank]="gepostetDankText"
+                    (schliessen)="kopiertErfolgSchliessen()" (jaGepostet)="jaGepostet()"></app-kopiert-erfolg>

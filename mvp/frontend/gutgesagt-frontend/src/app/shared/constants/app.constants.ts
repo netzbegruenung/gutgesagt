@@ -88,6 +88,7 @@ export const PAGE_TITLES = {
   EINWILLIGUNG_FRAGE: 'Einwilligung',
   UEBER: 'Über Gut gesagt',
   EINLADUNG: 'Einladung',
+  WILLKOMMEN: 'Willkommen',
   ADMIN: 'Admin'
 };
 
@@ -107,7 +108,9 @@ export const ROUTES = {
   BEITRAG: '/beitrag',
   SHARE_TARGET: '/teilen',
   LOGIN: '/login',
-  HELP: '/help'
+  HELP: '/help',
+  // Nach dem ersten Anmelden über eine Einladung ohne Team (einladung-anmelden)
+  WILLKOMMEN: '/willkommen'
 };
 
 export const STORAGE_KEYS = {

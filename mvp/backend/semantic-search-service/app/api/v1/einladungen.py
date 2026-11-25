@@ -161,7 +161,7 @@ class TeamFelder(BaseModel):
         return self
 
     def team(self, saison_vorschlag: str) -> Optional[Team]:
-        """Ohne Saison gilt die aktuelle Saison (Admin-Einstellung)."""
+        """Ohne Saison gilt der Vorschlag (laufende oder naechste geplante Saison)."""
         if self.team_name is None:
             return None
         return Team(
@@ -279,6 +279,9 @@ class EinladungListeResponse(BaseModel):
     # die Saison, die Motive mit Namen und der Hinweis zum Teamnamen.
     teams_aktiv: bool = False
     aktuelle_saison: Optional[str] = None
+    # Vorschlag fuer neue Teamlinks: laufende oder naechste geplante Saison, sonst die
+    # aktuelle Saison
+    saison_vorschlag: Optional[str] = None
     motive: List[MotivResponse] = []
     teamname_hinweis: Optional[str] = None
 
@@ -469,6 +472,7 @@ async def einladungen_liste(
         einladungen=[_mit_team(e, mitglieder) for e in einladungen],
         teams_aktiv=True,
         aktuelle_saison=teams.aktuelle_saison(),
+        saison_vorschlag=teams.saison_vorschlag(),
         motive=[MotivResponse(schluessel=k, name=v) for k, v in MOTIVE.items()],
         teamname_hinweis=TEAMNAME_HINWEIS,
     )
@@ -482,7 +486,7 @@ async def einladung_anlegen(
 ):
     team = None
     if service.teams_wirksam:
-        team = request.team(service.teams.aktuelle_saison())
+        team = request.team(service.teams.saison_vorschlag())
     einladung = service.anlegen(
         request.notiz, request.erlaubte_einloesungen, request.gueltig_bis, team=team
     )
@@ -499,7 +503,7 @@ async def einladung_schalten(
     """Abschalten oder wieder einschalten und/oder das Team setzen; der Zaehler bleibt."""
     team = UNVERAENDERT
     if "team_name" in request.model_fields_set and service.teams_wirksam:
-        team = request.team(service.teams.aktuelle_saison())
+        team = request.team(service.teams.saison_vorschlag())
     einladung = service.aendern(
         einladung_id, abgeschaltet=request.abgeschaltet, team=team
     )

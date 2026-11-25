@@ -55,6 +55,31 @@ def test_anlegen_und_lesen(db):
     assert service.saison_fuer_teams(MO) == "Winter 26"
 
 
+def test_vorschlag_vor_dem_beginn_ohne_schalter(db):
+    # Saisons im Jahreszeiten-Takt: Teamlinks vor dem Beginn bekommen schon ihren Namen,
+    # die aktuelle Saison der Teams wechselt erst mit dem Beginn, auch bei Schalter aus
+    vorher = MO - timedelta(days=5)
+    service = SaisonService(
+        SaisonRepository(db),
+        GepostetRepository(db).wochen,
+        einstellungen=Settings(),
+        wirksam=lambda _s: False,
+    )
+    service.anlegen("Winter 26/27", MO, MO + timedelta(days=90), 1000, heute=vorher)
+    service.anlegen(
+        "Frühjahr 27",
+        MO + timedelta(days=91),
+        MO + timedelta(days=182),
+        1000,
+        heute=vorher,
+    )
+
+    assert service.vorschlag(vorher) == "Winter 26/27"
+    assert service.saison_fuer_teams(vorher) is None
+    assert service.vorschlag(MO) == "Winter 26/27"
+    assert service.saison_fuer_teams(MO) == "Winter 26/27"
+
+
 def test_ueberschneidung_abgewiesen(db):
     service = _service(db)
     service.anlegen("Winter 26", MO, MO + timedelta(weeks=8), 1000, heute=MO)

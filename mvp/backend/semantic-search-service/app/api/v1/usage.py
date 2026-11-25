@@ -150,6 +150,10 @@ class BesuchResponse(BaseModel):
     # (gesehene_nutzung.echo, kein Zeitpunkt). None, solange der Schalter
     # wirkungs_echo aus ist.
     neu_oeffentlich_gepostet: Optional[int] = None
+    # Der allererste Besuch dieses Kontos: Es gab noch keinen Stand. Dann gibt es kein
+    # "seit deinem letzten Besuch", die Startseite laesst den Block weg (Review
+    # Spielgefuehl 25.11.). Abgeleitet aus der vorhandenen Zeile, nichts Neues gespeichert.
+    erster_besuch: bool = False
 
 
 # So lange warten die Nebenzahlen (alles ausser der Nutzung) hoechstens; danach gilt
@@ -884,6 +888,8 @@ async def besuch(
     direkt danach liefert 0. Die Person kommt aus ``X-User``, nicht aus dem Pfad (#284).
     """
     seit = datetime.now(timezone.utc) - timedelta(days=BESUCH_ZEITRAUM_TAGE)
+    # Vor den Zahlen: Sie legen den Stand beim ersten Besuch erst an.
+    erster = await _erster_besuch(current_user, gesehen)
     # Alle Zahlen zugleich: Die Nebenzahlen haben eine Zeitgrenze, die Nutzung
     # nicht; scheitert sie, ist der Besuch gescheitert (500).
     # Ohne Schalter fragt der Besuch die eigenen Aussagen gar nicht erst ab (#760).
@@ -942,7 +948,20 @@ async def besuch(
         neue_beitraege=max(0, beitraege),
         antworten_auf_eigene_aussagen=max(0, antworten) if mit_antworten else None,
         neu_oeffentlich_gepostet=max(0, gepostet) if mit_echo else None,
+        erster_besuch=erster,
     )
+
+
+async def _erster_besuch(person: str, gesehen: GeseheneNutzungRepository) -> bool:
+    """
+    Ob die Person zum ersten Mal da ist (noch kein Stand). Bei einem Fehler False: Dann
+    steht "Seit deinem letzten Besuch" wie bisher da, der Besuch selbst scheitert nicht.
+    """
+    try:
+        return not await asyncio.to_thread(gesehen.schon_besucht, person)
+    except Exception as e:
+        logger.warning(f"Erster Besuch nicht geprueft: {type(e).__name__}")
+        return False
 
 
 async def _neues_echo(

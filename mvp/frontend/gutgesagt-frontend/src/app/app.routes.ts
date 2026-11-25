@@ -257,6 +257,13 @@ export const routes: Routes = [
         data: { parent: '/search' }
     },
     {
+        // Begruessung nach dem ersten Anmelden ueber eine Einladung ohne Team (UX-Review 25.11.)
+        path: 'willkommen',
+        loadComponent: () => import('./einladung/willkommen.component').then(m => m.WillkommenComponent),
+        canActivate: [AuthGuard],
+        data: { parent: '/search' }
+    },
+    {
         // Einladung einloesen (#429); der Code steht hinter #, siehe einladungslink.
         path: 'einladung',
         loadComponent: () => import('./einladung/einladung.component').then(m => m.EinladungComponent),

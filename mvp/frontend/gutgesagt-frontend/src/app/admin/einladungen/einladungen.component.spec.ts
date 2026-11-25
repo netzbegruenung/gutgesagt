@@ -134,12 +134,13 @@ describe('EinladungenComponent', () => {
       team: { name: 'BDK 26 Berlin', motiv: 'vogel', saison: '2026', mitglieder: 36 },
     };
 
-    function mitTeams(einladungen: Einladung[], aktiv = true) {
+    function mitTeams(einladungen: Einladung[], aktiv = true, saisonVorschlag?: string) {
       http.expectOne(URL).flush({
         einloesen_eingerichtet: true,
         einladungen,
         teams_aktiv: aktiv,
         aktuelle_saison: '2026',
+        ...(saisonVorschlag ? { saison_vorschlag: saisonVorschlag } : {}),
         motive: MOTIVE,
         teamname_hinweis: 'Nur nach Anlass, Ort oder Saison benennen.',
       });
@@ -167,6 +168,15 @@ describe('EinladungenComponent', () => {
       expect(block.querySelector('mat-radio-group')!.getAttribute('role')).toBe('radiogroup');
       expect(fixture.componentInstance.teamSaison).toBe('2026');
       expect((block.querySelector('input[name="teamName"]') as HTMLInputElement).maxLength).toBe(40);
+    });
+
+    it('schlägt die laufende oder nächste angelegte Saison vor, nicht die Einstellung', () => {
+      mitTeams([], true, 'Winter 26/27');
+
+      const feld = el().querySelector('input[name="teamSaison"]') as HTMLInputElement;
+      expect(fixture.componentInstance.teamSaison).toBe('Winter 26/27');
+      // Freitext bleibt möglich
+      expect(feld.readOnly).toBeFalse();
     });
 
     it('legt einen Teamlink mit Name, Motiv und Saison an', () => {
@@ -339,7 +349,8 @@ describe('EinladungenComponent', () => {
     }
 
     it('setzt das Formular nach dem Anlegen auf Standard zurück, ohne Fehleranzeige an der Notiz', async () => {
-      mitTeams([]);
+      // Der Standard der Saison ist der Vorschlag des Servers (laufende oder nächste Saison)
+      mitTeams([], true, 'Winter 26/27');
       await ruhe();
       const k = fixture.componentInstance;
       tippen('notiz', 'Selbsttest');
@@ -364,7 +375,7 @@ describe('EinladungenComponent', () => {
       expect(k.erlaubteEinloesungen).toBe(1);
       expect(k.gueltigBis).not.toBe('2026-12-24');
       expect(k.teamName).toBe('');
-      expect(k.teamSaison).toBe('2026');
+      expect(k.teamSaison).toBe('Winter 26/27');
       expect(k.teamMotiv).toBe('vogel');
       expect(k.teamArt).toBe('anlass');
       const notiz = el().querySelector('input[name="notiz"]') as HTMLInputElement;
@@ -432,6 +443,19 @@ describe('EinladungenComponent', () => {
       expect(b.left).toBeGreaterThanOrEqual(t.right);
       expect(b.width).toBeGreaterThanOrEqual(24);
       expect(b.height).toBeGreaterThanOrEqual(24);
+    });
+
+    it('folgt beim Nachladen dem neuen Vorschlag, solange die Saison unverändert ist', () => {
+      mitTeams([]);
+      const k = fixture.componentInstance;
+      (k as unknown as { uebernehmen(l: unknown): void }).uebernehmen({
+        einloesen_eingerichtet: true,
+        einladungen: [],
+        teams_aktiv: true,
+        aktuelle_saison: '2026',
+        saison_vorschlag: 'Winter 26/27',
+      });
+      expect(k.teamSaison).toBe('Winter 26/27');
     });
 
     it('übernimmt beim Nachladen einen neuen Saison-Vorschlag nur, wenn niemand die Saison geändert hat', () => {

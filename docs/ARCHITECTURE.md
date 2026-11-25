@@ -84,6 +84,29 @@ listens on 5432 inside the container.
   - `environment.docker.ts` - Docker mode (baseUrl: empty for proxy)
   - `environment.prod.ts` - Production (uses placeholders replaced at runtime)
 
+#### Start page: order and priority of the cards
+
+The start page (`search-view.component.html`) stacks its cards in this fixed order. Rule: per
+visit at most one card that points the person somewhere new (review Spielgefühl 25.11.).
+
+| # | Card | Who sees it | Shown when |
+|---|------|-------------|------------|
+| 1 | Hero and search | everyone | always |
+| 2 | Rundgang line (`app-rundgang-band`, Willkommen) | everyone | until answered; signed in without „Ein Konto brauchst du nicht“ (`WILLKOMMEN_ANGEMELDET`) |
+| 3 | „Seit deinem letzten Besuch“ | signed in | not on the very first visit (`erster_besuch` from `POST /users/me/besuch`); next to a suggestion of card 4 only with news about the person's own Beiträge (`EIGENES_NEUES`: answers, uses, Wirkungs-Echo, ausformulierte Einwürfe) |
+| 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion and card 3 shows no own news |
+| 5 | Saison goal | everyone, Schalter `saison_ziel` | from the threshold (#782) |
+| 6 | Oft genutzt, Konter-Probe, Frisch aus der Community, Mitmachen tiles, Garten, About | everyone | as each card decides |
+
+Cards 3 and 4 are never shown together: own news wins (it is what the person caused), otherwise
+the single suggestion wins and the general numbers (new Einwürfe of others, Aussagen waiting,
+new Beiträge) step back (proposal, open as Fachfrage in #829). One place decides:
+`SeitLetztemBesuchService.start$` (rule in `seit-letztem-besuch/neues-liste.ts`, `startVorrang`);
+both cards only read it, card 4 reports whether it has a suggestion through `naechsterSchrittDa$`.
+Until both answers (Besuch, suggestions) are in, neither card shows, at most `START_WARTEZEIT_MS`
+(1.5 s), so no card appears and vanishes under the finger. Back on the start page the last
+answers apply at once (kept in the service) and are refreshed silently; nothing needs a reload.
+
 ### BFF (Backend-for-Frontend)
 - **Technology**: .NET 9.0, YARP reverse proxy
 - **Purpose**:
@@ -341,6 +364,9 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   defaults suit the start phase with few active people; raise them once usage grows. Entdoppelt
   means per person and day, so one person alone can make the section appear by copying the needed
   Beiträge on two days; the section never shows who copied what.
+- `SEMANTIC_SEARCH_ANLEGE_RATE_LIMIT_JE_MINUTE` / `_JE_STUNDE` - rate limit per person on the
+  creating routes (`middleware/rate_limit.py`, default 10 / 100). Startkonten are exempt (import
+  of the Startbestand), admins are not. Above it: 429 `"error": "TOO_MANY_REQUESTS"`.
 - `SEMANTIC_SEARCH_<LIMIT>_RATE_LIMIT_ANFRAGEN` - requests per window of the rate limits without
   login, counted per Anschluss (`utils/rate_limiter.py`). In a venue WLAN all visitors share one
   address, so operations raise them there. `<LIMIT>` and default: `AEHNLICHE_AUSSAGEN` 60 and
@@ -517,10 +543,14 @@ officer has advised.
 
 Table `saisons` (name, first and last day, goal in Widerspruchs-Wochen; no personal data),
 rules in `domain/saisons.py`, `repositories/saison_repository.py` (overlap check under a table
-lock, so at most one season runs on any day) and `services/saison_service.py`. With `saison_ziel`
-effective, the running season replaces the setting "aktuelle Saison" for teams
-(`einstellungen_service.aktuelle_saison()`); in a gap between two seasons the last ended season
-stays the current one until the next begins, before the first season the setting applies. The
+lock, so at most one season runs on any day) and `services/saison_service.py`. The running season
+replaces the setting "aktuelle Saison" for teams (`einstellungen_service.aktuelle_saison()`),
+whether or not `saison_ziel` is effective (the switch only governs the bar); in a gap between two
+seasons the last ended season stays the current one until the next begins, before the first season
+the setting applies. New team links get the running or else the next planned season as suggestion
+(`einstellungen_service.saison_vorschlag()`, field `saison_vorschlag` of `GET /api/v1/einladungen`,
+also used when the admin leaves the season empty); "Meine Teams" does not count teams of that next
+season as past. The
 count is the sum of the existing weekly numbers of "Ja, gepostet" (`gepostet_wochen`) over the
 closed weeks of the season; a boundary week shared by two seasons counts only for the season that
 contains its Monday (`domain.saisons.wochen_der_saison`); nothing new is stored.

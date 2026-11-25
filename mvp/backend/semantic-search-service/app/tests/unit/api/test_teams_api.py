@@ -117,8 +117,13 @@ def team_repo():
     return repo
 
 
-def _client(einladung_repo, team_repo, settings=AN):
-    teams = TeamService(team_repo, settings, saison=lambda: "2026")
+def _client(einladung_repo, team_repo, settings=AN, vorschlag=None):
+    teams = TeamService(
+        team_repo,
+        settings,
+        saison=lambda: "2026",
+        vorschlag=(lambda: vorschlag) if vorschlag else None,
+    )
     team_service_setzen(teams)
     service = EinladungService(einladung_repo, Mock(), teams)
     app = FastAPI()
@@ -141,6 +146,8 @@ class TestAdmin:
 
         assert body["teams_aktiv"] is True
         assert body["aktuelle_saison"] == "2026"
+        # Ohne angelegte Saison ist der Vorschlag die aktuelle Saison
+        assert body["saison_vorschlag"] == "2026"
         assert {m["schluessel"] for m in body["motive"]} >= {"vogel", "laufschuh"}
         assert body["teamname_hinweis"] == (
             "Anlass, Ort, Saison oder öffentliche Gruppe mit schriftlicher "
@@ -195,6 +202,27 @@ class TestAdmin:
         assert werte["team_zustimmung_am"] is None
         assert antwort.json()["team"]["mitglieder"] == 36
         assert antwort.json()["team"]["art"] == "anlass"
+
+    def test_vorschlag_ist_die_naechste_saison(self, einladung_repo, team_repo):
+        # Vor dem Beginn von "Winter 26/27": Formular und leere Saison bekommen schon sie
+        client = _client(einladung_repo, team_repo, vorschlag="Winter 26/27")
+        body = client.get("/api/v1/einladungen", headers=ADMIN).json()
+        assert body["saison_vorschlag"] == "Winter 26/27"
+        assert body["aktuelle_saison"] == "2026"
+
+        antwort = client.post(
+            "/api/v1/einladungen",
+            headers=ADMIN,
+            json={
+                "notiz": "BDK",
+                "erlaubte_einloesungen": 30,
+                "gueltig_bis": (heute_utc() + timedelta(days=14)).isoformat(),
+                "team_name": "BDK 26 Berlin",
+                "team_motiv": "vogel",
+            },
+        )
+        assert antwort.status_code == 201
+        assert einladung_repo.anlegen.call_args.kwargs["team_saison"] == "Winter 26/27"
 
     def test_anlegen_team_nach_gruppe_mit_datum(self, einladung_repo, team_repo):
         tag = (heute_utc() - timedelta(days=3)).isoformat()
@@ -696,6 +724,23 @@ class TestMeineTeams:
         assert jetzt["aktuelle_saison"] is True and jetzt["nummer"] == 37
         assert frueher["aktuelle_saison"] is False and frueher["saison"] == "2025"
         team_repo.meine.assert_called_once_with("konto-1")
+
+    def test_team_der_naechsten_saison_ist_nicht_vergangen(
+        self, einladung_repo, team_repo
+    ):
+        # Teamlink vor dem Saisonbeginn: das Team steht nicht unter "Vergangene Saisons"
+        team_repo.meine.return_value = [
+            _mitgliedschaft("Winter 26/27", 1),
+            _mitgliedschaft("2026", 37),
+            _mitgliedschaft("2025", 3),
+        ]
+        body = (
+            _client(einladung_repo, team_repo, vorschlag="Winter 26/27")
+            .get("/api/v1/teams/meine", headers=PERSON)
+            .json()
+        )
+        assert body["aktuelle_saison"] == "2026"
+        assert [t["aktuelle_saison"] for t in body["teams"]] == [True, True, False]
 
     def test_ohne_oeffentlich_kein_umschalter(self, einladung_repo, team_repo):
         body = (

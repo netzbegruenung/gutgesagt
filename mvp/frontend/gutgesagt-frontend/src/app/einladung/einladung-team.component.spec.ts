@@ -377,6 +377,27 @@ describe('EinladungComponent mit Team', () => {
       expect(el().textContent).toContain('Zu meinen Teams');
     });
 
+    it('macht nach dem Beitreten „Spruch suchen“ zum Hauptknopf, „Zu meinen Teams“ zum zweiten (UX-Review 25.11.)', () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team() }, true);
+      klick('team-ja');
+      http
+        .expectOne(`${URL}/beitreten`)
+        .flush({ team: { name: 'BDK 26 Berlin', motiv: 'vogel', saison: '2026' }, nummer: 37, neu: true });
+      fixture.detectChanges();
+
+      const knoepfe = Array.from(el().querySelectorAll<HTMLAnchorElement>('.team-knoepfe a'));
+      expect(knoepfe.map((k) => k.textContent?.trim())).toEqual(['Spruch suchen', 'Zu meinen Teams']);
+      expect(knoepfe[0].hasAttribute('mat-raised-button')).toBeTrue();
+      expect(knoepfe[0].getAttribute('href')).toBe('/search#suchen');
+      expect(knoepfe[1].hasAttribute('mat-stroked-button')).toBeTrue();
+      expect(knoepfe[1].getAttribute('href')).toBe('/contributions');
+      const satz = el().querySelector('[data-testid="erster-spruch-satz"]')?.textContent ?? '';
+      expect(satz).toContain('Such den Spruch, der dich zuletzt geärgert hat');
+      // Gewinn ohne Versprechen: Zum Start der Vorhut ist der Bestand noch klein
+      expect(satz).not.toMatch(/meist|immer|verfehlt/i);
+    });
+
     it('schickt die zweite Frage mit, wenn sie angehakt ist', () => {
       starten('Code123');
       pruefen({ einloesbar: true, team: team(OEFFENTLICH) }, true);
@@ -400,6 +421,8 @@ describe('EinladungComponent mit Team', () => {
 
       expect(el().querySelector('[data-testid="team-ergebnis"]')?.textContent?.trim()).toBe('Du bist schon dabei (Nr. 12)');
       expect(el().textContent).toContain('zählt für dich nicht noch einmal');
+      // Auch hier zuerst die Suche
+      expect(el().querySelector('.team-knoepfe a')?.textContent?.trim()).toBe('Spruch suchen');
     });
 
     it('zeigt „schon dabei“ ohne Frage und ohne Anfrage, wenn /pruefen die eigene Nummer kennt', () => {

@@ -20,7 +20,9 @@ from domain.saisons import (
     eingabe_pruefen,
     laufende_saison,
     loeschen_pruefen,
+    naechste_saison,
     saison_fuer_teams,
+    saison_fuer_vorschlag,
     saisonzahl,
     schwelle_erreicht,
     ueberschneidung,
@@ -213,6 +215,32 @@ class TestSaisonFuerTeams:
 
     def test_vor_der_ersten_saison_keine(self):
         assert saison_fuer_teams([self.WINTER], MO - timedelta(days=1)) is None
+
+
+class TestSaisonFuerVorschlag:
+    WINTER = TestSaisonFuerTeams.WINTER
+    FRUEHJAHR = TestSaisonFuerTeams.FRUEHJAHR
+
+    def test_laufende(self):
+        alle = [self.FRUEHJAHR, self.WINTER]
+        assert saison_fuer_vorschlag(alle, MO + timedelta(days=3)) is self.WINTER
+
+    def test_vor_der_ersten_die_naechste(self):
+        alle = [self.FRUEHJAHR, self.WINTER]
+        assert saison_fuer_vorschlag(alle, MO - timedelta(days=5)) is self.WINTER
+
+    def test_luecke_die_naechste_nicht_die_beendete(self):
+        alle = [self.FRUEHJAHR, self.WINTER]
+        assert saison_fuer_vorschlag(alle, MO + timedelta(weeks=13)) is self.FRUEHJAHR
+
+    def test_nach_der_letzten_keine(self):
+        assert saison_fuer_vorschlag([self.WINTER], MO + timedelta(weeks=13)) is None
+
+    def test_naechste_ist_die_frueheste_geplante(self):
+        alle = [self.FRUEHJAHR, self.WINTER]
+        assert naechste_saison(alle, MO - timedelta(days=1)) is self.WINTER
+        assert naechste_saison(alle, MO) is self.FRUEHJAHR
+        assert naechste_saison([], MO) is None
 
 
 class TestSchwelle:

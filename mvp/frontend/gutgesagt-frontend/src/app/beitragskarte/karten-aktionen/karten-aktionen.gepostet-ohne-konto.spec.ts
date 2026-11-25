@@ -5,7 +5,7 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
-import { Subject, of } from 'rxjs';
+import { of } from 'rxjs';
 
 import { KartenAktionenComponent } from './karten-aktionen.component';
 import { AuthService } from '../../auth/auth.service';
@@ -16,17 +16,12 @@ import { FunktionenService } from '../../services/funktionen.service';
 import { TEILEN_NAVIGATOR } from '../../shared/teilen.service';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
 import { KOPIERT } from '../../shared/vorlagen-luecke';
-import {
-  GEPOSTET_FRAGE_MS,
-  GEPOSTET_NICHT_GEZAEHLT,
-  GEPOSTET_OHNE_KONTO_DANK,
-  JA_GEPOSTET,
-  KOPIERT_GEPOSTET_FRAGE,
-} from './gepostet-texte';
+import { GEPOSTET_FRAGE, GEPOSTET_NICHT_GEZAEHLT, GEPOSTET_OHNE_KONTO_DANK } from './gepostet-texte';
 
 /**
- * „Ja, gepostet“ ohne Konto (#799): nur mit Schalter, dieselbe Frage wie mit Konto, je
- * Karte einmal (danach ist der Knopf weg), nichts im Browser-Speicher.
+ * „Ja, gepostet“ ohne Konto (#799): nur mit Schalter, dieselbe Frage wie mit Konto im
+ * Erfolgskasten, je Karte einmal (danach steht der Knopf als „Gepostet“ gesperrt da),
+ * nichts im Browser-Speicher.
  */
 describe('KartenAktionenComponent - Ja, gepostet ohne Konto', () => {
   const INHALT_ID = '123e4567-e89b-12d3-a456-426614174000';
@@ -36,7 +31,6 @@ describe('KartenAktionenComponent - Ja, gepostet ohne Konto', () => {
   let auth: jasmine.SpyObj<AuthService>;
   let snackBar: jasmine.SpyObj<MatSnackBar>;
   let schalter: Record<string, WritableSignal<boolean>>;
-  let aktion: Subject<void>;
 
   beforeEach(async () => {
     schalter = { gepostet_ohne_konto: signal(false) };
@@ -53,8 +47,6 @@ describe('KartenAktionenComponent - Ja, gepostet ohne Konto', () => {
     auth = jasmine.createSpyObj('AuthService', ['getUserInfo', 'login']);
     auth.getUserInfo.and.returnValue({ isAuthenticated: false } as any);
     snackBar = jasmine.createSpyObj('MatSnackBar', ['open']);
-    aktion = new Subject<void>();
-    snackBar.open.and.returnValue({ onAction: () => aktion.asObservable() } as any);
     await TestBed.configureTestingModule({
       imports: [KartenAktionenComponent, NoopAnimationsModule],
       providers: [
@@ -86,47 +78,58 @@ describe('KartenAktionenComponent - Ja, gepostet ohne Konto', () => {
     fixture.detectChanges();
   }
 
-  function frageGezeigt(): number {
-    return snackBar.open.calls.allArgs().filter((a) => a[1] === JA_GEPOSTET).length;
+  function jaKnopf(): HTMLButtonElement | null {
+    return fixture.nativeElement.querySelector('.ja-gepostet');
+  }
+
+  function jaTippen(): void {
+    jaKnopf()!.click();
+    fixture.detectChanges();
+  }
+
+  function dank(): string {
+    return (fixture.nativeElement.querySelector('.erfolg-gepostet-dank')?.textContent ?? '').trim();
   }
 
   it('Schalter aus: keine Rückfrage ohne Konto, nur die gewohnte Bestätigung', () => {
     kopieren();
 
-    expect(frageGezeigt()).toBe(0);
+    expect(jaKnopf()).toBeNull();
     expect(snackBar.open).toHaveBeenCalledWith(KOPIERT, 'Schließen', jasmine.any(Object));
     expect(usage.gepostetOhneKontoMelden).not.toHaveBeenCalled();
     expect(usage.gepostetAngeboten).not.toHaveBeenCalled();
   });
 
-  it('Schalter an: dieselbe Frage wie mit Konto, Dank ohne Zahl und ohne Druck', () => {
+  it('Schalter an: dieselbe Frage wie mit Konto im Kasten, Dank ohne Zahl und ohne Druck', () => {
     schalter['gepostet_ohne_konto'].set(true);
     kopieren();
 
-    expect(snackBar.open).toHaveBeenCalledOnceWith(KOPIERT_GEPOSTET_FRAGE, JA_GEPOSTET, { duration: GEPOSTET_FRAGE_MS });
+    expect(fixture.nativeElement.querySelector('.kopiert-erfolg').textContent).toContain(GEPOSTET_FRAGE);
+    expect(snackBar.open).not.toHaveBeenCalled();
     expect(usage.gepostetOhneKontoMelden).not.toHaveBeenCalled();
 
-    aktion.next();
+    jaTippen();
 
     expect(usage.gepostetOhneKontoMelden).toHaveBeenCalledOnceWith();
-    expect(snackBar.open).toHaveBeenCalledWith(GEPOSTET_OHNE_KONTO_DANK, 'Schließen', { duration: 5000 });
+    expect(dank()).toBe(GEPOSTET_OHNE_KONTO_DANK);
+    expect(snackBar.open).not.toHaveBeenCalled();
     expect(GEPOSTET_OHNE_KONTO_DANK).not.toMatch(/\d|anmeld|konto/i);
     // Der Weg mit Konto bleibt unberührt
     expect(usage.gepostetMelden).not.toHaveBeenCalled();
   });
 
-  it('Knopf deaktiviert sich: ein Doppeltipp zählt einmal, die Karte fragt danach nicht mehr', () => {
+  it('Knopf sperrt sich: ein Doppeltipp zählt einmal, die Karte fragt danach nicht mehr', () => {
     schalter['gepostet_ohne_konto'].set(true);
     kopieren();
 
-    aktion.next();
-    aktion.next();
+    jaTippen();
+    jaTippen();
     expect(usage.gepostetOhneKontoMelden).toHaveBeenCalledTimes(1);
+    expect(jaKnopf()!.getAttribute('aria-disabled')).toBe('true');
 
-    snackBar.open.calls.reset();
     kopieren();
 
-    expect(frageGezeigt()).toBe(0);
+    expect(jaKnopf()).toBeNull();
     expect(snackBar.open).toHaveBeenCalledWith(KOPIERT, 'Schließen', jasmine.any(Object));
     expect(usage.gepostetOhneKontoMelden).toHaveBeenCalledTimes(1);
   });
@@ -136,26 +139,28 @@ describe('KartenAktionenComponent - Ja, gepostet ohne Konto', () => {
     kopieren();
     kopieren();
 
-    expect(frageGezeigt()).toBe(2);
+    expect(jaKnopf()).not.toBeNull();
     expect(usage.gepostetOhneKontoMelden).not.toHaveBeenCalled();
   });
 
-  it('nicht angeboten: kein Dank; Fehler: Dank mit Hinweis', () => {
+  it('nicht angeboten: kein Dank, die Frage geht; Fehler: Dank mit Hinweis', () => {
     schalter['gepostet_ohne_konto'].set(true);
     usage.gepostetOhneKontoMelden.and.returnValue(of<MeldungOhneKontoErgebnis>('nicht_angeboten'));
     kopieren();
-    snackBar.open.calls.reset();
-    aktion.next();
-    expect(snackBar.open).not.toHaveBeenCalled();
+    jaTippen();
+    expect(dank()).toBe('');
+    expect(jaKnopf()).toBeNull();
 
-    const zweite = TestBed.createComponent(KartenAktionenComponent).componentInstance;
-    zweite.inhaltId = INHALT_ID;
-    zweite.kopierText = 'Noch ein Text.';
+    const zweite = TestBed.createComponent(KartenAktionenComponent);
+    zweite.componentInstance.inhaltId = INHALT_ID;
+    zweite.componentInstance.kopierText = 'Noch ein Text.';
+    zweite.detectChanges();
     usage.gepostetOhneKontoMelden.and.returnValue(of<MeldungOhneKontoErgebnis>('fehler'));
-    aktion = new Subject<void>();
-    zweite.kopieren();
-    aktion.next();
-    expect(snackBar.open).toHaveBeenCalledWith(GEPOSTET_NICHT_GEZAEHLT, 'Schließen', { duration: 5000 });
+    zweite.componentInstance.kopieren();
+    zweite.detectChanges();
+    (zweite.nativeElement.querySelector('.ja-gepostet') as HTMLButtonElement).click();
+    zweite.detectChanges();
+    expect(zweite.nativeElement.querySelector('.erfolg-gepostet-dank').textContent.trim()).toBe(GEPOSTET_NICHT_GEZAEHLT);
   });
 
   it('angemeldet: nie der Weg ohne Konto, auch mit Schalter', () => {
@@ -165,7 +170,7 @@ describe('KartenAktionenComponent - Ja, gepostet ohne Konto', () => {
     usage.gepostetMelden.and.returnValue(of(3));
     kopieren();
 
-    aktion.next();
+    jaTippen();
 
     expect(usage.gepostetOhneKontoMelden).not.toHaveBeenCalled();
     expect(usage.gepostetMelden).toHaveBeenCalledWith('kim', INHALT_ID);
@@ -180,7 +185,7 @@ describe('KartenAktionenComponent - Ja, gepostet ohne Konto', () => {
     schalter['gepostet_ohne_konto'].set(true);
 
     kopieren();
-    aktion.next();
+    jaTippen();
     kopieren();
 
     for (const spion of storage) {

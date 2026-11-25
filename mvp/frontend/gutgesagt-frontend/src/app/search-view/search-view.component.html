@@ -19,14 +19,19 @@
     </div>
 </section>
 
+<!-- Reihenfolge und Vorrang der Karten: docs/ARCHITECTURE.md, „Start page: order and priority
+     of the cards“. Pro Besuch hoechstens eine Karte mit neuer Richtung (Review 25.11.). -->
+
 <!-- Willkommen beim ersten Besuch unter dem Suchfeld statt darueber: Mobil stand das
      Suchfeld sonst erst weit unten (Nutzerfuehrung 13.11.) -->
 <app-rundgang-band ort="start"></app-rundgang-band>
 
-<!-- Fuer Angemeldete, nur wenn es Neues gibt (Nutzerfuehrung 13.11.) -->
+<!-- Fuer Angemeldete, nur wenn es Neues gibt (Nutzerfuehrung 13.11.); nicht beim ersten
+     Besuch, neben „Dein nächster Schritt“ nur mit Neuem zu eigenen Beitraegen (Review 25.11.) -->
 <app-seit-letztem-besuch></app-seit-letztem-besuch>
 
-<!-- Ein Vorschlag aus dem eigenen Stand, nur fuer Angemeldete (#789, Schalter naechster_schritt) -->
+<!-- Ein Vorschlag aus dem eigenen Stand, nur fuer Angemeldete (#789, Schalter naechster_schritt);
+     tritt hinter eigenes Neues im Block darueber zurueck -->
 <app-naechster-schritt></app-naechster-schritt>
 
 <!-- Gemeinschaftsziel der Saison (#782): nur mit Schalter saison_ziel und ab der Schwelle -->

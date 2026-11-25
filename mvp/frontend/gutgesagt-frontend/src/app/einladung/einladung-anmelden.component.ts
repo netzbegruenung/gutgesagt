@@ -9,12 +9,16 @@ import { environment } from '../../environments/environment';
 import { keycloakAnmelden } from '../login/keycloak-anmeldung';
 import { sitzungPruefen } from '../auth/sitzung';
 import { teamMerkerLesen } from './team-merker';
+import { ROUTES } from '../shared/constants/app.constants';
 
 /** Pfad der Seite; das Backend setzt ihn als Ziel des Links in der Mail (ANMELDEN_PFAD in keycloak_konten.py). */
 export const EINLADUNG_ANMELDEN_PFAD = 'einladung/anmelden';
 
-/** Wohin es nach der Anmeldung geht; ohne Einwilligung leitet die App von dort auf /einwilligung (#489). */
-const ZIEL = '/';
+/**
+ * Wohin es nach der Anmeldung geht: die Begrüßung mit dem ersten Schritt. Ohne Einwilligung
+ * leitet die App von dort auf /einwilligung (#489) und danach zurück.
+ */
+const ZIEL = ROUTES.WILLKOMMEN;
 /**
  * Ziel, wenn eine Einladung mit Team mitgetragen wird (team-merker): zurück auf die Einladung,
  * die dort das Team zeigt. Der Code bleibt im Merker; als returnUrl stünde er in den Protokollen.
@@ -27,7 +31,7 @@ type Weiter = 'angemeldet' | 'keycloak' | 'auswahl';
  * Ziel des Links in der Mail „Passwort festlegen“ (Einladung, #429): Nach Passwort und
  * Nutzungsbedingungen endet Keycloak ohne Anmeldung und verweist hierher. Die Seite
  * startet gleich die Anmeldung, statt die Person abgemeldet auf der Startseite stehen zu
- * lassen. Wer schon angemeldet ist, geht auf die Startseite, oder mit einer Einladung mit
+ * lassen. Wer schon angemeldet ist, geht auf die Begrüßung (/willkommen), oder mit einer Einladung mit
  * Team (team-merker) zurück auf /einladung, die das Team zeigt.
  *
  * Die Mail-Adresse geht bewusst nicht als login_hint mit: Sie stuende dann in den
@@ -81,8 +85,6 @@ export class EinladungAnmeldenComponent implements OnInit {
     const ziel = this.ziel();
     if (this.mitKeycloak) {
       keycloakAnmelden(ziel, this.fenster);
-    } else if (ziel === ZIEL) {
-      void this.router.navigate(['/login']);
     } else {
       void this.router.navigate(['/login'], { queryParams: { returnUrl: ziel } });
     }
