@@ -154,6 +154,50 @@ def test_bericht_erstellen_ohne_failed_zeilen_zeigt_die_zusammenfassungszeile():
     assert "Kompiliere" not in sichtbar
 
 
+def test_bericht_erstellen_nennt_den_roten_karma_spec_mit_grund_ohne_stack():
+    # Wie im Woodpecker-Log (Pipeline 1863): der rote Spec weit vor dem Ende der Ausgabe
+    browser = "Chrome Headless 156.0.0.0 (Linux x86_64)"
+    ausgabe = (
+        "\x1b[1A\x1b[2K"
+        + f"{browser}: Executed 1714 of 3264 SUCCESS (0 secs / 24.7 secs)\n"
+        + f"\x1b[31m{browser} Sharepic (#756) malt ein PNG im Format story FAILED\x1b[39m\n"
+        + "\tError: Timeout - Async function did not complete within 5000ms\n"
+        + "\t    at <Jasmine>\n"
+        + "".join(
+            f"{browser}: Executed {i} of 3264 (1 FAILED) (0 secs / 30 secs)\n"
+            for i in range(1715, 3265)
+        )
+        + "TOTAL: 1 FAILED, 3263 SUCCESS\n"
+    )
+
+    text = bericht([schritt("frontend", 1, ausgabe)])
+
+    sichtbar = text.split("<details>", 1)[0]
+    assert f"{browser} Sharepic (#756) malt ein PNG im Format story FAILED" in sichtbar
+    assert "\tError: Timeout - Async function did not complete within 5000ms" in sichtbar
+    assert "<Jasmine>" not in sichtbar
+    assert "Executed" not in sichtbar
+
+
+def test_fehlerzeilen_karma_grund_hoechstens_zwei_zeilen_und_nur_eingerueckt():
+    ausgabe = (
+        "Chrome Headless 156.0.0.0 (Linux x86_64) A b FAILED\n"
+        "\tExpected 1 to be 2.\n"
+        "\t    at UserContext.<anonymous> (src/app/a.spec.ts:3:5)\n"
+        "\tExpected 3 to be 4.\n"
+        "\tExpected 5 to be 6.\n"
+        "Chrome Headless 156.0.0.0 (Linux x86_64) C d FAILED\n"
+        "nicht eingerueckt\n"
+    )
+
+    assert ci_bericht.fehlerzeilen(ausgabe) == [
+        "Chrome Headless 156.0.0.0 (Linux x86_64) A b FAILED",
+        "\tExpected 1 to be 2.",
+        "\tExpected 3 to be 4.",
+        "Chrome Headless 156.0.0.0 (Linux x86_64) C d FAILED",
+    ]
+
+
 def test_bericht_erstellen_zeigt_failed_zeilen_vor_captured_log():
     ausgabe = (
         "---- Captured log call ----\n"
