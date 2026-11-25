@@ -744,8 +744,7 @@ oder Kennung nur gekürzt im Arbeitsspeicher, höchstens etwa 16 Minuten, mit Sc
   nur bis zum Tabschluss Rücksprungseite, Filter im Fangkorb, ein geteilter Link, der Zeitpunkt
   eines automatischen Neuladens nach einer neuen Version (Schleifensperre, zehn Minuten) und,
   höchstens eine Stunde, ein angefangener Kommentar mit Prüfwert des Kontos (E1, 14.11.2026);
-  dauerhaft die Wahl des Profilbilds, zwei Vermerke „schon gesehen“ und, wenn selbst eingeschaltet,
-  die Wahl „Ton bei Erfolgen“ (nur „an“, #787); ein Service Worker, der nichts speichert
+  dauerhaft die Wahl des Profilbilds und zwei Vermerke „schon gesehen“; ein Service Worker, der nichts speichert
   (`DSE:924-993`).
 - **Frist:** Cookie 14 Tage nach letzter Nutzung, sonst bis der Browser die Websitedaten löscht.
 - **Risiko:** gering. Keine Kennung zum Wiedererkennen; die alte Sitzungskennung wird beim nächsten
