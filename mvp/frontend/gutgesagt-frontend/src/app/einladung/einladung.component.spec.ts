@@ -7,6 +7,7 @@ import { EinladungComponent, codeAusEingabe } from './einladung.component';
 import { environment } from '../../environments/environment';
 
 const URL = `${environment.baseUrl}/api/v1/einladungen`;
+const SITZUNG = `${environment.baseUrl}/api/check-session`;
 
 describe('EinladungComponent', () => {
   let fixture: ComponentFixture<EinladungComponent>;
@@ -28,16 +29,21 @@ describe('EinladungComponent', () => {
     fixture.detectChanges();
   }
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    localStorage.clear();
+  });
 
   function el(): HTMLElement {
     return fixture.nativeElement as HTMLElement;
   }
 
+  /** /pruefen und die Sitzung kommen zusammen; ohne Team und abgemeldet wie vor den Teams. */
   function pruefen(einloesbar: boolean) {
     const anfrage = http.expectOne(`${URL}/pruefen`);
     expect(anfrage.request.body).toEqual({ code: 'Code123' });
     anfrage.flush({ einloesbar });
+    http.expectOne(SITZUNG).flush({ isAuthenticated: false });
     fixture.detectChanges();
   }
 
