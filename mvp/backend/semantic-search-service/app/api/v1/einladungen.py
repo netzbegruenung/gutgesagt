@@ -27,6 +27,7 @@ from pydantic import (
 from core.logging import get_logger
 from dependencies import get_einladung_service, require_admin, require_user
 from domain.teams import (
+    EINWILLIGUNG_GELTEND,
     EINWILLIGUNG_KENNUNG,
     EINWILLIGUNG_WORTLAUTE,
     KNOPF_JA,
@@ -76,7 +77,7 @@ CODE_MAX = 64
 # Serverfehler statt eines falschen Namens. Dazu "@": Daraus bildete die BFF keinen
 # Anzeigenamen (DisplayNamePolicy). Laenger als 100 Zeichen heisst niemand.
 NAME_MAX = 100
-# Kennung eines Einwilligungswortlauts (domain/teams.py), etwa "team-2026-11-25"
+# Kennung eines Einwilligungswortlauts (domain/teams.py), etwa "team-2026-11-26"
 KENNUNG_MAX = 64
 NAME_VERBOTEN = re.compile(r'[<>&"\v$%!#?§;*~/\\|^=\[\]{}()@\x00-\x1f\x7f]')
 # Teamname und Saison stehen an Namen und in Pillen: keine Steuerzeichen, kein
@@ -309,7 +310,7 @@ class EinloesenRequest(CodeRequest):
     def _einwilligung_kennung(
         cls, wert: Optional[str], info: ValidationInfo
     ) -> Optional[str]:
-        if info.data.get("team_einwilligung") and wert not in EINWILLIGUNG_WORTLAUTE:
+        if info.data.get("team_einwilligung") and wert not in EINWILLIGUNG_GELTEND:
             raise ValueError("Unbekannter Wortlaut")
         return wert
 
@@ -352,7 +353,7 @@ class EinloesenResponse(BaseModel):
 class BeitretenRequest(CodeRequest):
     # Muss true sein: der Knopf "Ja, speichert, dass ich im Team X bin"
     einwilligung: bool
-    # Kennung des gezeigten Wortlauts (aus /pruefen); unbekannt: 422
+    # Kennung des gezeigten Wortlauts (aus /pruefen); unbekannt oder frueher: 422
     einwilligung_kennung: str = Field(..., max_length=KENNUNG_MAX)
     # Zweite Frage "Team öffentlich am Namen zeigen" (nur bei wirksamem Schalter)
     oeffentlich: bool = False
@@ -364,7 +365,7 @@ class BeitretenRequest(CodeRequest):
     @field_validator("einwilligung_kennung")
     @classmethod
     def _einwilligung_kennung(cls, wert: str) -> str:
-        if wert not in EINWILLIGUNG_WORTLAUTE:
+        if wert not in EINWILLIGUNG_GELTEND:
             raise ValueError("Unbekannter Wortlaut")
         return wert
 
