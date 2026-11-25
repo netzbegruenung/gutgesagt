@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<!-- Linkvorschau (og:image) fuer Messenger, 1200 x 630 (1,91:1, das Format, das WhatsApp, Signal und
+     Telegram gross zeigen). linkvorschau-v1.png ist aus dieser Zeichnung gerendert (Chromium, Schriften aus
+     ../fonts/). Inhalt: Claim, eine Aussage und eine bewaehrte Antwort aus den Startdaten
+     (mvp/data/seed/v1.0/statements_with_commentaries/energie_klima.json, erste Antwort, Kurzfassung),
+     Absender Netzbegruenung. Keine Personen, keine Anzeigenamen. Logo: logo-v2.svg (Hand "Thumbs up" aus
+     Fluent Emoji, Copyright (c) Microsoft Corporation, MIT-Lizenz, siehe FLUENT-EMOJI-LIZENZ.txt).
+     Schriften: GrueneType und PT Sans, dieselben Dateien wie in der App (src/styles.css).
+     Farben wie das Teilen-Bild (sharepic.ts): Grund App-Gelb #f6ff7c, Tannengruen #005437, Text #1f1f1f,
+     alle Paare ueber 4,5:1. Wichtiges in der Mitte, damit ein quadratischer Ausschnitt den Claim behaelt. -->
+<style>
+@font-face{font-family:GT;src:url(../fonts/GrueneTypeNeue-Regular.woff2)}
+@font-face{font-family:PT;src:url(../fonts/PTS55F.ttf)}
+@font-face{font-family:PTB;src:url(../fonts/PTS75F.ttf)}
+.marke{font-family:GT;fill:#005437}
+.t{font-family:PT;fill:#1f1f1f;font-size:31px}
+.tb{font-family:PTB;fill:#1f1f1f;font-size:31px}
+.s{font-family:PTB;fill:#fff;font-size:32px}
+.f{font-family:PTB;fill:#005437;font-size:25px}
+</style>
+<rect width="1200" height="630" fill="#f6ff7c"/>
+<image href="logo-v2.svg" x="452" y="40" width="84" height="84"/>
+<text class="marke" x="549" y="102" font-size="50">Gut gesagt</text>
+<text class="marke" x="600" y="232" font-size="104" text-anchor="middle">Nie wieder sprachlos</text>
+<g transform="translate(160 272)">
+  <rect width="430" height="66" rx="33" fill="#005437"/>
+  <path d="M40 60 L28 86 L70 62 Z" fill="#005437"/>
+  <text class="s" x="215" y="44" text-anchor="middle">„Windräder töten die Vögel!“</text>
+</g>
+<g transform="translate(160 362)">
+  <rect width="880" height="170" rx="30" fill="#fff"/>
+  <text class="tb" x="44" y="58">Vogelschutz ist wichtig.</text>
+  <text class="t" x="44" y="100">Die größte Gefahr sind aber Glasscheiben: geschätzt 100 bis</text>
+  <text class="t" x="44" y="140">115 Millionen tote Vögel pro Jahr in Deutschland.</text>
+</g>
+<text class="f" x="600" y="588" text-anchor="middle">Ein Angebot der Netzbegrünung · gutgesagt.netzbegruenung.de</text>
+</svg>

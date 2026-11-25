@@ -22,7 +22,19 @@ def test_og_grundtags_vorhanden():
     meta = _meta()
     for name in ("og:type", "og:site_name", "og:title", "og:description", "og:image"):
         assert meta.get(name), f"{name} fehlt in index.html"
-    assert meta["twitter:card"] == "summary"
+    assert meta["twitter:card"] == "summary_large_image"
+
+
+def test_og_bild_im_grossformat():
+    # 1200 x 630 (1,91:1): Messenger zeigen das Bild nur in diesem Format gross; die Angaben im
+    # Kopf muessen zur Datei passen, sonst schneidet WhatsApp falsch zu.
+    from PIL import Image
+
+    meta = _meta()
+    bild = FRONTEND / "public" / meta["og:image"].split("netzbegruenung.de/", 1)[1]
+    with Image.open(bild) as im:
+        assert im.size == (int(meta["og:image:width"]), int(meta["og:image:height"])) == (1200, 630)
+    assert meta.get("og:image:alt")
 
 
 def test_og_title_gleicht_seitentitel():
