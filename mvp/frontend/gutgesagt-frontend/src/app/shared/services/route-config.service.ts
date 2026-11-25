@@ -88,6 +88,13 @@ export class RouteConfigService {
           showContributeButton: true
         };
 
+      case ROUTES.GARTEN:
+        return {
+          pageTitle: PAGE_TITLES.GARTEN,
+          showBackButton: true,
+          showContributeButton: true
+        };
+
       // Konter-Probe (#786), ohne Konto spielbar
       case ROUTES.KONTER_PROBE:
         return {

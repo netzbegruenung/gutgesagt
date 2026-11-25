@@ -641,6 +641,11 @@
         haben und wie viele neue Kommentare und Hintergrundinfos anderer es in dieser Zeit auf
         der Plattform gab.
       </p>
+      <p *ngIf="naechsterSchritt()">
+        Unter „Dein nächster Schritt“ lesen wir dafür deine Einwürfe, deine Bewertungen und deine
+        Beiträge samt ihrer Nutzung und schlagen dir aus deinen eigenen Beiträgen einen nächsten
+        Schritt vor; wir speichern dafür nichts zusätzlich.
+      </p>
       <p>
         <strong>Zweck:</strong> dir zeigen, dass deine Beiträge anderen helfen.<br>
         <strong>Rechtsgrundlage:</strong> Artikel 6 Absatz 1 Buchstabe f DSGVO — unser
@@ -1181,6 +1186,15 @@
         Home-Bildschirm legst. Blendest du ihn aus, merkt sich dein Browser das, damit er nicht
         wiederkommt. Der Vermerk enthält keine Angaben über dich, bleibt auch über das Schließen
         hinaus, bis du die Websitedaten dieser Seite löschst, und geht nicht an uns.
+      </p>
+      <p>
+        Klickst du auf der Startseite einen Vorschlag unter „Dein nächster Schritt“ weg, merkt
+        sich dein Browser unter dem festen Schlüssel „gutgesagt-naechster-schritt-weggeklickt“,
+        welche Art von Vorschlag du weggeklickt hast und an welchem Tag. Der Eintrag enthält keine
+        Kennung und keinen Prüfwert und geht nicht an uns. Er gilt <strong>sieben Tage</strong>,
+        danach kommt der Vorschlag wieder; Abgelaufenes löscht die Startseite beim nächsten
+        Aufruf, alles zusammen löschen wir beim Abmelden.
+        Gleich löschen kannst du ihn mit den Websitedaten dieser Seite.
       </p>
       <p *ngIf="meilensteinMerker">
         Damit ein Hinweis zu deinen Meilensteinen nur einmal erscheint, merkt sich dein

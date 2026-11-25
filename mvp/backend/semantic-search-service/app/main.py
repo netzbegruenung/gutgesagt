@@ -29,6 +29,7 @@ from api.v1.metrics import router as metrics_router
 from api.v1.reference import router as reference_router
 
 from api.v1.search import router as search_router
+from api.v1.garten import router as garten_router
 from api.v1.statement import router as statement_router
 
 from api.v1.generic_text import router as generic_text_router
@@ -37,6 +38,7 @@ from api.v1.image import router as image_router
 from api.v1.einwurf import router as einwurf_router
 from api.v1.seeding import router as seeding_router
 from api.v1.usage import router as usage_router
+from api.v1.naechster_schritt import router as naechster_schritt_router
 from api.v1.einwilligungs_moment import router as einwilligungs_moment_router
 from api.v1.voting import router as voting_router
 from api.v1.moderation import router as moderation_router
@@ -368,6 +370,8 @@ app.include_router(
 app.include_router(metrics_router, prefix="/api/v1/metrics", tags=["metrics"])
 app.include_router(reference_router, prefix="/api/v1/reference", tags=["reference"])
 app.include_router(search_router, prefix="/api/v1/search", tags=["search"])
+# Gartenansicht (#783): unter /search, damit sie wie die Suche fuer Besucher offen ist
+app.include_router(garten_router, prefix="/api/v1/search", tags=["search"])
 app.include_router(statement_router, prefix="/api/v1/statement", tags=["statement"])
 app.include_router(
     generic_text_router, prefix="/api/v1/generic_text", tags=["generic_text"]
@@ -377,6 +381,8 @@ app.include_router(image_router, prefix="/api/v1/image", tags=["image"])
 app.include_router(einwurf_router, prefix="/api/v1/rawinput", tags=["rawinput"])
 app.include_router(seeding_router, prefix="/api/v1", tags=["seeding"])
 app.include_router(usage_router, prefix="/api/v1/usage", tags=["usage"])
+# Karte "Dein naechster Schritt" (#789), nur fuer Angemeldete
+app.include_router(naechster_schritt_router, prefix="/api/v1/usage", tags=["usage"])
 app.include_router(einwilligungs_moment_router, prefix="/api/v1/usage", tags=["usage"])
 app.include_router(voting_router, prefix="/api/v1/voting", tags=["voting"])
 app.include_router(moderation_router, prefix="/api/v1/moderation", tags=["moderation"])

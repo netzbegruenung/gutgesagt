@@ -121,6 +121,12 @@ class AussageThemenRepository:
                 ).scalars()
             )
 
+    def alle(self) -> Dict[uuid.UUID, List[str]]:
+        """Alle Zuordnungen gleich welcher Art, je Aussage (Gartenansicht, #783)."""
+        return self._gruppiert(
+            select(AussageThemaZeile.statement_id, AussageThemaZeile.thema)
+        )
+
     def zuordnungen(self, zuordnungsart: Zuordnungsart) -> Dict[uuid.UUID, List[str]]:
         """Alle Zuordnungen einer Zuordnungsart, je Aussage."""
         abfrage = select(AussageThemaZeile.statement_id, AussageThemaZeile.thema).where(

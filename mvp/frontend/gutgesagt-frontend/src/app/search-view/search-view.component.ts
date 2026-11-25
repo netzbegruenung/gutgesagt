@@ -14,6 +14,8 @@ import { AuthService } from '../auth/auth.service';
 import { map } from 'rxjs/operators';
 import { RundgangBandComponent } from '../rundgang/rundgang-band.component';
 import { SeitLetztemBesuchComponent } from '../seit-letztem-besuch/seit-letztem-besuch.component';
+import { NaechsterSchrittComponent } from '../naechster-schritt/naechster-schritt.component';
+import { GartenHinweisComponent } from '../garten/garten-hinweis.component';
 import { SaisonZielComponent } from '../saison-ziel/saison-ziel.component';
 import { KonterProbeEinstiegComponent } from '../konter-probe/konter-probe-einstieg.component';
 
@@ -38,6 +40,8 @@ export const AUTOFOKUS_MEDIEN = '(min-width: 960px) and (hover: hover) and (poin
     AboutTeaserComponent,
     RundgangBandComponent,
     SeitLetztemBesuchComponent,
+    NaechsterSchrittComponent,
+    GartenHinweisComponent,
     SaisonZielComponent,
     KonterProbeEinstiegComponent,
   ],

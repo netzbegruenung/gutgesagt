@@ -146,6 +146,13 @@ export const routes: Routes = [
         canActivate: [AuthGuard],
         data: { parent: '/search' }
     },
+    {
+        // Gartenansicht (#783): fuer alle, Besucher sehen nur Zahlen (Schalter gartenansicht)
+        path: 'garten',
+        loadComponent: () => import('./garten/gartenansicht.component').then(m => m.GartenansichtComponent),
+        canActivate: [PublicGuard],
+        data: { parent: '/search' }
+    },
     // Diese Routen lesen ?einwurf= (Formular, Ergebnisseite, beim Bild-Formular nur der
     // Pfeil); alteEinwurfAdresseUmleiten schreibt aeltere Adressen vorher um
     // (destillieren/einwurf-adresse.ts).

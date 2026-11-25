@@ -483,6 +483,10 @@ class Settings(BaseSettings):
     themen_vorschlag_abstand_hoechstens: float = Field(default=0.05, ge=0.0, le=2.0)
     themen_vorschlag_nli: bool = False
     themen_vorschlag_folgerung_ab: float = Field(default=0.5, ge=0.0, le=1.0)
+    # Karte "Dein naechster Schritt" (#789, services/naechster_schritt.py): unter so
+    # vielen eigenen Stimmen schlaegt sie Bewerten vor, wenn es so viele frische
+    # Antworten anderer gibt; der Satz nennt die Zahl.
+    naechster_schritt_stimmen: int = Field(default=3, ge=1, le=20)
 
     # Keyword overlap boosting configuration
     enable_keyword_overlap_boost: bool = (
