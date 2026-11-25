@@ -7,7 +7,7 @@ Keycloak-Admin-Schnittstelle steckt dahinter (infrastructure/keycloak_konten.py)
 import enum
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, Iterable, List, Mapping, Optional, Protocol
+from typing import Callable, Dict, Iterable, List, Mapping, Optional, Protocol
 
 
 # So lange gilt der Link in der Mail; danach hilft "Passwort vergessen". Die Loeschfrist
@@ -27,6 +27,7 @@ class IKontenImRealm(Protocol):
         email: str,
         vorname: Optional[str] = None,
         nachname: Optional[str] = None,
+        bei_angelegt: Optional[Callable[[str], None]] = None,
     ) -> KontoErgebnis: ...
 
 

@@ -19,6 +19,11 @@ Einladung keine Mail-Adresse, nur der Zaehler. Sonst liesse sich aus einer Einla
 etwa fuer eine bestimmte Gruppe die Zugehoerigkeit einer Person ableiten (Art. 9
 DSGVO). Keycloak bekommt deshalb nie den Code, die Datenbank weder Mail-Adresse noch
 Namen, und keine Logzeile nennt eines davon.
+
+Teams (services/team_service.py): Eine Einladung kann zu einem Team gehoeren. Die
+Mitgliedschaft entsteht nur mit ausdruecklicher Einwilligung und traegt nicht, ueber
+welche Einladung sie entstand. Ohne wirksamen Schalter ``teams`` werden Teamfelder
+ignoriert.
 """
 
 import enum
@@ -26,11 +31,19 @@ import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import date
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from core.logging import get_logger
 from domain.interfaces.konten_im_realm import IKontenImRealm, KontoErgebnis
 from repositories.einladung_repository import EinladungRepository
+from services.team_service import (
+    Mitgliedschaft,
+    NichtEinloesbar,
+    Team,
+    TeamInfo,
+    TeamService,
+    TeamsAus,
+)
 from utils.utc_tag import heute_utc
 
 logger = get_logger(__name__)
@@ -55,6 +68,14 @@ class KontoAnlegenFehlgeschlagen(Exception):
     """Keycloak hat das Konto nicht angelegt oder die Mail nicht verschickt."""
 
 
+class EinladungOhneTeam(Exception):
+    """Die Einladung gehoert zu keinem Team (oder der Schalter teams wirkt nicht)."""
+
+
+# Fuer aendern(): Team nicht anfassen.
+UNVERAENDERT = object()
+
+
 class EinladungZustand(str, enum.Enum):
     AKTIV = "aktiv"
     ABGESCHALTET = "abgeschaltet"
@@ -72,6 +93,9 @@ class Einladung:
     gueltig_bis: date
     abgeschaltet: bool
     angelegt_am: date
+    team_name: Optional[str] = None
+    team_motiv: Optional[str] = None
+    team_saison: Optional[str] = None
 
     @classmethod
     def aus_zeile(cls, z) -> "Einladung":
@@ -84,7 +108,17 @@ class Einladung:
             gueltig_bis=z.gueltig_bis,
             abgeschaltet=z.abgeschaltet,
             angelegt_am=z.angelegt_am,
+            team_name=getattr(z, "team_name", None),
+            team_motiv=getattr(z, "team_motiv", None),
+            team_saison=getattr(z, "team_saison", None),
         )
+
+    @property
+    def team(self) -> Optional[Team]:
+        """Das Team, wie es an der Einladung steht (ohne Blick auf den Schalter)."""
+        if not self.team_name or not self.team_saison:
+            return None
+        return Team(self.team_name, self.team_motiv, self.team_saison)
 
     def zustand(self, heute: Optional[date] = None) -> EinladungZustand:
         """Nur eine aktive Einladung laesst sich einloesen."""
@@ -99,14 +133,30 @@ class Einladung:
 
 class EinladungService:
     def __init__(
-        self, repository: EinladungRepository, konten: Optional[IKontenImRealm]
+        self,
+        repository: EinladungRepository,
+        konten: Optional[IKontenImRealm],
+        teams: Optional[TeamService] = None,
     ):
         self._repository = repository
         self._konten = konten
+        self._teams = teams
 
     @property
     def einloesen_eingerichtet(self) -> bool:
         return self._konten is not None
+
+    @property
+    def teams_wirksam(self) -> bool:
+        return self._teams is not None and self._teams.wirksam()
+
+    @property
+    def teams(self) -> Optional[TeamService]:
+        return self._teams
+
+    def team(self, einladung: Einladung) -> Optional[Team]:
+        """Das Team der Einladung, nur bei wirksamem Schalter teams."""
+        return einladung.team if self.teams_wirksam else None
 
     def anlegen(
         self,
@@ -114,13 +164,17 @@ class EinladungService:
         erlaubte_einloesungen: int,
         gueltig_bis: date,
         heute: Optional[date] = None,
+        team: Optional[Team] = None,
     ) -> Einladung:
+        """Ohne wirksamen Schalter teams wird ``team`` ignoriert."""
+        team = team if self.teams_wirksam else None
         zeile = self._repository.anlegen(
             code=secrets.token_urlsafe(CODE_BYTES),
             notiz=notiz,
             erlaubte_einloesungen=erlaubte_einloesungen,
             gueltig_bis=gueltig_bis,
             angelegt_am=heute or heute_utc(),
+            **_team_spalten(team),
         )
         return Einladung.aus_zeile(zeile)
 
@@ -131,15 +185,52 @@ class EinladungService:
         self, einladung_id: uuid.UUID, abgeschaltet: bool
     ) -> Optional[Einladung]:
         """Ab- oder wieder einschalten; der Zaehler bleibt."""
-        zeile = self._repository.schalten(einladung_id, abgeschaltet)
+        return self.aendern(einladung_id, abgeschaltet=abgeschaltet)
+
+    def aendern(
+        self,
+        einladung_id: uuid.UUID,
+        abgeschaltet: Optional[bool] = None,
+        team=UNVERAENDERT,
+    ) -> Optional[Einladung]:
+        """
+        Ab- oder einschalten und/oder das Team setzen (``None`` nimmt es weg). Der
+        Zaehler bleibt; vorhandene Mitgliedschaften behalten ihre Kopie des Teams.
+        Ohne wirksamen Schalter teams bleibt das Team unveraendert.
+        """
+        werte: dict = {}
+        if abgeschaltet is not None:
+            werte["abgeschaltet"] = abgeschaltet
+        if team is not UNVERAENDERT and self.teams_wirksam:
+            werte.update(_team_spalten(team))
+        zeile = self._repository.aendern(einladung_id, **werte)
+        return Einladung.aus_zeile(zeile) if zeile is not None else None
+
+    def nach_code(self, code: str) -> Optional[Einladung]:
+        zeile = self._repository.nach_code(code)
         return Einladung.aus_zeile(zeile) if zeile is not None else None
 
     def ist_einloesbar(self, code: str, heute: Optional[date] = None) -> bool:
-        zeile = self._repository.nach_code(code)
+        einladung = self.nach_code(code)
         return (
-            zeile is not None
-            and Einladung.aus_zeile(zeile).zustand(heute) is EinladungZustand.AKTIV
+            einladung is not None and einladung.zustand(heute) is EinladungZustand.AKTIV
         )
+
+    def team_info(
+        self, code: str, konto: Optional[str] = None, heute: Optional[date] = None
+    ) -> Optional[TeamInfo]:
+        """
+        Fuer /pruefen: das Team einer einloesbaren Einladung mit Mitgliederzahl und
+        naechster Nummer; None ohne Team, ohne Schalter oder wenn nicht einloesbar.
+        """
+        einladung = self.nach_code(code)
+        if (
+            einladung is None
+            or einladung.zustand(heute) is not EinladungZustand.AKTIV
+            or self.team(einladung) is None
+        ):
+            return None
+        return self._teams.info(einladung.team, konto)
 
     def einloesen(
         self,
@@ -148,18 +239,37 @@ class EinladungService:
         heute: Optional[date] = None,
         vorname: Optional[str] = None,
         nachname: Optional[str] = None,
+        team_einwilligung: bool = False,
+        team_oeffentlich: bool = False,
     ) -> None:
         """
         Legt ueber die Einladung ein Konto an. Gibt es zur Adresse schon eines, endet
         der Aufruf genauso und zaehlt genauso: Ob eine Adresse ein Konto hat, erfaehrt
         hier niemand.
+
+        Mit ``team_einwilligung`` (Knopf "Ja, speichert ...") und einem Team an der
+        Einladung entsteht die Mitgliedschaft, sobald Keycloak das Konto neu angelegt
+        hat; ``team_oeffentlich`` gibt dazu die Einwilligung "Team öffentlich am Namen
+        zeigen", wenn deren Schalter wirkt. Ohne Einwilligung: keine Mitgliedschaft.
         """
         if self._konten is None:
             raise EinloesenNichtEingerichtet()
+        team = None
+        if team_einwilligung:
+            einladung = self.nach_code(code)
+            team = self.team(einladung) if einladung is not None else None
         if not self._repository.einloesung_zaehlen(code, heute or heute_utc()):
             raise EinladungUngueltig()
+        weitere = {}
+        if team is not None:
+            teams = self._teams
+
+            def bei_angelegt(konto_id: str) -> None:
+                teams.nach_kontoanlage(konto_id, team, oeffentlich=team_oeffentlich)
+
+            weitere["bei_angelegt"] = bei_angelegt
         try:
-            ergebnis = self._konten.konto_anlegen(email, vorname, nachname)
+            ergebnis = self._konten.konto_anlegen(email, vorname, nachname, **weitere)
         except Exception as e:
             self._repository.einloesung_zuruecknehmen(code)
             # Ohne Adresse und Code, nur die Art des Fehlers.
@@ -169,3 +279,35 @@ class EinladungService:
             logger.info("Invitation redeemed for an existing account")
         else:
             logger.info("Account created via invitation")
+
+    def beitreten(
+        self, code: str, konto: str, heute: Optional[date] = None
+    ) -> Tuple[Team, Mitgliedschaft, bool]:
+        """
+        Angemeldet einem Team beitreten (nach dem Knopf "Ja, speichert ..."). Neu:
+        zaehlt gegen die erlaubten Einloesungen. Schon dabei: nichts wird gezaehlt,
+        ``neu`` ist False, die Nummer die vorhandene.
+        """
+        if not self.teams_wirksam:
+            raise TeamsAus()
+        einladung = self.nach_code(code)
+        if einladung is None:
+            raise EinladungUngueltig()
+        team = einladung.team
+        if team is None:
+            raise EinladungOhneTeam()
+        try:
+            mitgliedschaft, neu = self._teams.beitreten(
+                konto, team, code=code, heute=heute
+            )
+        except NichtEinloesbar:
+            raise EinladungUngueltig()
+        return team, mitgliedschaft, neu
+
+
+def _team_spalten(team: Optional[Team]) -> dict:
+    return {
+        "team_name": team.name if team else None,
+        "team_motiv": team.motiv if team else None,
+        "team_saison": team.saison if team else None,
+    }

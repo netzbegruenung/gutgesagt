@@ -77,6 +77,12 @@ SPALTEN = {
     # Kennung des Admins an Schaltern und ihrem Verlauf (#708).
     "schalter": ("geaendert_von",),
     "schalter_verlauf": ("geaendert_von",),
+    # Kennung des Admins an Admin-Einstellungen (aktuelle Saison der Teams).
+    "einstellungen": ("geaendert_von",),
+    # Teams: Mitgliedschaften und die Einwilligung "Team oeffentlich am Namen zeigen"
+    # gehen mit der Person mit.
+    "team_mitgliedschaften": ("konto_kennung",),
+    "team_oeffentlich": ("konto_kennung",),
     "sperren": ("autor", "gesperrt_von", "geprueft_von"),
 }
 

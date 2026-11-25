@@ -21,6 +21,7 @@ from sqlalchemy import (
     UUID as SQLUUID,
     Text,
     CheckConstraint,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.ext.declarative import declarative_base
@@ -410,6 +411,82 @@ class EinladungZeile(Base):
     gueltig_bis = Column(Date, nullable=False)
     abgeschaltet = Column(Boolean, nullable=False, server_default=text("false"))
     angelegt_am = Column(Date, nullable=False)
+    # Team an der Einladung (GLOSSARY.md "Team"): ohne Namen ein reiner Kontolink.
+    # Die Saison ist Pflicht, sobald ein Name steht (services/team_service.py).
+    # Spalten aus postgres-app/migrations/2026-11-25-teams.sql.
+    team_name = Column(String(40), nullable=True)
+    team_motiv = Column(String(32), nullable=True)
+    team_saison = Column(String(20), nullable=True)
+
+
+class TeamMitgliedschaftZeile(Base):
+    """
+    Eine Mitgliedschaft in einem Team, nur mit ausdruecklicher Einwilligung der Person
+    (Kennung des Wortlauts und Zeitpunkt, domain/teams.py).
+
+    Bewusst ohne Bezug zur Einladung: Gespeichert sind Teamname, Motiv und Saison als
+    Kopie, nicht welcher Link genutzt wurde. Die Nummer ist laufend je Team und Saison
+    (team_nummern) und wird nach "Team verlassen" nicht neu vergeben. Geloescht wird
+    die Zeile bei "Team verlassen" und mit dem Konto
+    (mvp/scripts/manual/person_loeschen.sql).
+    """
+
+    __tablename__ = "team_mitgliedschaften"
+
+    id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    konto_kennung = Column(String(255), nullable=False)
+    team_name = Column(String(40), nullable=False)
+    team_motiv = Column(String(32), nullable=True)
+    saison = Column(String(20), nullable=False)
+    nummer = Column(Integer, nullable=False)
+    eingetreten_am = Column(Date, nullable=False)
+    einwilligung_kennung = Column(String(64), nullable=False)
+    einwilligung_zeitpunkt = Column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "konto_kennung",
+            "team_name",
+            "saison",
+            name="uq_team_mitgliedschaften_konto_team_saison",
+        ),
+        UniqueConstraint(
+            "team_name",
+            "saison",
+            "nummer",
+            name="uq_team_mitgliedschaften_team_saison_nummer",
+        ),
+    )
+
+
+class TeamNummerZeile(Base):
+    """
+    Die zuletzt vergebene Nummer je Team und Saison. Ein eigener Zaehler, weil die
+    hoechste Nummer unter den Mitgliedschaften nach "Team verlassen" sinken koennte und
+    eine Nummer nie zweimal vergeben wird. Nichts zur Person.
+    """
+
+    __tablename__ = "team_nummern"
+
+    team_name = Column(String(40), primary_key=True)
+    saison = Column(String(20), primary_key=True)
+    letzte_nummer = Column(Integer, nullable=False)
+
+
+class TeamOeffentlichZeile(Base):
+    """
+    Die eigene Einwilligung "Team öffentlich am Namen zeigen", getrennt von der
+    Einwilligung zur Mitgliedschaft: eine Zeile je Konto mit der juengsten Antwort,
+    der Kennung des Wortlauts und dem Zeitpunkt (domain/teams.py). Wirkt nur, solange
+    der Schalter teams_oeffentlich an ist. Geloescht mit dem Konto.
+    """
+
+    __tablename__ = "team_oeffentlich"
+
+    konto_kennung = Column(String(255), primary_key=True)
+    zeigen = Column(Boolean, nullable=False)
+    einwilligung_kennung = Column(String(64), nullable=False)
+    beantwortet_am = Column(DateTime(timezone=True), nullable=False)
 
 
 class VarianteZeile(Base):
@@ -979,6 +1056,21 @@ class SchalterVerlaufZeile(Base):
     geaendert_von = Column(String(255), nullable=True)
 
     __table_args__ = (Index("idx_schalter_verlauf_geaendert_am", "geaendert_am"),)
+
+
+class EinstellungZeile(Base):
+    """
+    Eine Admin-Einstellung mit Textwert (Seite "Schalter"), etwa die aktuelle Saison
+    der Teams (services/einstellungen_service.py). Fehlt die Zeile, gilt der Standard.
+    """
+
+    __tablename__ = "einstellungen"
+
+    name = Column(String(64), primary_key=True)
+    wert = Column(String(255), nullable=False)
+    geaendert_am = Column(DateTime(timezone=True), nullable=False)
+    # Kennung des Admins; leer, wenn sein Konto geloescht ist (person_loeschen.sql)
+    geaendert_von = Column(String(255), nullable=True)
 
 
 class HerkunftPruefungZeile(Base):

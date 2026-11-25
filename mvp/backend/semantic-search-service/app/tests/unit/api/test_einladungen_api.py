@@ -16,6 +16,7 @@ from api.v1.einladungen import router as einladungen_router
 from dependencies import get_einladung_service
 from services.einladung_service import (
     Einladung,
+    UNVERAENDERT,
     EinladungUngueltig,
     KontoAnlegenFehlgeschlagen,
     EinloesenNichtEingerichtet,
@@ -46,7 +47,8 @@ def service():
     service = Mock()
     service.alle.return_value = [EINLADUNG]
     service.anlegen.return_value = EINLADUNG
-    service.schalten.return_value = EINLADUNG
+    service.aendern.return_value = EINLADUNG
+    service.teams_wirksam = False
     service.ist_einloesbar.return_value = True
     service.einloesen_eingerichtet = True
     return service
@@ -98,7 +100,7 @@ class TestVerwalten:
         )
         assert antwort.status_code in (401, 403)
         service.anlegen.assert_not_called()
-        service.schalten.assert_not_called()
+        service.aendern.assert_not_called()
 
     def test_anlegen(self, client, service):
         response = client.post(
@@ -112,7 +114,9 @@ class TestVerwalten:
         )
 
         assert response.status_code == 201
-        service.anlegen.assert_called_once_with("Persönlicher Link", 1, IN_ZWEI_WOCHEN)
+        service.anlegen.assert_called_once_with(
+            "Persönlicher Link", 1, IN_ZWEI_WOCHEN, team=None
+        )
 
     @pytest.mark.parametrize(
         "werte",
@@ -169,10 +173,12 @@ class TestVerwalten:
         )
 
         assert response.status_code == 200
-        service.schalten.assert_called_once_with(EINLADUNG.id, True)
+        service.aendern.assert_called_once_with(
+            EINLADUNG.id, abgeschaltet=True, team=UNVERAENDERT
+        )
 
     def test_abschalten_unbekannt(self, client, service):
-        service.schalten.return_value = None
+        service.aendern.return_value = None
 
         response = client.patch(
             f"{BASIS}/{uuid.uuid4()}", headers=ADMIN, json={"abgeschaltet": True}
@@ -186,14 +192,14 @@ class TestEinloesen:
         response = client.post(f"{BASIS}/pruefen", json={"code": EINLADUNG.code})
 
         assert response.status_code == 200
-        assert response.json() == {"einloesbar": True}
+        assert response.json() == {"einloesbar": True, "team": None}
 
     def test_pruefen_verraet_keine_details(self, client, service):
         service.ist_einloesbar.return_value = False
 
         response = client.post(f"{BASIS}/pruefen", json={"code": "unbekannt"})
 
-        assert response.json() == {"einloesbar": False}
+        assert response.json() == {"einloesbar": False, "team": None}
 
     def test_einloesen_legt_konto_an(self, client, service):
         response = client.post(
@@ -204,7 +210,12 @@ class TestEinloesen:
         assert response.status_code == 202
         # Ohne Namen geht es weiter (eine alte, zwischengespeicherte Seite).
         service.einloesen.assert_called_once_with(
-            EINLADUNG.code, "neu@example.org", vorname=None, nachname=None
+            EINLADUNG.code,
+            "neu@example.org",
+            vorname=None,
+            nachname=None,
+            team_einwilligung=False,
+            team_oeffentlich=False,
         )
 
     def test_einloesen_mit_namen(self, client, service):
@@ -224,6 +235,8 @@ class TestEinloesen:
             "neu@example.org",
             vorname="Anna Maria",
             nachname="O'Beispiel-Muster",
+            team_einwilligung=False,
+            team_oeffentlich=False,
         )
 
     @pytest.mark.parametrize(

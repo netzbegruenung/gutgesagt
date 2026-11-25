@@ -116,6 +116,30 @@ SCHALTER: Dict[str, Schalterart] = {
             ),
             oeffentlich=True,
         ),
+        Schalterart(
+            name="teams",
+            feld="teams_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_TEAMS_AKTIV",
+            erklaerung=(
+                "Teams über Einladungen: Teamfelder an der Einladung, Beitreten mit "
+                "eigener Einwilligung und „Meine Teams“. Aus: Einladungen wie bisher, "
+                "Teamfelder werden ignoriert."
+            ),
+            dsfa_hinweis=True,
+            oeffentlich=True,
+        ),
+        Schalterart(
+            name="teams_oeffentlich",
+            feld="teams_oeffentlich_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV",
+            erklaerung=(
+                "Teams der aktuellen Saison am Anzeigenamen, die andere Angemeldete "
+                "sehen, nur mit eigener Einwilligung; wirkt nur zusammen mit „teams“. "
+                "Aus, bis die Datenschutzbeauftragte geraten hat."
+            ),
+            dsfa_hinweis=True,
+            oeffentlich=True,
+        ),
     )
 }
 
@@ -223,6 +247,9 @@ def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool
     if name == "abzeichen_sichtbar":
         # Ohne Punkte keine sichtbaren Abzeichen (wie Settings.abzeichen_sichtbar)
         return an and _wirksam("punkte", einstellungen, werte)
+    if name == "teams_oeffentlich":
+        # Ohne Teams keine Teams am Namen
+        return an and _wirksam("teams", einstellungen, werte)
     return an
 
 

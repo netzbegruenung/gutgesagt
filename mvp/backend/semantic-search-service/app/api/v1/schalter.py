@@ -13,6 +13,12 @@ from core.config import Settings
 from core.fehler import INTERNER_FEHLER
 from core.logging import get_logger, log_pseudonym
 from dependencies import get_settings, require_admin
+from services.einstellungen_service import (
+    EinstellungenService,
+    UnbekannteEinstellung,
+    UngueltigerWert,
+    get_einstellungen_service,
+)
 from services.schalter_service import (
     ObergrenzeAus,
     SchalterService,
@@ -40,8 +46,22 @@ class SchalterResponse(BaseModel):
     dsfa_hinweis: Optional[str]
 
 
+class EinstellungResponse(BaseModel):
+    name: str
+    erklaerung: str
+    wert: str
+    standard: str
+    max_laenge: int
+
+
 class SchalterListeResponse(BaseModel):
     schalter: List[SchalterResponse]
+    # Admin-Einstellungen mit Textwert, etwa aktuelle_saison (Teams)
+    einstellungen: List[EinstellungResponse] = []
+
+
+class EinstellungSetzenRequest(BaseModel):
+    wert: str
 
 
 class SchalterSetzenRequest(BaseModel):
@@ -52,13 +72,25 @@ def _service() -> SchalterService:
     return get_schalter_service()
 
 
-def _liste(dienst: SchalterService, settings: Settings) -> SchalterListeResponse:
+def _einstellungen() -> EinstellungenService:
+    return get_einstellungen_service()
+
+
+def _liste(
+    dienst: SchalterService,
+    settings: Settings,
+    einstellungen: Optional[EinstellungenService] = None,
+) -> SchalterListeResponse:
     # Frisch, am Cache vorbei: Mit mehreren Replikas zeigte die Seite sonst bis zu
     # CACHE_SEKUNDEN einen alten Stand, und der Umschalter spraenge zurueck.
+    einstellungen = einstellungen or get_einstellungen_service()
     return SchalterListeResponse(
         schalter=[
             SchalterResponse(**vars(s)) for s in dienst.stand(settings, frisch=True)
-        ]
+        ],
+        einstellungen=[
+            EinstellungResponse(**vars(e)) for e in einstellungen.stand(frisch=True)
+        ],
     )
 
 
@@ -67,8 +99,34 @@ def schalter_liste(
     admin_user: str = Depends(require_admin),
     settings: Settings = Depends(get_settings),
     dienst: SchalterService = Depends(_service),
+    einstellungen: EinstellungenService = Depends(_einstellungen),
 ) -> SchalterListeResponse:
-    return _liste(dienst, settings)
+    return _liste(dienst, settings, einstellungen)
+
+
+@router.put("/einstellungen/{name}", response_model=SchalterListeResponse)
+def einstellung_setzen(
+    name: str,
+    anfrage: EinstellungSetzenRequest,
+    admin_user: str = Depends(require_admin),
+    settings: Settings = Depends(get_settings),
+    dienst: SchalterService = Depends(_service),
+    einstellungen: EinstellungenService = Depends(_einstellungen),
+) -> SchalterListeResponse:
+    """Textwert einer Einstellung setzen (etwa aktuelle_saison); 404 unbekannt, 422 ungueltig."""
+    try:
+        einstellungen.setzen(name, anfrage.wert, admin_user)
+    except UnbekannteEinstellung:
+        raise HTTPException(status_code=404, detail="Einstellung nicht gefunden")
+    except UngueltigerWert:
+        raise HTTPException(status_code=422, detail="Ungueltiger Wert")
+    except Exception as e:
+        logger.error(
+            f"Einstellung {name} nicht gesetzt: {type(e).__name__}", exc_info=True
+        )
+        raise HTTPException(status_code=500, detail=INTERNER_FEHLER)
+    logger.info(f"Einstellung {name} gesetzt von {log_pseudonym(admin_user)}")
+    return _liste(dienst, settings, einstellungen)
 
 
 @router.put("/{name}", response_model=SchalterListeResponse)

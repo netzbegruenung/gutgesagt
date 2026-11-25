@@ -383,7 +383,11 @@ def get_einladung_service() -> EinladungService:
     Ohne Zugang zur Keycloak-Admin-Schnittstelle lassen sich Einladungen verwalten,
     aber nicht einloesen (503).
     """
-    return EinladungService(get_einladung_repository(), _keycloak_konten())
+    from services.team_service import get_team_service
+
+    return EinladungService(
+        get_einladung_repository(), _keycloak_konten(), get_team_service()
+    )
 
 
 _gegenlesen_service: Optional[GegenlesenService] = None

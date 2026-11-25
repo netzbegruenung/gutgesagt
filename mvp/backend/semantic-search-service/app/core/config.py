@@ -311,6 +311,15 @@ class Settings(BaseSettings):
     # nichts uebertragen oder gespeichert wird; Standard aus ist der Admin-Wert
     # (services/schalter_service.py, ohne Eintrag aus).
     sharepic_aktiv: bool = True
+    # Teams ueber Einladungen (services/team_service.py): Teamfelder an der Einladung,
+    # Beitreten mit eigener Einwilligung, "Meine Teams". Standard aus: Die
+    # Mitgliedschaft ist im Zweifel ein Art.-9-Datum; erst mit DSFA-Nachtrag,
+    # Loeschkonzept und Abschnitt "Teams" in der Datenschutzerklaerung einschalten.
+    teams_aktiv: bool = False
+    # Teams oeffentlich am Namen (eigene Einwilligung, domain/teams.py). Eigene
+    # Obergrenze, bewusst nicht an abzeichen_sichtbar_aktiv gekoppelt: Auf Prod bleibt
+    # sie aus, bis die Datenschutzbeauftragte geraten hat. Wirkt nur mit teams_aktiv.
+    teams_oeffentlich_aktiv: bool = False
     # Gewichte und Deckel der drei Stufen (domain/punkte.py): Tun klein und je Tag
     # gedeckelt, Quests mehr, Wirkung bei anderen am meisten.
     punkte_nutzung: int = Field(default=10, ge=0)

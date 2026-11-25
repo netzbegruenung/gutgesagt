@@ -112,7 +112,13 @@ class KeycloakKonten:
         email: str,
         vorname: Optional[str] = None,
         nachname: Optional[str] = None,
+        bei_angelegt: Optional[Callable[[str], None]] = None,
     ) -> KontoErgebnis:
+        """
+        ``bei_angelegt`` bekommt die Kennung des neuen Kontos, nachdem die Mail
+        hinausging (Teams: services/team_service.py). Fuer ein vorhandenes Konto wird
+        es nicht aufgerufen.
+        """
         admin = self._admin
         konto = _konto(
             email, email_bestaetigt=False, pflichtaktionen=EINLADUNG_PFLICHTAKTIONEN
@@ -149,6 +155,8 @@ class KeycloakKonten:
                         f"Removing account after failed mail failed: {type(e).__name__}"
                     )
                 raise
+        if bei_angelegt is not None:
+            bei_angelegt(konto_id)
         return KontoErgebnis.ANGELEGT
 
     # --- Kennungen umstellen (#487) ---------------------------------------

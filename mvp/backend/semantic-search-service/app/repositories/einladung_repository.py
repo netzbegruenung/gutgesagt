@@ -26,6 +26,9 @@ class EinladungRepository:
         erlaubte_einloesungen: int,
         gueltig_bis: date,
         angelegt_am: date,
+        team_name: Optional[str] = None,
+        team_motiv: Optional[str] = None,
+        team_saison: Optional[str] = None,
     ) -> EinladungZeile:
         with self.db.get_session() as session:
             zeile = EinladungZeile(
@@ -36,6 +39,9 @@ class EinladungRepository:
                 gueltig_bis=gueltig_bis,
                 abgeschaltet=False,
                 angelegt_am=angelegt_am,
+                team_name=team_name,
+                team_motiv=team_motiv,
+                team_saison=team_saison,
             )
             session.add(zeile)
             session.flush()
@@ -65,11 +71,21 @@ class EinladungRepository:
     def schalten(
         self, einladung_id: uuid.UUID, abgeschaltet: bool
     ) -> Optional[EinladungZeile]:
+        return self.aendern(einladung_id, abgeschaltet=abgeschaltet)
+
+    # Was aendern() setzen darf; Code, Notiz und Zaehler bleiben.
+    AENDERBAR = ("abgeschaltet", "team_name", "team_motiv", "team_saison")
+
+    def aendern(self, einladung_id: uuid.UUID, **werte) -> Optional[EinladungZeile]:
+        unbekannt = set(werte) - set(self.AENDERBAR)
+        if unbekannt:
+            raise ValueError(f"Not changeable: {sorted(unbekannt)}")
         with self.db.get_session() as session:
             zeile = session.get(EinladungZeile, einladung_id)
             if zeile is None:
                 return None
-            zeile.abgeschaltet = abgeschaltet
+            for spalte, wert in werte.items():
+                setattr(zeile, spalte, wert)
             session.flush()
             session.refresh(zeile)
             session.expunge(zeile)
