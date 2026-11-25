@@ -1,4 +1,4 @@
-import { TEAM_MOTIVE as MOTIV_LISTE, motivBild } from '../teams/teams';
+import { TEAM_MOTIVE as MOTIV_LISTE, TeamArt, motivBild } from '../teams/teams';
 
 /**
  * Teams über Einladungen beim Einlösen (api/v1/einladungen.py): was /pruefen zum Team
@@ -16,6 +16,11 @@ export interface TeamBeimPruefen {
   /** Schlüssel des Motivs (public/meilensteine/<motiv>.svg), siehe TEAM_MOTIVE. */
   motiv: string | null;
   saison: string;
+  /**
+   * Teamart: bei „gruppe“ steht über der Frage der Satz, dass das Team mit Zustimmung
+   * der Gruppe nach ihr benannt ist (teamGruppeSatz). Ältere Server schicken keine Art.
+   */
+  art?: TeamArt;
   mitglieder: number;
   /** Die Nummer, die als nächste vergeben wird; fest erst beim Speichern. */
   naechste_nummer: number;

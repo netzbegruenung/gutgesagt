@@ -5,6 +5,7 @@ import { AdminGuard } from './auth/admin.guard';
 import { PublicGuard } from './auth/public.guard';
 import { ShareTargetGuard } from './share-target/share-target.guard';
 import { abkuerzungGuard } from './abkuerzung/abkuerzung.guard';
+import { konterProbeGuard } from './konter-probe/konter-probe.guard';
 import {
     gespeichertEltern,
     vonHierFehltEineAntwort,
@@ -129,6 +130,14 @@ export const routes: Routes = [
         path: 'beitrag/:id',
         loadComponent: () => import('./beitrag-ansicht/beitrag-ansicht.component').then(m => m.BeitragAnsichtComponent),
         canActivate: [PublicGuard],
+        data: { parent: '/search' }
+    },
+    {
+        // Konter-Probe (#786): ohne Konto spielbar; ist der Schalter aus, fuehrt die
+        // Adresse auf die Startseite (konterProbeGuard).
+        path: 'konter-probe',
+        loadComponent: () => import('./konter-probe/konter-probe.component').then(m => m.KonterProbeComponent),
+        canActivate: [PublicGuard, konterProbeGuard],
         data: { parent: '/search' }
     },
     {

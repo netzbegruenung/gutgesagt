@@ -38,6 +38,34 @@
         <button mat-button type="button" class="team-verlassen" data-testid="verlassen" [disabled]="laeuft"
                 [attr.aria-label]="verlassenText + ': ' + team.team_name + ', Saison ' + team.saison"
                 (click)="verlassen(team)">{{ verlassenText }}</button>
+
+        <!-- Team-Fortschritt und Team-Quest: nur fuer die aktuelle Saison, nur was der Server
+             gerundet liefert; nie live, nie Team gegen Team -->
+        <div *ngIf="team.aktuelle_saison && (team.wirkung || team.quest)" class="team-fortschritt" data-testid="team-fortschritt">
+            <ng-container *ngIf="team.wirkung as wirkung">
+                <p *ngIf="wirkung.waechst_noch" class="team-waechst" data-testid="team-waechst">{{ waechstNoch }}</p>
+                <ng-container *ngIf="!wirkung.waechst_noch">
+                    <h3 class="team-fortschritt-titel" [id]="'wirkung-' + team.id">{{ wocheTitel(wirkung.woche) }}</h3>
+                    <dl class="team-zahlen" [attr.aria-labelledby]="'wirkung-' + team.id" data-testid="team-zahlen">
+                        <div><dt>Beiträge</dt><dd>{{ wirkung.beitraege }}</dd></div>
+                        <div><dt>Bewertungen</dt><dd>{{ wirkung.bewertungen }}</dd></div>
+                        <div><dt>„Ja, gepostet“</dt><dd>{{ wirkung.gepostet }}</dd></div>
+                    </dl>
+                </ng-container>
+            </ng-container>
+            <ng-container *ngIf="team.quest as quest">
+                <p *ngIf="quest.vorige_geschafft" class="team-quest-geschafft" data-testid="quest-geschafft">
+                    <span class="team-stempel" aria-hidden="true">✓</span>{{ questGeschafft(quest.vorige_thema_name) }}
+                </p>
+                <p *ngIf="quest.ziel" class="team-quest" data-testid="quest-ziel">
+                    {{ questZiel(quest.ziel) }}
+                    <ng-container *ngIf="quest.thema_name">Gern im Beet
+                        <span class="thema-marke team-quest-thema"><img *ngIf="quest.thema_motiv" class="thema-motiv" [src]="quest.thema_motiv" alt="" aria-hidden="true" width="16" height="16">{{ quest.thema_name }}</span>:
+                        <a routerLink="/hier-fehlt-eine-antwort">Hier fehlt eine Antwort</a>
+                    </ng-container>
+                </p>
+            </ng-container>
+        </div>
     </ng-template>
 
     <!-- Nur mit wirksamem Schalter teams_oeffentlich; der Wortlaut steht vor dem Umschalter -->

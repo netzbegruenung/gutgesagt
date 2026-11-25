@@ -55,6 +55,10 @@
         <img *ngIf="motivBild" [src]="motivBild" alt="" width="24" height="24" />
         <span>Team {{ team.name }}, Saison {{ team.saison }}<ng-container *ngIf="motivName"> · Motiv: {{ motivName }}</ng-container></span>
       </p>
+      <p *ngIf="wortlautNeu" class="team-hinweis" role="alert" data-testid="team-wortlaut-neu">
+        Der Text der Einwilligung hat sich inzwischen geändert. Gespeichert ist noch nichts: Lies ihn
+        bitte neu und entscheide noch einmal.
+      </p>
       <p *ngIf="nochmalGefragt" class="team-hinweis" data-testid="team-nochmal">
         Beim Anlegen wurde hier schon „Ja“ gewählt, gespeichert ist aber noch nichts: Zur Adresse
         gab es schon ein Konto. Entscheide bitte hier mit deinem angemeldeten Konto.
@@ -69,6 +73,8 @@
           Die Nummer steht erst fest, wenn du beitrittst. Ist jemand schneller, bekommst du die nächste.
         </ng-container>
       </p>
+      <!-- Nur bei einem Team nach Gruppe, direkt über der Frage (beide Wege: neues Konto und angemeldet) -->
+      <p *ngIf="gruppeSatz(team) as satz" id="team-gruppe" class="team-gruppe" data-testid="team-gruppe">{{ satz }}</p>
       <p id="team-erklaerung">
         <ng-container *ngFor="let satz of begruessungSaetze(team); let letzter = last">{{ satz }}{{ letzter ? '' : ' ' }}</ng-container>
       </p>
@@ -85,7 +91,8 @@
           {{ team.oeffentlich_text }} Gilt nur zusammen mit „Ja“.
         </p>
       </ng-container>
-      <div class="team-knoepfe" role="group" aria-labelledby="team-gruss" aria-describedby="team-erklaerung">
+      <div class="team-knoepfe" role="group" aria-labelledby="team-gruss"
+           [attr.aria-describedby]="gruppeSatz(team) ? 'team-gruppe team-erklaerung' : 'team-erklaerung'">
         <button mat-stroked-button type="button" class="team-knopf" data-testid="team-ja"
                 [class.gewaehlt]="teamWahl === 'ja'" [attr.aria-pressed]="angemeldet ? null : teamWahl === 'ja'"
                 [disabled]="stand === 'tritt_bei' || stand === 'sendet'" (click)="wahl('ja')">
@@ -192,9 +199,6 @@
       <ng-container *ngIf="stand === 'fehler'" [ngSwitch]="fehler">
         <p *ngSwitchCase="'adresse'" class="warnung" role="alert">
           Das sieht nicht wie eine Mail-Adresse aus. Bitte prüf sie noch einmal.
-        </p>
-        <p *ngSwitchCase="'wortlaut'" class="warnung" role="alert">
-          Der Text der Einwilligung hat sich inzwischen geändert. Bitte öffne den Link noch einmal und lies ihn neu.
         </p>
         <p *ngSwitchCase="'name'" class="warnung" role="alert">
           Bitte prüf deinen Namen: Zeichen wie ! / ( ) &#64; &lt; &gt; gehen darin nicht.

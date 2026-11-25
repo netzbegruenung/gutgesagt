@@ -257,9 +257,10 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Löschaufträge, erledigt | 365 Tage (entschieden 13.11.2026) | Ausführung (`erledigt_am`); mit dem Konto sofort (Schritt 2) |
 | Zustimmung zur Sichtbarkeit der Abzeichen (`abzeichen_sichtbarkeit`) | solange das Konto besteht | — Nachweis der Zustimmung (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Einwilligung „Punkte und Meilensteine“ (`punkte_einwilligung`, #351) | solange das Konto besteht | — Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
-| Mitgliedschaften in Teams (`team_mitgliedschaften`): Kennung, Teamname, Motiv, Saison, Nummer, Tag des Beitritts, Kennung des Wortlauts und Zeitpunkt der Einwilligung | bis „Team verlassen“ (sofort gelöscht, Widerruf der Einwilligung für dieses Team) oder bis zur Löschung des Kontos | — die Einwilligung `team-2026-11-25` steht an der Mitgliedschaft und geht mit ihr; kein Bezug zur Einladung. Mit dem Konto sofort (Schritt 2), unter „Teams“ |
+| Mitgliedschaften in Teams (`team_mitgliedschaften`): Kennung, Teamname, Motiv, Saison, Nummer, Tag des Beitritts, Kennung des Wortlauts und Zeitpunkt der Einwilligung | bis „Team verlassen“ (sofort gelöscht, Widerruf der Einwilligung für dieses Team) oder bis zur Löschung des Kontos | — die Einwilligung `team-2026-11-26` steht an der Mitgliedschaft und geht mit ihr; kein Bezug zur Einladung. Mit dem Konto sofort (Schritt 2), unter „Teams“ |
 | Einwilligung „Team öffentlich am Namen zeigen“ (`team_oeffentlich`): Kennung, ja/nein, Kennung des Wortlauts, Zeitpunkt | solange das Konto besteht | — nur die jüngste Antwort je Konto; Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Zähler je Team und Saison (`team_nummern`): Teamname, Saison, zuletzt vergebene Nummer | keine | — kein Personenbezug (keine Kennung); hält fest, dass eine Nummer nach „Team verlassen“ nicht neu vergeben wird |
+| team_wochen, team_quests: ohne Personenbezug, unbefristet; entfallen mit dem Team | keine | — Wochenzähler (Teamname, Saison, Woche, Zahl der Beiträge, Bewertungen und Meldungen „Ja, gepostet“) und Team-Quests (Teamname, Saison, Woche, Thema, Ziel), ohne Kennung, ohne Beitrag, ohne Zeitpunkt; bleiben bei „Team verlassen“ und bei der Löschung des Kontos. Entdoppelt wird über einen Wochen-Prüfwert nur im Arbeitsspeicher, der mit dem Wochenwechsel verfällt. Eine Team-Löschung gibt es noch nicht; kommt sie, gehen die Zeilen mit (`TeamFortschrittRepository.team_loeschen`) |
 | Admin-Einstellungen (`einstellungen`, etwa die aktuelle Saison): Wert, Zeitpunkt, Kennung des Admins | keine | — der Wert bleibt; die Kennung des Admins wird mit seinem Konto geleert (Schritt 2) |
 | Zustimmung zu den Nutzungsbedingungen in der App (`nutzungsbedingungen_zustimmungen`) | solange das Konto besteht | — Nachweis des Vertragsschlusses und des Stands, dem die Person zugestimmt hat (Art. 6 Abs. 1 lit. b DSGVO); geht mit dem Konto (Schritt 2) |
 | Archiv der Keycloak-Zeitpunkte der Zustimmung zu den Nutzungsbedingungen (bis 0.9.8): Kennung und Zeitpunkt | bis zur Löschung des Kontos (Entscheidung Maintainer 20.11.2026) | — am Rollout-Tag von 0.9.8 exportiert, zuletzt direkt vor dem Abschalten der Pflichtaktion, nach `/opt/gutgesagt-archiv/nb-zeitpunkte-keycloak.txt` auf dem Prod-Host (Verzeichnis 0700 root, nicht in einen Container gemountet und nicht Teil der Backups), Datei 0600 root (`mvp/scripts/manual/keycloak_nb_zeitpunkte.py --zeitpunkte`); danach wird das Attribut in Keycloak gelöscht. Mit dem Konto geht die Zeile (Schritt 4). Nachweis, wann die Person bis 0.9.8 zugestimmt hat |
@@ -436,12 +437,20 @@ und der Ablauf oben erfasst die Tabelle nicht.
 ## Teams
 
 Eine Einladung kann zu einem Team gehören (GLOSSARY „Teamlink“): An `einladungen` stehen dann
-zusätzlich Teamname, Motiv und Saison, weiter ohne Mail-Adresse und ohne Kennung. Eine
+zusätzlich Teamname, Motiv, Saison und Teamart, bei einem Team nach Gruppe dazu der Tag der
+schriftlichen Zustimmung der Gruppenleitung (Nachweis nur für Admins, ohne Namen; bleibt mit der
+Einladung stehen, siehe „Einladungen“), weiter ohne Mail-Adresse und ohne Kennung. Eine
 Mitgliedschaft (`team_mitgliedschaften`) entsteht nur, wenn die Person auf der Begrüßung
-ausdrücklich einwilligt (Wortlaut `team-2026-11-25`, gespeichert mit Kennung und Zeitpunkt an
+ausdrücklich einwilligt (Wortlaut `team-2026-11-26`, gespeichert mit Kennung und Zeitpunkt an
 der Mitgliedschaft). Sie trägt **keinen Bezug zur Einladung**: Welche Einladung jemand genutzt
 hat, steht weiter nirgends. Ohne Ja zählt die Einladung wie bisher nur.
 
+- **Widerruf der Zustimmung einer Gruppe (Team nach Gruppe):** Das Team wird in einen neutralen
+  Namen nach Anlass, Ort oder Saison umbenannt (in eine andere Gruppe nur mit neuer Einwilligung
+  der Mitglieder, nicht mit dem Skript), an
+  Einladungen, Mitgliedschaften und Nummernzähler zugleich (`mvp/scripts/manual/team_umbenennen.sql`);
+  die Einladungen werden zu einem Team nach Anlass, Ort oder Saison, das Datum der Zustimmung
+  wird geleert. Mitgliedschaften, Nummern und Einwilligungen bleiben.
 - **„Team verlassen“:** Die Person löscht ihre Mitgliedschaft unter „Meine Teams“ selbst; der
   Eintrag ist sofort gelöscht (`DELETE /api/v1/teams/meine/{id}`), auch bei ausgeschaltetem
   Schalter `teams`. Das ist der Widerruf der Einwilligung für dieses Team. Die Nummer wird

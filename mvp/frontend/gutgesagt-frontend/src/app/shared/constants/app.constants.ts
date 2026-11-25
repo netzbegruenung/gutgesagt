@@ -62,6 +62,7 @@ export const PAGE_TITLES = {
   // Gartenansicht (#783): je Thema Antworten und Sprueche ohne Antwort
   GARTEN: 'Themen im Überblick',
   VARIANTEN: 'Varianten',
+  KONTER_PROBE: 'Konter-Probe',
   BEITRAG: 'Beitrag',
   SHARE_TARGET: 'Geteilter Inhalt',
   // Typnamen aus der Registry
@@ -102,6 +103,7 @@ export const ROUTES = {
   HIER_FEHLT_EINE_ANTWORT: '/hier-fehlt-eine-antwort',
   GARTEN: '/garten',
   VARIANTEN: '/varianten',
+  KONTER_PROBE: '/konter-probe',
   BEITRAG: '/beitrag',
   SHARE_TARGET: '/teilen',
   LOGIN: '/login',

@@ -14,6 +14,8 @@ from dependencies import (
 from services.beitrag_laden import BeitragLader, BeitragUnlesbar
 from middleware.rate_limiter import check_voting_rate_limit
 from core.fehler import NICHT_ERREICHBAR, UNGUELTIGE_ANFRAGE, Validierungsfehler
+from domain.team_fortschritt import Art as TeamArt
+from services.team_fortschritt_service import team_zaehlen
 
 logger = get_logger(__name__)
 
@@ -74,6 +76,8 @@ def set_like(
     logger.debug(f"Setting like for content {content_id}")
     try:
         result = voting_service.set_like(user_id, content_id)
+        # Zaehlt fuer die Teams der Person (Team-Fortschritt, #784); Fehler nur im Log.
+        team_zaehlen(user_id, TeamArt.BEWERTUNG, str(content_id))
         logger.debug("Like set successfully")
         return result
     except Validierungsfehler as e:
@@ -136,6 +140,8 @@ def set_dislike(
     logger.debug(f"Setting dislike for content {content_id}")
     try:
         result = voting_service.set_dislike(user_id, content_id)
+        # Zaehlt fuer die Teams der Person (Team-Fortschritt, #784); Fehler nur im Log.
+        team_zaehlen(user_id, TeamArt.BEWERTUNG, str(content_id))
         logger.debug("Dislike set successfully")
         return result
     except Validierungsfehler as e:
