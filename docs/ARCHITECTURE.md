@@ -449,6 +449,23 @@ of "Ja, gepostet" (`gepostet_wochen`) over the closed weeks of the season; nothi
 - For later building blocks (Rangliste per season): `SaisonService.alle()`, `.laufende(heute)`
   and the dataclass `domain.saisons.Saison` (`id`, `name`, `beginn`, `ende`, `ziel`, `wochen()`).
 
+#### Rangliste per season (#793)
+
+Consent table `rangliste_einwilligung` (yes/no, choice of the display name, wording id, time;
+newest row counts, every change is a new row), rules in `domain/rangliste.py`, assembly in
+`services/rangliste_service.py`. Who is in is decided on every request: newest answer yes, Art. 9
+consent and "Punkte und Meilensteine" both valid, no Startkonto. Points are those of ADR 0004
+within the days of the running season (`PunkteService.punkte(user, zeitraum)`): usage from
+`usage_events` with `entdoppelt` (so only within their 90-day retention), approvals by the day of
+their last change, Tun and ratings by their day. Season points are cached in memory for 120 s;
+neither points nor places are stored.
+
+- `GET /api/v1/rangliste` (signed in, 404 while `rangliste` is not effective): own answer, random
+  Ranglistenname, and for participants the top 10 plus the own place (only from 10 participants)
+  and past seasons as own sums (only seasons that started within the 90-day retention).
+- `PUT /api/v1/rangliste/einwilligung` `{teilnehmen, mit_anzeigename, wortlaut}`: yes only to the
+  current wording; withdrawing the Art. 9 consent records an earlier yes as no.
+
 ## Startup Scripts
 
 ### Local Development

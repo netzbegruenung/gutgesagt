@@ -403,6 +403,25 @@ class TestWiderrufen:
         assert client.delete(BASIS, headers=PERSON).status_code == 204
         dienst.zuruecknehmen.assert_called_once_with("user-001")
 
+    def test_delete_haelt_ja_zur_rangliste_als_nein_fest(
+        self, client, repository, rangliste_ohne_datenbank
+    ):
+        """Sonst stuende die Person nach neuer Einwilligung ungefragt wieder darin (#793)."""
+        from datetime import datetime, timezone
+
+        from domain.rangliste import AKTUELLER_WORTLAUT
+        from repositories.rangliste_einwilligung_repository import RanglisteAntwort
+
+        rangliste_ohne_datenbank.lesen.return_value = RanglisteAntwort(
+            True, True, AKTUELLER_WORTLAUT, datetime(2026, 12, 1, tzinfo=timezone.utc)
+        )
+
+        assert client.delete(BASIS, headers=PERSON).status_code == 204
+        rangliste_ohne_datenbank.antworten.assert_called_once_with(
+            "user-001", False, False, AKTUELLER_WORTLAUT
+        )
+        repository.widerrufen.assert_called_once()
+
     def test_delete_ohne_anmeldung_401(self, client, repository, stimmen):
         assert client.delete(BASIS).status_code == 401
         repository.widerrufen.assert_not_called()
@@ -632,6 +651,9 @@ OFFEN = {
     # Einwilligung "Punkte und Meilensteine" (#351): eine eigene, freiwillige, nicht
     # an die Art.-9-Einwilligung gekoppelt (Art. 7 Abs. 4).
     ("PUT", "/api/v1/usage/users/me/punkte-einwilligung"),
+    # Einwilligung zur Rangliste (#793): Ein Nein ist Zuruecknehmen, ein Ja wirkt
+    # ohne Art.-9-Einwilligung nicht (Voraussetzung je Abruf).
+    ("PUT", "/api/v1/rangliste/einwilligung"),
     # Die Einwilligung selbst und "ohne Einwilligung weiter" (B2)
     ("POST", "/api/v1/art9-einwilligung"),
     ("POST", "/api/v1/art9-einwilligung/ohne"),

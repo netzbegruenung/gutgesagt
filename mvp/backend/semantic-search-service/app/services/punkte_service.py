@@ -26,12 +26,20 @@ und Meilensteine" (nie erteilt oder widerrufen) auch nicht: Die
 Datenschutzerklaerung stuetzt die Punkte auf diese eigene, freiwillige Einwilligung
 (domain/punkte_einwilligung.py, #351), nicht mehr auf die Art.-9-Einwilligung zur
 Mitwirkung. Gefragt wird je Abruf, damit ein Widerruf sofort wirkt.
+
+Punkte je Saison (Rangliste, #793): Mit ``zeitraum`` zaehlt nur, was in diese Tage
+faellt. Tun und Bewerten nach ihrem Tag, Zustimmung nach dem Tag ihrer letzten
+Aenderung, Nutzung nach den entdoppelten Nutzungsereignissen (usage_events mit
+``entdoppelt``). Die gibt es nur fuer die Frist der usage_events (90 Tage,
+cleanup_old_events): Was laenger zurueckliegt, zaehlt fuer die Saison nicht mehr.
+Gespeichert wird dafuer nichts Neues.
 """
 
 import asyncio
 from datetime import date, datetime, timedelta, timezone
 from typing import (
     Any,
+    Tuple,
     Awaitable,
     Callable,
     Dict,
@@ -67,9 +75,18 @@ class NutzungsQuelle(Protocol):
         self, content_ids: List[Any]
     ) -> Dict[str, int]: ...
 
+    def nutzung_entdoppelt_im_zeitraum(
+        self, content_ids: List[Any], von: date, bis: date
+    ) -> int: ...
+
 
 class StimmenUndEinwuerfe(Protocol):
-    def zustimmungen(self, content_ids: List[Any], ausgenommen: Set[str]) -> int: ...
+    def zustimmungen(
+        self,
+        content_ids: List[Any],
+        ausgenommen: Set[str],
+        zeitraum: Optional[Tuple[date, date]] = None,
+    ) -> int: ...
 
     def einwuerfe_ausformuliert_je_tag(
         self, user_id: str, bis: datetime
@@ -101,6 +118,13 @@ def _je_tag(tage: Iterable[date]) -> Dict[date, int]:
     return zaehler
 
 
+def _im_zeitraum(
+    je_tag: Dict[date, int], zeitraum: Tuple[date, date]
+) -> Dict[date, int]:
+    von, bis = zeitraum
+    return {tag: n for tag, n in je_tag.items() if von <= tag <= bis}
+
+
 class PunkteService:
     def __init__(
         self,
@@ -122,7 +146,13 @@ class PunkteService:
             lambda user_id: get_punkte_einwilligung_repository().eingewilligt(user_id)
         )
 
-    async def punkte(self, user_id: str) -> Punktestand:
+    async def punkte(
+        self, user_id: str, zeitraum: Optional[Tuple[date, date]] = None
+    ) -> Punktestand:
+        """
+        Der Punktestand; mit ``zeitraum`` (erster und letzter Tag, UTC, beide
+        eingeschlossen) nur aus diesen Tagen, etwa fuer die Saison (#793).
+        """
         gewichte = gewichte_aus(self._settings)
         if self._settings.ist_startkonto(user_id):
             return KEINE_PUNKTE
@@ -132,16 +162,27 @@ class PunkteService:
         beitraege = await self._sichtbare_beitraege(user_id)
         ids = [b.id for b in beitraege]
         # Die Repositories fragen PostgreSQL synchron ab: im Thread, nicht im Event-Loop.
-        nutzung = sum(
-            (
-                await asyncio.to_thread(self._nutzung.get_nutzung_entdoppelt_batch, ids)
-            ).values()
-        )
-        zustimmungen = await asyncio.to_thread(
-            self._stimmen_und_einwuerfe.zustimmungen,
-            ids,
-            {user_id} | set(self._settings.startkonto_kennungen()),
-        )
+        if zeitraum is None:
+            nutzung = sum(
+                (
+                    await asyncio.to_thread(
+                        self._nutzung.get_nutzung_entdoppelt_batch, ids
+                    )
+                ).values()
+            )
+        else:
+            nutzung = await asyncio.to_thread(
+                self._nutzung.nutzung_entdoppelt_im_zeitraum, ids, *zeitraum
+            )
+        ausgenommen = {user_id} | set(self._settings.startkonto_kennungen())
+        if zeitraum is None:
+            zustimmungen = await asyncio.to_thread(
+                self._stimmen_und_einwuerfe.zustimmungen, ids, ausgenommen
+            )
+        else:
+            zustimmungen = await asyncio.to_thread(
+                self._stimmen_und_einwuerfe.zustimmungen, ids, ausgenommen, zeitraum
+            )
         grenze = self._jetzt() - BEITRAG_WARTEZEIT
         einwuerfe = await asyncio.to_thread(
             self._stimmen_und_einwuerfe.einwuerfe_ausformuliert_je_tag,
@@ -156,10 +197,15 @@ class PunkteService:
             for b in beitraege
             if b.created.astimezone(timezone.utc) <= grenze
         ]
+        beitraege_je_tag = _je_tag(stehende)
+        if zeitraum is not None:
+            beitraege_je_tag = _im_zeitraum(beitraege_je_tag, zeitraum)
+            einwuerfe = _im_zeitraum(einwuerfe, zeitraum)
+            bewertungen = _im_zeitraum(bewertungen, zeitraum)
         daten = Wirkungsdaten(
             nutzungen=nutzung,
             zustimmungen=zustimmungen,
-            beitraege_je_tag=_je_tag(stehende),
+            beitraege_je_tag=beitraege_je_tag,
             einwuerfe_ausformuliert_je_tag=einwuerfe,
             bewertungen_je_tag=bewertungen,
         )

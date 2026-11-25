@@ -15,6 +15,7 @@ import { MeineEinwuerfeComponent } from './meine-einwuerfe.component';
 import { SperrnachrichtenComponent } from './sperrnachrichten.component';
 import { MeilensteineComponent } from './meilensteine.component';
 import { MeineTeamsComponent } from './meine-teams.component';
+import { RanglisteComponent } from './rangliste.component';
 import { PunkteComponent } from './punkte.component';
 import { tabMitTasteWaehlen } from '../shared/tab-tasten';
 import { MatButtonModule } from '@angular/material/button';
@@ -64,6 +65,7 @@ const TABS: ReadonlyArray<{ wert: MeineTab; name: string }> = [
     SperrnachrichtenComponent,
     MeilensteineComponent,
     MeineTeamsComponent,
+    RanglisteComponent,
     PunkteComponent,
     AussagekarteComponent
   ],

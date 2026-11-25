@@ -64,6 +64,8 @@ SPALTEN = {
     "abzeichen_sichtbarkeit": ("user_id",),
     # Einwilligung "Punkte und Meilensteine" (#351): geht mit der Person mit.
     "punkte_einwilligung": ("user_id",),
+    # Einwilligung zur Rangliste (#793): geht mit der Person mit.
+    "rangliste_einwilligung": ("user_id",),
     # Zustimmung zu den Nutzungsbedingungen in der App: geht mit der Person mit.
     "nutzungsbedingungen_zustimmungen": ("user_id",),
     # Loeschauftraege nach dem Widerruf (DSFA R9b): Ein offener muss die Kennung

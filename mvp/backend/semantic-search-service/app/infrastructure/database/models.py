@@ -984,6 +984,35 @@ class PunkteEinwilligungZeile(Base):
     )
 
 
+class RanglisteEinwilligungZeile(Base):
+    """
+    Eine Antwort auf die Einwilligung zur Rangliste (#793, domain/rangliste.py):
+    ``teilnehmen`` ja oder nein, ``mit_anzeigename`` ob die Person statt des
+    zufaelligen Ranglistennamens ihren Anzeigenamen gewaehlt hat, ``wortlaut`` die
+    Kennung des Wortlauts, ``beantwortet_am`` der Zeitpunkt. Es gilt die juengste Zeile
+    der Kennung; jede Aenderung ist eine neue Zeile, damit belegt bleibt, wann die
+    Person eingewilligt und wann sie widerrufen hat (Art. 7 Abs. 1 DSGVO, wie V22).
+    Plaetze und Punkte stehen hier nicht, sie werden je Abruf berechnet.
+
+    Neue Tabelle: create_all legt sie beim Start an. Das Skript
+    postgres-app/migrations/2026-11-26-rangliste-einwilligung.sql dokumentiert das
+    Schema. Loeschen: docs/LOESCHKONZEPT.md, Schritt 2.
+    """
+
+    __tablename__ = "rangliste_einwilligung"
+
+    id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(String(255), nullable=False)
+    teilnehmen = Column(Boolean, nullable=False)
+    mit_anzeigename = Column(Boolean, nullable=False)
+    wortlaut = Column(String(64), nullable=False)
+    beantwortet_am = Column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        Index("idx_rangliste_einwilligung_user", "user_id", "beantwortet_am"),
+    )
+
+
 class LoeschauftragZeile(Base):
     """
     Ein Loeschauftrag nach dem Widerruf der Art.-9-Einwilligung (GLOSSARY.md

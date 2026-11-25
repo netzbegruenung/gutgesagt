@@ -262,3 +262,60 @@ async def test_get_punkte_service_fragt_die_einwilligung_punkte(
     art9_einwilligung_ohne_datenbank.lesen.assert_not_called()
     inhalte.return_value.get_by_author.assert_not_awaited()
     assert stand.gesamt == 0
+
+
+class _QuellenImZeitraum(_Quellen):
+    """Dazu die Abfragen fuer einen Zeitraum (Punkte je Saison, #793)."""
+
+    def __init__(self, *args, nutzung_im_zeitraum=0, zustimmungen_im_zeitraum=0, **kw):
+        super().__init__(*args, **kw)
+        self.nutzung_im_zeitraum = nutzung_im_zeitraum
+        self.zustimmungen_im_zeitraum = zustimmungen_im_zeitraum
+        self.zeitraeume = []
+
+    def nutzung_entdoppelt_im_zeitraum(self, ids, von, bis) -> int:
+        self.zeitraeume.append(("nutzung", von, bis))
+        return self.nutzung_im_zeitraum
+
+    def zustimmungen(self, content_ids, ausgenommen, zeitraum=None) -> int:
+        if zeitraum is None:
+            return super().zustimmungen(content_ids, ausgenommen)
+        self.zeitraeume.append(("zustimmung", *zeitraum))
+        self.ausgenommen = ausgenommen
+        return self.zustimmungen_im_zeitraum
+
+
+async def test_punkte_im_zeitraum_zaehlen_nur_tage_der_saison():
+    """Saisonpunkte (#793): Tun, Bewerten, Nutzung und Zustimmung nur aus der Saison."""
+    heute = JETZT.date()
+    von, bis = heute - timedelta(days=10), heute
+    vor_der_saison = heute - timedelta(days=20)
+    quellen = _QuellenImZeitraum(
+        [_beitrag(5), _beitrag(20)],
+        nutzung={},
+        einwuerfe={heute - timedelta(days=4): 1, vor_der_saison: 1},
+        bewertungen={heute: 1, vor_der_saison: 3},
+        nutzung_im_zeitraum=2,
+        zustimmungen_im_zeitraum=1,
+    )
+
+    stand = await _service(
+        quellen, punkte_bewertung=1, punkte_deckel_bewertungen_je_tag=3
+    ).punkte(KIM, (von, bis))
+
+    assert stand.wirkung == 2 * 10 + 1 * 5
+    # Ein Beitrag und ein Einwurf in der Saison, eine Bewertung heute
+    assert stand.tun == 1 + 1 + 1
+    assert ("nutzung", von, bis) in quellen.zeitraeume
+    assert ("zustimmung", von, bis) in quellen.zeitraeume
+    assert quellen.ausgenommen == {KIM, START}
+
+
+async def test_punkte_ohne_zeitraum_fragen_die_gesamtzahlen():
+    beitrag = _beitrag(10)
+    quellen = _QuellenImZeitraum([beitrag], nutzung={beitrag.id: 1}, zustimmungen=1)
+
+    stand = await _service(quellen).punkte(KIM)
+
+    assert stand.wirkung == 15
+    assert quellen.zeitraeume == []

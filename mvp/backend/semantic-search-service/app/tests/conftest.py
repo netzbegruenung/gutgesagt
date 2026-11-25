@@ -191,6 +191,24 @@ def saisons_ohne_datenbank():
 
 
 @pytest.fixture(autouse=True)
+def rangliste_ohne_datenbank(monkeypatch):
+    """
+    Die Einwilligung zur Rangliste (#793) ohne Datenbank: niemand hat geantwortet.
+    Der Widerruf der Art.-9-Einwilligung fragt sie; Tests mit Antworten stellen
+    ``rangliste_ohne_datenbank.lesen.return_value`` ein.
+    """
+    import repositories.rangliste_einwilligung_repository as modul
+    from services.rangliste_service import rangliste_service_setzen
+
+    repository = MagicMock()
+    repository.lesen.return_value = None
+    repository.teilnehmende.return_value = {}
+    monkeypatch.setattr(modul, "_repository", repository)
+    yield repository
+    rangliste_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
 def teams_ohne_datenbank():
     """
     Der TeamService haengt an Antworten mit Anzeigenamen (Teams am Namen). Ohne Ersatz
