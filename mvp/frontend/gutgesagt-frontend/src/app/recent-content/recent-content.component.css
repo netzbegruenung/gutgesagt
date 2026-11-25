@@ -30,6 +30,17 @@
   border-radius: 8px;
 }
 
+/* Anfang ohne Beiträge: Satz und ein Weg los, Gewinn statt Druck (26.11.) */
+.anfang p {
+  margin: 0 0 var(--spacing-sm);
+  color: var(--text);
+}
+
+.anfang a {
+  font-weight: 600;
+  text-decoration: underline;
+}
+
 /* Mobile adjustments */
 @media (max-width: 599px) {
   .recent-content-header {

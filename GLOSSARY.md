@@ -380,6 +380,9 @@ _Avoid_: Like (das ist eine Stimme), Kudos
 Ein Beitrag, der in den letzten sieben Tagen (nicht der Kalenderwoche) mehrfach genutzt wurde, gezählt als entdoppelte Nutzung. „Diese Woche oft genutzt“ auf der Startseite zeigt die meistgenutzten zuerst und nur, wenn genug Beiträge oft genutzt wurden; sonst gibt es den Bereich nicht. Gesperrte und gelöschte Beiträge stehen dort nie. Die Schwellen (Mindestnutzung, Mindestzahl, Höchstzahl) sind Stellschrauben und stehen nicht hier: Mindestnutzung und Mindestzahl in der Konfiguration (`SEMANTIC_SEARCH_OFT_GENUTZT_*`, `docs/ARCHITECTURE.md`), die Höchstzahl in `services/oft_genutzt_service.py`.
 _Avoid_: Trending, Trend, beliebt, Top-Beiträge
 
+**Frisch aus der Community**:
+Der Bereich auf der Startseite mit den neuesten Kommentaren und Hintergrundinfos, für alle sichtbar. Frisch heißt wie bei der Kachel unter „Seit deinem letzten Besuch“: in den letzten 7 Tagen ergänzt. Ist mindestens einer der neuesten frisch, zeigt er bis zu fünf (mobil drei); ist keiner frisch, heißt er „Zuletzt ergänzt“ und zeigt die drei zuletzt ergänzten jeden Alters. Leer ist er nie; nur ganz ohne Beiträge steht dort ein Anfang mit dem Weg zum Beitragen (Entscheidung 26.11.2026). Gesperrte und gelöschte Beiträge stehen dort nie.
+
 **Stimme**:
 Die Zustimmung oder Ablehnung einer angemeldeten Person zu einem Beitrag. Ein Qualitätssignal, keine Nutzung. Sie gilt der Behauptung im Titel: Ändert die Autorin den Titel so, dass er nach der NLI-Stufe etwas anderes behauptet, verfallen die Stimmen; kleine Korrekturen und Änderungen nur am Text lassen sie stehen.
 _Avoid_: Vote, Like, Daumen
