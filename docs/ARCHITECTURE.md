@@ -91,7 +91,7 @@ visit at most one card that points the person somewhere new (review Spielgefühl
 
 | # | Card | Who sees it | Shown when |
 |---|------|-------------|------------|
-| 1 | Hero and search; the subtitle carries the Bestandszahl (`app-hero-unterzeile`, `/getMetrics`, no Schalter) | everyone | always; without a number the plain subtitle |
+| 1 | Hero and search; the subtitle carries the Bestandszahl (`app-hero-unterzeile`, `/getMetrics`, no Schalter) and its growth (Schalter `bestandszahl_zuwachs`, links to card 6 „Frisch aus der Community“) | everyone | always; without a number the plain subtitle |
 | 2 | Rundgang line (`app-rundgang-band`, Willkommen) | everyone | until answered; signed in without „Ein Konto brauchst du nicht“ (`WILLKOMMEN_ANGEMELDET`) |
 | 3 | „Seit deinem letzten Besuch“ | signed in | not on the very first visit (`erster_besuch` from `POST /users/me/besuch`); next to a suggestion of card 4 only with news about the person's own Beiträge (`EIGENES_NEUES`: answers, uses, Wirkungs-Echo, ausformulierte Einwürfe) |
 | 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion and card 3 shows no own news |
@@ -270,7 +270,7 @@ reported off reload every 5 minutes instead of every 30 seconds (`AUS_NACHLADEN_
 | Endpoint | Asked by | Empty or off |
 |----------|----------|--------------|
 | `GET /api/v1/saisons/aktuell` | start page, every 5 min | `balken: null`, `aktiv: false` |
-| `GET /api/v1/metrics/getMetrics` | start page (Bestandszahl in the subtitle), every 5 min | always 200 with counts; 0 on a failed count (the last number stays) |
+| `GET /api/v1/metrics/getMetrics` | start page (Bestandszahl in the subtitle), every 5 min | always 200 with counts; 0 on a failed count (the last number stays); `zuwachs: null` while `bestandszahl_zuwachs` is off |
 | `GET /api/v1/konter-probe` | start page, page Konter-Probe | `proben: []`, `aktiv: false` |
 | `GET /api/v1/search/garten` | page Gartenansicht, every 30 s | `beete: []`, `aktiv: false` |
 | `GET /api/v1/usage/users/me/naechster-schritt` | start page (signed in) | `vorschlaege: []`, `aktiv: false` |

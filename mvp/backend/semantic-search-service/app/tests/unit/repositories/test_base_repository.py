@@ -362,6 +362,56 @@ class TestAutorenzuordnungOhneSuchanfragen:
         assert ("original_author", "testuser") in nicht
         assert any(key == "status" for key, _ in nicht)
 
+    @pytest.mark.asyncio
+    async def test_angelegt_seit_zaehlt_sichtbare_und_holt_wenige_zeitpunkte(
+        self, repository_mit_client
+    ):
+        """Zuwachs zur Bestandszahl: Zeitraum, Typ, ohne Gesperrte; Zeitpunkte nur bei wenigen."""
+        import datetime as dt
+
+        repository, client = repository_mit_client
+        client.count.return_value = MagicMock(count=2)
+        client.scroll.return_value = (
+            [
+                MagicMock(payload={"created": "2026-11-24T23:30:00+00:00"}),
+                MagicMock(payload={"created": "2026-11-22T08:00:00"}),
+                MagicMock(payload={"created": "kaputt"}),
+            ],
+            None,
+        )
+        seit = dt.datetime(2026, 11, 19, tzinfo=dt.timezone.utc)
+
+        anzahl, zeitpunkte = await repository.angelegt_seit(seit, ("commentary",), 2)
+
+        assert anzahl == 2
+        assert zeitpunkte == [
+            dt.datetime(2026, 11, 24, 23, 30, tzinfo=dt.timezone.utc),
+            dt.datetime(2026, 11, 22, 8, 0, tzinfo=dt.timezone.utc),
+        ]
+        zaehlung = client.count.call_args.kwargs["count_filter"]
+        must = {b.key: b for b in zaehlung.must if b.key != "content_type"}
+        assert must["created"].range.gte == seit
+        assert ["commentary"] in self._typ_eingrenzungen(zaehlung)
+        assert any(b.key == "status" for b in zaehlung.must_not)
+        assert client.scroll.call_args.kwargs["scroll_filter"] == zaehlung
+        assert client.scroll.call_args.kwargs["with_payload"] == ["created"]
+
+    @pytest.mark.asyncio
+    async def test_angelegt_seit_ohne_zeitpunkte_bei_vielen(
+        self, repository_mit_client
+    ):
+        import datetime as dt
+
+        repository, client = repository_mit_client
+        client.count.return_value = MagicMock(count=12)
+
+        anzahl, zeitpunkte = await repository.angelegt_seit(
+            dt.datetime(2026, 11, 19, tzinfo=dt.timezone.utc), ("commentary",), 2
+        )
+
+        assert (anzahl, zeitpunkte) == (12, [])
+        client.scroll.assert_not_awaited()
+
     @staticmethod
     def _typ_eingrenzungen(such_filter) -> list:
         return [

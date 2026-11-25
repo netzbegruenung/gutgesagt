@@ -36,6 +36,15 @@ ADMIN_ONLY_PATHS = [
 ]
 
 
+@pytest.fixture(autouse=True)
+def zuwachs_schalter():
+    """Schalter bestandszahl_zuwachs ohne Datenbank; von Haus aus aus, Tests setzen ihn."""
+    with patch.object(
+        metrics_module, "schalter_wirksam", return_value=False
+    ) as schalter:
+        yield schalter
+
+
 @pytest.fixture
 def client():
     """App nur mit dem Metrics-Router; die Content-Services sind gemockt."""
@@ -129,7 +138,10 @@ class TestGetMetricsStaysPublic:
             "statement_count",
             "commentary_count",
             "reference_count",
+            "zuwachs",
         }
+        # Schalter bestandszahl_zuwachs aus: kein Zuwachs
+        assert body["zuwachs"] is None
 
 
 class TestGetMetricsCache:
@@ -232,3 +244,68 @@ def test_content_count_nie_negativ(client):
 
     assert response.status_code == 200
     assert response.json()["content_count"] == 0
+
+
+class TestGetMetricsZuwachs:
+    """
+    Zuwachs zur Bestandszahl (domain/bestandszahl.py): nur mit Schalter, genaue Zahl ab 3,
+    darunter nur der Tag ohne Uhrzeit; ein Fehler laesst nur den Zuwachs weg.
+    """
+
+    def _abruf(self, client, angelegt_seit):
+        with patch.object(metrics_module, "QdrantRepositoryFactory") as factory:
+            repository = Mock()
+            repository.count = AsyncMock(return_value=44)
+            repository.angelegt_seit = angelegt_seit
+            factory.return_value.create_content_repository.return_value = repository
+            response = client.get("/api/v1/metrics/getMetrics")
+        assert response.status_code == 200
+        return response.json()
+
+    def test_ab_drei_die_genaue_zahl(self, client, zuwachs_schalter):
+        zuwachs_schalter.return_value = True
+        angelegt_seit = AsyncMock(return_value=(12, []))
+
+        body = self._abruf(client, angelegt_seit)
+
+        assert body["zuwachs"] == {"neu_7_tage": 12, "zuletzt_ergaenzt": None}
+        seit, typen, bis = angelegt_seit.await_args.args
+        assert typen == ("commentary",)
+        # Zeitpunkte nur fuer weniger als drei
+        assert bis == 2
+        assert zuwachs_schalter.call_args.args[0] == "bestandszahl_zuwachs"
+
+    def test_unter_drei_nur_der_tag_in_deutscher_zeit(self, client, zuwachs_schalter):
+        from datetime import datetime, timezone
+
+        zuwachs_schalter.return_value = True
+        # 23:30 UTC am 24.11. ist in Deutschland schon der 25.11.
+        spaet = datetime(2026, 11, 24, 23, 30, tzinfo=timezone.utc)
+        frueh = datetime(2026, 11, 22, 8, 0, tzinfo=timezone.utc)
+
+        body = self._abruf(client, AsyncMock(return_value=(2, [frueh, spaet])))
+
+        assert body["zuwachs"] == {"neu_7_tage": None, "zuletzt_ergaenzt": "2026-11-25"}
+
+    def test_nichts_neu_kein_tag(self, client, zuwachs_schalter):
+        zuwachs_schalter.return_value = True
+
+        body = self._abruf(client, AsyncMock(return_value=(0, [])))
+
+        assert body["zuwachs"] == {"neu_7_tage": None, "zuletzt_ergaenzt": None}
+
+    def test_schalter_aus_fragt_nicht(self, client, zuwachs_schalter):
+        angelegt_seit = AsyncMock(return_value=(12, []))
+
+        body = self._abruf(client, angelegt_seit)
+
+        assert body["zuwachs"] is None
+        angelegt_seit.assert_not_awaited()
+
+    def test_fehler_laesst_nur_den_zuwachs_weg(self, client, zuwachs_schalter):
+        zuwachs_schalter.return_value = True
+
+        body = self._abruf(client, AsyncMock(side_effect=RuntimeError("kaputt")))
+
+        assert body["zuwachs"] is None
+        assert body["commentary_count"] == 22

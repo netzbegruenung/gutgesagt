@@ -9,6 +9,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Tuple,
     Type,
     TypeVar,
     Generic,
@@ -711,6 +712,64 @@ class QdrantBaseRepository(
             exact=True,
         )
         return result.count
+
+    async def angelegt_seit(
+        self,
+        seit: datetime.datetime,
+        content_types: Sequence[str],
+        zeitpunkte_bis: int,
+    ) -> Tuple[int, List[datetime.datetime]]:
+        """
+        Sichtbare Eintraege der Typen ``content_types``, angelegt seit ``seit``: ihre Zahl
+        (genau) und, nur wenn es hoechstens ``zeitpunkte_bis`` sind, ihre Anlagezeitpunkte
+        (Zuwachs zur Bestandszahl, domain/bestandszahl.py). Dieselbe Sichtbarkeit wie
+        count(). Ein Fehler geht an den Aufrufer.
+        """
+        from qdrant_client.models import (
+            DatetimeRange,
+            FieldCondition,
+            Filter,
+            MatchAny,
+        )
+
+        sichtbar = self._sichtbar_filter()
+        filter_ = Filter(
+            must=list(sichtbar.must or [])
+            + [
+                FieldCondition(
+                    key="content_type", match=MatchAny(any=list(content_types))
+                ),
+                FieldCondition(key="created", range=DatetimeRange(gte=seit)),
+            ],
+            must_not=list(sichtbar.must_not or []),
+        )
+        anzahl = (
+            await self._shared_manager.async_client.count(
+                collection_name=self._shared_manager.collection_name,
+                count_filter=filter_,
+                exact=True,
+            )
+        ).count
+        if anzahl <= 0 or anzahl > zeitpunkte_bis:
+            return anzahl, []
+        punkte, _ = await self._shared_manager.async_client.scroll(
+            collection_name=self._shared_manager.collection_name,
+            scroll_filter=filter_,
+            limit=zeitpunkte_bis,
+            with_payload=["created"],
+            with_vectors=False,
+        )
+        zeitpunkte = []
+        for punkt in punkte:
+            roh = (punkt.payload or {}).get("created")
+            try:
+                zeit = datetime.datetime.fromisoformat(str(roh))
+            except ValueError:
+                continue
+            if zeit.tzinfo is None:
+                zeit = zeit.replace(tzinfo=datetime.timezone.utc)
+            zeitpunkte.append(zeit)
+        return anzahl, zeitpunkte
 
     async def has_content(self) -> bool:
         """
