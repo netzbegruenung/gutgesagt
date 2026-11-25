@@ -306,7 +306,9 @@ def spuren(datenbank, einwuerfe):
             )
         )
         # Teams: eine Mitgliedschaft mit Einwilligung, die Einwilligung "Team
-        # oeffentlich am Namen zeigen" und eine Admin-Einstellung der Person.
+        # oeffentlich am Namen zeigen" und eine Admin-Einstellung der Person. Die
+        # Mitgliedschaft traegt absichtlich die fruehere Kennung team-2026-11-25: Eine
+        # bestehende Mitgliedschaft damit muss weiter mit dem Konto geloescht werden.
         s.add(
             TeamMitgliedschaftZeile(
                 konto_kennung=PERSON,
@@ -315,7 +317,7 @@ def spuren(datenbank, einwuerfe):
                 saison="2026",
                 nummer=1,
                 eingetreten_am=date(2026, 11, 25),
-                einwilligung_kennung="team-2026-11-26",
+                einwilligung_kennung="team-2026-11-25",
                 einwilligung_zeitpunkt=datetime.now(timezone.utc),
             )
         )

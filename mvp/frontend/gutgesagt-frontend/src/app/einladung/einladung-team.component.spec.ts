@@ -249,7 +249,7 @@ describe('EinladungComponent mit Team', () => {
       expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/einladung' } });
     });
 
-    it('sagt bei inzwischen geändertem Wortlaut (422 an der Kennung) nicht, die Adresse sei falsch', () => {
+    it('holt bei inzwischen geändertem Wortlaut (422 an der Kennung) den neuen selbst und fragt noch einmal', () => {
       starten('Code123');
       pruefen({ einloesbar: true, team: team() });
       klick('team-ja');
@@ -261,9 +261,15 @@ describe('EinladungComponent mit Team', () => {
           { detail: [{ loc: ['body', 'team_einwilligung_kennung'], msg: 'Unbekannter Wortlaut' }] },
           { status: 422, statusText: 'Unprocessable Entity' },
         );
-      fixture.detectChanges();
+      pruefen({ einloesbar: true, team: team({ einwilligung_text: 'Neuer Wortlaut für Team BDK 26 Berlin' }) });
 
-      expect(el().querySelector('[role="alert"]')?.textContent).toContain('Text der Einwilligung hat sich inzwischen geändert');
+      const hinweis = el().querySelector('[data-testid="team-wortlaut-neu"]');
+      expect(hinweis?.getAttribute('role')).toBe('alert');
+      expect(hinweis?.textContent).toContain('Text der Einwilligung hat sich inzwischen geändert');
+      expect(el().textContent).toContain('Neuer Wortlaut für Team BDK 26 Berlin');
+      expect(el().textContent).not.toContain('nicht wie eine Mail-Adresse');
+      // Nichts vorausgewählt: Die Person entscheidet zum neuen Text neu.
+      expect(fixture.componentInstance.teamWahl).toBeNull();
       expect(teamMerkerLesen()).toBeNull();
     });
 
@@ -388,6 +394,26 @@ describe('EinladungComponent mit Team', () => {
         expect(el().textContent).toContain(text);
       });
     }
+
+    it('holt bei 422 an der Kennung von /beitreten den neuen Wortlaut selbst und fragt noch einmal', () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team() }, true);
+      klick('team-ja');
+      http
+        .expectOne(`${URL}/beitreten`)
+        .flush(
+          { detail: [{ loc: ['body', 'einwilligung_kennung'], msg: 'Unbekannter Wortlaut' }] },
+          { status: 422, statusText: 'Unprocessable Entity' },
+        );
+      pruefen({ einloesbar: true, team: team({ einwilligung_text: 'Neuer Wortlaut für Team BDK 26 Berlin' }) }, true);
+
+      expect(el().querySelector('[data-testid="team-wortlaut-neu"]')?.textContent).toContain('Gespeichert ist noch nichts');
+      expect(el().textContent).toContain('Neuer Wortlaut für Team BDK 26 Berlin');
+      expect(el().textContent).not.toContain('hat nicht geklappt');
+
+      klick('team-ja');
+      expect(http.expectOne(`${URL}/beitreten`).request.body.einwilligung_kennung).toBe('team-2026-11-26');
+    });
 
     it('führt nach einem Fehler zurück zur Frage', () => {
       starten('Code123');

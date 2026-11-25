@@ -149,8 +149,8 @@ class TeamService:
         Speichert die Mitgliedschaft mit Einwilligung: Kennung des Wortlauts, den die
         Person gesehen hat (ohne Angabe der aktuelle, EINWILLIGUNG_KENNUNG), und
         Zeitpunkt jetzt. Nur geltende Kennungen (EINWILLIGUNG_GELTEND); eine fruehere
-        wird abgelehnt wie eine unbekannte. Mit ``code`` zaehlt die Einloesung in derselben Transaktion
-        (NichtEinloesbar, wenn die Einladung nicht mehr zaehlt).
+        wird abgelehnt wie eine unbekannte. Mit ``code`` zaehlt die Einloesung in
+        derselben Transaktion (NichtEinloesbar, wenn die Einladung nicht mehr zaehlt).
         """
         if not self.wirksam():
             raise TeamsAus()
