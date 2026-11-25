@@ -2,6 +2,15 @@
 
     <h2 class="anmeldegrund" *ngIf="anmeldegrund">{{ anmeldegrund }}</h2>
 
+    <!-- Vertrauenszeile vor dem Anmelden (Jura vorläufig 26.11.), nur mit Schalter vertrauenszeile;
+         auch während die Anmeldewege laden, damit nichts springt -->
+    @if (vertrauenszeileAn()) {
+        <p class="vertrauenszeile" data-testid="vertrauenszeile">
+            {{ vertrauenszeile }}
+            <a routerLink="/datenschutz" class="vertrauenszeile-link">Datenschutz</a>
+        </p>
+    }
+
     <div class="login-selector-container" *ngIf="!isLoading">
         <!-- Only the enabled login options; a switched-off one is hidden, not greyed out (#600) -->
         <div class="login-options">

@@ -1,5 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { LoginSelectorComponent, WARTELISTE_TEXT } from './login-selector.component';
+import { WritableSignal, signal } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { LoginSelectorComponent, VERTRAUENSZEILE, VERTRAUENSZEILE_SCHALTER, WARTELISTE_TEXT } from './login-selector.component';
+import { FunktionenService } from '../services/funktionen.service';
 import { ORGANISATION } from '../shared/organisation';
 import { environment } from '../../environments/environment';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
@@ -32,7 +35,9 @@ describe('LoginSelectorComponent', () => {
           },
           params: of({}),
           queryParams: of({})
-        } }
+        } },
+        // Schalter aus wie von Haus aus; die Vertrauenszeile prüft ihr eigener Block unten
+        { provide: FunktionenService, useValue: { an: () => signal(false).asReadonly() } }
       ]
     })
     .compileComponents();
@@ -45,6 +50,7 @@ describe('LoginSelectorComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
 
   // Designrunde 17.11.: Anmeldung oben, darunter immer sichtbar, wie man zu einem Konto kommt
   describe('Noch kein Konto?', () => {
@@ -222,5 +228,89 @@ describe('LoginSelectorComponent nach "Antworten" (#600)', () => {
     expect(grund?.textContent?.trim()).toBe('Zum Beantworten melde dich an.');
     // Der Grund steht ueber den Anmeldewegen und dem Hinweis zum Konto
     expect(fixture.nativeElement.querySelector('.component-box').firstElementChild).toBe(grund);
+  });
+});
+
+// Vorläufige juristische Einschätzung 26.11.2026, Punkt a: hinter dem Schalter, Standard aus.
+// Mit echtem Router, damit der Link „Datenschutz“ seine Adresse bekommt.
+describe('LoginSelectorComponent: Vertrauenszeile', () => {
+  let fixture: ComponentFixture<LoginSelectorComponent>;
+  let vertrauenszeile: WritableSignal<boolean>;
+  let gefragt: string[];
+
+  beforeEach(async () => {
+    vertrauenszeile = signal(false);
+    gefragt = [];
+    await TestBed.configureTestingModule({
+      imports: [LoginSelectorComponent, HttpClientTestingModule, BrowserAnimationsModule],
+      providers: [
+        provideRouter([]),
+        { provide: FunktionenService, useValue: {
+          an: (name: string) => { gefragt.push(name); return vertrauenszeile.asReadonly(); }
+        } }
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(LoginSelectorComponent);
+    fixture.detectChanges();
+  });
+
+  function zeile(): HTMLElement | null {
+    return fixture.nativeElement.querySelector('[data-testid="vertrauenszeile"]');
+  }
+
+  it('fragt den Schalter vertrauenszeile', () => {
+    expect(gefragt).toEqual([VERTRAUENSZEILE_SCHALTER]);
+    expect(VERTRAUENSZEILE_SCHALTER).toBe('vertrauenszeile');
+  });
+
+  it('ist bei ausgeschaltetem Schalter unsichtbar', () => {
+    expect(zeile()).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Anzeigenamen');
+  });
+
+  it('steht mit eingeschaltetem Schalter wörtlich da, mit Link „Datenschutz“', () => {
+    vertrauenszeile.set(true);
+    fixture.detectChanges();
+
+    const el = zeile()!;
+    const link = el.querySelector('a') as HTMLAnchorElement;
+    expect(VERTRAUENSZEILE).toBe(
+      'Was du beiträgst, erscheint unter deinem Anzeigenamen. Ob und wie viel du sonst mitmachst, sehen andere nicht.',
+    );
+    expect(el.textContent?.replace(/\s+/g, ' ').trim()).toBe(`${VERTRAUENSZEILE} Datenschutz`);
+    expect(link.textContent?.trim()).toBe('Datenschutz');
+    expect(link.getAttribute('href')).toBe('/datenschutz');
+  });
+
+  it('gibt dem Link mindestens 24 px Zielfläche', () => {
+    vertrauenszeile.set(true);
+    fixture.detectChanges();
+
+    const link = zeile()!.querySelector('a') as HTMLAnchorElement;
+    const rahmen = link.getBoundingClientRect();
+    expect(rahmen.height).toBeGreaterThanOrEqual(24);
+    expect(rahmen.width).toBeGreaterThanOrEqual(24);
+  });
+
+  it('steht über den Anmeldewegen, auch solange sie laden', () => {
+    vertrauenszeile.set(true);
+    fixture.detectChanges();
+
+    const box: HTMLElement = fixture.nativeElement.querySelector('.component-box');
+    const kinder = Array.from(box.children);
+    expect(fixture.componentInstance.isLoading).toBeTrue();
+    expect(kinder.indexOf(zeile()!)).toBeLessThan(kinder.indexOf(box.querySelector('.loading-container')!));
+    expect(kinder.indexOf(zeile()!)).toBeLessThan(kinder.indexOf(box.querySelector('.konto-weg')!));
+  });
+
+  it('kommt nach dem Umschalten ohne Neuladen und geht wieder', () => {
+    vertrauenszeile.set(true);
+    fixture.detectChanges();
+    expect(zeile()).not.toBeNull();
+
+    vertrauenszeile.set(false);
+    fixture.detectChanges();
+    expect(zeile()).toBeNull();
   });
 });

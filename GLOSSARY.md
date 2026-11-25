@@ -748,3 +748,7 @@ _Avoid_: Feature-Flag, Toggle, Flag
 **Teilen als Bild**:
 Eine Beitragskarte als Bild im Stil der App teilen: Thema mit Motiv, „Antwort auf“ mit der Aussage, Titel und Text der gewählten Fassung, die Marke „Gut gesagt“ und die Adresse des Beitrags. Das Bild entsteht im Browser, als Quadrat oder als Story (9:16), und geht über das Teilen-Menü des Geräts oder als Datei zum Herunterladen; der Server sieht es nicht. Hinter einem Schalter (#756).
 _Avoid_: Sharepic (nur im Code), Screenshot, Kachel
+
+**Vertrauenszeile**:
+Die Zeile über den Anmeldewegen auf der Anmeldeseite: „Was du beiträgst, erscheint unter deinem Anzeigenamen. Ob und wie viel du sonst mitmachst, sehen andere nicht.“ mit Link „Datenschutz“, Wortlaut nach der vorläufigen juristischen Einschätzung vom 26.11.2026. Sie stimmt nur, solange Rangliste und Team-Fortschritt aus oder freiwillig sind; mit dem Vorstands-Go wird sie ergänzt. Speichert und zählt nichts. Hinter dem Schalter `vertrauenszeile`, dessen Obergrenze von Haus aus aus ist, obwohl die App ihn ohne Anmeldung abfragt (Grundsatz 26.11.: Neues hinter einem Schalter, Standard aus).
+_Avoid_: Datenschutzhinweis, Disclaimer

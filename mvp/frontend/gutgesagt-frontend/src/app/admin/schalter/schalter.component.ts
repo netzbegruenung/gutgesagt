@@ -22,6 +22,7 @@ const TITEL: Record<string, string> = {
   abkuerzungen: 'App-Abkürzungen',
   antworten_hinweis: 'Neue Antworten auf eigene Aussagen',
   sharepic: 'Teilen als Bild',
+  vertrauenszeile: 'Vertrauenszeile vor dem Anmelden',
   team_fortschritt: 'Team-Fortschritt',
   team_quests: 'Team-Quests',
   teams: 'Teams über Einladungen',
