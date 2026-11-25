@@ -6,9 +6,21 @@ export const TEAM_SAISON_MAX = 20;
 // eslint-disable-next-line no-control-regex
 const TEAM_VERBOTEN = /[<>&"\\/\x00-\x1f\x7f]/;
 
-/** Hinweis zum Teamnamen, falls der Server keinen mitschickt (teamname_hinweis). */
+/** Hinweis zum Teamnamen, falls der Server keinen mitschickt (teamname_hinweis); wie TEAMNAME_HINWEIS im Backend. */
 export const TEAMNAME_HINWEIS =
-  'Nur nach Anlass, Ort oder Saison benennen, etwa „BDK 26 Berlin“ oder „Bayreuth“. Nie nach Personen.';
+  'Anlass, Ort, Saison oder öffentliche Gruppe mit schriftlicher Zustimmung; keine Namen zu Religion, Gesundheit, sexueller Orientierung, Herkunft oder Gewerkschaft.';
+
+/** Teamart an der Einladung (TEAM_ARTEN in domain/teams.py). */
+export type TeamArt = 'anlass' | 'gruppe';
+
+/** Die Auswahl im Admin-Formular; „anlass“ ist der Standard. */
+export const TEAM_ARTEN: readonly { schluessel: TeamArt; name: string }[] = [
+  { schluessel: 'anlass', name: 'Team nach Anlass, Ort oder Saison' },
+  { schluessel: 'gruppe', name: 'Team nach Gruppe' },
+];
+
+/** Beschriftung des Pflichtfelds bei „Team nach Gruppe“. */
+export const TEAM_ZUSTIMMUNG_LABEL = 'Zustimmung der Gruppenleitung liegt schriftlich vor (Datum)';
 
 /** Ein Motiv: Schlüssel (Datei unter public/meilensteine) und Name, der immer daneben steht. */
 export interface TeamMotiv {

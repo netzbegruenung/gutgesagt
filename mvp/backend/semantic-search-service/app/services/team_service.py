@@ -28,7 +28,7 @@ Schalter ``teams`` aus: Teamfelder werden ignoriert, Einladungen wie bisher.
 """
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
@@ -38,6 +38,7 @@ from domain.teams import (
     EINWILLIGUNG_KENNUNG,
     EINWILLIGUNG_GELTEND,
     OEFFENTLICH_KENNUNG,
+    TEAM_ART_ANLASS,
     OEFFENTLICH_WORTLAUTE,
     wortlaut_pruefen,
 )
@@ -77,6 +78,11 @@ class Team:
     name: str
     motiv: Optional[str]
     saison: str
+    # Teamart und Tag der schriftlichen Zustimmung der Gruppenleitung stehen an der
+    # Einladung, nicht an der Mitgliedschaft; sie zaehlen nicht zur Identitaet des
+    # Teams (Name und Saison). Das Datum ist nur ein Nachweis fuer Admins.
+    art: str = field(default=TEAM_ART_ANLASS, compare=False)
+    zustimmung_am: Optional[date] = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)

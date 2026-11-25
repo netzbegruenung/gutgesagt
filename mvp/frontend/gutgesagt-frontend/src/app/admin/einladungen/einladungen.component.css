@@ -80,6 +80,28 @@ td {
   min-width: 0;
 }
 
+/* Teamart vorn, über die ganze Breite; das Datum breit genug für die lange Beschriftung */
+.art-wahl {
+  flex-basis: 100%;
+  min-width: 0;
+}
+
+.arten {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.team-zustimmung {
+  flex: 1 1 100%;
+  max-width: 480px;
+}
+
+.team-art {
+  display: block;
+  font-size: 12px;
+}
+
 .motiv-label {
   display: block;
   margin-bottom: 4px;

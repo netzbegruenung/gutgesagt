@@ -33,11 +33,26 @@
       <!-- Nur mit Schalter teams; ohne Teamname ein reiner Kontolink wie bisher -->
       <fieldset *ngIf="teamsAktiv" class="team-block" data-testid="team-block">
         <legend>Team (optional)</legend>
+        <div class="art-wahl">
+          <span id="team-art-label" class="motiv-label">Teamart</span>
+          <mat-radio-group name="teamArt" [(ngModel)]="teamArt" aria-labelledby="team-art-label" class="arten">
+            <mat-radio-button *ngFor="let a of teamArten" [value]="a.schluessel" data-testid="team-art">
+              {{ a.name }}
+            </mat-radio-button>
+          </mat-radio-group>
+        </div>
         <mat-form-field appearance="outline" class="team-name" subscriptSizing="dynamic">
           <mat-label>Teamname</mat-label>
           <input matInput name="teamName" [(ngModel)]="teamName" [maxlength]="TEAM_NAME_MAX"
                  [attr.aria-invalid]="teamNameUngueltig" />
           <mat-hint>{{ teamnameHinweis }}</mat-hint>
+        </mat-form-field>
+        <mat-form-field *ngIf="teamArt === 'gruppe'" appearance="outline" class="team-zustimmung"
+                        subscriptSizing="dynamic" data-testid="team-zustimmung">
+          <mat-label>{{ zustimmungLabel }}</mat-label>
+          <input matInput type="date" name="teamZustimmungAm" [(ngModel)]="teamZustimmungAm" [max]="heute"
+                 [required]="mitTeam" [attr.aria-invalid]="teamZustimmungFehlt" />
+          <mat-hint>Nur als Nachweis für Admins. Keine Namen.</mat-hint>
         </mat-form-field>
         <mat-form-field appearance="outline" class="team-saison" subscriptSizing="dynamic">
           <mat-label>Saison</mat-label>
@@ -47,6 +62,9 @@
         </mat-form-field>
         <p *ngIf="teamNameUngueltig || teamSaisonUngueltig" class="warnung team-fehler" role="alert">
           Teamname und Saison dürfen nicht leer sein und keine der Zeichen &lt; &gt; &amp; " \ / enthalten.
+        </p>
+        <p *ngIf="teamZustimmungFehlt" class="warnung team-fehler" role="alert" data-testid="team-zustimmung-fehlt">
+          Bei einem Team nach Gruppe ist das Datum der schriftlichen Zustimmung Pflicht, höchstens heute.
         </p>
         <div class="motiv-wahl">
           <span id="motiv-label" class="motiv-label">Motiv</span>
@@ -99,6 +117,9 @@
             <td *ngIf="teamsAktiv" class="team" data-label="Team" data-testid="team">
               <app-team-pille *ngIf="e.team; else ohneTeam" [name]="e.team.name" [motiv]="e.team.motiv"
                               [saison]="e.team.saison" [klein]="true"></app-team-pille>
+              <span *ngIf="e.team?.art === 'gruppe'" class="hinweis team-art" data-testid="team-art-zeile">
+                Nach Gruppe<ng-container *ngIf="e.team?.zustimmung_am">, Zustimmung vom {{ tag(e.team!.zustimmung_am!) }}</ng-container>
+              </span>
             </td>
             <td *ngIf="teamsAktiv" class="eng" data-label="Mitglieder" data-testid="mitglieder">
               <ng-container *ngIf="e.team; else ohneTeam">{{ e.team.mitglieder }}</ng-container>

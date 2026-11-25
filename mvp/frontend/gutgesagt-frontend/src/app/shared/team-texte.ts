@@ -35,5 +35,13 @@ export function teamBegruessungSaetze(team: string): readonly string[] {
   ];
 }
 
+/**
+ * Satz direkt über der Frage, nur bei einem Team nach Gruppe (Teamart „gruppe“,
+ * Wortlaut aus der juristischen Prüfung vom 25.11.2026); ``gruppe`` ist der Teamname.
+ */
+export function teamGruppeSatz(gruppe: string): string {
+  return `Dieses Team ist mit Zustimmung von ${gruppe} nach ihr benannt. Verantwortlich für Gut gesagt ist allein die Netzbegrünung; ${gruppe} bekommt keine Daten über dich.`;
+}
+
 /** Verweis unter den Knöpfen auf den Abschnitt der Datenschutzerklärung. */
 export const TEAM_DATENSCHUTZ_HINWEIS = 'Mehr dazu in der Datenschutzerklärung unter „Teams“.';

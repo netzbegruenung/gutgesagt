@@ -372,14 +372,21 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   answers 404. `GET /api/v1/teams/meine` answers 404 only when the person has no Mitgliedschaft;
   existing ones are still listed (`teams_aktiv: false`, no public toggle) so that leaving a team
   stays as easy as joining (Art. 7(3) GDPR). While on:
-  - Admin: `GET /api/v1/einladungen` adds `team` `{name, motiv, saison, mitglieder}` per
-    invitation (`mitglieder` is only a count; no member list, export or API on other people's
-    memberships exists, admins included), plus `teams_aktiv`, `aktuelle_saison`, `motive` and
-    `teamname_hinweis`; `POST` and `PATCH /api/v1/einladungen` accept `team_name` (at most 40
-    characters, requires `team_motiv`), `team_motiv` (one of the Meilenstein motifs) and
-    `team_saison` (at most 20, default the current Saison).
+  - Admin: `GET /api/v1/einladungen` adds `team` `{name, motiv, saison, art, zustimmung_am,
+    mitglieder}` per invitation (`mitglieder` is only a count; no member list, export or API on
+    other people's memberships exists, admins included), plus `teams_aktiv`, `aktuelle_saison`,
+    `motive` and `teamname_hinweis`; `POST` and `PATCH /api/v1/einladungen` accept `team_name`
+    (at most 40 characters, requires `team_motiv`), `team_motiv` (one of the Meilenstein motifs),
+    `team_saison` (at most 20, default the current Saison), `team_art` (`anlass`, the default,
+    or `gruppe`, GLOSSARY.md "Team") and `team_zustimmung_am` (date the written consent of the
+    group's leadership was given; required with `gruppe`, not in the future, rejected with
+    `anlass`). Stored at the invitation (`einladungen.team_art`, `team_zustimmung_am`,
+    migration `2026-11-26-teams-nach-gruppe.sql`) as evidence for admins only, no names; the
+    Mitgliedschaft carries neither.
   - Redeeming: `POST /api/v1/einladungen/pruefen` returns `team` with the greeting, the next
-    number and the consent wording `team-2026-11-26` plus both button texts. For a logged-in
+    number, `art` (with `gruppe` the greeting shows the sentence that the team is named after the
+    group with its consent; `zustimmung_am` is never sent here) and the consent wording
+    `team-2026-11-26` plus both button texts. For a logged-in
     member it returns `team` with `eigene_nummer` even when the invitation is no longer
     redeemable ("schon dabei"); everyone else gets no team then.
     `POST /api/v1/einladungen/einloesen` stores a Mitgliedschaft only with

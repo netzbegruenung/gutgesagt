@@ -45,6 +45,14 @@ LOESCHSKRIPT = (
     postgres.REPO_WURZEL / "mvp" / "scripts" / "manual" / "person_loeschen.sql"
 )
 MIGRATION = postgres.MIGRATIONEN / "2026-11-25-teams.sql"
+MIGRATION_NACH_GRUPPE = postgres.MIGRATIONEN / "2026-11-26-teams-nach-gruppe.sql"
+GRUPPE = Team(
+    "Netzfeuerwehr",
+    "handschlag",
+    "2026",
+    art="gruppe",
+    zustimmung_am=date(2026, 11, 20),
+)
 
 TABELLEN = [
     EinladungZeile.__table__,
@@ -334,6 +342,7 @@ def test_migration_auf_bestehender_einladungstabelle(postgres_url):
         postgres.migration(db, postgres.MIGRATIONEN / "2026-10-30-429-einladungen.sql")
         postgres.migration(db, MIGRATION)
         postgres.migration(db, MIGRATION)
+        postgres.migration(db, MIGRATION_NACH_GRUPPE)
 
         einladungen, teams = _dienste(db)
         code = _teamlink(einladungen)
@@ -360,3 +369,64 @@ def test_nie_benutztes_konto_nimmt_seine_teamdaten_mit(db):
     assert teams.oeffentlich_stand("nie-benutzt") is None
     assert len(teams.meine("andere-person")) == 1
     assert TeamRepository(db).konten_loeschen([]) == 0
+
+
+def test_teamart_und_zustimmung_stehen_an_der_einladung(db):
+    einladungen, teams = _dienste(db)
+    anlass = _teamlink(einladungen)
+    gruppe = _teamlink(einladungen, team=GRUPPE)
+
+    nach_code = {e.code: e for e in einladungen.alle()}
+    assert nach_code[anlass].team_art == "anlass"
+    assert nach_code[anlass].team_zustimmung_am is None
+    assert nach_code[gruppe].team_art == "gruppe"
+    assert nach_code[gruppe].team_zustimmung_am == date(2026, 11, 20)
+    assert nach_code[gruppe].team.art == "gruppe"
+    assert einladungen.team_info(gruppe, heute=HEUTE).team.art == "gruppe"
+
+    # Die Mitgliedschaft traegt weder Art noch Datum: nur Name, Motiv, Saison
+    _, m, _ = einladungen.beitreten(gruppe, "konto-a", heute=HEUTE)
+    assert (m.team_name, m.saison) == ("Netzfeuerwehr", "2026")
+    with db.engine.connect() as c:
+        spalten = {s["name"] for s in inspect(c).get_columns("team_mitgliedschaften")}
+    assert "team_art" not in spalten and "team_zustimmung_am" not in spalten
+
+
+def test_teamart_aendern_und_zurueck_auf_anlass_leert_das_datum(db):
+    einladungen, _ = _dienste(db)
+    code = _teamlink(einladungen, team=GRUPPE)
+    [e] = einladungen.alle()
+
+    einladungen.aendern(e.id, team=Team("Netzfeuerwehr", "handschlag", "2026"))
+
+    [e] = einladungen.alle()
+    assert e.team_art == "anlass"
+    assert e.team_zustimmung_am is None
+    assert einladungen.nach_code(code).team.art == "anlass"
+
+
+def test_migration_nach_gruppe_setzt_vorhandene_teams_auf_anlass(postgres_url):
+    with postgres.schema(postgres_url, "itest_teams") as db:
+        postgres.migration(db, postgres.MIGRATIONEN / "2026-10-30-429-einladungen.sql")
+        postgres.migration(db, MIGRATION)
+        with db.engine.begin() as c:
+            c.execute(
+                text(
+                    "INSERT INTO einladungen (id, code, notiz, erlaubte_einloesungen,"
+                    " einloesungen, gueltig_bis, abgeschaltet, angelegt_am, team_name,"
+                    " team_motiv, team_saison) VALUES (gen_random_uuid(), 'mit-team',"
+                    " 'alt', 5, 0, '2026-12-31', false, '2026-11-25', 'Bayreuth',"
+                    " 'vogel', '2026'), (gen_random_uuid(), 'ohne-team', 'alt', 5, 0,"
+                    " '2026-12-31', false, '2026-11-25', NULL, NULL, NULL)"
+                )
+            )
+        postgres.migration(db, MIGRATION_NACH_GRUPPE)
+        postgres.migration(db, MIGRATION_NACH_GRUPPE)
+
+        with db.engine.connect() as c:
+            zeilen = dict(
+                c.execute(
+                    text("SELECT code, team_art FROM einladungen ORDER BY code")
+                ).all()
+            )
+        assert zeilen == {"mit-team": "anlass", "ohne-team": None}

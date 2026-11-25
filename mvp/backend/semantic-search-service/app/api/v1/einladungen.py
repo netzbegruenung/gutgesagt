@@ -13,7 +13,7 @@ import asyncio
 import re
 import uuid
 from datetime import date, timedelta
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import (
@@ -36,6 +36,8 @@ from domain.teams import (
     OEFFENTLICH_KENNUNG,
     OEFFENTLICH_WORTLAUTE,
     SAISON_MAX,
+    TEAM_ART_ANLASS,
+    TEAM_ART_GRUPPE,
     TEAM_NAME_MAX,
     TEAMNAME_HINWEIS,
 )
@@ -97,11 +99,19 @@ def _team_text(wert: Optional[str], feld: str) -> Optional[str]:
 
 
 class TeamFelder(BaseModel):
-    """Team an der Einladung: Name (nur Anlass, Ort oder Saison), Motiv, Saison."""
+    """
+    Team an der Einladung: Name, Motiv, Saison und Teamart. ``team_art`` ist "anlass"
+    (Team nach Anlass, Ort oder Saison; Standard) oder "gruppe" (Team nach Gruppe).
+    Bei "gruppe" ist ``team_zustimmung_am`` Pflicht: der Tag, an dem die schriftliche
+    Zustimmung der Gruppenleitung vorlag, nicht in der Zukunft. Gespeichert nur als
+    Nachweis fuer Admins, ohne Namen; bei "anlass" gibt es kein Datum.
+    """
 
     team_name: Optional[str] = Field(None, max_length=TEAM_NAME_MAX)
     team_motiv: Optional[str] = None
     team_saison: Optional[str] = Field(None, max_length=SAISON_MAX)
+    team_art: Optional[Literal["anlass", "gruppe"]] = None
+    team_zustimmung_am: Optional[date] = None
 
     @field_validator("team_name")
     @classmethod
@@ -123,10 +133,31 @@ class TeamFelder(BaseModel):
     @model_validator(mode="after")
     def _motiv_zum_namen(self):
         if self.team_name is None:
-            if self.team_motiv is not None or self.team_saison is not None:
-                raise ValueError("Motiv und Saison nur mit Teamname")
-        elif self.team_motiv is None:
+            if any(
+                v is not None
+                for v in (
+                    self.team_motiv,
+                    self.team_saison,
+                    self.team_art,
+                    self.team_zustimmung_am,
+                )
+            ):
+                raise ValueError("Motiv, Saison und Teamart nur mit Teamname")
+            return self
+        if self.team_motiv is None:
             raise ValueError("Ein Team braucht ein Motiv")
+        if self.team_art is None:
+            self.team_art = TEAM_ART_ANLASS
+        if self.team_art == TEAM_ART_GRUPPE:
+            if self.team_zustimmung_am is None:
+                raise ValueError(
+                    "Ein Team nach Gruppe braucht das Datum der schriftlichen "
+                    "Zustimmung der Gruppenleitung"
+                )
+            if self.team_zustimmung_am > heute_utc():
+                raise ValueError("Das Datum der Zustimmung liegt in der Zukunft")
+        elif self.team_zustimmung_am is not None:
+            raise ValueError("Ein Datum der Zustimmung nur bei einem Team nach Gruppe")
         return self
 
     def team(self, saison_vorschlag: str) -> Optional[Team]:
@@ -134,7 +165,11 @@ class TeamFelder(BaseModel):
         if self.team_name is None:
             return None
         return Team(
-            self.team_name, self.team_motiv, self.team_saison or saison_vorschlag
+            self.team_name,
+            self.team_motiv,
+            self.team_saison or saison_vorschlag,
+            art=self.team_art or TEAM_ART_ANLASS,
+            zustimmung_am=self.team_zustimmung_am,
         )
 
 
@@ -181,6 +216,10 @@ class TeamAdminResponse(BaseModel):
     name: str
     motiv: Optional[str]
     saison: str
+    # "anlass" oder "gruppe"; bei "gruppe" der Tag der schriftlichen Zustimmung der
+    # Gruppenleitung, nur fuer Admins
+    art: str = TEAM_ART_ANLASS
+    zustimmung_am: Optional[date] = None
     # Nur die Zahl, nie wer (keine Liste, kein Export)
     mitglieder: int
 
@@ -217,6 +256,8 @@ class EinladungResponse(BaseModel):
                     name=team.name,
                     motiv=team.motiv,
                     saison=team.saison,
+                    art=team.art,
+                    zustimmung_am=team.zustimmung_am,
                     mitglieder=mitglieder,
                 )
                 if team
@@ -250,6 +291,10 @@ class TeamPruefenResponse(BaseModel):
     name: str
     motiv: Optional[str]
     saison: str
+    # "anlass" oder "gruppe": bei "gruppe" zeigt die Begruessung den Satz, dass das
+    # Team mit Zustimmung der Gruppe nach ihr benannt ist. Das Datum der Zustimmung
+    # geht hier nie mit.
+    art: str = TEAM_ART_ANLASS
     mitglieder: int
     # Die Nummer, die als naechste vergeben wird; fest erst beim Speichern.
     naechste_nummer: int
@@ -498,6 +543,7 @@ async def einladung_pruefen(
             name=team.name,
             motiv=team.motiv,
             saison=team.saison,
+            art=team.art,
             mitglieder=info.mitglieder,
             naechste_nummer=info.naechste_nummer,
             eigene_nummer=info.eigene_nummer,

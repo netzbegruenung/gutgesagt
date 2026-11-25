@@ -436,7 +436,9 @@ und der Ablauf oben erfasst die Tabelle nicht.
 ## Teams
 
 Eine Einladung kann zu einem Team gehören (GLOSSARY „Teamlink“): An `einladungen` stehen dann
-zusätzlich Teamname, Motiv und Saison, weiter ohne Mail-Adresse und ohne Kennung. Eine
+zusätzlich Teamname, Motiv, Saison und Teamart, bei einem Team nach Gruppe dazu der Tag der
+schriftlichen Zustimmung der Gruppenleitung (Nachweis nur für Admins, ohne Namen; bleibt mit der
+Einladung stehen, siehe „Einladungen“), weiter ohne Mail-Adresse und ohne Kennung. Eine
 Mitgliedschaft (`team_mitgliedschaften`) entsteht nur, wenn die Person auf der Begrüßung
 ausdrücklich einwilligt (Wortlaut `team-2026-11-26`, gespeichert mit Kennung und Zeitpunkt an
 der Mitgliedschaft). Sie trägt **keinen Bezug zur Einladung**: Welche Einladung jemand genutzt

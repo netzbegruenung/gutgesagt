@@ -87,7 +87,8 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   Zustimmung zu den Nutzungsbedingungen (Kennung, Zeitpunkt, Stand) und das Archiv der bis zur
   Umstellung im Anmeldedienst gespeicherten Zustimmungszeitpunkte; beim Beta-Zugang E-Mail-Adresse, Anzeigename und Prüfsumme des
   Passworts in einer Konfigurationsdatei; Anmelde-Cookie; an Einladungen nur Zähler und Notiz, bei
-  einem Teamlink dazu Teamname, Motiv und Saison (Mitgliedschaften unter T13).
+  einem Teamlink dazu Teamname, Motiv, Saison und Teamart, bei einem Team nach Gruppe der Tag
+  der schriftlichen Zustimmung der Gruppenleitung ohne Namen (Mitgliedschaften unter T13).
   Im Browser bis zum Tabschluss, höchstens eine Stunde, ein angefangener Kommentar mit Prüfwert
   des Kontos (DSE „Weitere Einträge“, E1).
   Schon das Konto kann eine politische Nähe erkennen lassen (Art. 9).
@@ -312,8 +313,12 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
 - **TOM:** DSFA-Nachtrag „Teams“. Schalter `teams` (Obergrenze `SEMANTIC_SEARCH_TEAMS_AKTIV`) und
   `teams_oeffentlich` (eigene Obergrenze `SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV`, nicht an die
   Abzeichen gekoppelt), beide Standard aus; die Anzeige am Namen bleibt aus, bis der
-  Datenschutzbeauftragte geraten hat. Teamnamen nur nach Anlass, Ort oder Saison (Hinweis im
-  Admin-Formular). Keine Nummer am Namen.
+  Datenschutzbeauftragte geraten hat. Teamnamen nach Anlass, Ort oder Saison oder, als Team
+  nach Gruppe, nach einer öffentlich auftretenden Gruppe mit vorheriger schriftlicher,
+  widerruflicher Zustimmung der Gruppenleitung (Tag der Zustimmung an der Einladung, nur für
+  Admins; nach Widerruf wird das Team umbenannt); die Gruppe bekommt nie Namen, Listen oder
+  eigene Zahlen und steuert nichts; keine Namen, die eine weitere besondere Kategorie erkennen
+  lassen (Hinweis im Admin-Formular, GLOSSARY „Team“). Keine Nummer am Namen.
 
 ## Offen
 

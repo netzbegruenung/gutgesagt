@@ -21,7 +21,7 @@ import {
 import { ROUTES } from '../shared/constants/app.constants';
 import { sitzungPruefen } from '../auth/sitzung';
 import { FunktionenService } from '../services/funktionen.service';
-import { teamBegruessungSaetze, teamBegruessungTitel } from '../shared/team-texte';
+import { teamBegruessungSaetze, teamBegruessungTitel, teamGruppeSatz } from '../shared/team-texte';
 import { teamMerkerAblegen, teamMerkerLesen, teamMerkerLoeschen, teamMerkerNehmen } from './team-merker';
 
 /**
@@ -173,6 +173,11 @@ export class EinladungComponent implements OnInit {
 
   begruessungSaetze(team: TeamBeimPruefen): readonly string[] {
     return teamBegruessungSaetze(team.name);
+  }
+
+  /** Nur bei einem Team nach Gruppe: der Satz direkt über der Frage, sonst null. */
+  gruppeSatz(team: TeamBeimPruefen): string | null {
+    return team.art === 'gruppe' ? teamGruppeSatz(team.name) : null;
   }
   /** Der eingefuegte Link, solange die Seite ohne Code aufgerufen wurde. */
   link = '';
