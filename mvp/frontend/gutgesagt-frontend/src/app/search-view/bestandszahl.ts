@@ -1,14 +1,15 @@
 /**
- * Bestandszahl auf der Startseite (Entscheidung des Maintainers vom 25.11.2026): Solange der
- * Saisonbalken nicht öffentlich ist, zeigt sein Platz, wie viel schon da ist, etwa „Schon 750
- * Antworten auf 250 Sprüche“. Nur Inhalte, keine Personen, keine Nutzung, keine Konten.
+ * Bestandszahl auf der Startseite (Entscheidung des Maintainers vom 25.11.2026): Die Unterzeile
+ * unter „Nie wieder sprachlos“ zeigt, wie viel schon da ist, etwa „800 bewährte Antworten auf 250
+ * Sprüche – aus der Community.“ (hero-unterzeile.component.ts). Nur Inhalte, keine Personen,
+ * keine Nutzung, keine Konten.
  *
  * Gezählt wird, was /getMetrics ohnehin für alle liefert: sichtbare Kommentare und Aussagen ohne
  * unbeantwortete Suchanfragen (Vormoderation). Abgerundet auf runde Stufen, damit die Zahl nicht
  * täglich zuckt; nie aufgerundet, die Zahl ist also nie größer als der Bestand.
  */
 
-/** Darunter zeigt der Platz nichts: „Schon 3 Antworten“ zeigt noch keinen Gewinn. */
+/** Darunter bleibt die Unterzeile ohne Zahl: „3 bewährte Antworten“ zeigt noch keinen Gewinn. */
 export const BESTAND_MINDEST_ANTWORTEN = 10;
 
 export interface Bestandszahl {

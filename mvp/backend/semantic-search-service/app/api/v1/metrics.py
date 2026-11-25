@@ -189,8 +189,8 @@ class SuchenOhneTrefferResponse(BaseModel):
 # Bewusst oeffentlich: /getMetrics liefert nur aggregierte Bestandszaehler
 # (content_count, statement_count, commentary_count, reference_count); das BFF
 # fuehrt es als anonym erlaubt (EndpointPolicy). Die Startseite zeigt Kommentare und
-# Aussagen abgerundet als Bestandszahl, solange der Saisonbalken nicht oeffentlich ist
-# (saison-ziel/bestandszahl.ts). Die Kennzahlen fuer Admins stehen
+# Aussagen abgerundet als Bestandszahl in der Unterzeile des Claims
+# (search-view/hero-unterzeile.component.ts). Die Kennzahlen fuer Admins stehen
 # in den Endpunkten darunter, die admin-only sind; Betriebskennzahlen liegen unter
 # /metrics (api/betriebskennzahlen.py).
 @router.get("/getMetrics", response_model=GetMetricsResponse)

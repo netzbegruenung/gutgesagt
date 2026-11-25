@@ -8,9 +8,6 @@ import { environment } from '../../environments/environment';
 import { FunktionenService } from '../services/funktionen.service';
 
 const URL = `${environment.baseUrl}/api/v1/saisons/aktuell`;
-const METRICS = `${environment.baseUrl}/api/v1/metrics/getMetrics`;
-/** Bestand wie /getMetrics ihn meldet */
-const BESTAND = { content_count: 1200, statement_count: 263, commentary_count: 812, reference_count: 40 };
 
 describe('SaisonZielComponent', () => {
   let fixture: ComponentFixture<SaisonZielComponent>;
@@ -63,136 +60,27 @@ describe('SaisonZielComponent', () => {
     expect(bereich()).toBeNull();
   });
 
-  function bestandBereich(): HTMLElement | null {
-    return fixture.nativeElement.querySelector('[data-testid="bestandszahl"]');
-  }
-
   it('zeigt nichts, wenn der Server den Schalter als aus meldet (200, aktiv false)', () => {
     schalter = null;
     fixture.detectChanges();
     http.expectOne(URL).flush({ balken: null, aktiv: false });
     fixture.detectChanges();
-    http.expectNone(METRICS);
     expect(bereich()).toBeNull();
-    expect(bestandBereich()).toBeNull();
   });
 
   it('zeigt nichts bei einem 404 eines älteren Backends', () => {
     fixture.detectChanges();
     http.expectOne(URL).flush({ detail: 'Nicht gefunden' }, { status: 404, statusText: 'Not Found' });
     fixture.detectChanges();
-    http.expectNone(METRICS);
-    expect(bereich()).toBeNull();
-    expect(bestandBereich()).toBeNull();
-  });
-
-  it('fragt bei Schalter sicher aus auch den Bestand nicht', () => {
-    schalter = false;
-    fixture.detectChanges();
-    http.expectNone(METRICS);
-    expect(bestandBereich()).toBeNull();
-  });
-
-  it('unter der Schwelle: Bestandszahl statt Balken, abgerundet und ohne Personen', () => {
-    fixture.detectChanges();
-    http.expectOne(URL).flush({ balken: null });
-    http.expectOne(METRICS).flush(BESTAND);
-    fixture.detectChanges();
-
-    expect(bereich()).toBeNull();
-    expect(bestandBereich()).not.toBeNull();
-    expect(text()).toContain('Schon 800 Antworten auf 250 Sprüche');
-    expect(text()).toContain('Fertig zum Kopieren und Anpassen.');
-    expect(text()).not.toMatch(/Menschen|Personen|Konten|Nutzer|genutzt|Woche/);
-    expect(fixture.nativeElement.querySelector('progress')).toBeNull();
-    expect(bestandBereich()!.getAttribute('aria-labelledby')).toBe('bestandszahl-titel');
-  });
-
-  it('zeigt bei zu wenig Bestand nichts statt einer kleinen Zahl', () => {
-    fixture.detectChanges();
-    http.expectOne(URL).flush({ balken: null });
-    http.expectOne(METRICS).flush({ ...BESTAND, commentary_count: 4, statement_count: 2 });
-    fixture.detectChanges();
-    expect(bestandBereich()).toBeNull();
-  });
-
-  it('zeigt nichts, wenn der Bestand schon beim ersten Laden fehlschlägt', () => {
-    fixture.detectChanges();
-    http.expectOne(URL).flush({ balken: null });
-    http.expectOne(METRICS).flush('kaputt', { status: 500, statusText: 'Server Error' });
-    fixture.detectChanges();
-    expect(bestandBereich()).toBeNull();
     expect(bereich()).toBeNull();
   });
 
-  it('behält die Bestandszahl, wenn die Zählung einmal 0 meldet (gescheiterte Zählung)', fakeAsync(() => {
+  it('zeigt nichts unter der Schwelle', () => {
     fixture.detectChanges();
     http.expectOne(URL).flush({ balken: null });
-    http.expectOne(METRICS).flush(BESTAND);
-    tick(SAISON_NACHLADEN_MS);
-    http.expectOne(URL).flush({ balken: null });
-    http.expectOne(METRICS).flush({ ...BESTAND, commentary_count: 0 });
-    fixture.detectChanges();
-    expect(text()).toContain('Schon 800 Antworten auf 250 Sprüche');
-    fixture.destroy();
-  }));
-
-  it('Saison vorbei und Bestand kaputt: kein veralteter Balken', fakeAsync(() => {
-    fixture.detectChanges();
-    http.expectOne(URL).flush({ balken: { name: 'Winter 26', ziel: 100, erreicht: 10 } });
-    fixture.detectChanges();
-    expect(bereich()).not.toBeNull();
-    tick(SAISON_NACHLADEN_MS);
-    http.expectOne(URL).flush({ balken: null });
-    http.expectOne(METRICS).flush('kaputt', { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
     expect(bereich()).toBeNull();
-    fixture.destroy();
-  }));
-
-  it('Einzahl bei einem Spruch', () => {
-    fixture.detectChanges();
-    http.expectOne(URL).flush({ balken: null });
-    http.expectOne(METRICS).flush({ ...BESTAND, commentary_count: 12, statement_count: 1 });
-    fixture.detectChanges();
-    expect(text()).toContain('Schon 10 Antworten auf 1 Spruch');
   });
-
-  it('mit öffentlichem Balken keine Bestandszahl und keine Abfrage dafür', () => {
-    fixture.detectChanges();
-    http.expectOne(URL).flush({ balken: { name: 'Winter 26', ziel: 100, erreicht: 10 } });
-    http.expectNone(METRICS);
-    fixture.detectChanges();
-    expect(bestandBereich()).toBeNull();
-    expect(bereich()).not.toBeNull();
-  });
-
-  it('wechselt von selbst von der Bestandszahl zum Balken, sobald die Schwelle erreicht ist', fakeAsync(() => {
-    fixture.detectChanges();
-    http.expectOne(URL).flush({ balken: null });
-    http.expectOne(METRICS).flush(BESTAND);
-    fixture.detectChanges();
-    expect(bestandBereich()).not.toBeNull();
-
-    tick(SAISON_NACHLADEN_MS);
-    http.expectOne(URL).flush({ balken: { name: 'Winter 26', ziel: 100, erreicht: 10 } });
-    fixture.detectChanges();
-    expect(bestandBereich()).toBeNull();
-    expect(bereich()).not.toBeNull();
-    fixture.destroy();
-  }));
-
-  it('behält die Bestandszahl, wenn der Bestand einmal nicht lädt', fakeAsync(() => {
-    fixture.detectChanges();
-    http.expectOne(URL).flush({ balken: null });
-    http.expectOne(METRICS).flush(BESTAND);
-    tick(SAISON_NACHLADEN_MS);
-    http.expectOne(URL).flush({ balken: null });
-    http.expectOne(METRICS).flush('kaputt', { status: 500, statusText: 'Server Error' });
-    fixture.detectChanges();
-    expect(text()).toContain('Schon 800 Antworten auf 250 Sprüche');
-    fixture.destroy();
-  }));
 
   it('zeigt Widerspruchs-Wochen ehrlich, nie Menschen', () => {
     fixture.detectChanges();
@@ -264,7 +152,7 @@ describe('SaisonZielComponent', () => {
 
   it('lädt selbst nach: Einschalten kommt ohne Neuladen an', fakeAsync(() => {
     fixture.detectChanges();
-    http.expectOne(URL).flush({ balken: null, aktiv: false });
+    http.expectOne(URL).flush({ balken: null });
     fixture.detectChanges();
     expect(bereich()).toBeNull();
 
