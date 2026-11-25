@@ -30,9 +30,10 @@ Datenschutzerklaerung stuetzt die Punkte auf diese eigene, freiwillige Einwillig
 Mitwirkung. Gefragt wird je Abruf, damit ein Widerruf sofort wirkt.
 
 Punkte je Saison (Rangliste, #793): Mit ``zeitraum`` zaehlt nur, was in diese Tage
-faellt. Tun und Bewerten nach ihrem Tag, Quests nach dem Montag, an dem sie
-zaehlen (eine Quest der letzten Saisonwoche also nicht mehr), Zustimmung nach dem Tag ihrer letzten
-Aenderung, Nutzung nach den entdoppelten Nutzungsereignissen (usage_events mit
+faellt. Tun und Bewerten nach ihrem Tag, Quests nach ihrer Quest-Woche (deren
+Montag liegt in der Saison, wie bei domain.saisons.wochen_der_saison; gutgeschrieben
+wird erst am Montag danach, eine Quest der letzten Saisonwoche zaehlt also noch fuer
+diese Saison), Zustimmung nach dem Tag ihrer letzten Aenderung, Nutzung nach den entdoppelten Nutzungsereignissen (usage_events mit
 ``entdoppelt``). Die gibt es nur fuer die Frist der usage_events (90 Tage,
 cleanup_old_events): Was laenger zurueckliegt, zaehlt fuer die Saison nicht mehr.
 Gespeichert wird dafuer nichts Neues.
@@ -131,6 +132,23 @@ def _im_zeitraum(
     return {tag: n for tag, n in je_tag.items() if von <= tag <= bis}
 
 
+# quest_tage liefert den Montag nach der Quest-Woche; die Woche beginnt eine Woche davor.
+QUEST_WOCHE = timedelta(days=7)
+
+
+def _quests_der_saison(
+    quests_je_tag: Dict[date, int], zeitraum: Tuple[date, date]
+) -> Dict[date, int]:
+    """
+    Die Quest-Punkte, deren Quest-Woche zur Saison gehoert: Ihr Montag liegt im
+    Zeitraum (Entscheidung Maintainer 25.11., #793), nicht der Tag der Gutschrift.
+    """
+    von, bis = zeitraum
+    return {
+        tag: n for tag, n in quests_je_tag.items() if von <= tag - QUEST_WOCHE <= bis
+    }
+
+
 class PunkteService:
     def __init__(
         self,
@@ -226,8 +244,8 @@ class PunkteService:
             beitraege_je_tag = _im_zeitraum(beitraege_je_tag, zeitraum)
             einwuerfe = _im_zeitraum(einwuerfe, zeitraum)
             bewertungen = _im_zeitraum(bewertungen, zeitraum)
-            # Quest-Punkte der Team-Quests (#792) nach ihrem Tag, wie Tun und Bewerten
-            quests = _im_zeitraum(quests, zeitraum)
+            # Quest-Punkte der Team-Quests (#792) nach der Woche der Quest
+            quests = _quests_der_saison(quests, zeitraum)
         daten = Wirkungsdaten(
             nutzungen=nutzung,
             zustimmungen=zustimmungen,

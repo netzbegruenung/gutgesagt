@@ -311,14 +311,18 @@ async def test_punkte_im_zeitraum_zaehlen_nur_tage_der_saison():
     assert quellen.ausgenommen == {KIM, START}
 
 
-async def test_quest_punkte_im_zeitraum_nur_nach_ihrem_tag():
-    """Saisonpunkte (#793) mit Team-Quests (#792): nur Quest-Tage in der Saison."""
-    heute = JETZT.date()
-    von, bis = heute - timedelta(days=10), heute
+async def test_quest_punkte_zaehlen_fuer_die_saison_ihrer_quest_woche():
+    """
+    Saisonpunkte (#793) mit Team-Quests (#792): Es zaehlt die Woche der Quest, nicht
+    der Montag der Gutschrift danach (Entscheidung 25.11.). Eine Quest aus der letzten
+    Saisonwoche zaehlt also fuer diese Saison, eine aus der Woche davor nicht.
+    """
+    von, bis = date(2026, 10, 5), date(2026, 10, 25)  # Mo bis So, drei Wochen
     quellen = _QuellenImZeitraum([], nutzung={})
     quest_tage = lambda user_id, erstellt, grenze: {  # noqa: E731
-        heute - timedelta(days=3): 1,
-        heute - timedelta(days=20): 1,
+        date(2026, 10, 5): 1,  # Woche ab 28.09., vor der Saison
+        date(2026, 10, 19): 1,  # Woche ab 12.10., mitten in der Saison
+        date(2026, 10, 26): 2,  # Woche ab 19.10., letzte Saisonwoche, zwei Teams
     }
     settings = Settings(
         startkonten=START, punkte_quest=4, punkte_deckel_quests_je_tag=8
@@ -333,8 +337,9 @@ async def test_quest_punkte_im_zeitraum_nur_nach_ihrem_tag():
         quest_tage=quest_tage,
     )
 
-    assert (await dienst.punkte(KIM, (von, bis))).quests == 4
-    assert (await dienst.punkte(KIM)).quests == 8
+    # Nach dem Tag der Gutschrift waeren es 1 + 1 (5.10. und 19.10.)
+    assert (await dienst.punkte(KIM, (von, bis))).quests == 3 * 4
+    assert (await dienst.punkte(KIM)).quests == 4 * 4
 
 
 async def test_punkte_ohne_zeitraum_fragen_die_gesamtzahlen():
