@@ -43,6 +43,9 @@ const TITEL: Record<string, string> = {
 const VORAUSSETZUNG: Record<string, [string, string]> = {
   abzeichen_sichtbar: ['punkte', 'Punkte'],
   teams_oeffentlich: ['teams', 'Teams'],
+  // Kette wie im Backend (schalter_service._wirksam): teams → team_fortschritt → team_quests
+  team_fortschritt: ['teams', 'Teams'],
+  team_quests: ['team_fortschritt', 'Team-Fortschritt'],
   danke_ohne_konto: ['danke_knopf', 'Danke-Knopf'],
   rangliste: ['punkte', 'Punkte'],
 };
