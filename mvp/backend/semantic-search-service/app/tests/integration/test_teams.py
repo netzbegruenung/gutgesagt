@@ -433,14 +433,16 @@ def test_migration_nach_gruppe_setzt_vorhandene_teams_auf_anlass(postgres_url):
         assert zeilen == {"mit-team": "anlass", "ohne-team": None}
 
 
-def _umbenennen(db, alt: str, neu: str) -> None:
-    """Das Skript Anweisung fuer Anweisung, wie psql mit -v alt=... -v neu=..."""
+def _umbenennen(db, alt: str, neu: str, art: str = "anlass") -> None:
+    """Das Skript Anweisung fuer Anweisung, wie psql mit -v art=... -v alt=... -v neu=..."""
     skript = UMBENENNEN.read_text(encoding="utf-8")
+    werte = {"alt": alt, "neu": neu, "art": art}
     with db.engine.connect().execution_options(isolation_level="AUTOCOMMIT") as c:
         for anweisung in postgres.anweisungen(skript):
-            anweisung = anweisung.replace(":'alt'", ":alt").replace(":'neu'", ":neu")
+            for name in werte:
+                anweisung = anweisung.replace(f":'{name}'", f":{name}")
             assert ":'" not in anweisung and "\\" not in anweisung, anweisung
-            c.execute(text(anweisung), {"alt": alt, "neu": neu})
+            c.execute(text(anweisung), werte)
 
 
 def test_umbenennen_nach_widerruf_an_allen_drei_stellen(db):
@@ -478,3 +480,23 @@ def test_umbenennen_nach_widerruf_an_allen_drei_stellen(db):
             ).scalar()
             == 0
         )
+
+
+@pytest.mark.parametrize("art", ["gruppe", "", "Anlass"])
+def test_umbenennen_in_eine_gruppe_bricht_ohne_aenderung_ab(db, art):
+    """Nur in einen neutralen Namen; eine andere Gruppe braucht neue Einwilligungen."""
+    einladungen, teams = _dienste(db)
+    code = _teamlink(einladungen, team=GRUPPE)
+    einladungen.beitreten(code, "konto-a", heute=HEUTE)
+
+    with pytest.raises(Exception, match="neutralen Namen"):
+        _umbenennen(db, "Netzfeuerwehr", "Die grüne Welle", art=art)
+
+    e = einladungen.nach_code(code)
+    assert (e.team_name, e.team_art) == ("Netzfeuerwehr", "gruppe")
+    assert e.team_zustimmung_am == date(2026, 11, 20)
+    assert [m.team_name for m in teams.meine("konto-a")] == ["Netzfeuerwehr"]
+    with db.engine.connect() as c:
+        assert c.execute(
+            text("SELECT team_name FROM team_nummern")
+        ).scalars().all() == ["Netzfeuerwehr"]

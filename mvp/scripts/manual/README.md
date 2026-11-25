@@ -169,8 +169,9 @@ dort steht auch der Aufruf. Getestet in `tests/integration/test_loeschkommando.p
 
 `team_umbenennen.sql` – **schreibend.** Benennt ein Team in allen Saisons um, an
 Einladungen, Mitgliedschaften und Nummernzaehler zugleich, etwa wenn eine Gruppe ihre
-Zustimmung zu einem Team nach Gruppe widerruft (GLOSSARY „Team“). Die Einladungen werden
-dabei zu einem Team nach Anlass, Ort oder Saison, das Datum der Zustimmung geleert.
+Zustimmung zu einem Team nach Gruppe widerruft (GLOSSARY „Team“). Nur in einen neutralen
+Namen: Es verlangt `-v art=anlass` und bricht sonst ab; die Einladungen werden zu einem Team
+nach Anlass, Ort oder Saison, das Datum der Zustimmung geleert.
 Aufruf im Kopf des Skripts. Getestet in `tests/integration/test_teams.py`.
 
 ## Kennungen auf den Realm umstellen (im semantic-search-Container)

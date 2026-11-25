@@ -19,6 +19,14 @@ export const TEAM_ARTEN: readonly { schluessel: TeamArt; name: string }[] = [
   { schluessel: 'gruppe', name: 'Team nach Gruppe' },
 ];
 
+/**
+ * Bei „Team nach Gruppe“ ist der Teamname genau der Gruppenname: Die Begrüßung setzt ihn
+ * als {gruppe} in den Satz zur Zustimmung (teamGruppeSatz). Beschriftung und Hinweis des Felds.
+ */
+export const TEAM_GRUPPENNAME_LABEL = 'Name der Gruppe (genau so, wie sie öffentlich heißt)';
+export const TEAM_GRUPPENNAME_HINWEIS =
+  'Ohne Zusätze wie Ort oder Jahr: Die Begrüßung nennt die Gruppe mit genau diesem Namen.';
+
 /** Beschriftung des Pflichtfelds bei „Team nach Gruppe“. */
 export const TEAM_ZUSTIMMUNG_LABEL = 'Zustimmung der Gruppenleitung liegt schriftlich vor (Datum)';
 

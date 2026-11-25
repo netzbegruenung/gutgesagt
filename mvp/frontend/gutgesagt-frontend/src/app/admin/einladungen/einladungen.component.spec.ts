@@ -227,6 +227,24 @@ describe('EinladungenComponent', () => {
       expect((feld.querySelector('input') as HTMLInputElement).type).toBe('date');
     });
 
+    it('Team nach Gruppe: das Namensfeld heißt „Name der Gruppe …“ mit Hinweis, sonst „Teamname“', () => {
+      mitTeams([]);
+      const feld = () => el().querySelector('.team-name') as HTMLElement;
+      expect(feld().querySelector('mat-label')!.textContent!.trim()).toBe('Teamname');
+      expect(feld().textContent).not.toContain('Ohne Zusätze');
+
+      fixture.componentInstance.teamArt = 'gruppe';
+      fixture.detectChanges();
+
+      expect(feld().querySelector('mat-label')!.textContent!.trim()).toBe(
+        'Name der Gruppe (genau so, wie sie öffentlich heißt)'
+      );
+      const hinweis = feld().querySelector('[data-testid="teamname-hinweis"]')!.textContent!;
+      expect(hinweis).toContain('Ohne Zusätze wie Ort oder Jahr: Die Begrüßung nennt die Gruppe mit genau diesem Namen.');
+      // der allgemeine Hinweis zum Teamnamen bleibt dabei
+      expect(hinweis).toContain('Nur nach Anlass, Ort oder Saison benennen.');
+    });
+
     it('zeigt am Teamnamen den Hinweis wortgleich, auch ohne Hinweis vom Server', () => {
       http.expectOne(URL).flush({ einloesen_eingerichtet: true, einladungen: [], teams_aktiv: true, motive: MOTIVE });
       fixture.detectChanges();

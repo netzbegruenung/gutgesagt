@@ -444,7 +444,9 @@ ausdrücklich einwilligt (Wortlaut `team-2026-11-26`, gespeichert mit Kennung un
 der Mitgliedschaft). Sie trägt **keinen Bezug zur Einladung**: Welche Einladung jemand genutzt
 hat, steht weiter nirgends. Ohne Ja zählt die Einladung wie bisher nur.
 
-- **Widerruf der Zustimmung einer Gruppe (Team nach Gruppe):** Das Team wird umbenannt, an
+- **Widerruf der Zustimmung einer Gruppe (Team nach Gruppe):** Das Team wird in einen neutralen
+  Namen nach Anlass, Ort oder Saison umbenannt (in eine andere Gruppe nur mit neuer Einwilligung
+  der Mitglieder, nicht mit dem Skript), an
   Einladungen, Mitgliedschaften und Nummernzähler zugleich (`mvp/scripts/manual/team_umbenennen.sql`);
   die Einladungen werden zu einem Team nach Anlass, Ort oder Saison, das Datum der Zustimmung
   wird geleert. Mitgliedschaften, Nummern und Einwilligungen bleiben.

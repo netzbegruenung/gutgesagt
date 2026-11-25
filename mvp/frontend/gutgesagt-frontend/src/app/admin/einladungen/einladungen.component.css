@@ -71,6 +71,11 @@ th {
   flex: 1 1 260px;
 }
 
+/* Die Beschriftung „Name der Gruppe (…)“ ist lang: eigene Zeile */
+.team-name.breit {
+  flex-basis: 100%;
+}
+
 .team-saison {
   width: 200px;
 }

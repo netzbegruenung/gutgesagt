@@ -384,8 +384,12 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
     migration `2026-11-26-teams-nach-gruppe.sql`) as evidence for admins only, no names; the
     Mitgliedschaft carries neither. A `PATCH` with `team_name` replaces the whole team: without
     `team_art` it becomes `anlass` and the date is cleared, like a missing `team_motiv` is
-    rejected. Renaming a team everywhere (invitations, memberships, number counter), e.g.
-    after a group withdraws its consent: `mvp/scripts/manual/team_umbenennen.sql`.
+    rejected. With `gruppe` the team name is exactly the group's public name (no place or
+    year, the Saison is separate); the greeting uses it as {gruppe}. Renaming a team
+    everywhere (invitations, memberships, number counter) after a group withdraws its
+    consent: `mvp/scripts/manual/team_umbenennen.sql`, only into a neutral name (requires
+    `-v art=anlass`, aborts otherwise; renaming into another group needs new consent of the
+    members).
   - Redeeming: `POST /api/v1/einladungen/pruefen` returns `team` with the greeting, the next
     number, `art` (with `gruppe` the greeting shows the sentence that the team is named after the
     group with its consent; `zustimmung_am` is never sent here) and the consent wording

@@ -22,6 +22,8 @@ import { TeamPilleComponent } from '../../shared/teams/team-pille.component';
 import {
   TEAMNAME_HINWEIS,
   TEAM_ARTEN,
+  TEAM_GRUPPENNAME_HINWEIS,
+  TEAM_GRUPPENNAME_LABEL,
   TEAM_MOTIVE,
   TEAM_ZUSTIMMUNG_LABEL,
   TeamArt,
@@ -90,6 +92,8 @@ export class EinladungenComponent implements OnInit {
   /** Teamart; Standard „Team nach Anlass, Ort oder Saison“. */
   readonly teamArten = TEAM_ARTEN;
   readonly zustimmungLabel = TEAM_ZUSTIMMUNG_LABEL;
+  readonly gruppennameLabel = TEAM_GRUPPENNAME_LABEL;
+  readonly gruppennameHinweis = TEAM_GRUPPENNAME_HINWEIS;
   teamArt: TeamArt = 'anlass';
   /** Bei „Team nach Gruppe“ Pflicht: Tag der schriftlichen Zustimmung (JJJJ-MM-TT), nicht in der Zukunft. */
   teamZustimmungAm = '';
