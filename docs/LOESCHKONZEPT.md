@@ -114,9 +114,12 @@ dann jede folgende Anfrage ab, nach dem Entfernen nicht mehr.
    Antwort auf die Frage nach der Sichtbarkeit der Abzeichen, auch ein Nein; #351), in
    `punkte_einwilligung` (jede Antwort auf die Einwilligung „Punkte und Meilensteine“, auch
    ein Widerruf; #351), in `nutzungsbedingungen_zustimmungen` (jede Zustimmung zu den
-   Nutzungsbedingungen in der App mit Zeitpunkt und Stand) und die in
+   Nutzungsbedingungen in der App mit Zeitpunkt und Stand), in `team_mitgliedschaften` (jede
+   Mitgliedschaft in einem Team samt Kennung des Wortlauts und Zeitpunkt der Einwilligung), in
+   `team_oeffentlich` (die Antwort auf „Team öffentlich am Namen zeigen“) und die in
    `loeschauftraege` (offene und erledigte Löschaufträge nach einem Widerruf)
-   löschen, ebenso jeden Muster-Hinweis
+   löschen; in `einstellungen` die Kennung eines Admins (`geaendert_von`) auf `NULL` setzen,
+   der Wert bleibt; ebenso jeden Muster-Hinweis
    (`muster_hinweise`, #352), der die Person nennt. Der Anzeigename steht **nur dort** — weder in Qdrant
    noch in `raw_inputs` noch im Log —, die Karten lesen ihn beim Ausliefern dazu und
    zeigen nach Schritt 3 „ehemalige Person“.
@@ -254,6 +257,10 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Löschaufträge, erledigt | 365 Tage (entschieden 13.11.2026) | Ausführung (`erledigt_am`); mit dem Konto sofort (Schritt 2) |
 | Zustimmung zur Sichtbarkeit der Abzeichen (`abzeichen_sichtbarkeit`) | solange das Konto besteht | — Nachweis der Zustimmung (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Einwilligung „Punkte und Meilensteine“ (`punkte_einwilligung`, #351) | solange das Konto besteht | — Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
+| Mitgliedschaften in Teams (`team_mitgliedschaften`): Kennung, Teamname, Motiv, Saison, Nummer, Tag des Beitritts, Kennung des Wortlauts und Zeitpunkt der Einwilligung | bis „Team verlassen“ (sofort gelöscht, Widerruf der Einwilligung für dieses Team) oder bis zur Löschung des Kontos | — die Einwilligung `team-2026-11-24` steht an der Mitgliedschaft und geht mit ihr; kein Bezug zur Einladung. Mit dem Konto sofort (Schritt 2), unter „Teams“ |
+| Einwilligung „Team öffentlich am Namen zeigen“ (`team_oeffentlich`): Kennung, ja/nein, Kennung des Wortlauts, Zeitpunkt | solange das Konto besteht | — nur die jüngste Antwort je Konto; Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
+| Zähler je Team und Saison (`team_nummern`): Teamname, Saison, zuletzt vergebene Nummer | keine | — kein Personenbezug (keine Kennung); hält fest, dass eine Nummer nach „Team verlassen“ nicht neu vergeben wird |
+| Admin-Einstellungen (`einstellungen`, etwa die aktuelle Saison): Wert, Zeitpunkt, Kennung des Admins | keine | — der Wert bleibt; die Kennung des Admins wird mit seinem Konto geleert (Schritt 2) |
 | Zustimmung zu den Nutzungsbedingungen in der App (`nutzungsbedingungen_zustimmungen`) | solange das Konto besteht | — Nachweis des Vertragsschlusses und des Stands, dem die Person zugestimmt hat (Art. 6 Abs. 1 lit. b DSGVO); geht mit dem Konto (Schritt 2) |
 | Archiv der Keycloak-Zeitpunkte der Zustimmung zu den Nutzungsbedingungen (bis 0.9.8): Kennung und Zeitpunkt | bis zur Löschung des Kontos (Entscheidung Maintainer 20.11.2026) | — am Rollout-Tag von 0.9.8 exportiert, zuletzt direkt vor dem Abschalten der Pflichtaktion, nach `/opt/gutgesagt-archiv/nb-zeitpunkte-keycloak.txt` auf dem Prod-Host (Verzeichnis 0700 root, nicht in einen Container gemountet und nicht Teil der Backups), Datei 0600 root (`mvp/scripts/manual/keycloak_nb_zeitpunkte.py --zeitpunkte`); danach wird das Attribut in Keycloak gelöscht. Mit dem Konto geht die Zeile (Schritt 4). Nachweis, wann die Person bis 0.9.8 zugestimmt hat |
 | Neue Antworten auf eigene Aussagen und „Meine Aussagen“ (#760, Schalter `antworten_hinweis`) | keine Speicherung | — beim Besuch bzw. Aufruf aus den Antwortvorschlägen der Aussagen berechnet |
@@ -425,6 +432,33 @@ und der Ablauf oben erfasst die Tabelle nicht.
   über eine Einladung entstehen; ältere mit bestätigter Adresse und ohne Passwort bleiben.
   Wird ein solches Konto später mit dem Netzbegrünung-Login verknüpft, fragt Keycloak beim
   ersten Anmelden einmal nach einem Passwort.
+
+## Teams
+
+Eine Einladung kann zu einem Team gehören (GLOSSARY „Teamlink“): An `einladungen` stehen dann
+zusätzlich Teamname, Motiv und Saison, weiter ohne Mail-Adresse und ohne Kennung. Eine
+Mitgliedschaft (`team_mitgliedschaften`) entsteht nur, wenn die Person auf der Begrüßung
+ausdrücklich einwilligt (Wortlaut `team-2026-11-24`, gespeichert mit Kennung und Zeitpunkt an
+der Mitgliedschaft). Sie trägt **keinen Bezug zur Einladung**: Welche Einladung jemand genutzt
+hat, steht weiter nirgends. Ohne Ja zählt die Einladung wie bisher nur.
+
+- **„Team verlassen“:** Die Person löscht ihre Mitgliedschaft unter „Meine Teams“ selbst; der
+  Eintrag ist sofort gelöscht (`DELETE /api/v1/teams/meine/{id}`), auch bei ausgeschaltetem
+  Schalter `teams`. Das ist der Widerruf der Einwilligung für dieses Team. Die Nummer wird
+  nicht neu vergeben (`team_nummern` zählt weiter, ohne Kennung).
+- **Löschung des Kontos:** Alle Mitgliedschaften und die Antwort auf „Team öffentlich am
+  Namen zeigen“ gehen sofort mit (Schritt 2, `person_loeschen.sql`).
+- **Widerruf der Art.-9-Einwilligung:** erfasst die Mitgliedschaften nicht, denn sie hängen an
+  ihrer eigenen Einwilligung; die Person widerruft sie mit „Team verlassen“.
+- **Teams am Namen:** werden nicht gespeichert, sondern beim Ausliefern eines Beitrags aus den
+  Mitgliedschaften der aktuellen Saison und `team_oeffentlich` gelesen; nach „Team verlassen“
+  oder einem Nein verschwinden sie mit der nächsten Antwort.
+- **Admins:** sehen je Team nur die Zahl der Mitglieder. Eine Liste, einen Export oder eine
+  API auf fremde Mitgliedschaften gibt es nicht; die Daten liegen nur in der Datenbank.
+- **Sicherungskopien:** Gelöschte Mitgliedschaften stehen dort bis zu deren Ablauf weiter (bis
+  zu 28 Tage, unter „Was nicht gelöscht wird“).
+- **Kennungen umstellen:** Die Tabellen `team_mitgliedschaften` und `team_oeffentlich` stellt
+  das Umstellen der Kennungen mit um (`services/wartung/kennungen_umstellen.py`).
 
 ## Vier Fallen
 
@@ -702,7 +736,7 @@ docker exec -i gutgesagt-app-postgres psql -U app_user -d gutgesagt_app \
 #   -v ON_ERROR_STOP=1 -v uid="$KENNUNG"
 
 docker exec -i gutgesagt-app-postgres psql -U app_user -d gutgesagt_app -c \
-  "VACUUM FULL votes, content_reports, raw_inputs, raw_input_content_links, raw_input_drafts, usage_events, users, gesehene_nutzung, muster_hinweise, art9_einwilligungen, art9_ohne_einwilligung, abzeichen_sichtbarkeit, punkte_einwilligung, nutzungsbedingungen_zustimmungen, loeschauftraege;"
+  "VACUUM FULL votes, content_reports, raw_inputs, raw_input_content_links, raw_input_drafts, usage_events, users, gesehene_nutzung, muster_hinweise, art9_einwilligungen, art9_ohne_einwilligung, abzeichen_sichtbarkeit, punkte_einwilligung, nutzungsbedingungen_zustimmungen, team_mitgliedschaften, team_oeffentlich, loeschauftraege;"
 ```
 
 ```bash

@@ -521,6 +521,54 @@ describe('DatenschutzComponent', () => {
     });
   });
 
+  describe('Teams über Einladungen', () => {
+    it('Einladung: das Team nur mit ausdrücklicher Zustimmung, nie die Einladung', () => {
+      const text = abschnitt('Konto aus einer Einladung');
+
+      expect(text).toContain('Am Konto steht nicht, über welche Einladung es entstand');
+      expect(text).toContain(
+        'Nur wenn eine Einladung zu einem Team gehört und du ausdrücklich zustimmst, speichern wir dein Team (siehe „Teams“), nicht aber die Einladung.'
+      );
+    });
+
+    it('Teams: was gespeichert wird, ohne Einladung, nur für dich, Admins nur die Zahl', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain(
+        'deine Kennung, den Namen des Teams, deine laufende Nummer im Team und den Tag, an dem du beigetreten bist'
+      );
+      expect(text).toContain('Welche Einladung du genutzt hast, speichern wir nicht.');
+      expect(text).toContain('Sagst du nein, speichern wir nichts davon');
+      expect(text).toContain('Deine Teams siehst nur du, unter „Meine Teams“.');
+      expect(text).toContain('sehen je Team nur, wie viele dabei sind, keine Namen und keine Liste');
+    });
+
+    it('Teams: eigene Einwilligung nach Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a, getrennt von den anderen', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain('Artikel 6 Absatz 1 Buchstabe a und Artikel 9 Absatz 2 Buchstabe a DSGVO');
+      expect(text).toContain('Du gibst sie mit dem Knopf „Ja, speichert …“, nichts ist vorausgewählt.');
+      expect(text).toContain('getrennt von der Einwilligung zu deiner Mitwirkung und von „Punkte und Meilensteine“');
+      expect(text).toContain('mit der Kennung des Wortlauts und dem Zeitpunkt als Nachweis');
+    });
+
+    it('Teams: „Team verlassen“ löscht sofort, Nummer nicht neu, Sicherungskopien bis zum Ablauf', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain('„Team verlassen“');
+      expect(text).toContain('wir löschen den Eintrag sofort');
+      expect(text).toContain('Deine Nummer vergeben wir nicht neu.');
+      expect(text).toContain('siehe „Sicherungskopien“');
+    });
+
+    it('Teams: die Anzeige am Namen ist noch nicht eingeschaltet und braucht eine eigene Frage', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain('fragen wir dich vorher gesondert');
+      expect(text).toContain('Diese Anzeige am Namen ist noch nicht eingeschaltet.');
+    });
+  });
+
   describe('Suchvorgänge (#239, #289, #495)', () => {
     it('nennt den Tag statt eines Zeitpunkts und das Ende des Tages als Frist mit Tageszähler', () => {
       const text = abschnitt('Suchvorgänge');
