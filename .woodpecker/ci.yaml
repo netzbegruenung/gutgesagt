@@ -16,6 +16,8 @@
 # liefert Forgejo keine Dateiliste, laeuft alles (on_empty). Push auf main, Tag und manuell
 # laufen immer voll. python-installieren und unit laufen immer: Unit-Tests und scripts/tests/
 # lesen auch Frontend- und BFF-Dateien (docs/CI.md, "Path filters").
+# Bei einem Tag auf einem Commit, der ci auf main schon bestanden hat, enden die Testschritte
+# sofort gruen (tag-vorpruefung, docs/CI.md "Releases without a second test run").
 when:
   - event: pull_request
   - event: push
@@ -48,6 +50,19 @@ services:
       POSTGRES_DB: gutgesagt_app
 
 steps:
+  # Nur bei Tags: Hat genau dieser Commit ci auf main bestanden (build.yaml hat seine Images
+  # mit dem Commit im Label gebaut), legt der Schritt .ci/main-schon-gruen an, und alle
+  # Testschritte enden sofort gruen (scripts/ci-protokoll.sh); release-platzhalter laeuft
+  # trotzdem. Sonst laeuft alles wie auf main. Laeuft der main-Lauf des Commits noch, wartet
+  # er auf ihn (scripts/main_images.py). Braucht git und python3; beides hat das Node-Image.
+  - name: tag-vorpruefung
+    image: node:22@sha256:3218f0d1b9e4b63def322e9ae362d581fbeac1ef21b51fc502ef91386667ce92
+    depends_on: []
+    when:
+      - event: tag
+    commands:
+      - sh scripts/ci-protokoll.sh tag-vorpruefung python3 scripts/main_images.py pruefen
+
   # Braucht nur git und python3; beides hat das Node-Image
   - name: retired-words
     image: node:22@sha256:3218f0d1b9e4b63def322e9ae362d581fbeac1ef21b51fc502ef91386667ce92
@@ -64,7 +79,11 @@ steps:
     image: git.verdigado.com/netzbegruenung-images/gutgesagt-ci-python:latest
     # :latest wandert mit jedem Build (ci-image.yaml); ohne pull bliebe ein altes Image im Agent.
     pull: true
-    depends_on: []
+    depends_on:
+      # Bei Tags erst nach der Vorpruefung (sie entscheidet, ob getestet wird); sonst gibt es
+      # sie nicht, und die Abhaengigkeit faellt weg
+      - name: tag-vorpruefung
+        optional: true
     commands:
       - sh scripts/ci-protokoll.sh python-installieren sh scripts/ci-installieren.sh python
 
@@ -74,7 +93,9 @@ steps:
   - name: frontend-installieren
     image: git.verdigado.com/netzbegruenung-images/gutgesagt-ci-node:latest
     pull: true
-    depends_on: []
+    depends_on:
+      - name: tag-vorpruefung
+        optional: true
     when:
       # Nicht, wenn sich nur Backend und Python-Skripte aendern; das Frontend liest nichts davon
       - event: pull_request
@@ -111,7 +132,9 @@ steps:
 
   - name: bff
     image: mcr.microsoft.com/dotnet/sdk:9.0@sha256:840f3b62b9742dde4461a3c31e38ffd34d41d7d33afd39c378cfcfd5dcb82bd5
-    depends_on: []
+    depends_on:
+      - name: tag-vorpruefung
+        optional: true
     when:
       # Nicht, wenn sich nur Frontend, Python-Dienst und Python-Skripte aendern
       - event: pull_request

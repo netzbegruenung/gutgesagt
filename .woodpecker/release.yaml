@@ -3,6 +3,11 @@
 # gruenem ci (depends_on), also nur, was auch main bestanden haette. Ein Tag, der keine
 # SemVer-Version ist, macht image-tags rot und baut nichts.
 # Die Version im Footer kommt aus dem Tag (Build-Arg APP_VERSION), nicht aus package.json.
+# BFF, Semantic Search und postgres-app uebernimmt das Release vom main-Image desselben
+# Commits, wenn es eins gibt (image-quelle, scripts/main_images.py): Dockerfile nur
+# "FROM <main-image>@<digest>", dieselben Schichten, Sekunden statt eines Neubaus. Sonst
+# baut es sie voll wie bisher. Das Frontend baut immer neu (APP_VERSION). docs/CI.md,
+# "Releases without a second test run".
 when:
   - event: tag
     ref: refs/tags/v*
@@ -16,6 +21,14 @@ steps:
     depends_on: []
     commands:
       - python3 scripts/image_tags.py .image-tags
+
+  # Schreibt .release/<image>.Dockerfile fuer die drei Backend-Images: FROM des main-Images,
+  # wenn :main diesen Commit traegt, sonst das echte Dockerfile (voller Build).
+  - name: image-quelle
+    image: python:3.13-slim
+    depends_on: []
+    commands:
+      - python3 scripts/main_images.py quelle
 
   - name: frontend
     image: woodpeckerci/plugin-docker-buildx:6.0.2@sha256:82f90f336084c320c37970aa1cae8e8bf8a54a5b63f80093dd80dc2bb181b6ab
@@ -38,12 +51,13 @@ steps:
 
   - name: bff
     image: woodpeckerci/plugin-docker-buildx:6.0.2@sha256:82f90f336084c320c37970aa1cae8e8bf8a54a5b63f80093dd80dc2bb181b6ab
-    depends_on: [image-tags]
+    depends_on: [image-tags, image-quelle]
     settings:
       registry: git.verdigado.com
       repo: git.verdigado.com/netzbegruenung-images/gutgesagt-bff
       context: mvp/backend/BFF
-      dockerfile: mvp/backend/BFF/Dockerfile
+      # Von image-quelle geschrieben; Kontext wie beim vollen Build
+      dockerfile: .release/bff.Dockerfile
       platforms: linux/amd64
       tags_file: .image-tags
       username:
@@ -53,12 +67,13 @@ steps:
 
   - name: semantic-search
     image: woodpeckerci/plugin-docker-buildx:6.0.2@sha256:82f90f336084c320c37970aa1cae8e8bf8a54a5b63f80093dd80dc2bb181b6ab
-    depends_on: [image-tags]
+    depends_on: [image-tags, image-quelle]
     settings:
       registry: git.verdigado.com
       repo: git.verdigado.com/netzbegruenung-images/gutgesagt-semantic-search
       context: mvp
-      dockerfile: mvp/backend/semantic-search-service/Dockerfile
+      # Von image-quelle geschrieben; Kontext wie beim vollen Build
+      dockerfile: .release/semantic-search.Dockerfile
       platforms: linux/amd64
       tags_file: .image-tags
       # Schichten aus dem letzten main-Build wiederverwenden (Cache-Metadaten inline im
@@ -75,12 +90,13 @@ steps:
 
   - name: postgres-app
     image: woodpeckerci/plugin-docker-buildx:6.0.2@sha256:82f90f336084c320c37970aa1cae8e8bf8a54a5b63f80093dd80dc2bb181b6ab
-    depends_on: [image-tags]
+    depends_on: [image-tags, image-quelle]
     settings:
       registry: git.verdigado.com
       repo: git.verdigado.com/netzbegruenung-images/gutgesagt-postgres-app
       context: mvp/backend/postgres-app
-      dockerfile: mvp/backend/postgres-app/Dockerfile
+      # Von image-quelle geschrieben; Kontext wie beim vollen Build
+      dockerfile: .release/postgres-app.Dockerfile
       platforms: linux/amd64
       tags_file: .image-tags
       username:

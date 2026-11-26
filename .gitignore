@@ -446,3 +446,4 @@ FodyWeavers.xsd
 
 # Claude Code
 .claude/settings.local.json
+.release/
