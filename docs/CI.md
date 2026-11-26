@@ -8,7 +8,9 @@ tests run only on `main`, on tags and manually (see
 [setup](#setup-by-a-person).
 
 After the merge, `.woodpecker/build.yaml` and, on `v*` tags, `release.yaml` build the images
-(see [Images and releases](#images-and-releases)), and every night `.woodpecker/nacht.yaml`
+(see [Images and releases](#images-and-releases)); a tag on a commit that `main` has already
+tested and built neither tests again nor rebuilds the backend images (see
+[Releases without a second test run](#releases-without-a-second-test-run)). Every night `.woodpecker/nacht.yaml`
 measures search quality against the real model (see [Nightly run](#nightly-run)).
 `.woodpecker/ci-image.yaml` builds the images the pipeline itself can run in, with the Python
 packages, the models and `node_modules` already installed (see [CI images](#ci-images)). The
@@ -18,6 +20,7 @@ GitHub mirror runs no CI.
 
 | Step | Image | Runs |
 |---|---|---|
+| `tag-vorpruefung` | `node:22` (as `retired-words`) | tags only: `scripts/main_images.py pruefen`; if this commit passed `ci` on `main`, the steps below end green at once (see [Releases without a second test run](#releases-without-a-second-test-run)) |
 | `retired-words` | `node:22` (frontend Dockerfile; has git and python3) | `check.sh --schritt retired-words`, lines added since the branch left the target branch; pull requests only (push, tag and manual runs have no target branch) |
 | `python-installieren` | `gutgesagt-ci-python:latest` ([CI image](#ci-images) on `python:3.13-slim` of the semantic-search Dockerfile) | `scripts/ci-installieren.sh python`: venv at `mvp/backend/semantic-search-service/venv`, `requirements.txt` (only a link to the packages of the [CI image](#ci-images) when they match) |
 | `frontend-installieren` | `gutgesagt-ci-node:latest` (CI image on `node:22`) | `scripts/ci-installieren.sh frontend`: `npm ci` in the frontend directory, once for the two frontend steps (or a link to the `node_modules` of the CI image) |
@@ -163,7 +166,9 @@ Pull-request and `main` runs skip it.
 ## Integration tests on main only
 
 Decided on 14.11.: `integration` runs on a push to `main`, on tags (`release.yaml` waits for
-`ci`, so no release skips them) and on "Run pipeline", never in pull-request runs. The
+`ci`, so no release skips them; a tag on a commit that passed them on `main` does not run them
+again, see [Releases without a second test run](#releases-without-a-second-test-run)) and on
+"Run pipeline", never in pull-request runs. The
 services `qdrant` and `postgres` have the same `when` and do not start in pull requests
 either. Pull-request runs lose their longest step (several minutes on the shared runner,
 loading the embedding model).
@@ -416,7 +421,7 @@ Actions on the mirror used, so deployment and Renovate keep working (#327). Both
 | Workflow | Runs on | Builds | Tags |
 |---|---|---|---|
 | `build.yaml` | push to `main`; "Run pipeline" on `main` | all four | `main` |
-| `release.yaml` | tag `v*` | all four | `X.Y.Z`, `X.Y`, `latest`; a prerelease only `X.Y.Z` |
+| `release.yaml` | tag `v*` | frontend; BFF, semantic search and postgres-app taken over from `:main` when it carries the tagged commit, otherwise built | `X.Y.Z`, `X.Y`, `latest`; a prerelease only `X.Y.Z` |
 
 - **Tags from one script.** The step `image-tags` runs `scripts/image_tags.py`, which writes
   the tags to `.image-tags`; the build steps read them (`tags_file`). A tag that is not a
@@ -439,7 +444,7 @@ Actions on the mirror used, so deployment and Renovate keep working (#327). Both
   scratch), every merge gives all four images a new digest (test still pulls only when the
   operators roll out), and some registry churn that `cleanup_packages` removes after 24 h.
 - `scripts/tests/test_woodpecker_images.py` keeps the two workflows identical except for
-  `APP_VERSION`, checks the image names, that no step has a `when` filter and that only the
+  `APP_VERSION` and the Dockerfiles `image-quelle` writes, checks the image names, that no step has a `when` filter and that only the
   plugin steps see the registry secret.
 - **Build cache only for the semantic search image:** `cache_from` its `:main`,
   `cache_to: type=inline` (the cache metadata travel inside the image, no extra cache image).
@@ -454,6 +459,57 @@ Actions on the mirror used, so deployment and Renovate keep working (#327). Both
   than 24 h); a `sha-` tag per merge kept every build forever and filled the package disk on
   14.11.2026. The `sha-` tags the former GitHub workflow set go by a cleanup rule of the
   organisation `netzbegruenung-images` (older than 7 days, the 5 newest versions stay).
+  A release taken over from `:main` reuses its layers and adds only a config, a manifest
+  and an attestation of a few KB each; a rebuilt release needs its own layers.
+
+## Releases without a second test run
+
+Until 26.11. a tag on the commit just merged ran everything a second time: `ci` with the
+integration tests (about 18 min) and all four image builds, although `main` had just tested and
+built the same commit. Now (Woodpecker 3.20.1):
+
+- **Proof from the registry.** `build.yaml` runs only after a green `ci` on `main` and pushes
+  `:main` with the label `org.opencontainers.image.revision` = commit (set by the plugin's
+  `auto_labels`). An image `:main` carrying the tagged commit therefore proves that this commit
+  passed `ci` on `main`, integration tests included. The registry is readable without login
+  (anonymous pull token), so no secret is needed; the repository is internal, so the Forgejo
+  status API would need one.
+- **Skipping the tests.** On tags, `tag-vorpruefung` (`scripts/main_images.py pruefen`) reads
+  the four `:main` images. If one carries the commit, it writes `.ci/main-schon-gruen`, and
+  `scripts/ci-protokoll.sh` ends every following command green at once, except
+  `release-platzhalter`, which only tags run. Every other step waits for the check
+  (`depends_on` optional, so pull requests and `main` do not have the step). Woodpecker 3.20.1
+  cannot leave out a step depending on an earlier one at runtime: `when` is evaluated when the
+  pipeline is created, and there is no skip exit code (`pipeline/runtime/step.go` only knows
+  success and failure). So the steps still start, which takes a minute or two. The check
+  deletes a marker from the checkout first, and the marker counts only on tags.
+- **Waiting for `main`.** A tag set right after the merge finds `:main` still on the
+  previous commit while `ci` and `build` of the merge run (about 30 min). While every
+  `:main` that does not carry the commit carries an ancestor of it, the check waits, every
+  30 s, at most 30 min and at most until 40 min after the commit; then the full run would still
+  fit into the pipeline's time limit. A later commit on `:main` (a merge after the tag commit),
+  a tag next to `main`, an unreadable registry or a red `main` mean: no proof, everything runs
+  as before. Any error in the check also runs everything; it never turns red.
+- **Taking over the images.** `release.yaml` builds the frontend as before (the footer shows
+  the tag, `APP_VERSION`). For BFF, semantic search and postgres-app, `image-quelle`
+  (`scripts/main_images.py quelle`) writes `.release/<name>.Dockerfile`: only
+  `FROM <image>@<digest of :main>` when `:main` carries the commit, otherwise a copy of the
+  real Dockerfile. The plugin builds from that file with the same context. A `FROM`-only
+  build only checks that the layers exist and pushes a new config and manifest (tried locally
+  with buildx 0.36 against a registry: HEAD requests for the layers, no layer download or
+  upload, 3 s). The release image has the same layers as the tested `:main`, but its own
+  digest (new labels, attestation); Renovate and Salt keep reading `:<version>@sha256:…`.
+  A plugin step cannot be skipped at runtime either, hence the generated Dockerfile instead of a
+  registry copy with crane.
+- **No tag per commit.** A `sha-` tag per merge would keep the image of a commit for the
+  fallback when `main` moved on, but filled the package disk on 14.11.2026. Without it a tag
+  on an older commit builds as before.
+- **Duration:** a tag on a commit whose `build` has finished: about 2 min for `ci` and 3 to
+  4 min for `release` (the frontend build). Set right after the merge: until `build` of the
+  merge is done, then the same. Without proof: as before, plus the waiting time when the tag
+  commit's `main` run is red or still queued.
+- **Undo:** revert the pull request; `ci.yaml` then tests every tag again and
+  `release.yaml` builds all four images.
 
 **Switch from GitHub Actions** (#327), steps for a person, once:
 
