@@ -36,7 +36,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 from core.config import Settings
 from core.logging import get_logger, log_pseudonym
-from domain.saisons import Saison
+from domain.saisons import Saison, saison_fuer_vorschlag
 from domain.teams import (
     EINWILLIGUNG_KENNUNG,
     EINWILLIGUNG_GELTEND,
@@ -169,8 +169,12 @@ class TeamService:
         einem Namen entsteht, der nie zur aktuellen Saison wird. Ohne jede Saison gilt
         der Name wie bisher.
         """
-        saison = saison or self.saison_vorschlag()
         alle = self._saisons()
+        if not saison:
+            # Der Vorschlag aus derselben frischen Liste: Der gecachte Vorschlag koennte
+            # kurz nach einer Umbenennung noch den alten Namen tragen.
+            frisch = saison_fuer_vorschlag(alle, heute_utc()) if alle else None
+            saison = frisch.name if frisch else self.saison_vorschlag()
         treffer = next((s for s in alle if s.name == saison), None)
         if treffer is None and alle:
             raise SaisonUnbekannt(saison)

@@ -8,8 +8,6 @@ die echten.
 
 import uuid
 from datetime import date, timedelta
-
-from domain.saisons import Saison
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -21,6 +19,7 @@ import api.v1.teams as teams_module
 from api.v1.einladungen import router as einladungen_router
 from api.v1.schalter import router as schalter_router
 from api.v1.teams import router as teams_router
+from domain.saisons import Saison
 from core.config import Settings
 from dependencies import get_einladung_service, get_settings
 from domain.teams import (

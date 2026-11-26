@@ -32,7 +32,7 @@ from tests.integration.postgres import Datenbank
 MIGRATION = postgres.MIGRATIONEN / "2026-10-30-429-einladungen.sql"
 TEAMS = postgres.MIGRATIONEN / "2026-11-25-teams.sql"
 TEAMS_NACH_GRUPPE = postgres.MIGRATIONEN / "2026-11-26-teams-nach-gruppe.sql"
-SAISON_ID = postgres.MIGRATIONEN / "2026-11-27-teamlink-saison-id.sql"
+SAISON_ID = postgres.MIGRATIONEN / "2026-11-26-teamlink-saison-id.sql"
 
 HEUTE = date(2026, 10, 30)
 LETZTER_TAG = date(2026, 11, 13)

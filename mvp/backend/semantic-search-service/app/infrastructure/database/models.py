@@ -468,7 +468,7 @@ class EinladungZeile(Base):
     team_name = Column(String(40), nullable=True)
     team_motiv = Column(String(32), nullable=True)
     team_saison = Column(String(20), nullable=True)
-    # Die Saison per ID (Befund 6, postgres-app/migrations/2026-11-27-teamlink-saison-id.sql);
+    # Die Saison per ID (Befund 6, postgres-app/migrations/2026-11-26-teamlink-saison-id.sql);
     # leer bei Links ohne passende Saison. team_saison bleibt die Kopie ihres Namens.
     # Ohne Fremdschluessel, wie team_saison: Einladungen gab es vor den Saisons; beim
     # Loeschen einer Saison leert repositories/saison_repository.py die ID.

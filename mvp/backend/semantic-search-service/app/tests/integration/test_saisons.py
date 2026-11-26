@@ -200,6 +200,23 @@ def test_umbenennen_zieht_teamlinks_und_teams_mit(db):
                 ),
                 {"s": saison},
             )
+            c.execute(
+                text(
+                    "INSERT INTO team_wochen (team_name, saison, woche, beitraege, "
+                    "bewertungen, gepostet) VALUES ('BDK', :s, :w, 1, 0, 0)"
+                ),
+                {"s": saison, "w": MO},
+            )
+        # Ein Link ohne ID mit dem alten Namen (aus der Zeit ohne Saison)
+        c.execute(
+            text(
+                "INSERT INTO einladungen (id, code, notiz, erlaubte_einloesungen, "
+                "einloesungen, gueltig_bis, abgeschaltet, angelegt_am, team_name, "
+                "team_saison) VALUES (gen_random_uuid(), 'c2', '', 5, 0, :t, false, "
+                ":t, 'Ohne ID', 'Winter 26')"
+            ),
+            {"t": MO},
+        )
 
     service.aendern(
         geplant.id,
@@ -211,9 +228,17 @@ def test_umbenennen_zieht_teamlinks_und_teams_mit(db):
     )
 
     with db.engine.begin() as c:
-        assert c.execute(text("SELECT team_saison FROM einladungen")).scalar() == (
-            "Winter 26/27"
-        )
+        links = c.execute(
+            text("SELECT team_saison, team_saison_id FROM einladungen")
+        ).all()
+        assert sorted(links) == [
+            ("Winter 26/27", geplant.id),
+            ("Winter 26/27", geplant.id),
+        ]
+        assert sorted(c.execute(text("SELECT saison FROM team_wochen")).scalars()) == [
+            "Sommer 26",
+            "Winter 26/27",
+        ]
         assert sorted(
             c.execute(text("SELECT saison FROM team_mitgliedschaften")).scalars()
         ) == ["Sommer 26", "Winter 26/27"]
@@ -221,6 +246,56 @@ def test_umbenennen_zieht_teamlinks_und_teams_mit(db):
             "Sommer 26",
             "Winter 26/27",
         ]
+
+
+def test_umbenennen_bricht_ab_wenn_dasselbe_team_den_neuen_namen_traegt(db):
+    """Dasselbe Team unter altem und neuem Namen: kein 500, sondern ein klarer Fehler."""
+    service = _service(db)
+    geplant = service.anlegen(
+        "Winter 26", MO + timedelta(weeks=1), MO + timedelta(weeks=8), 5, heute=MO
+    )
+    with db.engine.begin() as c:
+        for saison in ("Winter 26", "Winter 26/27"):
+            c.execute(
+                text(
+                    "INSERT INTO team_nummern (team_name, saison, letzte_nummer) "
+                    "VALUES ('BDK', :s, 1)"
+                ),
+                {"s": saison},
+            )
+
+    with pytest.raises(SaisonUngueltig):
+        service.aendern(
+            geplant.id, "Winter 26/27", geplant.beginn, geplant.ende, 5, heute=MO
+        )
+    assert service.alle()[0].name == "Winter 26"
+
+
+def test_anlegen_und_loeschen_setzen_die_id_an_links_mit_dem_namen(db):
+    with db.engine.begin() as c:
+        c.execute(
+            text(
+                "INSERT INTO einladungen (id, code, notiz, erlaubte_einloesungen, "
+                "einloesungen, gueltig_bis, abgeschaltet, angelegt_am, team_name, "
+                "team_saison) VALUES (gen_random_uuid(), 'c3', '', 5, 0, :t, false, "
+                ":t, 'BDK', 'Winter 26')"
+            ),
+            {"t": MO},
+        )
+    service = _service(db)
+    geplant = service.anlegen(
+        "Winter 26", MO + timedelta(weeks=1), MO + timedelta(weeks=8), 5, heute=MO
+    )
+    with db.engine.begin() as c:
+        assert c.execute(text("SELECT team_saison_id FROM einladungen")).scalar() == (
+            geplant.id
+        )
+
+    service.loeschen(geplant.id, heute=MO)
+    with db.engine.begin() as c:
+        assert c.execute(
+            text("SELECT team_saison, team_saison_id FROM einladungen")
+        ).one() == ("Winter 26", None)
 
 
 def test_balken_aus_den_wochenzahlen(db):

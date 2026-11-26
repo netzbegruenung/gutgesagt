@@ -48,7 +48,7 @@ LOESCHSKRIPT = (
 MIGRATION = postgres.MIGRATIONEN / "2026-11-25-teams.sql"
 UMBENENNEN = postgres.REPO_WURZEL / "mvp" / "scripts" / "manual" / "team_umbenennen.sql"
 MIGRATION_NACH_GRUPPE = postgres.MIGRATIONEN / "2026-11-26-teams-nach-gruppe.sql"
-MIGRATION_SAISON_ID = postgres.MIGRATIONEN / "2026-11-27-teamlink-saison-id.sql"
+MIGRATION_SAISON_ID = postgres.MIGRATIONEN / "2026-11-26-teamlink-saison-id.sql"
 GRUPPE = Team(
     "Netzfeuerwehr",
     "handschlag",

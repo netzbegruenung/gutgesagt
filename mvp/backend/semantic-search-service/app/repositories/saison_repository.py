@@ -85,6 +85,16 @@ class SaisonRepository:
             session.execute(_SPERREN)
             self._ohne_ueberschneidung(session, eingabe, ausser=None)
             self._ohne_namensdoppel(session, eingabe.name, ausser=None)
+            # Links ohne ID mit genau diesem Namen (aus der Zeit ohne Saison oder von
+            # einer geloeschten) bekommen die ID, damit sie beim Umbenennen mitgehen.
+            session.execute(
+                update(EinladungZeile)
+                .where(
+                    EinladungZeile.team_saison == eingabe.name,
+                    EinladungZeile.team_saison_id.is_(None),
+                )
+                .values(team_saison_id=neu_id)
+            )
             session.add(
                 SaisonZeile(
                     id=neu_id,
@@ -186,14 +196,38 @@ def get_saison_repository() -> SaisonRepository:
 def _namen_nachziehen(session, saison_id: uuid.UUID, alt: str, neu: str) -> None:
     """
     Eine umbenannte Saison (nur solange sie geplant ist, domain/saisons.py) nimmt ihre
-    Teams mit (Befund 6): Teamlinks mit ihrer ID und alle Kopien des alten Namens an
-    Mitgliedschaften, Nummern, Wochenzaehlern und Quests. In derselben Transaktion wie
-    die Umbenennung, damit nie zwei Namen fuer eine Saison gelten.
+    Teams mit (Befund 6): Teamlinks mit ihrer ID oder ohne ID mit dem alten Namen (die
+    bekommen die ID) und alle Kopien des alten Namens an Mitgliedschaften, Nummern,
+    Wochenzaehlern und Quests. In derselben Transaktion wie die Umbenennung, damit nie
+    zwei Namen fuer eine Saison gelten. Teams, die schon unter dem neuen Namen stehen
+    (Freitext aus der Zeit vor den Saisons), werden zusammengefuehrt; gibt es dasselbe
+    Team unter beiden Namen, bricht die Umbenennung mit SaisonUngueltig ab.
+
+    Bekannte Grenze: Legt jemand genau waehrend der Umbenennung einen Link an oder tritt
+    einem Team bei, kann das unter dem alten Namen landen (die Sperre gilt nur der
+    Tabelle saisons); Umbenennen geht nur bei geplanten Saisons.
     """
+    for tabelle in (TeamNummerZeile, TeamWocheZeile, TeamQuestZeile):
+        alt_teams = select(tabelle.team_name).where(tabelle.saison == alt)
+        if session.execute(
+            select(tabelle.team_name)
+            .where(tabelle.saison == neu, tabelle.team_name.in_(alt_teams))
+            .limit(1)
+        ).first():
+            raise SaisonUngueltig(
+                "Unter diesem Namen stehen schon Teams, die es auch in dieser Saison "
+                "gibt. Bitte einen anderen Namen wählen."
+            )
     session.execute(
         update(EinladungZeile)
-        .where(EinladungZeile.team_saison_id == saison_id)
-        .values(team_saison=neu)
+        .where(
+            (EinladungZeile.team_saison_id == saison_id)
+            | (
+                EinladungZeile.team_saison_id.is_(None)
+                & (EinladungZeile.team_saison == alt)
+            )
+        )
+        .values(team_saison=neu, team_saison_id=saison_id)
     )
     for tabelle in (
         TeamMitgliedschaftZeile,
