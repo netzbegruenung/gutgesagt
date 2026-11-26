@@ -48,6 +48,7 @@
 }
 
 .spielgefuehl-text,
+.spielgefuehl-absprachen,
 .spielgefuehl-tipp,
 .spielgefuehl-fuss {
   color: var(--text-leise);

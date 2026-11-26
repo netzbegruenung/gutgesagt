@@ -25,6 +25,8 @@ export interface SpielgefuehlWortlaut {
   einleitung: string;
   /** In der Reihenfolge der Knöpfe: Gemeinschaft zuerst, Datenschutz danach. */
   stufen: SpielgefuehlStufenText[];
+  /** Direkt unter den Stufen: Einwilligung in den Schutz gegen Absprachen. */
+  absprachen: string;
   namenswahl: {
     frage: string;
     anzeigename: string;

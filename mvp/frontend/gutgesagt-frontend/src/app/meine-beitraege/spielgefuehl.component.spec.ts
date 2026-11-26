@@ -31,6 +31,7 @@ function stand(teil: Partial<SpielgefuehlStand> = {}): SpielgefuehlStand {
         { stufe: 'fuer_mich', titel: 'Nur für mich', text: 'Ich willige ausdrücklich ein … nur ich' },
         { stufe: 'aus', titel: 'Aus', text: 'Wir berechnen nichts für dich und zeigen nichts.' },
       ],
+      absprachen: 'Für ‚Nur für mich‘ und ‚In der Saison-Rangliste mitspielen‘ willige ich außerdem ein: … Absprachen …',
       namenswahl: {
         frage: 'In der Rangliste als:',
         anzeigename: 'mein Anzeigename',
@@ -142,6 +143,9 @@ describe('SpielgefuehlComponent', () => {
     // Gleich gewichtet: dieselbe Art Knopf, keiner hervorgehoben
     expect(new Set(knoepfe.map((k) => k.className)).size).toBe(1);
     expect(el().textContent).toContain('Wir berechnen nichts für dich und zeigen nichts.');
+    // Der Satz zu Absprachen direkt unter den drei Stufen
+    const stufen = el().querySelector('.spielgefuehl-stufen')!;
+    expect(stufen.nextElementSibling!.getAttribute('data-testid')).toBe('absprachen');
     expect(el().textContent).not.toContain('empfohlen');
     expect(el().querySelector('[data-testid="namenswahl"]')).toBeNull();
   });

@@ -341,13 +341,14 @@ async def _punkte_eingewilligt(kennung: str, settings: Settings) -> bool:
     Gilt fuer das Konto die Einwilligung "Punkte und Meilensteine" (#351)? Fuer die
     Muster-Hinweise; im Zweifel nicht erteilt, der Zaehler laeuft trotzdem.
 
-    Mit Schalter spielgefuehl_buehne nie: Der Wortlaut des Spielgefuehls nennt die
-    Muster-Hinweise fuer Admins nicht, also entstehen dann keine
-    (domain/spielgefuehl.py).
+    Mit Schalter spielgefuehl_buehne: Stufe fuer_mich oder rangliste, deren Wortlaut
+    den Schutz gegen Absprachen einschliesst (domain/spielgefuehl.py); bei "aus" nicht.
     """
-    if spielgefuehl_service.buehne_aktiv(settings):
-        return False
     try:
+        if spielgefuehl_service.buehne_aktiv(settings):
+            return await asyncio.to_thread(
+                spielgefuehl_service.stufe_punkte_wirksam, kennung
+            )
         return await asyncio.to_thread(
             get_punkte_einwilligung_repository().eingewilligt, kennung
         )

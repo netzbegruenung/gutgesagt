@@ -329,3 +329,48 @@ class TestUmschaltung:
         with pytest.raises(RuntimeError):
             quelle.antworten("kim", True, False, "rangliste-2026-11-25")
         alt.antworten.assert_not_called()
+
+
+class TestMusterHinweiseImNeuenModell:
+    """Paar-Pruefwert und Muster-Hinweis wie bisher, im neuen Modell ab Stufe fuer_mich."""
+
+    @pytest.mark.parametrize(
+        "stufe, erwartet",
+        [
+            (None, False),
+            (Stufe.AUS, False),
+            (Stufe.FUER_MICH, True),
+            (Stufe.RANGLISTE, True),
+        ],
+    )
+    def test_ab_stufe_fuer_mich(self, spielgefuehl_ohne_datenbank, stufe, erwartet):
+        import asyncio
+
+        from api.v1.usage import _punkte_eingewilligt
+        from core.config import Settings
+
+        spielgefuehl_ohne_datenbank.lesen.return_value = (
+            _antwort(stufe) if stufe else None
+        )
+        alt = MagicMock()
+        alt.eingewilligt.return_value = True
+        settings = Settings(punkte_aktiv=True, spielgefuehl_buehne_aktiv=True)
+        with patch("repositories.punkte_einwilligung_repository._repository", alt):
+            assert asyncio.run(_punkte_eingewilligt("kim", settings)) is erwartet
+        # Die bisherige Einwilligung zaehlt im neuen Modell nicht.
+        alt.eingewilligt.assert_not_called()
+
+    def test_ohne_schalter_die_bisherige_einwilligung(
+        self, spielgefuehl_ohne_datenbank
+    ):
+        import asyncio
+
+        from api.v1.usage import _punkte_eingewilligt
+        from core.config import Settings
+
+        alt = MagicMock()
+        alt.eingewilligt.return_value = True
+        settings = Settings(punkte_aktiv=True, spielgefuehl_buehne_aktiv=False)
+        with patch("repositories.punkte_einwilligung_repository._repository", alt):
+            assert asyncio.run(_punkte_eingewilligt("kim", settings)) is True
+        spielgefuehl_ohne_datenbank.lesen.assert_not_called()

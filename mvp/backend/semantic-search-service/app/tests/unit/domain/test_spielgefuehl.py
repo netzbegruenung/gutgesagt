@@ -49,6 +49,9 @@ def test_aktueller_wortlaut_gilt_und_ist_vollstaendig():
     assert all(t.titel and t.text for t in wortlaut.stufen.values())
     # Name des Verantwortlichen genau wie in der Datenschutzerklaerung
     assert VERANTWORTLICHER in wortlaut.fuss
+    # Schutz gegen Absprachen fuer beide Stufen ueber "aus" (Jura zu PR #849)
+    assert "Absprachen" in wortlaut.absprachen
+    assert "Kennungen beider Konten" in wortlaut.absprachen
     # Ausdrueckliche Einwilligung nach Art. 9 in beiden Stufen ueber "aus"
     for stufe in (Stufe.FUER_MICH, Stufe.RANGLISTE):
         assert "Art. 9 Abs. 2 lit. a DSGVO" in wortlaut.stufen[stufe].text

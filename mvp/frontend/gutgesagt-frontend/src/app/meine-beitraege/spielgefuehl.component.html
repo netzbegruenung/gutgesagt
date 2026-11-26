@@ -33,6 +33,7 @@
                 </fieldset>
             </div>
         </div>
+        <p class="spielgefuehl-absprachen" data-testid="absprachen">{{ stand.aktueller_wortlaut.absprachen }}</p>
         <p class="spielgefuehl-fuss">{{ stand.aktueller_wortlaut.fuss }}
             <a routerLink="/datenschutz" fragment="spielgefuehl" target="_blank" rel="noopener">Zur Datenschutzerklärung<span class="visually-hidden"> (öffnet in neuem Tab)</span></a></p>
         <p *ngIf="frageOffen"><button mat-button type="button" data-testid="abbrechen" (click)="abbrechen()">Abbrechen</button></p>

@@ -78,6 +78,12 @@ def _neues_repository() -> SpielgefuehlRepository:
     return get_spielgefuehl_repository()
 
 
+def stufe_punkte_wirksam(user_id: str) -> bool:
+    """Im neuen Modell: Stufe fuer_mich oder rangliste zu einem geltenden Wortlaut."""
+    antwort = _neues_repository().lesen(user_id)
+    return antwort is not None and punkte_wirksam(antwort.wirksame_stufe)
+
+
 def punkte_eingewilligt(user_id: str) -> bool:
     """
     Werden fuer die Kennung Punkte und Meilensteine berechnet? Im neuen Modell ab
@@ -85,8 +91,7 @@ def punkte_eingewilligt(user_id: str) -> bool:
     je Aufruf gefragt: Ein Herabstufen oder Widerruf wirkt sofort.
     """
     if buehne_aktiv():
-        antwort = _neues_repository().lesen(user_id)
-        return antwort is not None and punkte_wirksam(antwort.wirksame_stufe)
+        return stufe_punkte_wirksam(user_id)
     from repositories.punkte_einwilligung_repository import (
         get_punkte_einwilligung_repository,
     )

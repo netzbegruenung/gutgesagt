@@ -4,7 +4,8 @@
  * und Rangliste; die Rechenregeln (Punkte, Meilensteine, Muster-Hinweise) bleiben stehen.
  *
  * Wortlaut von Jura (26.11., vorläufig zum Bauen, endgültig vor dem Go), mit den Sätzen
- * zur Namenswahl aus der Nachsteuerung vom selben Abend. Kennung des Fragewortlauts:
+ * zur Namenswahl aus der Nachsteuerung vom selben Abend und der Ergänzung zum Schutz gegen
+ * Absprachen aus der Antwort auf die Fachfragen zu PR #849. Kennung des Fragewortlauts:
  * spielgefuehl-2026-11-26 (backend domain/spielgefuehl.py).
  */
 export const DSE_SPIELGEFUEHL_TITEL = 'Spielgefühl.';
@@ -13,7 +14,8 @@ export const DSE_SPIELGEFUEHL =
   'Ob wir aus deiner Mitwirkung Punkte und Meilensteine berechnen und ob du in der Rangliste ' +
   'mitspielst, entscheidest du mit einer Frage in drei Stufen. ‚Aus‘: Wir berechnen nichts. ' +
   '‚Nur für mich‘: Wir berechnen Punkte und Meilensteine, die nur du siehst (wie unten ' +
-  'beschrieben). ‚In der Saison-Rangliste mitspielen‘: Zusätzlich stehst du in der Rangliste ' +
+  'beschrieben), und mit deiner Stufe gilt auch der Schutz gegen Absprachen (unten). ' +
+  '‚In der Saison-Rangliste mitspielen‘: Zusätzlich stehst du in der Rangliste ' +
   'der laufenden Saison mit dem Namen, den du wählst, also deinem Anzeigenamen oder einem ' +
   'zufällig vergebenen Ranglistennamen, sowie deinem Platz, deinen Punkten und deinen ' +
   'Abzeichen; Abzeichen zeigen wir nirgends sonst. Die Rangliste sehen nur, wer selbst ' +

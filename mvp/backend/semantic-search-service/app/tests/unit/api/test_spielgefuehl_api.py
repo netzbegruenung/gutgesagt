@@ -86,6 +86,7 @@ def test_frage_mit_wortlaut_in_der_reihenfolge_gemeinschaft_zuerst(
         "aus",
     ]
     assert wortlaut["namenswahl"]["vorbelegung_anzeigename"] is None
+    assert "Absprachen" in wortlaut["absprachen"]
 
 
 def test_stand_mit_stufe(dienst):

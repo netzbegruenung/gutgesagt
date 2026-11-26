@@ -64,6 +64,9 @@ class Wortlaut:
     ueberschrift: str
     einleitung: str
     stufen: Dict[Stufe, StufenText]
+    # Direkt unter den drei Stufen: die Einwilligung in den Schutz gegen Absprachen
+    # (Paar-Pruefwert, Muster-Hinweis an Admins) fuer beide Stufen ueber "aus"
+    absprachen: str
     # Nur fuer Stufe rangliste: die Pflichtwahl des Namens und der Hilfetext dazu
     namenswahl_frage: str
     namenswahl_anzeigename: str
@@ -73,7 +76,8 @@ class Wortlaut:
 
 
 # Wortlaut von Jura (26.11., vorlaeufig zum Bauen, endgueltig vor dem Go), Stufe 3
-# und Namenswahl aus der Nachsteuerung vom selben Abend.
+# und Namenswahl aus der Nachsteuerung vom selben Abend, der Satz zu Absprachen aus der
+# Antwort auf die Fachfragen zu PR #849.
 WORTLAUTE: Dict[str, Wortlaut] = {
     "spielgefuehl-2026-11-26": Wortlaut(
         ueberschrift="Spielgefühl: Wie möchtest du mitspielen?",
@@ -112,6 +116,13 @@ WORTLAUTE: Dict[str, Wortlaut] = {
                 text="Wir berechnen nichts für dich und zeigen nichts.",
             ),
         },
+        absprachen=(
+            "Für ‚Nur für mich‘ und ‚In der Saison-Rangliste mitspielen‘ willige ich "
+            "außerdem ein: Damit Punkte nicht durch Absprachen entstehen, prüft Gut gesagt, "
+            "ob sich zwei Konten gegenseitig nutzen. Fällt das auf, sehen die "
+            "Administratorinnen und Administratoren einen Hinweis mit den Kennungen beider "
+            "Konten."
+        ),
         namenswahl_frage="In der Rangliste als:",
         namenswahl_anzeigename="mein Anzeigename",
         namenswahl_zufallsname="ein Zufallsname",

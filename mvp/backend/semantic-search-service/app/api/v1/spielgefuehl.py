@@ -77,6 +77,8 @@ class WortlautResponse(BaseModel):
     einleitung: str
     # In der Reihenfolge der Knoepfe: Gemeinschaft zuerst
     stufen: List[StufeResponse]
+    # Direkt unter den Stufen: Einwilligung in den Schutz gegen Absprachen
+    absprachen: str
     namenswahl: NamenswahlResponse
     fuss: str
 
@@ -136,6 +138,7 @@ def _wortlaut(mit_rangliste: bool = True) -> WortlautResponse:
             for stufe in REIHENFOLGE
             if mit_rangliste or stufe is not Stufe.RANGLISTE
         ],
+        absprachen=wortlaut.absprachen,
         namenswahl=NamenswahlResponse(
             frage=wortlaut.namenswahl_frage,
             anzeigename=wortlaut.namenswahl_anzeigename,

@@ -605,8 +605,8 @@ SCHALTER["spielgefuehl_buehne"] = Schalterart(
         "Namen und Rangliste; Abzeichen erscheinen dann nur in der Rangliste."
     ),
     einschalt_hinweis=(
-        "Erst mit endgültigem Jura-Wortlaut; schaltet das alte Modell ab, alle werden "
-        "neu gefragt"
+        "Jura vorläufig ok 26.11. (interner Test); vor Vorhut/BDK Go des Vorstands; "
+        "braucht Salt-Obergrenze"
     ),
     oeffentlich=True,
 )

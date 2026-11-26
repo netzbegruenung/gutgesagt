@@ -734,8 +734,8 @@ Switch on: only the new table counts, old answers stay as proof but are neither 
 over, so everyone is asked again. Points ⇔ level ≥ `fuer_mich`; Rangliste ⇔ level `rangliste`
 (still only with the switches `punkte` and `rangliste`); badges never at the display name
 (`AbzeichenService.abzeichen` empty), only in the Rangliste (`in_rangliste`, computed in the
-15-minute cycle for participants). No Muster-Hinweise in the new model (its wording does not name
-them). The old endpoints for points consent, badge visibility and `PUT /rangliste/einwilligung`
+15-minute cycle for participants). Pair check values and Muster-Hinweise as before for both
+levels above `aus` (the wording names them in a sentence below the three levels). The old endpoints for points consent, badge visibility and `PUT /rangliste/einwilligung`
 answer `aktiv: false` / 404.
 
 - `GET /api/v1/usage/users/me/spielgefuehl`: level (null = not asked yet), name choice,
