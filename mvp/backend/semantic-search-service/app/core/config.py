@@ -348,6 +348,9 @@ class Settings(BaseSettings):
     danke_knopf_aktiv: bool = False
     danke_ohne_konto_aktiv: bool = False
     rangliste_aktiv: bool = False
+    # Saal-Spruch des Tages (services/saal_spruch_service.py): Karte auf der Startseite
+    # mit einem vorab festgelegten, oeffentlichen Spruch je Tag; nur Text, nichts zur Person.
+    saal_spruch_aktiv: bool = False
     # Saison und Gemeinschaftsziel (#782, domain/saisons.py): Den Balken sehen alle erst,
     # wenn es einmal so viele abgeschlossene Wochen hintereinander mit je mindestens so
     # vielen verschiedenen Menschen gab, die "Ja, gepostet" gemeldet haben; vorher nur

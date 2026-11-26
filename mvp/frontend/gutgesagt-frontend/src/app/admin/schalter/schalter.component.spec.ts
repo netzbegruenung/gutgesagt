@@ -5,6 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { SchalterComponent } from './schalter.component';
 import { SaisonsComponent } from '../saisons/saisons.component';
+import { SaalSpruecheComponent } from '../saal-sprueche/saal-sprueche.component';
 import { Einstellung, Schalter } from '../../services/moderation.service';
 import { environment } from '../../../environments/environment';
 
@@ -28,6 +29,10 @@ function schalter(teil: Partial<Schalter> & { name: string }): Schalter {
 @Component({ selector: 'app-saisons', standalone: true, template: '' })
 class SaisonsStubComponent {}
 
+/** Die Saal-Sprüche ebenso. */
+@Component({ selector: 'app-saal-sprueche', standalone: true, template: '' })
+class SaalSpruecheStubComponent {}
+
 const DSFA = 'Vor dem Einschalten auf Prod: DSFA beschlossen (docs/DSFA.md Abschnitt 7)';
 
 describe('SchalterComponent', () => {
@@ -40,8 +45,8 @@ describe('SchalterComponent', () => {
       providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()],
     })
       .overrideComponent(SchalterComponent, {
-        remove: { imports: [SaisonsComponent] },
-        add: { imports: [SaisonsStubComponent] },
+        remove: { imports: [SaisonsComponent, SaalSpruecheComponent] },
+        add: { imports: [SaisonsStubComponent, SaalSpruecheStubComponent] },
       })
       .compileComponents();
 

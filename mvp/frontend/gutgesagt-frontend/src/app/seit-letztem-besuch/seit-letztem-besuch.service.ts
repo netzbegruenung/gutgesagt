@@ -73,6 +73,14 @@ export class SeitLetztemBesuchService {
    * Karte zeigt sie bei der Rückkehr sofort und fragt im Hintergrund neu.
    */
   naechsterSchrittGemerkt: Vorschlag[] | null = null;
+  /**
+   * Ob die Karte „Heute im Saal gehört:“ heute einen Spruch hat. false ohne die Karte (dann
+   * wartet nichts auf sie); die Karte setzt null, solange ihre Antwort aussteht, und dann
+   * true oder false. Bei der Rückkehr gilt der letzte Stand, wie beim Vorschlag.
+   */
+  readonly saalSpruchDa$ = new BehaviorSubject<boolean | null>(false);
+  /** Der letzte Saal-Spruch dieses App-Starts mit seinem Tag; null, solange keiner kam. */
+  saalSpruchGemerkt: { tag: string; spruch: string | null } | null = null;
 
   /**
    * Die eine Stelle, die über den Vorrang auf der Startseite entscheidet (Review
@@ -83,9 +91,10 @@ export class SeitLetztemBesuchService {
     mitZeitgrenze(inject(UsageTrackingService).besuchStand$),
     this.erledigt$,
     mitZeitgrenze(this.naechsterSchrittDa$).pipe(map((da) => (da === null ? false : da))),
+    mitZeitgrenze(this.saalSpruchDa$).pipe(map((da) => (da === undefined ? 'offen' : da === null ? false : da))),
   ]).pipe(
-    map(([stand, erledigt, da]) => {
-      const vorrang = startVorrang(stand, erledigt, da);
+    map(([stand, erledigt, da, spruch]) => {
+      const vorrang = startVorrang(stand, erledigt, da, spruch);
       return { vorrang, kacheln: startKacheln(stand, erledigt, vorrang) };
     }),
     distinctUntilChanged((a, b) => a.vorrang === b.vorrang && gleicheKacheln(a.kacheln, b.kacheln)),

@@ -698,6 +698,8 @@ OFFEN = {
     # Saisons pflegen (Admin, #782): keine Daten von Nutzenden
     ("POST", "/api/v1/moderation/saisons"),
     ("PUT", "/api/v1/moderation/saisons/{saison_id}"),
+    # Saal-Sprueche pflegen (Admin): oeffentlicher Text, keine Daten von Nutzenden
+    ("PUT", "/api/v1/moderation/saal-sprueche/{datum}"),
     # Herkunft pruefen anstossen (Admin, #759): keine Daten von Nutzenden
     ("POST", "/api/v1/herkunft-pruefen/lauf"),
     ("POST", "/api/v1/sperren/{sperre_id}/widerspruch"),

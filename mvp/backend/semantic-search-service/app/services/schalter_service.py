@@ -150,6 +150,18 @@ SPIEL_SCHALTER = (
         oeffentlich=True,
     ),
     Schalterart(
+        name="saal_spruch",
+        gruppe=SPIELGEFUEHL,
+        feld="saal_spruch_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_SAAL_SPRUCH_AKTIV",
+        erklaerung=(
+            "Karte „Heute im Saal gehört:“ oben auf der Startseite mit dem Spruch des "
+            "Tages (Abschnitt Saal-Sprüche) und dem Knopf „Antworten ansehen“; an Tagen "
+            "ohne Spruch nichts. Speichert nichts zur Person."
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
         name="wirkungs_echo",
         gruppe=PUNKTE_ANERKENNUNG,
         feld="wirkungs_echo_aktiv",

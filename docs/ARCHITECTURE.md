@@ -93,16 +93,20 @@ visit at most one card that points the person somewhere new (review Spielgefühl
 |---|------|-------------|------------|
 | 1 | Hero and search | everyone | always |
 | 2 | Rundgang line (`app-rundgang-band`, Willkommen) | everyone | until answered; signed in without „Ein Konto brauchst du nicht“ (`WILLKOMMEN_ANGEMELDET`) |
+| 2a | „Heute im Saal gehört:“ (`app-saal-spruch`) | everyone, Schalter `saal_spruch` | an admin has set a Saal-Spruch for today (Europe/Berlin); not while the Rundgang line of card 2 is on the start page; signed in only when card 3 shows no own news |
 | 3 | „Seit deinem letzten Besuch“ | signed in | not on the very first visit (`erster_besuch` from `POST /users/me/besuch`); next to a suggestion of card 4 only with news about the person's own Beiträge (`EIGENES_NEUES`: answers, uses, Wirkungs-Echo, ausformulierte Einwürfe) |
-| 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion and card 3 shows no own news |
+| 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion, card 3 shows no own news and card 2a has no Saal-Spruch |
 | 5 | Saison goal | everyone, Schalter `saison_ziel` | from the threshold (#782) |
 | 6 | Oft genutzt, Konter-Probe, Frisch aus der Community, Mitmachen tiles, Garten, About | everyone | as each card decides |
 
-Cards 3 and 4 are never shown together: own news wins (it is what the person caused), otherwise
-the single suggestion wins and the general numbers (new Einwürfe of others, Aussagen waiting,
+Cards 2a, 3 and 4 are never shown together: own news wins (it is what the person caused), then
+on its days the Saal-Spruch, otherwise the single suggestion wins and the general numbers (new Einwürfe of others, Aussagen waiting,
 new Beiträge) step back (proposal, open as Fachfrage in #829). One place decides:
 `SeitLetztemBesuchService.start$` (rule in `seit-letztem-besuch/neues-liste.ts`, `startVorrang`);
-both cards only read it, card 4 reports whether it has a suggestion through `naechsterSchrittDa$`.
+the cards only read it, card 4 reports whether it has a suggestion through `naechsterSchrittDa$`,
+card 2a whether it has a Saal-Spruch today through `saalSpruchDa$` (without card 2a nothing waits
+for it). Visitors without an account never see cards 3 and 4, so card 2a shows for them as soon as
+its answer is in.
 Until both answers (Besuch, suggestions) are in, neither card shows, at most `START_WARTEZEIT_MS`
 (1.5 s), so no card appears and vanishes under the finger. Back on the start page the last
 answers apply at once (kept in the service) and are refreshed silently; nothing needs a reload.
@@ -538,6 +542,22 @@ officer has advised.
 | `danke_knopf` | `SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV` | off | yes | DSFA addendum V31 (#791) |
 | `danke_ohne_konto` | `SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV` | off | yes | V31 and visitor marker (#495); works only with `danke_knopf` |
 | `rangliste` | `SEMANTIC_SEARCH_RANGLISTE_AKTIV` | off | no | legal OK (wording, DSFA V28, privacy policy) and Punkte on (#793); works only with `punkte` |
+| `saal_spruch` | `SEMANTIC_SEARCH_SAAL_SPRUCH_AKTIV` | off | yes | none: public text only, nothing about the person (see "Saal-Spruch" below) |
+
+#### Saal-Spruch
+
+Table `saal_sprueche` (day in Europe/Berlin, text up to 200 characters, time of the last change;
+no personal data, not even which admin set it), `repositories/saal_spruch_repository.py`,
+`services/saal_spruch_service.py` (today's text cached 60 s; a read error means no Saal-Spruch).
+
+- `GET /api/v1/saal-spruch/heute` (anonymous at the BFF): `{"spruch": "…"}`, `{"spruch": null}`
+  without one for today, `{"spruch": null, "aktiv": false}` while the switch is off (never 404,
+  the start page asks on every view). The frontend skips it while `GET /api/v1/funktionen`
+  reports the switch off.
+- `/api/v1/moderation/saal-sprueche` (admin): `GET` lists today and later, `PUT /{datum}`
+  `{"text": …}` sets or replaces the text of a day (not for past days), `DELETE /{datum}` removes
+  it. Works with the switch off, so the texts are ready before switching on. UI: section
+  „Saal-Sprüche“ on the admin page „Schalter“.
 
 #### Saisons and Gemeinschaftsziel (#782)
 
