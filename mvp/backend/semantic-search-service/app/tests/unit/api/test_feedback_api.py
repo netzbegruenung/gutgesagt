@@ -208,6 +208,14 @@ class TestListe:
 class TestGestoert:
     """Knopf "Was hat dich gestört?" (Schalter feedback_gestoert, Jura 26.11. Punkt g)."""
 
+    @pytest.fixture(autouse=True)
+    def startphase(self):
+        # Fester Tag in der Startphase: sonst kippen die Tests ab dem 31.12.2026 auf 409.
+        with patch(
+            "services.schalter_service.heute_utc", return_value=date(2026, 11, 27)
+        ):
+            yield
+
     @pytest.fixture
     def obergrenze(self, client):
         def setzen(an: bool):

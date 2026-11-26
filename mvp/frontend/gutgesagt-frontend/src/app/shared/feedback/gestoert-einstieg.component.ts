@@ -21,7 +21,7 @@ import { FEEDBACK_GESTOERT_SCHALTER } from './feedback.service';
   template: `
     @if (an()) {
       <button type="button" class="gestoert-einstieg" data-testid="gestoert-einstieg" (click)="oeffnen()">
-        <mat-icon class="gestoert-icon" aria-hidden="true">sentiment_dissatisfied</mat-icon>
+        <mat-icon class="gestoert-icon" aria-hidden="true">chat_bubble_outline</mat-icon>
         <span class="gestoert-text">
           <span class="gestoert-titel">Was hat dich gestört?</span>
           <span class="gestoert-satz">Sag es uns in einem Satz, damit Gut gesagt besser wird.</span>
@@ -36,7 +36,8 @@ import { FEEDBACK_GESTOERT_SCHALTER } from './feedback.service';
         display: block;
       }
 
-      /* Kanten wie die Mitmachen-Kacheln: 16 px Einzug, ab 752 px die mittige 720er-Spalte */
+      /* Kanten wie die Mitmachen-Kacheln: 16 px Einzug, ab 752 px die mittige 720er-Spalte.
+         Rand in --linie-tanne, damit sich der Knopf von der Fläche abhebt (gut sichtbarer Einstieg). */
       .gestoert-einstieg {
         display: flex;
         align-items: center;
@@ -46,7 +47,7 @@ import { FEEDBACK_GESTOERT_SCHALTER } from './feedback.service';
         min-height: 48px;
         margin: var(--spacing-lg, 24px) max(var(--spacing-md, 16px), calc((100% - var(--lesespalte, 720px)) / 2)) 0;
         padding: var(--spacing-md, 16px) var(--spacing-lg, 24px);
-        border: 2px solid var(--kachel-rand, var(--linie-tanne));
+        border: 2px solid var(--linie-tanne, var(--primaer));
         border-radius: 12px;
         background: var(--karte-kommentar, var(--flaeche));
         color: var(--text);
@@ -57,7 +58,7 @@ import { FEEDBACK_GESTOERT_SCHALTER } from './feedback.service';
 
       .gestoert-einstieg:hover,
       .gestoert-einstieg:focus-visible {
-        background: color-mix(in srgb, var(--karte-kommentar, var(--flaeche)) 92%, var(--akzent-tanne, #00563a));
+        background: color-mix(in srgb, var(--karte-kommentar, var(--flaeche)) 80%, var(--akzent-tanne, #00563a));
       }
 
       .gestoert-einstieg:focus-visible {
