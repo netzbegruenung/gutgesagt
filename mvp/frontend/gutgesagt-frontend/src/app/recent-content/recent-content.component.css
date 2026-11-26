@@ -30,6 +30,12 @@
   border-radius: 8px;
 }
 
+/* Anfang ohne Beiträge: Gewinn statt Druck (26.11.) */
+.anfang p {
+  margin: 0;
+  color: var(--text);
+}
+
 /* Mobile adjustments */
 @media (max-width: 599px) {
   .recent-content-header {

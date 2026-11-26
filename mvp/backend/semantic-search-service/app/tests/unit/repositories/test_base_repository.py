@@ -767,6 +767,80 @@ class TestGesperrteBeitraege:
         such_filter = client.scroll.call_args.kwargs["scroll_filter"]
         assert self._gesperrte_ausgeschlossen(such_filter.must_not)
 
+    @staticmethod
+    def _punkt(punkt_id: str, payload: dict):
+        return MagicMock(id=punkt_id, payload=payload)
+
+    @pytest.mark.asyncio
+    async def test_get_recent_findet_die_neuesten_ueber_alle_seiten(
+        self, repository_mit_client
+    ):
+        # Bis 26.11. las get_recent nur die ersten limit*10 Punkte in ID-Reihenfolge;
+        # der neueste Beitrag auf einer spaeteren Seite fehlte dann.
+        from unittest.mock import AsyncMock
+
+        repository, client, _ = repository_mit_client
+        ids = {name: str(uuid.uuid4()) for name in ["neu", "ohne", "a18", "a19"]}
+        alt = [
+            self._punkt(
+                ids.get(f"a{i}", str(uuid.uuid4())),
+                {"created": f"2026-01-{i + 1:02d}T10:00:00"},
+            )
+            for i in range(20)
+        ]
+        neu = self._punkt(ids["neu"], {"created": "2026-11-25T10:00:00"})
+        ohne_datum = self._punkt(ids["ohne"], {"created": None})
+        client.scroll = AsyncMock(
+            side_effect=[(alt[:10], "seite-2"), (alt[10:] + [ohne_datum, neu], None)]
+        )
+        client.retrieve = AsyncMock(
+            side_effect=lambda **kwargs: [
+                self._punkt(
+                    i,
+                    {
+                        **create_base_content_fields(),
+                        "text": f"Beitrag {i}",
+                        "content_type": "statement",
+                    },
+                )
+                for i in reversed(kwargs["ids"])
+            ]
+        )
+
+        ergebnis = await repository.get_recent(limit=3)
+
+        # Zuerst nur created, voll gelesen werden nur die drei neuesten.
+        erwartet = [ids["neu"], ids["a19"], ids["a18"]]
+        assert all(
+            aufruf.kwargs["with_payload"] == ["created"]
+            for aufruf in client.scroll.call_args_list
+        )
+        assert client.retrieve.call_args.kwargs["ids"] == erwartet
+        assert [str(eintrag.id) for eintrag in ergebnis] == erwartet
+
+    @pytest.mark.asyncio
+    async def test_get_recent_ohne_beitraege_liest_nichts_voll(
+        self, repository_mit_client
+    ):
+        from unittest.mock import AsyncMock
+
+        repository, client, _ = repository_mit_client
+        client.retrieve = AsyncMock()
+
+        assert await repository.get_recent(limit=5) == []
+        client.retrieve.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_get_recent_gibt_qdrant_fehler_weiter(self, repository_mit_client):
+        # Sonst saehe ein Ausfall auf der Startseite aus wie "noch keine Beitraege".
+        from unittest.mock import AsyncMock
+
+        repository, client, _ = repository_mit_client
+        client.scroll = AsyncMock(side_effect=RuntimeError("Qdrant weg"))
+
+        with pytest.raises(RuntimeError):
+            await repository.get_recent(limit=5)
+
     @pytest.mark.asyncio
     async def test_meine_beitraege_ohne_gesperrte(self, repository_mit_client):
         repository, client, _ = repository_mit_client
