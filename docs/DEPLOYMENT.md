@@ -192,6 +192,10 @@ admin switches it on. Before switching on Punkte or Abzeichen on production: DSF
 no personal data; the Schalter is still off until an admin switches it on. Once on, the semantic
 service makes outbound HTTP(S) requests to the hosts of the Herkünfte; where egress is
 restricted, the list shows them as „nicht erreichbar“.
+`SEMANTIC_SEARCH_BESTANDSZAHL_ZUWACHS_AKTIV` defaults to `true` as well: the growth next to the
+Bestandszahl on the start page only counts public content when asked and stores nothing. After the
+rollout the start page shows „– aus der Community.“ instead of the growth until an admin switches
+`bestandszahl_zuwachs` on.
 
 Schalter marked `oeffentlich` in `SCHALTER` (`services/schalter_service.py`) are readable without
 sign-in at `GET /api/v1/funktionen` (#756): the app shows those functions only when they are on.

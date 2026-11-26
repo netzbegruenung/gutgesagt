@@ -3,10 +3,12 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pydantic import BaseModel, Field
 
-from dtos.metrics import GetMetricsResponse
+from dtos.metrics import GetMetricsResponse, ZuwachsResponse
+from domain.bestandszahl import ZUWACHS_AB, zeitraum_beginn, zuwachs
+from domain.models.content_type import ContentType
 from dependencies import (
     get_bilanz_service,
     get_commentary_service,
@@ -186,10 +188,35 @@ class SuchenOhneTrefferResponse(BaseModel):
     suchanfragen: List[SucheOhneTrefferEintrag]
 
 
+async def _zuwachs(content_repository, settings: Settings) -> Optional[ZuwachsResponse]:
+    """
+    Zuwachs zur Bestandszahl (domain/bestandszahl.py), nur mit dem Schalter
+    bestandszahl_zuwachs. Ein Fehler laesst nur den Zuwachs weg, nie die Zaehler.
+    """
+    try:
+        if not await asyncio.to_thread(
+            schalter_wirksam, "bestandszahl_zuwachs", settings
+        ):
+            return None
+        neu, zeitpunkte = await content_repository.angelegt_seit(
+            zeitraum_beginn(datetime.now(timezone.utc)),
+            (ContentType.COMMENTARY.value,),
+            ZUWACHS_AB - 1,
+        )
+        ergebnis = zuwachs(neu, zeitpunkte)
+        return ZuwachsResponse(
+            neu_7_tage=ergebnis.neu, zuletzt_ergaenzt=ergebnis.zuletzt_ergaenzt
+        )
+    except Exception as e:
+        logger.error(f"Zuwachs nicht gezaehlt: {type(e).__name__}", exc_info=True)
+        return None
+
+
 # Bewusst oeffentlich: /getMetrics liefert nur aggregierte Bestandszaehler
 # (content_count, statement_count, commentary_count, reference_count); das BFF
-# fuehrt es als anonym erlaubt (EndpointPolicy). Die Startseite zeigt die Zahlen
-# seit dem Umbau auf zwei Kacheln nicht mehr an. Die Kennzahlen fuer Admins stehen
+# fuehrt es als anonym erlaubt (EndpointPolicy). Die Startseite zeigt Kommentare und
+# Aussagen abgerundet als Bestandszahl in der Unterzeile des Claims
+# (search-view/hero-unterzeile.component.ts). Die Kennzahlen fuer Admins stehen
 # in den Endpunkten darunter, die admin-only sind; Betriebskennzahlen liegen unter
 # /metrics (api/betriebskennzahlen.py).
 @router.get("/getMetrics", response_model=GetMetricsResponse)
@@ -242,6 +269,7 @@ async def get_metrics(
                 statement_count=statement_count,
                 commentary_count=await commentary_service.count(),
                 reference_count=await reference_service.count(),
+                zuwachs=await _zuwachs(content_repository, settings),
             )
 
             _metrics_cache = (time.monotonic(), metrics)
