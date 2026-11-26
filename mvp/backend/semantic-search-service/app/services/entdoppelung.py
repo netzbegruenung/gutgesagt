@@ -125,11 +125,16 @@ def deckel_pruefwerte(
     § 25 TDDDG). Eine Nutzung ohne Anmeldung zaehlt nur entdoppelt, wenn sie einen
     freien Platz belegt; so bringen hoechstens die ersten ``anzahl`` am Tag Punkte,
     egal von wem. Verworfen wie alle Pruefwerte nach dem Tageswechsel.
+
+    Ohne geheimen Schluessel (Review): In den Plaetzen steckt keine Person, nur Beitrag
+    und Tag, die ohnehin an der Nutzung stehen. So gilt der Deckel auch ueber einen
+    Neustart am selben Tag hinweg, statt mit dem Tagesschluessel neu zu beginnen.
     """
     tag = (moment or datetime.now(timezone.utc)).astimezone(timezone.utc).date()
-    schluessel = _NUTZUNG_SCHLUESSEL.fuer(tag)
     return [
-        _hmac(schluessel, f"ohne-anmeldung|{platz}|{content_id}|{tag.isoformat()}")
+        hashlib.sha256(
+            f"ohne-anmeldung|{platz}|{content_id}|{tag.isoformat()}".encode("utf-8")
+        ).hexdigest()
         for platz in range(1, anzahl + 1)
     ]
 

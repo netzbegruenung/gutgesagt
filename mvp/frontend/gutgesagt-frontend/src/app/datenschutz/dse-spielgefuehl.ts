@@ -42,9 +42,6 @@ export const DSE_SPIELGEFUEHL_SCHLUSS =
   'Einwilligung (Art. 6 Abs. 1 lit. a, Art. 9 Abs. 2 lit. a DSGVO). Dauer: die Antworten bis ' +
   'zur Löschung deines Kontos.';
 
-/** Der ganze Absatz bei eingeschalteter Rangliste (wie vor der Teilung). */
-export const DSE_SPIELGEFUEHL = [DSE_SPIELGEFUEHL_ANFANG, DSE_SPIELGEFUEHL_RANGLISTE, DSE_SPIELGEFUEHL_SCHLUSS].join(' ');
-
 /**
  * Steht immer, auch ohne Schalter (Jura 26.11.): Eine gespeicherte Wahl bleibt, wenn wir
  * die Funktion ausschalten, und lässt sich in den Datenschutz-Einstellungen ausschalten.

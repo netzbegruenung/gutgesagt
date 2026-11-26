@@ -63,6 +63,24 @@ class TestEntdoppelteNutzung:
         assert repo.get_usage_count(beitrag) == 6
         assert repo.get_nutzung_entdoppelt_batch([beitrag]) == {str(beitrag): 4}
 
+    def test_tagesdeckel_null_zaehlt_nichts_und_bleibt_fuer_oft_genutzt(
+        self, datenbank  # noqa: F811
+    ):
+        """Anzahl 0: nichts ohne Anmeldung zaehlt; "oft genutzt" sieht den Deckel."""
+        repo = UsageTrackingRepository(datenbank)
+        null, drei = uuid.uuid4(), uuid.uuid4()
+        repo.track_usage(null, pruefwert="besucher-a", deckel=[])
+        for besucher in range(5):
+            repo.track_usage(
+                drei, pruefwert=f"besucher-{besucher}", deckel=["p1", "p2", "p3"]
+            )
+
+        assert repo.get_nutzung_entdoppelt_batch([null]) == {str(null): 0}
+        entdoppelt = repo.get_trending_content(limit=10, hours=168, nur_entdoppelt=True)
+        assert [(t["content_id"], t["recent_uses"]) for t in entdoppelt] == [
+            (str(drei), 3)
+        ]
+
     def test_track_usage_ohne_pruefwert_nicht_entdoppelt(self, datenbank):  # noqa: F811
         repo = UsageTrackingRepository(datenbank)
         beitrag = uuid.uuid4()
