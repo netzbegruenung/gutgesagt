@@ -13,30 +13,44 @@
     } @else if (gestoppt() && !beete()) {
         <p class="garten-hinweis">Diese Übersicht ist gerade nicht erreichbar.</p>
     } @else if (beete()) {
-        @let liste = beete()!;
-        <ul class="beete">
-            @for (beet of liste; track beet.schluessel) {
-                <li class="beet" [class.hat-luecken]="beet.ohne_antwort > 0">
-                    <a class="beet-link" [routerLink]="ergebnisse" [queryParams]="{ searchQuery: beet.name }">
-                        <span class="beet-kopf">
-                            @if (beet.motiv) {
-                                <img class="beet-motiv" [src]="beet.motiv" alt="" width="32" height="32">
-                            }
-                            <span class="beet-name">{{ beet.name }}</span>
-                        </span>
-                        <span class="beet-zahl">{{ antwortenText(beet.antworten) }}</span>
-                        @if (beet.ohne_antwort > 0) {
-                            <span class="beet-ohne">{{ ohneAntwortText(beet.ohne_antwort) }}</span>
+        @let gruppe = gruppen();
+        @if (gruppe.mitAntworten.length) {
+            <ul class="beete">
+                @for (beet of gruppe.mitAntworten; track beet.schluessel) {
+                    <ng-container *ngTemplateOutlet="kachel; context: { $implicit: beet }"></ng-container>
+                }
+            </ul>
+        }
+        <!-- Leerzustände 26.11.: Themen ohne Antwort gesammelt unten statt verstreut zwischen den vollen -->
+        @if (gruppe.nochPlatz.length) {
+            <h3 class="beete-platz" data-testid="noch-platz">Hier ist noch Platz</h3>
+            <ul class="beete">
+                @for (beet of gruppe.nochPlatz; track beet.schluessel) {
+                    <ng-container *ngTemplateOutlet="kachel; context: { $implicit: beet }"></ng-container>
+                }
+            </ul>
+        }
+        <ng-template #kachel let-beet>
+            <li class="beet" [class.hat-luecken]="beet.ohne_antwort > 0">
+                <a class="beet-link" [routerLink]="ergebnisse" [queryParams]="{ searchQuery: beet.name }">
+                    <span class="beet-kopf">
+                        @if (beet.motiv) {
+                            <img class="beet-motiv" [src]="beet.motiv" alt="" width="32" height="32">
                         }
-                    </a>
-                    @if (beet.ohne_antwort > 0 && (angemeldet$ | async)) {
-                        <a class="beet-antworten" [routerLink]="hierFehlt" [queryParams]="{ thema: beet.schluessel }">
-                            Jetzt antworten<span class="visually-hidden"> im Thema {{ beet.name }}</span>
-                        </a>
+                        <span class="beet-name">{{ beet.name }}</span>
+                    </span>
+                    <span class="beet-zahl">{{ antwortenText(beet.antworten) }}</span>
+                    @if (beet.ohne_antwort > 0) {
+                        <span class="beet-ohne">{{ ohneAntwortText(beet.ohne_antwort) }}</span>
                     }
-                </li>
-            }
-        </ul>
+                </a>
+                @if (beet.ohne_antwort > 0 && (angemeldet$ | async)) {
+                    <a class="beet-antworten" [routerLink]="hierFehlt" [queryParams]="{ thema: beet.schluessel }">
+                        Jetzt antworten<span class="visually-hidden"> im Thema {{ beet.name }}</span>
+                    </a>
+                }
+            </li>
+        </ng-template>
         @if ((angemeldet$ | async) === false) {
             <p class="garten-konto">
                 Den Wortlaut der Sprüche ohne Antwort siehst du mit Konto.

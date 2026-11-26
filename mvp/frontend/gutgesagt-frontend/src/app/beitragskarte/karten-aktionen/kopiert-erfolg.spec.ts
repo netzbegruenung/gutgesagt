@@ -25,15 +25,28 @@ import { GEPOSTET_FRAGE, JA_GEPOSTET } from './gepostet-texte';
 describe('Erfolgstext nach dem Kopieren - Texte (#785)', () => {
   it('nennt die Nutzung als Kopiervorgaenge, nie als Menschen', () => {
     expect(nutzungSatz(14)).toBe('Schon 14-mal genutzt.');
-    expect(nutzungSatz(1)).toBe('Schon 1-mal genutzt.');
+    expect(nutzungSatz(2)).toBe('Schon 2-mal genutzt.');
     expect(nutzungSatz(1234)).toBe('Schon 1.234-mal genutzt.');
     expect(nutzungSatz(14)).not.toContain('Menschen');
   });
 
-  it('ohne Zahl bei 0 oder unbekannter Nutzung', () => {
-    expect(nutzungSatz(0)).toBeNull();
+  it('bei 0 und 1 vorher nach Anfang statt nach „schon 1-mal“ (Leerzustaende 26.11.)', () => {
+    expect(nutzungSatz(0)).toBe('Deine Kopie ist die erste.');
+    expect(nutzungSatz(1)).toBe('Deine Kopie ist die zweite.');
+    expect(nutzungSatz(1.7)).toBe('Deine Kopie ist die zweite.');
+  });
+
+  it('am eigenen Beitrag ohne „die erste“: die eigene Kopie zaehlt nicht', () => {
+    expect(nutzungSatz(0, true)).toBeNull();
+    expect(nutzungSatz(1, true)).toBe('Einmal genutzt.');
+    expect(nutzungSatz(3, true)).toBe('Schon 3-mal genutzt.');
+  });
+
+  it('ohne Satz bei unbekannter Nutzung', () => {
     expect(nutzungSatz(null)).toBeNull();
     expect(nutzungSatz(undefined)).toBeNull();
+    expect(nutzungSatz(-1)).toBeNull();
+    expect(nutzungSatz(Number.NaN)).toBeNull();
   });
 
   it('den Tonlagen-Hinweis je Stil mit dem Wort der Oberflaeche', () => {
@@ -130,12 +143,25 @@ describe('Erfolgstext nach dem Kopieren - Karte (#785)', () => {
     expect(zeichen.textContent).toBe('🌱');
   });
 
-  it('bei 0 Nutzungen nur der Erfolgssatz', () => {
+  it('bei 0 Nutzungen der Anfang: diese Kopie ist die erste', () => {
     component.nutzung = 0;
     kopieren();
 
-    expect(erfolg()!.textContent).toContain(KOPIERT_ERFOLG);
-    expect(erfolg()!.textContent).not.toContain('genutzt');
+    const text = erfolg()!.textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain(KOPIERT_ERFOLG);
+    expect(text).toContain('Deine Kopie ist die erste.');
+    expect(text).not.toContain('genutzt');
+  });
+
+  it('am eigenen Beitrag bei 0 Nutzungen nur der Erfolgssatz', () => {
+    component.nutzung = 0;
+    component.eigeneStimmeImZaehler = false;
+    kopieren();
+
+    const text = erfolg()!.textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain(KOPIERT_ERFOLG);
+    expect(text).not.toContain('die erste');
+    expect(text).not.toContain('genutzt');
   });
 
   it('ohne andere Tonlage kein Hinweis und kein Link', () => {
@@ -319,13 +345,44 @@ describe('Erfolgstext nach dem Kopieren - in der Beitragskarte (#785)', () => {
     }).compileComponents();
   });
 
-  it('bei 0 Nutzungen nur der Erfolgssatz: die eigene Kopie zaehlt nicht mit', fakeAsync(() => {
+  it('bei 0 Nutzungen „die erste“: die eigene Kopie zaehlt im Satz nicht mit', fakeAsync(() => {
     const fixture = karte('a', 0);
     kopieren(fixture);
 
     expect(nutzungAnDerKarte(fixture)).toBe('1× genutzt');
-    expect(erfolg(fixture)!.textContent).toContain(KOPIERT_ERFOLG);
-    expect(erfolg(fixture)!.textContent).not.toContain('genutzt');
+    const text = erfolg(fixture)!.textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain(KOPIERT_ERFOLG);
+    expect(text).toContain('Deine Kopie ist die erste.');
+    expect(text).not.toContain('genutzt');
+    tick(600);
+  }));
+
+  it('am eigenen Beitrag bei 1 Nutzung „Einmal genutzt.“, die Karte zaehlt nicht hoch', fakeAsync(() => {
+    (TestBed.inject(AuthService).getUserInfo as jasmine.Spy).and.returnValue({ isAuthenticated: true, userId: 'ich' });
+    const fixture = TestBed.createComponent(BeitragskarteComponent);
+    fixture.componentRef.setInput('daten', { ...ausSuchergebnis({
+      score: 0.95,
+      statement_text: 'Windräder töten die Vögel!',
+      statement_similarity_score: 0.9,
+      reply_relevance: 0.85,
+      commentary_result: inhalt('a', 1),
+    } as any), eigen: true });
+    fixture.detectChanges();
+    kopieren(fixture);
+
+    expect(nutzungAnDerKarte(fixture)).toBe('1× genutzt');
+    const text = erfolg(fixture)!.textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain('Einmal genutzt.');
+    expect(text).not.toContain('zweite');
+    tick(600);
+  }));
+
+  it('bei 1 Nutzung vorher „Deine Kopie ist die zweite.“', fakeAsync(() => {
+    const fixture = karte('a', 1);
+    kopieren(fixture);
+
+    expect(nutzungAnDerKarte(fixture)).toBe('2× genutzt');
+    expect(erfolg(fixture)!.textContent!.replace(/\s+/g, ' ')).toContain('Deine Kopie ist die zweite.');
     tick(600);
   }));
 

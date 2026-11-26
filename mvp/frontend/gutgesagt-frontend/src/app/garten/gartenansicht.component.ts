@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
-import { AsyncPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { AsyncPipe, NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
@@ -9,7 +9,7 @@ import { AuthService } from '../auth/auth.service';
 import { PAGE_TITLES, ROUTES } from '../shared/constants/app.constants';
 import { nachladeStrom } from '../shared/selbst-nachladen';
 import { MIT_KONTO_PFAD, ZIEL_PARAM } from '../mit-konto/vorschau-schritte';
-import { Beet, GartenService, antwortenText, ohneAntwortText } from './garten.service';
+import { Beet, GartenService, antwortenText, beeteGruppieren, ohneAntwortText } from './garten.service';
 
 /** Nach diesen Antworten fragt die Seite nicht weiter: aus (404, älteres Backend) oder ohne Rechte. */
 function endgueltig(fehler: unknown): boolean {
@@ -27,12 +27,13 @@ function endgueltig(fehler: unknown): boolean {
  * Antwort“, gefiltert auf das Thema. Die Seite laedt selbst nach (nachladeStrom); ohne den
  * Schalter `gartenansicht` antwortet der Server 200 mit `aktiv: false` (oder fragt die
  * Seite gar nicht), dann steht ein Satz da. Geht er an, zeigt der nächste Lauf die Beete.
+ * Themen ohne Antwort stehen gesammelt unter den anderen, unter „Hier ist noch Platz“.
  */
 @Component({
   selector: 'app-gartenansicht',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AsyncPipe, RouterLink, MatProgressSpinnerModule],
+  imports: [AsyncPipe, NgTemplateOutlet, RouterLink, MatProgressSpinnerModule],
   templateUrl: './gartenansicht.component.html',
   styleUrls: ['./gartenansicht.component.css'],
 })
@@ -49,6 +50,8 @@ export class GartenansichtComponent implements OnInit {
   readonly ohneAntwortText = ohneAntwortText;
 
   readonly beete = signal<Beet[] | null>(null);
+  /** Erst die Themen mit Antworten, darunter gesammelt die ohne. */
+  readonly gruppen = computed(() => beeteGruppieren(this.beete() ?? []));
   /** Der Schalter ist aus (`aktiv: false`, bei einem älteren Backend 404). */
   readonly aus = signal(false);
   /** Der letzte Versuch ist gescheitert; die Seite versucht es von selbst weiter. */
