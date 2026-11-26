@@ -1,10 +1,11 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, Signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { ROUTES } from '../shared/constants/app.constants';
 import { Subscription, Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SearchService } from '../services/search.service';
+import { FunktionenService } from '../services/funktionen.service';
 import { PassendesThema, SearchResponse } from '../services/dtos/searchDtos';
 import { KartenlisteComponent } from '../beitragskarte/kartenliste.component';
 import { SearchComponent } from '../search/search.component';
@@ -184,6 +185,11 @@ export function nachThemaGefiltert(antwort: SearchResponse, thema: string | null
   };
 }
 
+/** Schalter für „Danach wurde schon N-mal gesucht“ (#362), wie im Backend. */
+export const NULL_TREFFER_ANZAHL_SCHALTER = 'null_treffer_anzahl';
+/** Erst ab dieser Zahl (Jura vorläufig 26.11.; Backend: ANZEIGE_AB). */
+export const SCHON_GESUCHT_AB = 3;
+
 @Component({
   selector: 'app-result-view',
   standalone: true,
@@ -301,6 +307,13 @@ export class ResultViewComponent implements OnInit, OnDestroy {
    */
   ohneSuche = false;
   readonly testeingabeAufruf = TESTEINGABE_AUFRUF;
+  private readonly funktionen = inject(FunktionenService);
+  /**
+   * Schalter null_treffer_anzahl (Gruppe Spielgefühl), erst gefragt, wenn das Backend eine
+   * Zahl schickt: So fragt nicht jede Ergebnisseite GET /api/v1/funktionen. Lädt ohne
+   * Neuladen nach (FunktionenService.an).
+   */
+  private nullTrefferAnzahlAn: Signal<boolean> | null = null;
   readonly testeingabeBeispiel = TESTEINGABE_BEISPIEL;
 
   constructor(
@@ -447,6 +460,19 @@ export class ResultViewComponent implements OnInit, OnDestroy {
     if (neu.join('|') !== this.bekannteAussagen.join('|')) {
       this.bekannteAussagen = neu;
     }
+  }
+
+  /**
+   * Ohne Treffer: wie oft schon danach gesucht wurde (#362), nur mit dem Schalter und erst
+   * ab SCHON_GESUCHT_AB; das Backend prüft beides ebenfalls (Jura vorläufig 26.11.).
+   */
+  get schonGesuchtAnzahl(): number | null {
+    const anzahl = this.antwort?.schon_gesucht_anzahl ?? null;
+    if (anzahl === null || anzahl < SCHON_GESUCHT_AB) {
+      return null;
+    }
+    this.nullTrefferAnzahlAn ??= this.funktionen.an(NULL_TREFFER_ANZAHL_SCHALTER);
+    return this.nullTrefferAnzahlAn() ? anzahl : null;
   }
 
   /** Irgendein Treffer, gleich welchen Typs. */

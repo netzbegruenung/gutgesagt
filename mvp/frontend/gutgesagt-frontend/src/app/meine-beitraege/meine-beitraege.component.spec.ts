@@ -1,4 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { MerklisteService } from '../services/merkliste.service';
+import { ContentService } from '../services/content.service';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -79,7 +82,7 @@ describe('MeineBeitraegeComponent', () => {
     };
   }
 
-  function konfigurieren(laden: () => Observable<any>): void {
+  function konfigurieren(laden: () => Observable<any>, weitere: any[] = []): void {
     eigeneLaden = jasmine
       .createSpy('eigeneLaden')
       .and.returnValue(of({ results_count: 0, results: [], total_records_count: 0 }));
@@ -122,6 +125,7 @@ describe('MeineBeitraegeComponent', () => {
           provide: AuthService,
           useValue: { getCurrentUserId: () => null, getUserInfo: () => null, userInfo$: of(null) },
         },
+        ...weitere,
       ],
     });
 
@@ -173,6 +177,46 @@ describe('MeineBeitraegeComponent', () => {
       expect(sichtbar('app-album')).toBeTrue();
       expect(fixture.nativeElement.querySelector('app-meine-einwuerfe')).toBeNull();
       expect(eigeneLaden).not.toHaveBeenCalled();
+    });
+
+    it('zeigt den Reiter „Gemerkt“ nur mit eingeschaltetem Schalter (#758)', async () => {
+      const an = signal(false);
+      konfigurieren(() => of({ beitraege: [beitrag()], gesamt: 1 }), [
+        {
+          provide: MerklisteService,
+          useValue: {
+            an: an.asReadonly(),
+            eingewilligt: () => true,
+            einwilligungOffen: () => false,
+            bereit: () => an(),
+            eintraege: signal([]).asReadonly(),
+            laden: () => of([]),
+            istGemerkt: () => false,
+            sicherstellen: () => undefined,
+          },
+        },
+        { provide: ContentService, useValue: { beitragLaden: () => of() } },
+      ]);
+      await TestBed.compileComponents();
+      fixture = TestBed.createComponent(MeineBeitraegeComponent);
+      fixture.detectChanges();
+
+      expect(tabs().map((tab) => tab.textContent!.trim())).toEqual(['Meine Beiträge', 'Meine Einwürfe']);
+      expect(fixture.nativeElement.querySelector('#meine-bereich-gemerkt')).toBeNull();
+
+      an.set(true);
+      fixture.detectChanges();
+      expect(tabs().map((tab) => tab.textContent!.trim())).toEqual(['Meine Beiträge', 'Meine Einwürfe', 'Gemerkt']);
+
+      tabWaehlen('Gemerkt');
+      expect(sichtbar('app-gemerkt')).toBeTrue();
+      expect(sichtbar('app-album')).toBeFalse();
+
+      // Schaltet ein Admin ab, faellt der offene Reiter auf Meine Beitraege zurueck
+      an.set(false);
+      fixture.detectChanges();
+      expect(sichtbar('app-album')).toBeTrue();
+      expect(tabs()[0].getAttribute('aria-selected')).toBe('true');
     });
 
     it('zeigt unter "Meine Einwürfe" die eigenen Einwuerfe statt der Beitraege', async () => {

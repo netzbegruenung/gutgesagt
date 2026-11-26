@@ -10,6 +10,16 @@ export const FEEDBACK_TEXT_MAX = 2000;
 export const FEEDBACK_KONTAKT_MAX = 200;
 export const FEEDBACK_AUFBEWAHRUNG_TAGE = 180;
 
+/**
+ * Kategorie des Knopfs „Was hat dich gestört?“ für die Startphase (Schalter
+ * feedback_gestoert): nur Freitext, kein Kontakt, gelöscht am Tag aus
+ * domain/feedback_gestoert.py (GESTOERT_GELOESCHT_AB).
+ */
+export const FEEDBACK_GESTOERT = 'gestoert';
+export type FeedbackKategorie = typeof FEEDBACK_GESTOERT;
+export const FEEDBACK_GESTOERT_SCHALTER = 'feedback_gestoert';
+export const FEEDBACK_GESTOERT_GELOESCHT_AM = '31.12.2026';
+
 /** Feedback, wie Admins es im Admin-Dashboard sehen. */
 export interface FeedbackEintrag {
   id: string;
@@ -19,6 +29,8 @@ export interface FeedbackEintrag {
   eingegangen_am: string;
   /** Von einem Admin als erledigt markiert (#425); die Frist gilt trotzdem. */
   erledigt: boolean;
+  /** null: Knopf „Feedback“; „gestoert“: Knopf „Was hat dich gestört?“. */
+  kategorie?: FeedbackKategorie | null;
 }
 
 export interface FeedbackListe {
@@ -37,8 +49,10 @@ export class FeedbackService {
 
   constructor(private http: HttpClient) {}
 
-  senden(text: string, kontakt: string | null): Observable<unknown> {
-    return this.http.post(`${this.baseUrl}/senden`, { text, kontakt });
+  /** Mit Kategorie „gestoert“ geht nie ein Kontakt mit (der Dienst wiese ihn ab). */
+  senden(text: string, kontakt: string | null, kategorie?: FeedbackKategorie): Observable<unknown> {
+    const body = kategorie ? { text, kontakt: null, kategorie } : { text, kontakt };
+    return this.http.post(`${this.baseUrl}/senden`, body);
   }
 
   /** Nur das offene (erledigt = false) oder nur das erledigte Feedback. */

@@ -11,6 +11,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Einstellung, ModerationService, Schalter, SchalterListe } from '../../services/moderation.service';
 import { ohneRechte, selbstNachladen } from '../../shared/selbst-nachladen';
 import { SaisonsComponent } from '../saisons/saisons.component';
+import { SaalSpruecheComponent } from '../saal-sprueche/saal-sprueche.component';
 
 /** Anzeigenamen der Schalter; unbekannte zeigen ihren technischen Namen. */
 const TITEL: Record<string, string> = {
@@ -19,22 +20,33 @@ const TITEL: Record<string, string> = {
   gepostet: 'Rückfrage „Ja, gepostet“',
   gepostet_ohne_konto: '„Ja, gepostet“ ohne Konto',
   herkunft_pruefen: 'Links unter „Herkunft“ prüfen',
+  merkliste: 'Merkliste',
   abkuerzungen: 'App-Abkürzungen',
   antworten_hinweis: 'Neue Antworten auf eigene Aussagen',
+  aufrufe_zaehlen: 'Aufrufe und Besucher pro Tag',
   sharepic: 'Teilen als Bild',
   bestandszahl_zuwachs: 'Zuwachs neben der Bestandszahl',
+  vertrauenszeile: 'Vertrauenszeile vor dem Anmelden',
+  feedback_gestoert: 'Knopf „Was hat dich gestört?“',
+  dse_kurzfassung: 'Kurzfassung der Datenschutzerklärung',
+  hinweiszeile_kurz: 'Kurze Hinweiszeile unter dem Suchknopf',
+  k_begruessung: 'Begrüßung nach ?k= (Sticker, BDK)',
+  k_ankuenfte: 'Ankünfte je Kampagnenwort und Tag',
   team_fortschritt: 'Team-Fortschritt',
   team_quests: 'Team-Quests',
   teams: 'Teams über Einladungen',
   teams_oeffentlich: 'Teams am Anzeigenamen',
+  teamlink_vertrauenssatz: 'Vertrauenssatz beim Teambeitritt',
   // Spielgefühl zur BDK (#782 bis #793)
   saison_ziel: 'Saison und Gemeinschaftsziel',
   gartenansicht: 'Gartenansicht',
   kopiert_erfolg: 'Erfolgstext nach dem Kopieren',
   konter_probe: 'Konter-Probe',
+  saal_spruch: 'Saal-Spruch „Heute im Saal gehört:“',
   luecke_zu_gross: '„Lücke zu!“ als großer Moment',
   einwilligung_im_gewinn: 'Einwilligung im passenden Moment',
   naechster_schritt: '„Dein nächster Schritt“',
+  null_treffer_anzahl: '„Schon N-mal gesucht“ ohne Treffer',
   wirkungs_echo: 'Wirkungs-Echo „öffentlich gepostet“',
   danke_knopf: 'Danke-Knopf',
   danke_ohne_konto: 'Danke-Knopf ohne Konto',
@@ -45,6 +57,7 @@ const TITEL: Record<string, string> = {
 const VORAUSSETZUNG: Record<string, [string, string]> = {
   abzeichen_sichtbar: ['punkte', 'Punkte'],
   teams_oeffentlich: ['teams', 'Teams'],
+  teamlink_vertrauenssatz: ['teams', 'Teams'],
   // Kette wie im Backend (schalter_service._wirksam): teams → team_fortschritt → team_quests
   team_fortschritt: ['teams', 'Teams'],
   team_quests: ['team_fortschritt', 'Team-Fortschritt'],
@@ -112,6 +125,7 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
     MatSlideToggleModule,
     MatSnackBarModule,
     SaisonsComponent,
+    SaalSpruecheComponent,
   ],
   template: `
     <h2>Schalter</h2>
@@ -237,6 +251,8 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
       </section>
       <!-- Saisons mit Gemeinschaftsziel (#782) -->
       <app-saisons></app-saisons>
+      <!-- Saal-Sprüche je Tag (Schalter saal_spruch) -->
+      <app-saal-sprueche></app-saal-sprueche>
     </ng-container>
   `,
   styles: [`

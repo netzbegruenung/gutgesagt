@@ -64,6 +64,7 @@ class FakeRepository:
         self.geloescht_vor = []
         self._haeufigste = haeufigste or []
         self._freigaben = freigaben or {}
+        self._personen = {}
 
     def zaehlen(self, statement_id, woche, neue_person):
         self.gezaehlt.append((statement_id, woche, neue_person))
@@ -76,6 +77,11 @@ class FakeRepository:
         )
         zeilen = [z for z in self._haeufigste if z[0] in erlaubt]
         return zeilen[offset : offset + limit]
+
+    def personen(self, statement_id, seit_woche):
+        self.abfragen.append((statement_id, seit_woche))
+        self.thread = threading.current_thread()
+        return self._personen.get(statement_id, 0)
 
     def loeschen_vor(self, woche):
         self.geloescht_vor.append(woche)
@@ -304,6 +310,38 @@ class TestAufbewahrung:
         task.cancel()
 
         assert personen.anzahl() == 0
+
+
+class TestSchonGesucht:
+    """Die Zahl fuer "Danach wurde schon N-mal gesucht" (#362, Jura vorlaeufig 26.11.)."""
+
+    @pytest.mark.asyncio
+    async def test_schon_gesucht_ab_drei_in_den_letzten_vier_wochen(self):
+        repo = FakeRepository()
+        repo._personen[AUSSAGE] = 3
+
+        anzahl = await _service(repo).schon_gesucht(AUSSAGE, heute=MITTWOCH)
+
+        assert anzahl == 3
+        # Die laufende Woche und die drei davor, wie die Listen.
+        assert repo.abfragen == [(AUSSAGE, date(2026, 10, 5))]
+        assert repo.thread is not threading.main_thread()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("anzahl", [0, 1, 2])
+    async def test_schon_gesucht_unter_drei_nichts(self, anzahl):
+        """Zwei reicht fuer die Listen (MINDESTANZAHL), fuer die Anzeige nicht."""
+        repo = FakeRepository()
+        repo._personen[AUSSAGE] = anzahl
+
+        assert await _service(repo).schon_gesucht(AUSSAGE, heute=MITTWOCH) is None
+
+    @pytest.mark.asyncio
+    async def test_schon_gesucht_ohne_aussage_fragt_nicht(self):
+        repo = FakeRepository()
+
+        assert await _service(repo).schon_gesucht(None, heute=MITTWOCH) is None
+        assert repo.abfragen == []
 
 
 class TestHaeufigste:

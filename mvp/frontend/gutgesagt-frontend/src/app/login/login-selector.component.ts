@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Component, OnInit, inject } from '@angular/core';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { SHARED_IMPORTS } from '../shared/shared-imports';
 import { HttpClient } from '@angular/common/http';
@@ -9,9 +9,21 @@ import { keycloakAnmelden } from './keycloak-anmeldung';
 import { MatDialog } from '@angular/material/dialog';
 import { feedbackDialogOeffnen } from '../shared/feedback/feedback-dialog.component';
 import { ORGANISATION } from '../shared/organisation';
+import { FunktionenService } from '../services/funktionen.service';
 
 /** Vorbelegt im Feedback-Dialog, damit die Warteliste von anderem Feedback zu trennen ist. */
 export const WARTELISTE_TEXT = 'Bitte setzt mich auf die Warteliste für eine Einladung.';
+
+/**
+ * Vertrauenszeile über den Anmeldewegen, Wortlaut der vorläufigen juristischen Einschätzung
+ * vom 26.11.2026 (Punkt a). Sie stimmt nur, solange Rangliste und Team-Fortschritt aus oder
+ * freiwillig sind; nach dem Vorstands-Go wird sie ergänzt. Nur hier ändern.
+ */
+export const VERTRAUENSZEILE =
+  'Was du beiträgst, erscheint unter deinem Anzeigenamen. Ob und wie viel du sonst mitmachst, sehen andere nicht.';
+
+/** Schalter der Vertrauenszeile (services/schalter_service.py), Standard aus. */
+export const VERTRAUENSZEILE_SCHALTER = 'vertrauenszeile';
 
 interface AuthModes {
   keycloakEnabled: boolean;
@@ -21,7 +33,7 @@ interface AuthModes {
 @Component({
   selector: 'app-login-selector',
   standalone: true,
-  imports: SHARED_IMPORTS,
+  imports: [...SHARED_IMPORTS, RouterLink],
   templateUrl: './login-selector.component.html',
   styleUrls: ['./login-selector.component.css']
 })
@@ -35,6 +47,9 @@ export class LoginSelectorComponent implements OnInit {
   /** Wozu die Anmeldung nötig ist, aus dem Ziel; null zeigt keinen Satz (#600). */
   anmeldegrund: string | null = null;
   readonly organisation = ORGANISATION;
+  readonly vertrauenszeile = VERTRAUENSZEILE;
+  /** Ob die Vertrauenszeile steht; kommt nach, ohne dass jemand neu lädt (FunktionenService). */
+  readonly vertrauenszeileAn = inject(FunktionenService).an(VERTRAUENSZEILE_SCHALTER);
 
   constructor(
     private authService: AuthService,

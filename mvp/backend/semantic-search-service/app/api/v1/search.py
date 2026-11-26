@@ -50,7 +50,11 @@ from services.search_tracking_service import (
     get_search_tracking_service,
     tagespseudonym,
 )
-from services.suchen_ohne_treffer_service import SuchenOhneTrefferService
+from services.suchen_ohne_treffer_service import (
+    NULL_TREFFER_ANZAHL,
+    SuchenOhneTrefferService,
+)
+from services.schalter_service import schalter_wirksam
 from services.embeddings.qdrant_embeddings_manager import einbettungen_geteilt
 from services.search.search_query_statement import (
     SearchQueryStatementRecorder,
@@ -517,6 +521,7 @@ async def search_by_text(
         # getrennt vom Suchereignis. Das Tagespseudonym dient nur dazu, Personen zu
         # unterscheiden, gespeichert wird es dort nicht. total_results zaehlt nur,
         # was ueber der Schwelle des SearchOrchestrators lag.
+        gezaehlt = False
         try:
             suchen_ohne_treffer.erfassen(
                 statement_id,
@@ -524,11 +529,35 @@ async def search_by_text(
                 tagespseudonym(user_id=user_id, besucher_merkmal=merkmal, moment=jetzt),
                 heute=jetzt.date(),
             )
+            gezaehlt = True
         except Exception as e:
             # Nur der Fehlertyp: SQLAlchemy-Fehler tragen die Parameter, und
             # statement_id neben dem Zeitstempel der Logzeile waere genau der
             # Zeitpunkt, den die Tabelle nicht speichert.
             logger.warning(f"Failed to count search without hits: {type(e).__name__}")
+
+        # "Danach wurde schon N-mal gesucht" (#362): nur mit dem Schalter
+        # null_treffer_anzahl, nur nach einer Suche ohne Treffer, die gezaehlt wurde, nur
+        # die Zahl und erst ab drei (Jura vorlaeufig 26.11.). Nur zu einer Aussage, die
+        # der Aufrufer sehen darf (antwort_id, Vormoderation P6): Zu einer verborgenen
+        # oder abgelehnten Suchanfrage verriete die Zahl, dass gerade jemand fast
+        # dasselbe gesucht hat. Eben angelegt heisst ohnehin einmal. Scheitert das
+        # Lesen, fehlt nur der Hinweis.
+        if (
+            total_results == 0
+            and gezaehlt
+            and antwort_id is not None
+            and not statement_was_new
+            and schalter_wirksam(NULL_TREFFER_ANZAHL)
+        ):
+            try:
+                response.schon_gesucht_anzahl = await suchen_ohne_treffer.schon_gesucht(
+                    statement_id, heute=jetzt.date()
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to read searches without hits: {type(e).__name__}"
+                )
 
         return response
 

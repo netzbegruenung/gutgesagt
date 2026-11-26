@@ -245,6 +245,11 @@ mat-sidenav-content {
   font-weight: 500;
 }
 
+.unified-empty-state .schon-gesucht {
+  color: var(--text-leise);
+  margin: 0 0 1.25rem;
+}
+
 .unified-empty-state .action-buttons-top {
   display: flex;
   justify-content: center;

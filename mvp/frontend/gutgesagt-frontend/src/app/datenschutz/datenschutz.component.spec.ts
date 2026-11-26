@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
@@ -6,6 +7,7 @@ import { DatenschutzComponent } from './datenschutz.component';
 import { SUCHANFRAGEN_ABSCHNITT } from '../search/search.component';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
 import { FEIER_TON_SCHLUESSEL } from '../shared/feier/feier-ton.service';
+import { FunktionenService } from '../services/funktionen.service';
 
 /** Der Satz zu Widerrufen vor dem Einspielen: mit Platzhalter oder mit Datum („1. Dezember 2026“). */
 const WIDERRUF_VOR_DEM_EINSPIELEN = new RegExp(
@@ -1034,5 +1036,92 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('schaltest du ihn wieder aus, löschen wir den Eintrag');
       expect(text).toContain('bis du ihn änderst');
     });
+  });
+});
+
+/** „Danach wurde schon N-mal gesucht“ (#362, Jura vorläufig 26.11.): Absatz nur mit Schalter. */
+describe('DatenschutzComponent: Suchen ohne Treffer, Anzahl auf der Ergebnisseite', () => {
+  function seiteMit(an: boolean): HTMLElement {
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]),
+        { provide: FunktionenService, useValue: { an: (name: string) => signal(an && name === 'null_treffer_anzahl') } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('nennt mit Schalter an „n-mal gesucht“ ab drei, je Pseudonym und Tag, nicht „Personen“', () => {
+    const text = abschnittIn(seiteMit(true), 'Suchen ohne Treffer');
+
+    expect(text).toContain('„Danach wurde in den letzten vier Wochen schon n-mal gesucht.“');
+    expect(text).toContain('erst ab drei');
+    expect(text).toContain('je Pseudonym und Tag');
+    expect(text).toContain('nicht, wie viele verschiedene Menschen gesucht haben');
+    expect(text).not.toContain('schon n Personen gesucht');
+  });
+
+  it('lässt den Absatz mit Schalter aus weg', () => {
+    const text = abschnittIn(seiteMit(false), 'Suchen ohne Treffer');
+
+    expect(text).not.toContain('n-mal gesucht');
+    expect(text).toContain('Auf die Listen der Suchen ohne Treffer kommt ein Eintrag erst');
+  });
+});
+
+/** Halbsatz zum Stimmenverfall bei ganz anderem Text (#636) hinter dem Schalter stimmen_text_verfall. */
+describe('DatenschutzComponent - Stimmenverfall bei ganz anderem Text (#636)', () => {
+  const HALBSATZ = 'oder ersetzt sie oder er den Text durch einen ganz anderen';
+  const schalter = signal(false);
+
+  function bewertungen(): string {
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    return abschnittIn(fixture.nativeElement as HTMLElement, 'Bewertungen');
+  }
+
+  beforeEach(async () => {
+    schalter.set(false);
+    await TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]),
+        {
+          provide: FunktionenService,
+          useValue: { an: (name: string) => (name === 'stimmen_text_verfall' ? schalter : signal(false)) },
+        },
+      ],
+    }).compileComponents();
+  });
+
+  it('Schalter aus: nur der Titel, kein Halbsatz zum Text', () => {
+    const text = bewertungen();
+
+    expect(text).not.toContain(HALBSATZ);
+    expect(text).toContain(
+      'Ändert die Autorin oder der Autor den Titel so, dass er etwas anderes behauptet, löschen wir die Bewertungen dazu.'
+    );
+  });
+
+  it('Schalter an: Halbsatz steht im Satz zum Titel', () => {
+    schalter.set(true);
+    const text = bewertungen();
+
+    expect(text).toContain(`dass er etwas anderes behauptet, ${HALBSATZ}, löschen wir die Bewertungen dazu.`);
+  });
+
+  it('erscheint ohne Neuladen, sobald der Schalter umspringt', () => {
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    const seite = fixture.nativeElement as HTMLElement;
+    expect(abschnittIn(seite, 'Bewertungen')).not.toContain(HALBSATZ);
+
+    schalter.set(true);
+    fixture.detectChanges();
+
+    expect(abschnittIn(seite, 'Bewertungen')).toContain(HALBSATZ);
   });
 });

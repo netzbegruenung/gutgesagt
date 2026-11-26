@@ -5,7 +5,21 @@
   </div>
 
   <div class="content-section inhalt-spalte inhalt-spalte--lesen">
-    <section class="legal-section">
+    @if (kurzfassungZeigen()) {
+      <section class="kurzfassung" aria-labelledby="kurzfassung-titel" data-testid="dse-kurzfassung">
+        <h2 id="kurzfassung-titel">Kurz gesagt</h2>
+        <ul>
+          @for (satz of kurzfassungSaetze; track satz.anker) {
+            <li>
+              {{ satz.text }}
+              <a [href]="'/datenschutz#' + satz.anker" (click)="springen($event, satz.anker)">{{ satz.linkText }}</a>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    <section class="legal-section" id="verantwortlicher" tabindex="-1">
       <h2>Verantwortlicher</h2>
       <p>
         Verantwortlich für die Verarbeitung personenbezogener Daten auf dieser Plattform im
@@ -40,7 +54,7 @@
 
     <mat-divider></mat-divider>
 
-    <section class="legal-section">
+    <section class="legal-section" id="was-diese-erklaerung-abdeckt" tabindex="-1">
       <h2>Was diese Erklärung abdeckt</h2>
       <p>
         Diese Erklärung beschreibt die Verarbeitungen auf dieser Plattform. Sie beschreibt
@@ -550,6 +564,16 @@
           das Moderationsteam, zusätzlich mit der Zahl der Suchen.
         </li>
       </ul>
+      <p *ngIf="nullTrefferAnzahl()">
+        Findet deine Suche nichts und gehört sie zu einem Eintrag, den alle sehen können
+        (mit Antwort oder vom Moderationsteam freigegeben), nennt dir die Ergebnisseite auch
+        ohne Anmeldung, wie oft in den letzten vier Wochen ohne Treffer danach gesucht wurde,
+        deine Suche eingerechnet und erst ab drei: „Danach wurde in den letzten vier Wochen
+        schon n-mal gesucht.“ Gezählt wird wie auf den Listen je Person im obigen Sinn, also
+        je Pseudonym und Tag; die Zahl sagt deshalb nicht, wie viele verschiedene Menschen
+        gesucht haben. Wer gesucht hat, erfährst du nicht; gespeichert wird dafür nichts
+        zusätzlich.
+      </p>
       <p>
         Wer gesucht hat, sieht niemand. Legt eine angemeldete Person auf „Hier fehlt eine
         Antwort“ selbst eine Aussage an, die einer für alle sichtbaren (freigegebenen), noch
@@ -850,7 +874,7 @@
         <strong>Rechtsgrundlage:</strong> Artikel 6 Absatz 1 Buchstabe b DSGVO.<br>
         <strong>Dauer:</strong> Eine Bewertung bleibt gespeichert, bis du sie zurücknimmst,
         deine Art.-9-Einwilligung widerrufst (siehe „Deine Zustimmung und deine Einwilligung“), wir dein Konto löschen oder der bewertete Beitrag endgültig entfernt wird — ein
-        gelöschter Beitrag nach 30 Tagen (siehe „Beiträge, die du einstellst“). Ändert die Autorin oder der Autor den Titel so, dass er etwas anderes behauptet, löschen wir die Bewertungen dazu.
+        gelöschter Beitrag nach 30 Tagen (siehe „Beiträge, die du einstellst“). Ändert die Autorin oder der Autor den Titel so, dass er etwas anderes behauptet,<ng-container *ngIf="textVerfall()"> oder ersetzt sie oder er den Text durch einen ganz anderen,</ng-container> löschen wir die Bewertungen dazu.
         Eine eigene Frist hat sie nicht.
       </p>
     </section>
@@ -1414,7 +1438,7 @@
 
     <mat-divider></mat-divider>
 
-    <section class="legal-section">
+    <section class="legal-section" id="deine-rechte" tabindex="-1">
       <h2>Deine Rechte</h2>
       <p>
         Du hast uns gegenüber das Recht auf <strong>Auskunft</strong> über die zu dir
@@ -1505,7 +1529,7 @@
     </section>
 
     <div class="update-notice">
-      <p><strong>Stand:</strong> 25. November 2026</p>
+      <p><strong>Stand:</strong> 26. November 2026</p>
     </div>
   </div>
 </div>

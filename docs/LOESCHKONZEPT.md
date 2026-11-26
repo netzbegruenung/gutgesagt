@@ -47,8 +47,8 @@ Umgebung benutzt** — die Kommandos sind identisch, nur der eingesetzte Wert ni
   nicht nach dem Zustand.
 - **Ein Admin entfernt endgültig**
   (`DELETE /api/v1/moderation/content/{content_type}/{id}`): Der Punkt ist danach aus
-  Qdrant weg, mit ihm seine Stimmen (`votes`) und das „ausformuliert in“ der Einwürfe
-  zu ihm (`raw_input_content_links`); offene Meldungen zu ihm stehen danach auf
+  Qdrant weg, mit ihm seine Stimmen (`votes`), das „ausformuliert in“ der Einwürfe
+  zu ihm (`raw_input_content_links`) und die Einträge in Merklisten (`merkliste`, #758); offene Meldungen zu ihm stehen danach auf
   bearbeitet, bearbeitete und abgewiesene behalten ihre Entscheidung. Das ist der Weg
   für Schritt 3, wenn ein Text die Person erkennbar macht, und sonst für nichts:
   Gemeldete Beiträge sperrt ein Admin, statt sie zu entfernen. Denselben Weg nimmt die
@@ -117,7 +117,8 @@ dann jede folgende Anfrage ab, nach dem Entfernen nicht mehr.
    Rangliste samt Wahl des Anzeigenamens und Ranglistenname, auch ein Nein; #793), in `nutzungsbedingungen_zustimmungen` (jede Zustimmung zu den
    Nutzungsbedingungen in der App mit Zeitpunkt und Stand), in `team_mitgliedschaften` (jede
    Mitgliedschaft in einem Team samt Kennung des Wortlauts und Zeitpunkt der Einwilligung), in
-   `team_oeffentlich` (die Antwort auf „Team öffentlich am Namen zeigen“) und die in
+   `team_oeffentlich` (die Antwort auf „Team öffentlich am Namen zeigen“), in `merkliste`
+   (gemerkte Beiträge mit Zeitpunkt, #758) und die in
    `loeschauftraege` (offene und erledigte Löschaufträge nach einem Widerruf)
    löschen; in `einstellungen` die Kennung eines Admins (`geaendert_von`) auf `NULL` setzen,
    der Wert bleibt; ebenso jeden Muster-Hinweis
@@ -165,7 +166,7 @@ dann jede folgende Anfrage ab, nach dem Entfernen nicht mehr.
 
 Widerruft eine Person ihre Art.-9-Einwilligung, fehlt für die Zuordnung ihrer Beiträge,
 Einwürfe und Sätze die Rechtsgrundlage (DSFA V2, R9; `docs/ART9_EINWILLIGUNG.md`). Der Widerruf
-löscht sofort ihre Stimmen und legt in derselben Transaktion einen **Löschauftrag** an: Kennung,
+löscht sofort ihre Stimmen und ihre Merkliste (#758) und legt in derselben Transaktion einen **Löschauftrag** an: Kennung,
 Zeitpunkt und Frist, sieben Tage später (Tabelle `loeschauftraege`,
 `Art9EinwilligungService.widerrufen`). Einen Auftrag gibt es nur, wenn dabei eine geltende
 Einwilligung widerrufen wurde; je Person höchstens einen offenen, ein zweiter Widerruf legt
@@ -241,6 +242,8 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 |---|---|---|
 | Meldungen (`content_reports`), bearbeitet oder abgewiesen | 180 Tage | Bearbeitung (`reviewed_at`; ohne sie, im Altbestand, der Eingang) |
 | Suchereignisse (`search_events`) samt Tagespseudonym | bis zum Ende ihres UTC-Tages | dann zum Tageszähler der Suchen verdichtet, ohne Pseudonym (#495, `SearchTrackingRepository.verdichten_vor`; Einzelheiten unter „Was nicht gelöscht wird“) |
+| Seitenaufrufe (`aufrufe_heute`, #761, Schalter `aufrufe_zaehlen`): Tagespseudonym und Zahl der Aufrufe | bis zum Ende ihres UTC-Tages | spätestens eine Stunde danach zu Tageszahlen verdichtet (`aufrufe_tage`: Aufrufe, Besucher, ohne Pseudonym) und gelöscht, stündlicher Task `services/aufrufe_service.py`, auch bei ausgeschaltetem Schalter |
+| Tageszahlen der Seitenaufrufe (`aufrufe_tage`) | keine | — nur zwei Zahlen je Tag, ohne Personenbezug |
 | Tagespseudonym an anonymen Meldungen (`reported_by_session_id`, `besucher:…`) | bis zum Abschluss der Meldung | Bearbeiten oder Abweisen ersetzt es durch einen Zufallswert (`anon:…`), angemeldete Meldungen verlieren den Wert (#446, `repositories/content_report_repository.py`) |
 | Meldungen, offen | keine | — sie sind Arbeit und bleiben, bis ein Admin sie bearbeitet oder ihr Beitrag endgültig entfernt wird (dann bearbeitet, Frist wie oben) |
 | Einwürfe (`raw_inputs`), die in keinem Beitrag ausformuliert sind, samt Sätzen und Themen | 365 Tage | letzte Arbeit daran: Einwerfen oder zuletzt gespeicherter Satz |
@@ -248,16 +251,18 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Gelöschte Beiträge (Zustand „gelöscht“, Qdrant) | 30 Tage, dann endgültig entfernt | Tag im Payload-Feld `geloescht_am` |
 | Sperren (`sperren`), aufgehoben, samt Widerspruch | 180 Tage | Aufhebung (`aufgehoben_am`) |
 | Sperren, aktiv | keine | — der Beitrag ist gesperrt |
-| Stimmen (`votes`) | solange der Beitrag besteht; trifft ein geänderter Titel eine andere Behauptung (NLI-Stufe, #427), sofort; widerruft die Person ihre Art.-9-Einwilligung, sofort alle ihre Stimmen (`Art9EinwilligungService.widerrufen`) | — gehen mit ihm |
+| Stimmen (`votes`) | solange der Beitrag besteht; trifft ein geänderter Titel eine andere Behauptung (NLI-Stufe, #427) oder ist der Text ein ganz anderer (#636, Schalter `stimmen_text_verfall`, Standard aus), sofort; widerruft die Person ihre Art.-9-Einwilligung, sofort alle ihre Stimmen (`Art9EinwilligungService.widerrufen`) | — gehen mit ihm |
 | Prüfwerte der entdoppelten Nutzung (`nutzung_heute`) | ihr Tag | verworfen beim ersten Lauf nach Mitternacht (UTC) |
 | Paar-Prüfwerte der Muster-Hinweise (`muster_pruefwerte`) | 7 Tage | letzte Nutzung in dieser Richtung (`tag`) |
 | Prüfwerte „Ja, gepostet“ (`gepostet_pruefwerte`, #643) | ihre Kalenderwoche | zur Zahl der Woche verdichtet und gelöscht beim ersten täglichen Lauf nach Wochenende (Montag, UTC; derselbe Task wie für `nutzung_heute`, auch bei ausgeschaltetem Schalter), spätestens bei der nächsten Meldung; der Wochenschlüssel liegt nur im Arbeitsspeicher |
 | Zahl je Woche „Ja, gepostet“ (`gepostet_wochen`) | keine | — nur eine Zahl je Woche, ohne Personenbezug |
 | Meldungen ohne Konto je Woche (`gepostet_ohne_konto_wochen`, #799) | keine | — nur die Zahl der Klicks je Woche, ohne Prüfwert, Beitrag oder Adresse; die Drosselung liegt nur im Arbeitsspeicher und vergisst nach einer Sekunde |
+| Ankünfte je Kampagnenwort und Tag (`ankuenfte_je_tag`) | 12 Monate (365 Tage) | der Tag (`tag`); gelöscht vom täglichen Task der Löschfristen. Nur Wort, Tag und Zahl, ohne Kennung, Konto, Adresse oder Beitrag; die Drosselung liegt nur im Arbeitsspeicher und vergisst nach einer Sekunde |
 | Wirkungs-Echo und Danke je Beitrag (`wirkung_je_beitrag`, #790, #791) | keine | — nur zwei Summen je Beitrag, ohne Kennung und Zeitpunkt; die Tages-Prüfwerte des Danke liegen in `nutzung_heute` und gehen mit ihnen nach dem Tageswechsel, die des Wirkungs-Echos nur im Arbeitsspeicher |
 | Muster-Hinweise (`muster_hinweise`) | 56 Tage (8 Wochen) | letzter Tag mit gegenseitiger Nutzung (`letzter_tag`) |
 | Löschaufträge (`loeschauftraege`), offen | keine | — sie sind Arbeit und bleiben, bis ein Admin den Löschablauf ausführt (Frist dafür: sieben Tage ab dem Widerruf, unter „Löschauftrag nach dem Widerruf“) |
 | Löschaufträge, erledigt | 365 Tage (entschieden 13.11.2026) | Ausführung (`erledigt_am`); mit dem Konto sofort (Schritt 2) |
+| Merkliste (`merkliste`, #758): gemerkter Beitrag und Zeitpunkt | solange die Person ihn gemerkt hat | — geht beim Entfernen aus der Merkliste, mit dem Konto (Schritt 2), beim Widerruf der Art.-9-Einwilligung und mit dem endgültig entfernten Beitrag; höchstens 500 Einträge je Person. Schaltet ein Admin den Schalter wieder aus, bleiben die Einträge, Entfernen bleibt für die Person offen |
 | Zustimmung zur Sichtbarkeit der Abzeichen (`abzeichen_sichtbarkeit`) | solange das Konto besteht | — Nachweis der Zustimmung (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Einwilligung „Punkte und Meilensteine“ (`punkte_einwilligung`, #351) | solange das Konto besteht | — Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Einwilligung zur Rangliste (`rangliste_einwilligung`, #793) | solange das Konto besteht | — Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2); Plätze und Punkte werden nicht gespeichert |
@@ -265,6 +270,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Einwilligung „Team öffentlich am Namen zeigen“ (`team_oeffentlich`): Kennung, ja/nein, Kennung des Wortlauts, Zeitpunkt | solange das Konto besteht | — nur die jüngste Antwort je Konto; Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Zähler je Team und Saison (`team_nummern`): Teamname, Saison, zuletzt vergebene Nummer | keine | — kein Personenbezug (keine Kennung); hält fest, dass eine Nummer nach „Team verlassen“ nicht neu vergeben wird |
 | Saisons (`saisons`, #782): Name, erster und letzter Tag, Ziel, Anlegezeitpunkt | keine | — kein Personenbezug, auch keine Kennung des Admins; löschen lässt sich eine Saison nur vor ihrem Beginn |
+| Saal-Sprüche (`saal_sprueche`, Schalter `saal_spruch`): Tag, Text, Änderungszeit | keine | — kein Personenbezug, auch keine Kennung des Admins; nur öffentlicher Text. die Admin-Seite listet und entfernt Sprüche ab heute; vergangene bleiben stehen und werden nirgends mehr gezeigt |
 | team_wochen, team_quests: ohne Personenbezug, unbefristet; entfallen mit dem Team | keine | — Wochenzähler (Teamname, Saison, Woche, Zahl der Beiträge, Bewertungen und Meldungen „Ja, gepostet“) und Team-Quests (Teamname, Saison, Woche, Thema, Ziel), ohne Kennung, ohne Beitrag, ohne Zeitpunkt; bleiben bei „Team verlassen“ und bei der Löschung des Kontos. Entdoppelt wird über einen Wochen-Prüfwert nur im Arbeitsspeicher, der mit dem Wochenwechsel verfällt. Eine Team-Löschung gibt es noch nicht; kommt sie, gehen die Zeilen mit (`TeamFortschrittRepository.team_loeschen`) |
 | Admin-Einstellungen (`einstellungen`, etwa die aktuelle Saison): Wert, Zeitpunkt, Kennung des Admins | keine | — der Wert bleibt; die Kennung des Admins wird mit seinem Konto geleert (Schritt 2) |
 | Zustimmung zu den Nutzungsbedingungen in der App (`nutzungsbedingungen_zustimmungen`) | solange das Konto besteht | — Nachweis des Vertragsschlusses und des Stands, dem die Person zugestimmt hat (Art. 6 Abs. 1 lit. b DSGVO); geht mit dem Konto (Schritt 2) |
@@ -313,7 +319,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
   UTC-Tag nach `geloescht_am`; die 30 Tage zählen ab dann, also höchstens einen Tag nach
   dem Löschen. Das gilt auch für Altbestand, der vor #421 gelöscht wurde. Entfernt wird
   über `ModerationService.delete_content`, denselben Weg wie beim Admin: erst Verweise der
-  Aussagen, Stimmen und „ausformuliert in“, dann der Punkt. Wie beim Admin stehen offene
+  Aussagen, Stimmen, „ausformuliert in“ und Merkliste, dann der Punkt. Wie beim Admin stehen offene
   Meldungen zum Beitrag danach auf bearbeitet, hier ohne Admin (`reviewed_by` leer), und
   ihre 180 Tage beginnen. Bearbeitete und abgewiesene behalten Entscheidung und Frist.
   Scheitert ein Schritt, bleibt der Beitrag stehen und der nächste Lauf versucht es erneut. Gesperrte Beiträge
@@ -384,6 +390,11 @@ nicht.
   (`services/feedback_service.py`, `loeschen_im_takt`, `AUFBEWAHRUNG_TAGE`). Er hängt
   nicht am abschaltbaren Bereinigungsjob. Die Frist gilt für offenes wie für
   erledigtes Feedback; „erledigt“ ändert an ihr nichts.
+- **Frist „Was hat dich gestört?“:** Feedback mit der Kategorie `gestoert` (Knopf der
+  Startphase, Schalter `feedback_gestoert`) trägt nie einen Kontakt. Ab dem 31.12.2026
+  (UTC) löscht derselbe Task alle Zeilen dieser Kategorie, gleich wie alt
+  (`domain/feedback_gestoert.py`, `GESTOERT_GELOESCHT_AB`); ab demselben Tag wirkt der
+  Schalter nicht mehr, und der Dienst nimmt keine neuen an.
 - **Einzeln:** Ein Admin löscht ein einzelnes Feedback samt Kontakt in der
   Feedback-Karte des Admin-Dashboards („Löschen“, mit Rückfrage), etwa wenn es
   beantwortet ist und nicht bis zur Frist bleiben soll (#425). Nur Admins
@@ -756,7 +767,7 @@ docker exec -i gutgesagt-app-postgres psql -U app_user -d gutgesagt_app \
 #   -v ON_ERROR_STOP=1 -v uid="$KENNUNG"
 
 docker exec -i gutgesagt-app-postgres psql -U app_user -d gutgesagt_app -c \
-  "VACUUM FULL votes, content_reports, raw_inputs, raw_input_content_links, raw_input_drafts, usage_events, users, gesehene_nutzung, muster_hinweise, art9_einwilligungen, art9_ohne_einwilligung, abzeichen_sichtbarkeit, punkte_einwilligung, rangliste_einwilligung, nutzungsbedingungen_zustimmungen, team_mitgliedschaften, team_oeffentlich, loeschauftraege;"
+  "VACUUM FULL votes, content_reports, raw_inputs, raw_input_content_links, raw_input_drafts, usage_events, users, gesehene_nutzung, muster_hinweise, art9_einwilligungen, art9_ohne_einwilligung, abzeichen_sichtbarkeit, punkte_einwilligung, rangliste_einwilligung, nutzungsbedingungen_zustimmungen, team_mitgliedschaften, team_oeffentlich, merkliste, loeschauftraege;"
 ```
 
 ```bash

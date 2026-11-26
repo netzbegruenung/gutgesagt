@@ -179,6 +179,15 @@ class Settings(BaseSettings):
     # Derselbe Text mit anderer Zahl liegt darueber und gilt als Dublette,
     # Umformulierungen zum Teil darunter. Die Schwelle trennt das nicht; siehe #387.
     generic_text_similarity_threshold: float = 0.975
+    # Stimmenverfall bei geaendertem Text (#636): Stimmen verfallen, wenn die
+    # passage/passage-Aehnlichkeit von altem und neuem Text darunter liegt
+    # (fassung.gleicher_text). Nutzt nur die Einbettung, kein NLI-Modell; wirkt nur mit
+    # dem Schalter stimmen_text_verfall und wie der Titel-Fall mit dieselbe_aussage_nli = an.
+    # Gemessen am Messset "Geaenderter Text" (tests/regression/MESSSET.md): Korrekturen,
+    # Ergaenzungen, Kuerzungen, Links und Umformulierungen ab 0,915, ganz andere Texte
+    # hoechstens 0,840. Ein ausgetauschter Text zum selben Thema kann darueber liegen
+    # (verwandte Kommentare 0,817-0,899, oben) und behaelt dann die Stimmen.
+    text_verfall_aehnlichkeit_unter: float = Field(default=0.88, ge=0.0, le=1.0)
     # Vorschlaege im Feld "Antwort auf" (#387, frueher Konstante im Frontend):
     # Aussagen ab dieser query/query-Aehnlichkeit. Gemessen fuer EMBEDDING_MODELL
     # (passende Aussagen 0,892-0,940). Widerspricht eine Aussage dem Getippten in einer
@@ -298,11 +307,36 @@ class Settings(BaseSettings):
     # Drosselung von POST /api/v1/ereignis (#799): hoechstens so viele Meldungen je
     # Sekunde fuer alle zusammen, nur im Arbeitsspeicher, ohne Adresse.
     ereignis_je_sekunde: int = Field(default=10, ge=1)
+    # Kampagnenwort ?k= (GLOSSARY.md "Kampagnenwort"): Begruessung nach dem Wort (nur
+    # Anzeige im Browser) und Ankuenfte je Wort und Tag (services/ankunft_service.py),
+    # beide Standard aus (vorlaeufige Jura-Einschaetzung 26.11.2026). Gezaehlt werden nur
+    # Woerter aus k_woerter (kommagetrennt, klein); andere zaehlen nicht.
+    k_begruessung_aktiv: bool = False
+    k_ankuenfte_aktiv: bool = False
+    k_woerter: str = "vorhut,g1,g2,g3,g4,bdk,sticker,karte,technik"
+    # Drosselung von POST /api/v1/ankunft: hoechstens so viele Ankuenfte je Sekunde fuer
+    # alle zusammen, nur im Arbeitsspeicher, ohne Adresse (wie ereignis_je_sekunde).
+    ankunft_je_sekunde: int = Field(default=20, ge=1)
+
+    def kampagnenwoerter(self) -> frozenset:
+        """Die erlaubten Kampagnenwoerter, klein geschrieben; laengere als 20 Zeichen
+        (Spalte ``ankuenfte_je_tag.k``) fallen weg."""
+        return frozenset(
+            w.strip().lower()
+            for w in self.k_woerter.split(",")
+            if w.strip() and len(w.strip()) <= 20
+        )
+
     # Herkunft pruefen (#759): nachts die Links aller Herkuenfte abrufen und tote oder
     # umgezogene fuer Admins auflisten (services/herkunft_pruefen.py). Obergrenze an,
     # weil dabei nichts zur Person entsteht: kein Name, keine Kennung, nur Adresse und
     # Ergebnis. Wirksam erst, wenn ein Admin den Schalter einschaltet (Standard aus).
     herkunft_pruefen_aktiv: bool = True
+    # Merkliste (#758): Angemeldete merken Beitraege und finden sie unter "Meine
+    # Beitraege" wieder (Tabelle merkliste, api/v1/merkliste.py), nur mit
+    # Art.-9-Einwilligung. Obergrenze Standard aus: Vor dem Einschalten auf Prod braucht
+    # es Einwilligungswortlaut, DSFA-Abschnitt und DSE-Absatz (Hinweis auf der Admin-Seite).
+    merkliste_aktiv: bool = False
     # App-Abkuerzungen im Manifest (#757): Langes Druecken aufs App-Symbol bietet
     # Einwerfen, Suchen und Fangkorb an. Das Manifest ist statisch, der Schalter wirkt an
     # der Zielroute /abkuerzung/<name> (aus: Startseite). Obergrenze an, weil nichts
@@ -313,6 +347,12 @@ class Settings(BaseSettings):
     # Datenschutzerklaerung nennt bisher nur zwei 7-Tage-Zahlen: Standard aus wie bei
     # gepostet_aktiv, bis der Satz dort steht.
     antworten_hinweis_aktiv: bool = False
+    # Seitenaufrufe und Besucher je Tag (#761, services/aufrufe_service.py): das
+    # Tagespseudonym (#446) an einer Zeile je Besucher und Tag, am Tagesende zu zwei
+    # Zahlen verdichtet. Standard aus: eine weitere Verarbeitung mit dem Pseudonym, die
+    # erst mit Satz in Datenschutzerklaerung und DSFA und nach der Antwort auf die
+    # DSB-Frage 2 (#495) eingeschaltet wird.
+    aufrufe_zaehlen_aktiv: bool = False
     # Teilen als Bild (#756): Die Karte malt im Browser ein Bild (Sharepic) und gibt es
     # ans Teilen-Menue des Geraets; der Server sieht davon nichts. Obergrenze an, weil
     # nichts uebertragen oder gespeichert wird; Standard aus ist der Admin-Wert
@@ -323,6 +363,15 @@ class Settings(BaseSettings):
     # oeffentliche Inhalte beim Aufruf gezaehlt werden und nichts gespeichert wird;
     # wirksam erst mit dem Admin-Wert (Feature-Toggle fuer Neues, Sebastian 26.11.).
     bestandszahl_zuwachs_aktiv: bool = True
+    # Kurzfassung "Kurz gesagt" oben in der Datenschutzerklaerung (Jura b): Standard aus,
+    # bis der Wortlaut von Jura im Frontend steht (datenschutz/dse-kurzfassung.ts). Ohne
+    # Wortlaut bleibt der Kasten auch eingeschaltet unsichtbar.
+    dse_kurzfassung_aktiv: bool = False
+    # Stimmenverfall bei ganz anderem Text unter gleichem Titel (#636,
+    # StatementService.gleicher_text): Obergrenze von Haus aus aus, weil geloeschte
+    # Stimmen nicht zurueckkommen; wirkt nur zusammen mit dieselbe_aussage_nli = an.
+    # Erst nach dem endgueltigen Jura-OK zum Halbsatz "Bewertungen" einschalten.
+    stimmen_text_verfall_aktiv: bool = False
     # Teams ueber Einladungen (services/team_service.py): Teamfelder an der Einladung,
     # Beitreten mit eigener Einwilligung, "Meine Teams". Standard aus: Die
     # Mitgliedschaft ist im Zweifel ein Art.-9-Datum; erst mit DSFA-Nachtrag,
@@ -338,6 +387,14 @@ class Settings(BaseSettings):
     # Obergrenze, bewusst nicht an abzeichen_sichtbar_aktiv gekoppelt: Auf Prod bleibt
     # sie aus, bis die Datenschutzbeauftragte geraten hat. Wirkt nur mit teams_aktiv.
     teams_oeffentlich_aktiv: bool = False
+    # Vertrauenssatz beim Teambeitritt (Begruessung eines Teamlinks): nur ein Text, speichert
+    # nichts. Von Haus aus aus, bis Jura teams.py geprueft hat (was Mitglieder voneinander
+    # sehen). Wirkt nur mit teams_aktiv.
+    teamlink_vertrauenssatz_aktiv: bool = False
+    # Knopf "Was hat dich gestört?" fuer die Startphase (domain/feedback_gestoert.py):
+    # Feedback ohne Kontakt, geloescht bis 31.12.2026. Standard aus; einschalten erst
+    # mit dem Absatz der Datenschutzerklaerung (Jura-Paket 27.11.).
+    feedback_gestoert_aktiv: bool = False
     # Spielgefuehl zur BDK (#782 bis #793, services/schalter_service.py SPIEL_SCHALTER):
     # je Baustein eine Obergrenze, von Haus aus aus; Einschalt-Bedingungen je Schalter in
     # docs/ARCHITECTURE.md. danke_ohne_konto wirkt nur mit danke_knopf, rangliste nur mit
@@ -349,10 +406,22 @@ class Settings(BaseSettings):
     luecke_zu_gross_aktiv: bool = False
     einwilligung_im_gewinn_aktiv: bool = False
     naechster_schritt_aktiv: bool = False
+    # "Danach wurde schon N-mal gesucht" (#362, Jura vorlaeufig 26.11.)
+    null_treffer_anzahl_aktiv: bool = False
     wirkungs_echo_aktiv: bool = False
     danke_knopf_aktiv: bool = False
     danke_ohne_konto_aktiv: bool = False
     rangliste_aktiv: bool = False
+    # Vertrauenszeile vor dem Anmelden (services/schalter_service.py, vorlaeufige
+    # juristische Einschaetzung 26.11.): reiner Text, speichert nichts; Obergrenze trotzdem
+    # von Haus aus aus, bis die Einschaetzung endgueltig ist.
+    vertrauenszeile_aktiv: bool = False
+    # Kurze Hinweiszeile unter dem Suchknopf (services/schalter_service.py
+    # HINWEIS_SCHALTER): Obergrenze von Haus aus aus, bis Jura den Wortlaut bestaetigt.
+    hinweiszeile_kurz_aktiv: bool = False
+    # Saal-Spruch (services/saal_spruch_service.py): Karte auf der Startseite
+    # mit einem vorab festgelegten, oeffentlichen Spruch je Tag; nur Text, nichts zur Person.
+    saal_spruch_aktiv: bool = False
     # Saison und Gemeinschaftsziel (#782, domain/saisons.py): Den Balken sehen alle erst,
     # wenn es einmal so viele abgeschlossene Wochen hintereinander mit je mindestens so
     # vielen verschiedenen Menschen gab, die "Ja, gepostet" gemeldet haben; vorher nur

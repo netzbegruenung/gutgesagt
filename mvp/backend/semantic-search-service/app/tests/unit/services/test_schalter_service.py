@@ -162,6 +162,7 @@ def test_stand_nennt_obergrenze_admin_wert_wirksam_und_dsfa_hinweis():
     assert "DSFA" in stand["punkte"].dsfa_hinweis
     assert "DSFA" in stand["abzeichen_sichtbar"].dsfa_hinweis
     assert stand["gepostet"].dsfa_hinweis is None
+    assert stand["merkliste"].wartet_auf_recht is True
     assert stand["abkuerzungen"].dsfa_hinweis is None
     assert stand["sharepic"].dsfa_hinweis is None
     assert all(s.erklaerung for s in stand.values())
@@ -184,6 +185,17 @@ def test_antworten_hinweis_obergrenze_aus_admin_wert_aus():
 
     assert (stand.obergrenze, stand.admin_wert, stand.wirksam) == (False, False, False)
     assert stand.dsfa_hinweis is None
+
+
+def test_aufrufe_zaehlen_obergrenze_aus_und_dsfa_hinweis():
+    """#761: heikel, deshalb Obergrenze aus, mit der offenen Rechtsbedingung als Hinweis."""
+    dienst, _, _ = _dienst({"aufrufe_zaehlen": True})
+    stand = {s.name: s for s in dienst.stand(Settings())}["aufrufe_zaehlen"]
+
+    assert (stand.obergrenze, stand.admin_wert, stand.wirksam) == (False, True, False)
+    assert "§ 25 TDDDG" in stand.dsfa_hinweis and "V-Messung" in stand.dsfa_hinweis
+    assert stand.wartet_auf_recht is True
+    assert dienst.wirksam("aufrufe_zaehlen", Settings(aufrufe_zaehlen_aktiv=True))
 
 
 def test_sharepic_standard_aus_ohne_admin_wert():
@@ -218,6 +230,7 @@ def test_stand_nach_gruppen_geordnet_jeder_schalter_in_einer_gruppe():
     assert gruppe["gepostet_ohne_konto"] == gruppe["gepostet"] == "Grundfunktionen"
     assert gruppe["team_quests"] == "Teams"
     assert gruppe["naechster_schritt"] == "Spielgefühl"
+    assert gruppe["null_treffer_anzahl"] == "Spielgefühl"
     assert gruppe["rangliste"] == "Punkte & Anerkennung"
 
 
@@ -231,3 +244,26 @@ def test_wartet_auf_recht_nur_mit_hinweis_und_ohne_freigabe():
     assert stand["teams"].dsfa_hinweis
     assert stand["teams"].wartet_auf_recht is False
     assert stand["sharepic"].wartet_auf_recht is False
+
+
+def test_stimmen_text_verfall_standard_aus_mit_jura_bedingung():
+    """#636: Obergrenze und Admin-Wert von Haus aus aus; Einschalten erst nach Jura-OK."""
+    from services.schalter_service import SCHALTER, oeffentliche_schalter
+
+    dienst, _, _ = _dienst()
+    assert Settings().stimmen_text_verfall_aktiv is False
+    assert dienst.wirksam("stimmen_text_verfall", Settings()) is False
+    # Admin-Wert allein reicht nicht, die Obergrenze ist aus
+    dienst, _, _ = _dienst({"stimmen_text_verfall": True})
+    assert dienst.wirksam("stimmen_text_verfall", Settings()) is False
+    an = Settings(stimmen_text_verfall_aktiv=True)
+    assert dienst.wirksam("stimmen_text_verfall", an) is True
+
+    art = SCHALTER["stimmen_text_verfall"]
+    assert art.umgebungsvariable == "SEMANTIC_SEARCH_STIMMEN_TEXT_VERFALL_AKTIV"
+    assert art.gruppe == "Grundfunktionen"
+    assert "Jura" in art.einschalt_hinweis
+    # Die Datenschutzerklaerung blendet ihren Halbsatz danach ein
+    assert "stimmen_text_verfall" in oeffentliche_schalter()
+    stand = {s.name: s for s in dienst.stand(Settings())}
+    assert stand["stimmen_text_verfall"].wartet_auf_recht is True

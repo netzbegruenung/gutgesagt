@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RundgangBandComponent } from './rundgang-band.component';
 import { RundgangService } from './rundgang.service';
-import { Angebot, APP_INSTALLIEREN_ANGEBOT, HOME_ANGEBOT, MITMACHEN_ANGEBOT, WILLKOMMEN } from './rundgang-daten';
+import { Angebot, APP_INSTALLIEREN_ANGEBOT, HOME_ANGEBOT, MITMACHEN_ANGEBOT, WILLKOMMEN, mitBegruessung } from './rundgang-daten';
 import { ALS_APP_GESTARTET } from './app-installieren.service';
 import { installierenEreignis } from '../testing/installieren-ereignis';
 
@@ -41,6 +41,29 @@ describe('RundgangBandComponent', () => {
     expect(aside.querySelector('h2')?.textContent).toContain(MITMACHEN_ANGEBOT.titel);
     expect(aside.textContent).toContain(MITMACHEN_ANGEBOT.satz);
     expect(aside.getAttribute('aria-labelledby')).toBe(aside.querySelector('h2')!.id);
+  });
+
+  it('zeigt die Begrüßung nach ?k= als zusammenhängenden Satz vor dem Rundgang', () => {
+    fixture.componentRef.setInput('ort', 'start');
+    band.set(mitBegruessung(WILLKOMMEN, 'sticker'));
+    fixture.detectChanges();
+    const aside = el().querySelector('aside.zeile')!;
+    expect(aside.getAttribute('aria-label')).toBe('Vom Sticker?');
+    const absatz = aside.querySelector('p')!;
+    expect(absatz.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+      'Vom Sticker? Probier’s direkt aus – das Beispiel steht schon drin. Rundgang (1 Min.)',
+    );
+    // Der Knopf steht hinter dem Satz, nicht dazwischen; kein Trennpunkt
+    expect(absatz.lastElementChild!.tagName).toBe('BUTTON');
+    expect(aside.querySelector('.zeile-satz')).toBeNull();
+  });
+
+  it('lässt das Willkommen ohne Kampagnenwort wie bisher: Knopf, dann Satz', () => {
+    fixture.componentRef.setInput('ort', 'start');
+    band.set(WILLKOMMEN);
+    fixture.detectChanges();
+    expect(el().querySelector('.zeile-satz')).not.toBeNull();
+    expect(el().querySelector('.zeile-gruss')).toBeNull();
   });
 
   it('zeigt das Willkommen als eine schlanke Zeile mit kleinem Wegweiser (Persona-Runde 18.11.)', () => {

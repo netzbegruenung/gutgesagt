@@ -417,9 +417,10 @@ Empfänger und Ort“.
   Admins in der Datenbank, nicht über die Oberfläche.
 - **Frist:** solange der Beitrag besteht, oder bis zur Rücknahme bzw. Kontolöschung (`LK:160`,
   `DSE:670-673`). Trifft ein geänderter Titel nach der NLI-Stufe eine andere Behauptung, werden
-  die Stimmen zum Beitrag gelöscht (#427, `ss/services/content/beitrag_aendern_service.py`);
-  eine Stimme gilt damit nie für eine Aussage, der die Person nicht zugestimmt hat. Ohne
-  Entscheidung der Stufe (nicht `an`, kein Modell, keine Antwort) bleiben sie.
+  die Stimmen zum Beitrag gelöscht (#427, `ss/services/content/beitrag_aendern_service.py`),
+  ebenso bei einem ganz anderen Text (#636, nur mit dem Schalter `stimmen_text_verfall`, Standard
+  aus); ein Gegenteil im Text erkennt die Prüfung nicht (`tests/regression/MESSSET.md`, „Geänderter Text“). Ohne
+  Entscheidung der Stufe (nicht `an`, Schalter aus, kein Modell, keine Antwort) bleiben sie.
 - **Risiko:** Eine Stimme zu einem politischen Text ist eine Meinungsäußerung. Bei kleinen Zählern
   oder aus einer Änderung der Güte ließe sich eine einzelne Stimme erraten, besonders wer die
   Seite vor und nach einer Stimme vergleicht (R8).
@@ -510,6 +511,12 @@ Empfänger und Ort“.
   je Anschluss), kein Pseudonym (`LK:368-374`).
 - **Frist:** acht Wochen (`DSE:517-518`).
 - **Risiko:** gering; der Zähler „n Personen“ ist für alle Angemeldeten sichtbar (`DSE:497-500`).
+  Seit #362 (hinter dem Schalter `null_treffer_anzahl`, Standard aus) nennt die Ergebnisseite
+  ohne Treffer auch Suchenden ohne Anmeldung „Danach wurde in den letzten vier Wochen schon
+  n-mal gesucht“, erst ab drei und die eigene Suche eingerechnet, aber nur zu einer Aussage, die
+  sie ohnehin sehen (mit Antwort oder freigegeben, Vormoderation P6); zu einer verborgenen oder
+  abgelehnten Suchanfrage gibt es keine Zahl. Gezählt wird je Tagespseudonym (Anschluss bzw.
+  Kennung je Tag), nicht je Mensch; deshalb „n-mal“ statt „n Personen“ (Jura vorläufig 26.11.).
 - **Maßnahmen:** Merkliste nur im Speicher bis Mitternacht (`DSE:469-476`); erst ab zwei Personen
   auf der Liste (`DSE:490-491`).
 

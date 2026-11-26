@@ -21,9 +21,17 @@ import { RundgangService } from './rundgang.service';
            Links der Wegweiser des alten Kastens, klein (Maintainer 18.11.). -->
       <aside class="zeile" [attr.aria-label]="angebot.titel">
         <img class="zeile-bild" src="marke/wegweiser.svg" alt="" width="28" height="28" />
-        <p>
-          <span class="zeile-titel">{{ angebot.titel }}</span>&ngsp;<button type="button" class="zeile-link" (click)="rundgang.bandBeantworten(true)">{{ angebot.ja }}</button>&ngsp;<span class="zeile-satz"><span aria-hidden="true">· </span>{{ angebot.satz }}</span>
-        </p>
+        @if (angebot.begruessung) {
+          <!-- Begrüßung nach dem Kampagnenwort: Titel und Satz als ein Satz, der Rundgang danach,
+               damit die Begrüßung nicht in zwei Teile zerfällt (Review #845) -->
+          <p>
+            <span class="zeile-titel">{{ angebot.titel }}</span>&ngsp;<span class="zeile-gruss">{{ angebot.satz }}</span>&ngsp;<button type="button" class="zeile-link" (click)="rundgang.bandBeantworten(true)">{{ angebot.ja }}</button>
+          </p>
+        } @else {
+          <p>
+            <span class="zeile-titel">{{ angebot.titel }}</span>&ngsp;<button type="button" class="zeile-link" (click)="rundgang.bandBeantworten(true)">{{ angebot.ja }}</button>&ngsp;<span class="zeile-satz"><span aria-hidden="true">· </span>{{ angebot.satz }}</span>
+          </p>
+        }
         <button type="button" class="zeile-zu" [attr.aria-label]="angebot.neinLabel ?? angebot.nein"
                 [attr.title]="angebot.nein" (click)="ausblenden()">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">

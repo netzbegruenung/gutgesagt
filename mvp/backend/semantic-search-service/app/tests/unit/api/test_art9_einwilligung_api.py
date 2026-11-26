@@ -638,6 +638,10 @@ GESPERRT = {
     # Meinung; GET mit, damit das Frontend den Knopf nur mit Einwilligung zeigt.
     ("GET", "/api/v1/usage/users/me/gepostet"),
     ("POST", "/api/v1/usage/users/me/gepostet"),
+    # Merkliste (#758): Was jemand merkt, verraet die politische Meinung; GET mit,
+    # damit die Liste nur mit Einwilligung steht. Entfernen bleibt offen (DELETE).
+    ("GET", "/api/v1/merkliste"),
+    ("PUT", "/api/v1/merkliste/{content_id}"),
 }
 
 
@@ -680,6 +684,9 @@ OFFEN = {
     # Meldungen ohne Konto (#799): nur ein Wochenzaehler ohne Kennung; Angemeldete
     # zaehlen dort nicht (sie melden ueber /users/me/gepostet mit Einwilligung)
     ("POST", "/api/v1/ereignis"),
+    # Ankuenfte je Kampagnenwort und Tag: nur eine Zahl je Wort und Tag, der Endpunkt
+    # liest keine Kennung; nichts verknuepft sie mit einem Konto oder Beitrag
+    ("POST", "/api/v1/ankunft"),
     ("POST", "/api/v1/usage/users/me/besuch"),
     ("POST", "/api/v1/statement/addReplysuggestionToStatement"),
     ("PUT", "/api/v1/statement/themen/zuordnen"),
@@ -698,6 +705,8 @@ OFFEN = {
     # Saisons pflegen (Admin, #782): keine Daten von Nutzenden
     ("POST", "/api/v1/moderation/saisons"),
     ("PUT", "/api/v1/moderation/saisons/{saison_id}"),
+    # Saal-Sprueche pflegen (Admin): oeffentlicher Text, keine Daten von Nutzenden
+    ("PUT", "/api/v1/moderation/saal-sprueche/{datum}"),
     # Herkunft pruefen anstossen (Admin, #759): keine Daten von Nutzenden
     ("POST", "/api/v1/herkunft-pruefen/lauf"),
     ("POST", "/api/v1/sperren/{sperre_id}/widerspruch"),
@@ -730,6 +739,7 @@ OFFEN = {
 
 
 def _gesperrte_routen():
+    from api.v1.merkliste import merkliste_angeboten
     from api.v1.usage import gepostet_angeboten
     from main import app
 
@@ -738,7 +748,8 @@ def _gesperrte_routen():
         if not isinstance(route, APIRoute):
             continue
         if any(
-            d.call in (require_art9_einwilligung, gepostet_angeboten)
+            d.call
+            in (require_art9_einwilligung, gepostet_angeboten, merkliste_angeboten)
             for d in route.dependant.dependencies
         ):
             gesperrt |= {(methode, route.path) for methode in route.methods}

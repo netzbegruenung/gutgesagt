@@ -18,9 +18,19 @@ class FeedbackRepository:
     def __init__(self):
         self.db = get_app_database()
 
-    def anlegen(self, text: str, kontakt: Optional[str], tag: date) -> None:
+    def anlegen(
+        self,
+        text: str,
+        kontakt: Optional[str],
+        tag: date,
+        kategorie: Optional[str] = None,
+    ) -> None:
         with self.db.get_session() as session:
-            session.add(FeedbackZeile(text=text, kontakt=kontakt, eingegangen_am=tag))
+            session.add(
+                FeedbackZeile(
+                    text=text, kontakt=kontakt, eingegangen_am=tag, kategorie=kategorie
+                )
+            )
             session.commit()
 
     def neueste(
@@ -69,6 +79,15 @@ class FeedbackRepository:
         with self.db.get_session() as session:
             ergebnis = session.execute(
                 delete(FeedbackZeile).where(FeedbackZeile.eingegangen_am < tag)
+            )
+            session.commit()
+            return ergebnis.rowcount
+
+    def loeschen_kategorie(self, kategorie: str) -> int:
+        """Alles Feedback dieser Kategorie loeschen; liefert die Zahl der Zeilen."""
+        with self.db.get_session() as session:
+            ergebnis = session.execute(
+                delete(FeedbackZeile).where(FeedbackZeile.kategorie == kategorie)
             )
             session.commit()
             return ergebnis.rowcount
