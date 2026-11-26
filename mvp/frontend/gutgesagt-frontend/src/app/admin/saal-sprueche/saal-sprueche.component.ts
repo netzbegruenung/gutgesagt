@@ -1,11 +1,14 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { SaalSpruch, SaalSpruchListe, SaalSpruchService } from '../../services/saal-spruch.service';
+import { ROUTES } from '../../shared/constants/app.constants';
+import { SUCHTEXT_PARAM } from '../../shared/formular-adresse';
 import { ohneRechte, selbstNachladen } from '../../shared/selbst-nachladen';
 
 /** JJJJ-MM-TT als Wochentag und TT.MM.JJJJ, etwa „Fr 04.12.2026“. */
@@ -24,7 +27,7 @@ export function saalTag(iso: string): string {
 @Component({
   selector: 'app-saal-sprueche',
   standalone: true,
-  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSnackBarModule],
+  imports: [FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, MatSnackBarModule],
   template: `
     <section class="saal-sprueche mat-elevation-z1" aria-labelledby="saal-sprueche-titel" data-testid="saal-sprueche">
       <div class="kopf"><h3 id="saal-sprueche-titel">Saal-Sprüche</h3></div>
@@ -50,6 +53,10 @@ export function saalTag(iso: string): string {
                         [attr.aria-label]="'Spruch für ' + tag(s.datum) + ' ändern'">Ändern</button>
                 <button mat-stroked-button type="button" (click)="entfernen(s)" [disabled]="speichernd"
                         [attr.aria-label]="'Spruch für ' + tag(s.datum) + ' entfernen'">Entfernen</button>
+                <!-- Prüfen, ob „Antworten ansehen“ etwas findet, bevor der Saal den Spruch hört -->
+                <a mat-button [routerLink]="ergebnisse" [queryParams]="suche(s.text)" target="_blank"
+                   data-testid="saal-spruch-suche"
+                   [attr.aria-label]="'Suche zum Spruch für ' + tag(s.datum) + ' ansehen (neuer Tab)'">Suche ansehen</a>
               </span>
             </li>
           }
@@ -64,7 +71,7 @@ export function saalTag(iso: string): string {
           </mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="breit">
             <mat-label>Spruch</mat-label>
-            <textarea matInput name="text" [(ngModel)]="text" [maxlength]="l.text_max" rows="2" required></textarea>
+            <textarea #textFeld matInput name="text" data-testid="saal-spruch-textfeld" [(ngModel)]="text" [maxlength]="l.text_max" rows="2" required></textarea>
             <mat-hint>etwa „Klimaschutz können wir uns gerade nicht leisten.“ · höchstens {{ l.text_max }} Zeichen</mat-hint>
           </mat-form-field>
           <div class="knoepfe">
@@ -103,6 +110,10 @@ export class SaalSpruecheComponent implements OnInit {
   text = '';
 
   protected readonly tag = saalTag;
+  protected readonly ergebnisse = ROUTES.RESULT;
+  protected readonly suche = (text: string) => ({ [SUCHTEXT_PARAM]: text });
+
+  @ViewChild('textFeld') private textFeld?: ElementRef<HTMLTextAreaElement>;
 
   private readonly service = inject(SaalSpruchService);
   private readonly snackBar = inject(MatSnackBar);
@@ -124,6 +135,8 @@ export class SaalSpruecheComponent implements OnInit {
   bearbeiten(s: SaalSpruch): void {
     this.datum = s.datum;
     this.text = s.text;
+    // Ohne Sicht merkt man sonst nicht, dass das Formular weiter unten befüllt wurde
+    this.textFeld?.nativeElement.focus();
   }
 
   speichern(): void {
@@ -156,7 +169,11 @@ export class SaalSpruecheComponent implements OnInit {
       next: () => {
         this.speichernd = false;
         this.snackBar.open(`Spruch für ${saalTag(s.datum)} entfernt.`, 'OK', { duration: 4000 });
-        this.service.liste().subscribe({ next: (daten) => this.uebernehmen(daten) });
+        // Sofort ohne den entfernten Spruch; schlägt das Nachladen fehl, holt der nächste Takt den Stand
+        if (this.liste) {
+          this.liste = { ...this.liste, sprueche: this.liste.sprueche.filter((x) => x.datum !== s.datum) };
+        }
+        this.service.liste().subscribe({ next: (daten) => this.uebernehmen(daten), error: () => undefined });
       },
       error: (fehler: { status?: number; error?: { detail?: unknown } }) => {
         this.speichernd = false;

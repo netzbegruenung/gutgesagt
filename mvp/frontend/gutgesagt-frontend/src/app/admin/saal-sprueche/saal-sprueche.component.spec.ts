@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideRouter } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
 import { SaalSpruchListe } from '../../services/saal-spruch.service';
@@ -26,7 +27,7 @@ describe('SaalSpruecheComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [SaalSpruecheComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(), provideRouter([])],
     });
     fixture = TestBed.createComponent(SaalSpruecheComponent);
     http = TestBed.inject(HttpTestingController);
@@ -77,6 +78,35 @@ describe('SaalSpruecheComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Ab heute kein Spruch festgelegt.');
+  });
+
+  it('Entfernen: Eintrag sofort weg, auch wenn das Nachladen scheitert', () => {
+    http.expectOne(URL).flush(liste());
+    fixture.detectChanges();
+    fixture.componentInstance.entfernen({ datum: '2026-12-04', text: 'x' });
+    http.expectOne(`${URL}/2026-12-04`).flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne(URL).flush(null, { status: 502, statusText: 'Bad Gateway' });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="saal-spruch-eintrag"]')).toBeNull();
+  });
+
+  it('„Ändern“ füllt das Formular und setzt den Fokus ins Textfeld', () => {
+    http.expectOne(URL).flush(liste());
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    (el.querySelector('[data-testid="saal-spruch-eintrag"] button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.text).toBe('Das bringt doch alles nichts.');
+    expect(document.activeElement).toBe(el.querySelector('[data-testid="saal-spruch-textfeld"]'));
+  });
+
+  it('„Suche ansehen“ zeigt, was „Antworten ansehen“ finden würde', () => {
+    http.expectOne(URL).flush(liste());
+    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector('[data-testid="saal-spruch-suche"]') as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe(`/result?searchQuery=${encodeURIComponent('Das bringt doch alles nichts.')}`);
   });
 
   it('ohne Tag oder Text kein Speichern', () => {

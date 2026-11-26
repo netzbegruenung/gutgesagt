@@ -155,9 +155,9 @@ SPIEL_SCHALTER = (
         feld="saal_spruch_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_SAAL_SPRUCH_AKTIV",
         erklaerung=(
-            "Karte „Heute im Saal gehört:“ oben auf der Startseite mit dem Spruch des "
-            "Tages (Abschnitt Saal-Sprüche) und dem Knopf „Antworten ansehen“; an Tagen "
-            "ohne Spruch nichts. Speichert nichts zur Person."
+            "Karte „Heute im Saal gehört:“ oben auf der Startseite mit dem heutigen "
+            "Saal-Spruch (Abschnitt Saal-Sprüche) und dem Knopf „Antworten ansehen“; an "
+            "Tagen ohne Spruch nichts. Speichert nichts zur Person."
         ),
         oeffentlich=True,
     ),

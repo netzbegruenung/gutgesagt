@@ -221,10 +221,12 @@ export type StartVorrang = 'offen' | 'block' | 'spruch' | 'karte';
 
 /**
  * Vorrang: Neues zu eigenen Beiträgen geht vor (es ist, was die Person bewirkt hat), dann
- * an seinen Tagen der Saal-Spruch, dann der eine Vorschlag, sonst der Block mit den
- * allgemeinen Zahlen. `undefined` heißt „Antwort steht noch aus“ (beim Saal-Spruch
- * 'offen'), null beim Stand „keine Antwort“ (Fehler, Zeitgrenze). Ohne Angabe zum
- * Saal-Spruch gibt es heute keinen.
+ * der eine Vorschlag, dann an seinen Tagen der Saal-Spruch, sonst der Block mit den
+ * allgemeinen Zahlen. Der Saal-Spruch verdrängt also nur die allgemeinen Zahlen (Auftrag
+ * Strategiewichtel Nr. 3, #846), nichts Persönliches. `undefined` heißt „Antwort steht
+ * noch aus“ (beim Saal-Spruch 'offen'; auf ihn wird nur gewartet, wenn kein Vorschlag da
+ * ist), null beim Stand „keine Antwort“ (Fehler, Zeitgrenze). Ohne Angabe zum Saal-Spruch
+ * gibt es heute keinen.
  */
 export function startVorrang(
   stand: NeuesStand | null | undefined,
@@ -232,16 +234,19 @@ export function startVorrang(
   naechsterSchrittDa: boolean | undefined,
   saalSpruchDa: boolean | 'offen' = false,
 ): StartVorrang {
-  if (stand === undefined || naechsterSchrittDa === undefined || saalSpruchDa === 'offen') {
+  if (stand === undefined || naechsterSchrittDa === undefined) {
     return 'offen';
   }
   if (eigenesNeuesSichtbar(stand, erledigt)) {
     return 'block';
   }
-  if (saalSpruchDa) {
-    return 'spruch';
+  if (naechsterSchrittDa) {
+    return 'karte';
   }
-  return naechsterSchrittDa ? 'karte' : 'block';
+  if (saalSpruchDa === 'offen') {
+    return 'offen';
+  }
+  return saalSpruchDa ? 'spruch' : 'block';
 }
 
 /**

@@ -1,5 +1,5 @@
 """
-Saal-Spruch des Tages (Schalter ``saal_spruch``, GLOSSARY.md "Saal-Spruch").
+Saal-Spruch (Schalter ``saal_spruch``, GLOSSARY.md "Saal-Spruch").
 
 Ein Admin legt vorab je Tag einen oeffentlichen Spruch fest, etwa fuer die Tage der
 BDK; die Startseite zeigt ihn an diesem Tag als Karte "Heute im Saal gehört:" mit dem
@@ -28,7 +28,11 @@ logger = get_logger(__name__)
 
 CACHE_SEKUNDEN = 60.0
 
-_STEUERZEICHEN = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
+# ASCII-Steuerzeichen sowie Nullbreiten- und Bidi-Steuerzeichen: Der Text steht oeffentlich
+# gross als Zitat, unsichtbare Zeichen koennten ihn verdrehen oder die Suche verfaelschen.
+_STEUERZEICHEN = re.compile(
+    r"[\x00-\x08\x0b-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]"
+)
 
 
 class SaalSpruchUngueltig(Validierungsfehler):

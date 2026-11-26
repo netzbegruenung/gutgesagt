@@ -34,7 +34,7 @@ class SaalSpruchRepository:
             return {zeile.datum: zeile.text for zeile in zeilen}
 
     def setzen(self, tag: date, text: str) -> None:
-        """Legt den Spruch des Tages an oder ersetzt ihn."""
+        """Legt den Saal-Spruch eines Tages an oder ersetzt ihn."""
         with self.db.get_session() as session:
             einfuegen = pg_insert(SaalSpruchZeile).values(
                 datum=tag, text=text, geaendert_am=func.now()
@@ -50,7 +50,7 @@ class SaalSpruchRepository:
             )
 
     def loeschen(self, tag: date) -> None:
-        """Entfernt den Spruch des Tages; ohne Spruch passiert nichts."""
+        """Entfernt den Saal-Spruch eines Tages; ohne Spruch passiert nichts."""
         with self.db.get_session() as session:
             session.execute(delete(SaalSpruchZeile).where(SaalSpruchZeile.datum == tag))
 

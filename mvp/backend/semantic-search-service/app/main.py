@@ -413,7 +413,7 @@ app.include_router(rangliste_router, prefix="/api/v1/rangliste", tags=["ranglist
 app.include_router(
     saisons_admin_router, prefix="/api/v1/moderation/saisons", tags=["moderation"]
 )
-# Saal-Spruch des Tages: Spruch ohne Anmeldung, Pflege nur Admins
+# Saal-Spruch: Spruch ohne Anmeldung, Pflege nur Admins
 app.include_router(saal_spruch_router, prefix="/api/v1/saal-spruch", tags=["spiel"])
 app.include_router(
     saal_spruch_admin_router,

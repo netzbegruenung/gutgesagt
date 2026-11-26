@@ -1,4 +1,4 @@
--- Saal-Spruch des Tages (Schalter saal_spruch)
+-- Saal-Spruch (Schalter saal_spruch)
 --
 -- saal_sprueche: je Tag (Europe/Berlin) hoechstens ein oeffentlicher Spruch, den ein
 -- Admin vorab festlegt (mvp/backend/semantic-search-service/app/services/

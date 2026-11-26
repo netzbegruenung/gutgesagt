@@ -1,5 +1,5 @@
 """
-Saal-Spruch des Tages (services/saal_spruch_service.py): Tag in Europe/Berlin, Text
+Saal-Spruch (services/saal_spruch_service.py): Tag in Europe/Berlin, Text
 bereinigt, Cache je Tag, Lesefehler gelten als kein Spruch, vergangene Tage gesperrt.
 """
 
@@ -62,12 +62,17 @@ def test_bereinigen():
         spruch_bereinigen("   ")
     with pytest.raises(SaalSpruchUngueltig):
         spruch_bereinigen("a\x00b")
+    # Nullbreiten- und Bidi-Steuerzeichen verdrehen das Zitat unsichtbar
+    for zeichen in ("\u200b", "\u200f", "\u202e", "\u2066", "\ufeff"):
+        with pytest.raises(SaalSpruchUngueltig):
+            spruch_bereinigen(f"Das{zeichen} bringt nichts")
+    assert spruch_bereinigen("Grüne – „Klima“ ✓") == "Grüne – „Klima“ ✓"
     with pytest.raises(SaalSpruchUngueltig):
         spruch_bereinigen("x" * (SAAL_SPRUCH_MAX + 1))
     assert spruch_bereinigen("x" * SAAL_SPRUCH_MAX) == "x" * SAAL_SPRUCH_MAX
 
 
-def test_heute_nur_der_spruch_des_tages():
+def test_heute_nur_der_saal_spruch_von_heute():
     speicher = Speicher()
     service, tag = _service(speicher)
     service.setzen(SAMSTAG, "Klimaschutz kostet nur")

@@ -29,7 +29,7 @@ export interface SaalSpruchListe {
 }
 
 /**
- * Saal-Spruch des Tages (Schalter „saal_spruch“, Glossar „Saal-Spruch“): der Spruch für
+ * Saal-Spruch (Schalter „saal_spruch“, Glossar „Saal-Spruch“): der Spruch für
  * die Startseite und die Pflege für Admins (Seite „Schalter“).
  */
 @Injectable({ providedIn: 'root' })

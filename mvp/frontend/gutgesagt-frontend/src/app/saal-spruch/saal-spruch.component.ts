@@ -10,6 +10,7 @@ import { RundgangService } from '../rundgang/rundgang.service';
 import { SaalSpruchService } from '../services/saal-spruch.service';
 import { SeitLetztemBesuchService } from '../seit-letztem-besuch/seit-letztem-besuch.service';
 import { ROUTES } from '../shared/constants/app.constants';
+import { SUCHTEXT_PARAM } from '../shared/formular-adresse';
 import { AUS_NACHLADEN_MS, selbstNachladen } from '../shared/selbst-nachladen';
 
 /** Der Tag im Browser als JJJJ-MM-TT, damit ein gemerkter Spruch nicht über Mitternacht hält. */
@@ -27,10 +28,15 @@ export function browserTag(jetzt = new Date()): string {
  * Höchstens ein Aufruf über dem Feed (Review Spielgefühl 25.11.): Den Vorrang gegenüber
  * „Seit deinem letzten Besuch“ und „Dein nächster Schritt“ entscheidet
  * SeitLetztemBesuchService.start$ (Regel in neues-liste.ts, startVorrang); die Karte meldet
- * dorthin nur, ob sie heute einen Spruch hat. Eigenes Neues geht ihr vor, allgemeine
- * Zahlen und der Vorschlag treten an ihren Tagen zurück. Steht das Willkommen des
- * Rundgangs auf der Startseite, wartet sie, bis es beantwortet ist. Besucher ohne Konto
- * sehen weder Block noch Vorschlag, deshalb wartet die Karte für sie auf nichts davon.
+ * dorthin nur, ob sie heute einen Spruch hat. Eigenes Neues und der Vorschlag gehen ihr
+ * vor, nur die allgemeinen Zahlen treten an ihren Tagen zurück. Steht ein Rundgang-Angebot
+ * auf der Startseite (Willkommen, Startbildschirm, App installieren), wartet sie, bis es
+ * beantwortet ist: Das Angebot ist dann der eine Aufruf. Besucher ohne Konto sehen weder
+ * Block noch Vorschlag, deshalb wartet die Karte für sie auf nichts davon.
+ *
+ * Bekannt: Kommt der Spruch erst nach START_WARTEZEIT_MS (zwei Abrufe nacheinander,
+ * Schalterstand und Spruch), zeigen Angemeldete ohne Vorschlag zuerst den Block und dann
+ * die Karte; wie beim Vorschlag, im Saal-WLAN nur wahrscheinlicher.
  */
 @Component({
   selector: 'app-saal-spruch',
@@ -47,7 +53,7 @@ export function browserTag(jetzt = new Date()): string {
         <blockquote class="saal-spruch-zitat" data-testid="saal-spruch-text">„{{ spruch }}“</blockquote>
         <p class="saal-spruch-frage">Wie würdest du antworten?</p>
         <a mat-raised-button class="gutgesagt-primary-dark saal-spruch-knopf" data-testid="saal-spruch-knopf"
-           [routerLink]="ergebnisse" [queryParams]="{ searchQuery: spruch }">
+           [routerLink]="ergebnisse" [queryParams]="suche(spruch)">
           Antworten ansehen
           <mat-icon iconPositionEnd aria-hidden="true">arrow_forward</mat-icon>
         </a>
@@ -111,6 +117,7 @@ export function browserTag(jetzt = new Date()): string {
 })
 export class SaalSpruchComponent {
   readonly ergebnisse = ROUTES.RESULT;
+  readonly suche = (spruch: string) => ({ [SUCHTEXT_PARAM]: spruch });
 
   private readonly service = inject(SaalSpruchService);
   private readonly neues = inject(SeitLetztemBesuchService);
@@ -125,7 +132,7 @@ export class SaalSpruchComponent {
     ),
     { initialValue: false },
   );
-  /** Das Willkommen (oder ein anderes Angebot) steht gerade auf der Startseite. */
+  /** Ein Rundgang-Angebot (Willkommen, Startbildschirm, App) steht gerade auf der Startseite. */
   private readonly rundgangHier = computed(() => !!this.rundgang.band()?.imInhalt);
 
   /** Der Spruch, wenn die Karte ihn zeigen darf; sonst null. */

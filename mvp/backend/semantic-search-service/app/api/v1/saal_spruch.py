@@ -1,8 +1,8 @@
 """
-Saal-Spruch des Tages (services/saal_spruch_service.py, Schalter ``saal_spruch``).
+Saal-Spruch (services/saal_spruch_service.py, Schalter ``saal_spruch``).
 
 - ``router`` unter /api/v1/saal-spruch, ohne Anmeldung: ``GET /heute`` liefert den
-  Spruch des Tages, ``{"spruch": null}`` ohne Spruch und ``{"spruch": null, "aktiv":
+  heutigen Saal-Spruch, ``{"spruch": null}`` ohne Spruch und ``{"spruch": null, "aktiv":
   false}``, solange der Schalter nicht wirkt. Nie 404: Die Startseite fragt bei jedem
   Aufruf, und ein 404 je Aufruf sperrte am Gateway ein ganzes Saal-WLAN
   (docs/ARCHITECTURE.md). Nur der oeffentliche Text, nichts zur Person.

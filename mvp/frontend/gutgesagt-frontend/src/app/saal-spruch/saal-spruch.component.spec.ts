@@ -18,14 +18,14 @@ const SPRUCH = 'Klimaschutz können wir uns gerade nicht leisten.';
 const ANGEMELDET: UserInfo = { isAuthenticated: true, userId: 'kim', userName: null, claims: null };
 const BESUCHER: UserInfo = { isAuthenticated: false, userId: null, userName: null, claims: null };
 
-describe('Saal-Spruch des Tages (Schalter saal_spruch)', () => {
+describe('Saal-Spruch (Schalter saal_spruch)', () => {
   describe('startVorrang mit Saal-Spruch', () => {
     const keins = new Set<never>();
 
-    it('geht allgemeinen Zahlen und dem Vorschlag vor', () => {
+    it('geht allgemeinen Zahlen vor, nicht dem Vorschlag', () => {
       const allgemein = { nutzung_seit_letztem_besuch: 0, neue_einwuerfe: 3, unbeantwortete_aussagen: 2 };
-      expect(startVorrang(allgemein, keins, true, true)).toBe('spruch');
       expect(startVorrang(allgemein, keins, false, true)).toBe('spruch');
+      expect(startVorrang(allgemein, keins, true, true)).toBe('karte');
       // Die allgemeinen Zahlen treten zurück
       expect(startKacheln(allgemein, keins, 'spruch')).toEqual([]);
     });
@@ -36,6 +36,8 @@ describe('Saal-Spruch des Tages (Schalter saal_spruch)', () => {
 
     it('wartet, solange seine Antwort aussteht; ohne Spruch wie bisher', () => {
       expect(startVorrang(null, keins, false, 'offen')).toBe('offen');
+      // Mit Vorschlag wartet nichts auf den Saal-Spruch
+      expect(startVorrang(null, keins, true, 'offen')).toBe('karte');
       expect(startVorrang(null, keins, true, false)).toBe('karte');
       expect(startVorrang(null, keins, true)).toBe('karte');
     });
@@ -121,7 +123,7 @@ describe('Saal-Spruch des Tages (Schalter saal_spruch)', () => {
       expect(TestBed.inject(SeitLetztemBesuchService).saalSpruchDa$.value).toBeTrue();
     });
 
-    it('wartet, solange das Willkommen des Rundgangs auf der Startseite steht', () => {
+    it('wartet, solange ein Rundgang-Angebot auf der Startseite steht', () => {
       einrichten(true, BESUCHER);
       band.set({ imInhalt: true });
       const fixture = TestBed.createComponent(SaalSpruchComponent);
@@ -136,10 +138,27 @@ describe('Saal-Spruch des Tages (Schalter saal_spruch)', () => {
       expect(karte(fixture.nativeElement)).not.toBeNull();
     });
 
-    it('Angemeldete: eigenes Neues geht vor, allgemeine Zahlen nicht', () => {
+    it('Angemeldete mit Vorschlag: „Dein nächster Schritt“ geht vor', () => {
       einrichten(true, ANGEMELDET);
       const neues = TestBed.inject(SeitLetztemBesuchService);
       neues.naechsterSchrittDa$.next(true);
+      besuch.next({ nutzung_seit_letztem_besuch: 0, neue_einwuerfe: 3 });
+      const fixture = TestBed.createComponent(SaalSpruchComponent);
+      fixture.detectChanges();
+      http.expectOne(SAAL_SPRUCH_HEUTE_URL).flush({ spruch: SPRUCH });
+      fixture.detectChanges();
+      expect(karte(fixture.nativeElement)).toBeNull();
+
+      // Ohne Vorschlag tritt nur der Block mit allgemeinen Zahlen zurück
+      neues.naechsterSchrittDa$.next(false);
+      fixture.detectChanges();
+      expect(karte(fixture.nativeElement)).not.toBeNull();
+    });
+
+    it('Angemeldete: eigenes Neues geht vor, allgemeine Zahlen nicht', () => {
+      einrichten(true, ANGEMELDET);
+      const neues = TestBed.inject(SeitLetztemBesuchService);
+      neues.naechsterSchrittDa$.next(false);
       besuch.next({ nutzung_seit_letztem_besuch: 3 });
       const fixture = TestBed.createComponent(SaalSpruchComponent);
       fixture.detectChanges();

@@ -93,14 +93,14 @@ visit at most one card that points the person somewhere new (review Spielgefühl
 |---|------|-------------|------------|
 | 1 | Hero and search | everyone | always |
 | 2 | Rundgang line (`app-rundgang-band`, Willkommen) | everyone | until answered; signed in without „Ein Konto brauchst du nicht“ (`WILLKOMMEN_ANGEMELDET`) |
-| 2a | „Heute im Saal gehört:“ (`app-saal-spruch`) | everyone, Schalter `saal_spruch` | an admin has set a Saal-Spruch for today (Europe/Berlin); not while the Rundgang line of card 2 is on the start page; signed in only when card 3 shows no own news |
+| 2a | „Heute im Saal gehört:“ (`app-saal-spruch`) | everyone, Schalter `saal_spruch` | an admin has set a Saal-Spruch for today (Europe/Berlin); not while a Rundgang offer (`imInhalt`: Willkommen, home screen, app install) is on the start page; signed in only when card 3 shows no own news and card 4 has no suggestion |
 | 3 | „Seit deinem letzten Besuch“ | signed in | not on the very first visit (`erster_besuch` from `POST /users/me/besuch`); next to a suggestion of card 4 only with news about the person's own Beiträge (`EIGENES_NEUES`: answers, uses, Wirkungs-Echo, ausformulierte Einwürfe) |
-| 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion, card 3 shows no own news and card 2a has no Saal-Spruch |
+| 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion and card 3 shows no own news |
 | 5 | Saison goal | everyone, Schalter `saison_ziel` | from the threshold (#782) |
 | 6 | Oft genutzt, Konter-Probe, Frisch aus der Community, Mitmachen tiles, Garten, About | everyone | as each card decides |
 
 Cards 2a, 3 and 4 are never shown together: own news wins (it is what the person caused), then
-on its days the Saal-Spruch, otherwise the single suggestion wins and the general numbers (new Einwürfe of others, Aussagen waiting,
+the single suggestion, then on its days the Saal-Spruch; the general numbers (new Einwürfe of others, Aussagen waiting,
 new Beiträge) step back (proposal, open as Fachfrage in #829). One place decides:
 `SeitLetztemBesuchService.start$` (rule in `seit-letztem-besuch/neues-liste.ts`, `startVorrang`);
 the cards only read it, card 4 reports whether it has a suggestion through `naechsterSchrittDa$`,

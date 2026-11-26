@@ -576,7 +576,7 @@ Ein kleines Spiel ohne Konto (#786, Schalter `konter_probe`): Zu einer Aussage s
 _Avoid_: Quiz, Ratespiel
 
 **Saal-Spruch**:
-Ein öffentlicher Spruch, den ein Admin vorab für einen bestimmten Tag festlegt (Schalter `saal_spruch`), etwa für die Tage der BDK: Die Startseite zeigt ihn an diesem Tag oben als Karte „Heute im Saal gehört:“ mit der Frage „Wie würdest du antworten?“ und dem Knopf „Antworten ansehen“, der die Suche mit dem Spruch startet. Je Tag höchstens einer, der Tag gilt in deutscher Zeit; gepflegt auf der Admin-Seite „Schalter“ im Abschnitt „Saal-Sprüche“. Nur Text, keine Namen, nichts zur Person. Die Karte geht allgemeinen Zahlen und „Dein nächster Schritt“ vor, nicht eigenem Neuem, und wartet, solange das Willkommen auf der Startseite steht.
+Ein öffentlicher Spruch, den ein Admin vorab für einen bestimmten Tag festlegt (Schalter `saal_spruch`), etwa für die Tage der BDK: Die Startseite zeigt ihn an diesem Tag oben als Karte „Heute im Saal gehört:“ mit der Frage „Wie würdest du antworten?“ und dem Knopf „Antworten ansehen“, der die Suche mit dem Spruch startet. Je Tag höchstens einer, der Tag gilt in deutscher Zeit; gepflegt auf der Admin-Seite „Schalter“ im Abschnitt „Saal-Sprüche“. Nur Text, keine Namen, nichts zur Person. Die Karte geht nur allgemeinen Zahlen vor, nicht eigenem Neuem und nicht „Dein nächster Schritt“, und wartet, solange ein Rundgang-Angebot auf der Startseite steht.
 _Avoid_: Spruch des Tages (klingt nach Kalenderspruch), Tagesaussage
 
 **Zustimmung zur Sichtbarkeit**:

@@ -74,7 +74,7 @@ describe('SearchViewComponent', () => {
     const willkommen = band.nextElementSibling as HTMLElement;
 
     expect(willkommen.tagName.toLowerCase()).toBe('app-rundgang-band');
-    // Dazwischen der Saal-Spruch des Tages (Schalter saal_spruch), nur an Tagen mit Spruch
+    // Dazwischen der Saal-Spruch (Schalter saal_spruch), nur an Tagen mit Spruch
     const spruch = willkommen.nextElementSibling as HTMLElement;
     expect(spruch.tagName.toLowerCase()).toBe('app-saal-spruch');
     expect(spruch.nextElementSibling!.tagName.toLowerCase()).toBe('app-seit-letztem-besuch');

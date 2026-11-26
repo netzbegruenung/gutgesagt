@@ -24,7 +24,7 @@ public class EndpointPolicyTests
     [InlineData("/api/v1/funktionen")]           // oeffentliche Schalter (#756)
     [InlineData("/api/v1/saisons/aktuell")]      // Saisonbalken, nur Summen (#782)
     [InlineData("/api/v1/konter-probe")]         // Konter-Probe ohne Konto (#786)
-    [InlineData("/api/v1/saal-spruch/heute")]    // Saal-Spruch des Tages, nur Text
+    [InlineData("/api/v1/saal-spruch/heute")]    // Saal-Spruch, nur Text
     [InlineData("/api/v1/moderation/report")]
     [InlineData("/api/v1/metrics/getmetrics")]   // Bestandszaehler der Startseite
     [InlineData("/api/v1/metrics/getMetrics")]   // Schreibweise darf keine Rolle spielen

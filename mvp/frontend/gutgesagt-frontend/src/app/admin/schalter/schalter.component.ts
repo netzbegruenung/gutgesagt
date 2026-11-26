@@ -32,6 +32,7 @@ const TITEL: Record<string, string> = {
   gartenansicht: 'Gartenansicht',
   kopiert_erfolg: 'Erfolgstext nach dem Kopieren',
   konter_probe: 'Konter-Probe',
+  saal_spruch: 'Saal-Spruch „Heute im Saal gehört:“',
   luecke_zu_gross: '„Lücke zu!“ als großer Moment',
   einwilligung_im_gewinn: 'Einwilligung im passenden Moment',
   naechster_schritt: '„Dein nächster Schritt“',
