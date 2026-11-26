@@ -10,9 +10,20 @@ import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 import { By } from '@angular/platform-browser';
 import { BehaviorSubject, of } from 'rxjs';
+import { WritableSignal, signal } from '@angular/core';
 import { HOT_TAKES } from '../shared/startbeispiel';
+import { FunktionenService } from '../services/funktionen.service';
 
-import { SCHMAL, SUCHANFRAGEN_ABSCHNITT, SUCHHINWEIS, SUCHHINWEIS_KURZ, SearchComponent } from './search.component';
+import {
+  HINWEISZEILE_KURZ,
+  HINWEISZEILE_MEHR,
+  HINWEIS_MEHR_KNOPF,
+  SCHMAL,
+  SUCHANFRAGEN_ABSCHNITT,
+  SUCHHINWEIS,
+  SUCHHINWEIS_KURZ,
+  SearchComponent,
+} from './search.component';
 
 describe('SearchComponent', () => {
   let component: SearchComponent;
@@ -20,8 +31,11 @@ describe('SearchComponent', () => {
   let navigationServiceMock: any;
   /** Bildschirmbreite fuer die Komponente: matches = unter 600 px. */
   let breite$: BehaviorSubject<BreakpointState>;
+  /** Schalter hinweiszeile_kurz; von Haus aus aus wie auf dem Server. */
+  let hinweiszeileKurz: WritableSignal<boolean>;
 
   beforeEach(async () => {
+    hinweiszeileKurz = signal(false);
     navigationServiceMock = jasmine.createSpyObj('NavigationService', ['navigateToResult']);
     breite$ = new BehaviorSubject<BreakpointState>({ matches: false, breakpoints: {} });
 
@@ -33,6 +47,10 @@ describe('SearchComponent', () => {
       ],
       providers: [
         { provide: NavigationService, useValue: navigationServiceMock },
+        {
+          provide: FunktionenService,
+          useValue: { an: (name: string) => (name === 'hinweiszeile_kurz' ? hinweiszeileKurz : signal(false)) },
+        },
         {
           provide: BreakpointObserver,
           // Material fragt selbst weitere Medienabfragen ab (etwa forced-colors)
@@ -103,6 +121,85 @@ describe('SearchComponent', () => {
       expect(SUCHHINWEIS_KURZ).toBe('Suchtexte speichern wir ohne deinen Namen.');
       const link = hinweis().querySelector('a') as HTMLAnchorElement;
       expect(link.getAttribute('href')).toBe(`/datenschutz#${SUCHANFRAGEN_ABSCHNITT}`);
+    });
+  });
+
+  // Designwichtel Nr. 5: eine Zeile statt zwei, hinter dem Schalter hinweiszeile_kurz
+  describe('kurze Hinweiszeile (Schalter hinweiszeile_kurz)', () => {
+    function text(el: Element): string {
+      return el.textContent!.replace(/\s+/g, ' ').trim();
+    }
+    function kurz(): HTMLElement | null {
+      return fixture.nativeElement.querySelector('.such-hinweis-kurz .such-hinweis');
+    }
+    function mehr(): HTMLElement {
+      return fixture.nativeElement.querySelector('.such-hinweis-mehr');
+    }
+    function anschalten(): void {
+      hinweiszeileKurz.set(true);
+      fixture.detectChanges();
+    }
+
+    it('ist mit Schalter aus unsichtbar: der abgestimmte Wortlaut bleibt', () => {
+      expect(kurz()).toBeNull();
+      expect(mehr()).toBeNull();
+      expect(text(fixture.nativeElement.querySelector('.such-hinweis'))).toBe(`${SUCHHINWEIS} Mehr dazu im Datenschutz`);
+      const feld = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+      expect(feld.getAttribute('aria-describedby')).toBe(fixture.nativeElement.querySelector('.such-hinweis').id);
+    });
+
+    it('zeigt mit Schalter an eine Zeile „Ohne Namen gespeichert · Datenschutz“ mit Link auf den Abschnitt', () => {
+      anschalten();
+      expect(HINWEISZEILE_KURZ).toBe('Ohne Namen gespeichert');
+      expect(text(kurz()!)).toBe('Ohne Namen gespeichert · Datenschutz');
+      const link = kurz()!.querySelector('a') as HTMLAnchorElement;
+      expect(link.textContent!.trim()).toBe('Datenschutz');
+      expect(link.getAttribute('href')).toBe(`/datenschutz#${SUCHANFRAGEN_ABSCHNITT}`);
+      // Nie „anonym“: Proxy-Logs halten Suchtexte mit IP befristet
+      expect(text(kurz()!).toLowerCase()).not.toContain('anonym');
+      expect(fixture.nativeElement.querySelectorAll('.such-hinweis').length).toBe(2);
+    });
+
+    it('behält den Satz zur Veröffentlichung: zugeklappt, per Knopf auf, für Screenreader immer am Feld', () => {
+      anschalten();
+      expect(HINWEISZEILE_MEHR).toBe('Nach Prüfung können Suchtexte öffentlich werden.');
+      const knopf = fixture.nativeElement.querySelector('.such-hinweis-kurz button') as HTMLButtonElement;
+      expect(HINWEIS_MEHR_KNOPF).toBe('Was mit Suchtexten passiert');
+      expect(knopf.getAttribute('aria-label')).toBe(HINWEIS_MEHR_KNOPF);
+      expect(knopf.getAttribute('aria-expanded')).toBe('false');
+      expect(knopf.getAttribute('aria-controls')).toBe(mehr().id);
+      expect(mehr().hidden).toBeTrue();
+      expect(text(mehr())).toBe(HINWEISZEILE_MEHR);
+
+      const feld = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+      expect(feld.getAttribute('aria-describedby')).toBe(`${kurz()!.id} ${mehr().id}`);
+
+      knopf.click();
+      fixture.detectChanges();
+      expect(knopf.getAttribute('aria-expanded')).toBe('true');
+      expect(mehr().hidden).toBeFalse();
+
+      knopf.click();
+      fixture.detectChanges();
+      expect(mehr().hidden).toBeTrue();
+    });
+
+    it('gilt auch über den Treffern (compactMode), dort ohne Info-Knopf und Satz wie seit E5', () => {
+      fixture.componentRef.setInput('compactMode', true);
+      anschalten();
+      expect(text(kurz()!)).toBe('Ohne Namen gespeichert · Datenschutz');
+      expect(fixture.nativeElement.querySelector('.such-hinweis-kurz button')).toBeNull();
+      expect(mehr()).toBeNull();
+      const feld = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+      expect(feld.getAttribute('aria-describedby')).toBe(kurz()!.id);
+    });
+
+    it('geht beim Ausschalten ohne Neuladen zurück auf den abgestimmten Wortlaut', () => {
+      anschalten();
+      hinweiszeileKurz.set(false);
+      fixture.detectChanges();
+      expect(kurz()).toBeNull();
+      expect(text(fixture.nativeElement.querySelector('.such-hinweis'))).toBe(`${SUCHHINWEIS} Mehr dazu im Datenschutz`);
     });
   });
 

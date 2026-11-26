@@ -1524,7 +1524,11 @@ describe('ResultViewComponent: Testeingabe', () => {
   }
 
   // Keine weiteren Aufrufe, etwa an andere Endpunkte, die eine Aussage anlegen koennten.
-  afterEach(() => http.verify());
+  // Ausgenommen der lesende Schalterstand (/api/v1/funktionen), den das Suchfeld fragt.
+  afterEach(() => {
+    http.match((r) => r.url.endsWith('/api/v1/funktionen'));
+    http.verify();
+  });
 
   it('zeigt keine spaete Antwort einer vorigen Suche unter der Karte', async () => {
     const { harness, seite } = await oeffnen('Klimaschutz ist zu teuer');

@@ -26,6 +26,7 @@ const TITEL: Record<string, string> = {
   vertrauenszeile: 'Vertrauenszeile vor dem Anmelden',
   feedback_gestoert: 'Knopf „Was hat dich gestört?“',
   dse_kurzfassung: 'Kurzfassung der Datenschutzerklärung',
+  hinweiszeile_kurz: 'Kurze Hinweiszeile unter dem Suchknopf',
   team_fortschritt: 'Team-Fortschritt',
   team_quests: 'Team-Quests',
   teams: 'Teams über Einladungen',

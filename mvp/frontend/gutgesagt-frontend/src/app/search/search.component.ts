@@ -1,8 +1,9 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, ChangeDetectionStrategy, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, ChangeDetectionStrategy, NgZone, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { HOT_TAKES } from '../shared/startbeispiel';
 import { NavigationService } from '../services/navigation.service';
 import { LoggingService } from '../services/logging.service';
 import { SearchService } from '../services/search.service';
+import { FunktionenService } from '../services/funktionen.service';
 import { Router, RouterLink } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { TextFieldModule } from '@angular/cdk/text-field';
@@ -30,6 +31,22 @@ export const SUCHHINWEIS = 'Suchtexte speichern wir ohne deinen Namen. Nach Prü
  * Hinweis schob die erste Antwort mobil aus dem ersten Bildschirm. Der Start behält ihn ganz.
  */
 export const SUCHHINWEIS_KURZ = 'Suchtexte speichern wir ohne deinen Namen.';
+/**
+ * Hinter dem Schalter `hinweiszeile_kurz` (Designwichtel Nr. 5): eine Zeile statt zwei,
+ * dahinter der Link „Datenschutz“. Zutreffend, weil Suchtexte auch bei Angemeldeten nicht an
+ * der Kennung hängen: Die Aussage zur Suche trägt den Systemautor (services/search/
+ * search_query_statement.py), das Suchereignis nur ein Tagespseudonym ohne Text. Nie „anonym“:
+ * Proxy-Logs halten Suchtexte mit IP befristet (siehe SUCHHINWEIS).
+ */
+export const HINWEISZEILE_KURZ = 'Ohne Namen gespeichert';
+/**
+ * Der zweite Satz von SUCHHINWEIS bleibt auf dem Start erhalten: aufklappbar hinter dem Info-Knopf
+ * HINWEIS_MEHR_KNOPF, und Screenreader lesen ihn mit dem Feld immer vor (aria-describedby auf die
+ * zugeklappte Zeile). Über den Treffern fehlt er wie seit E5 (SUCHHINWEIS_KURZ).
+ */
+export const HINWEISZEILE_MEHR = 'Nach Prüfung können Suchtexte öffentlich werden.';
+/** Name des Info-Knopfs, eigenständig verständlich auch in der Liste der Bedienelemente. */
+export const HINWEIS_MEHR_KNOPF = 'Was mit Suchtexten passiert';
 /** Sprungmarke des Abschnitts „Deine Suchanfragen“ in der Datenschutzerklärung. */
 export const SUCHANFRAGEN_ABSCHNITT = 'suchanfragen';
 /** Ab hier abwärts wird das Feld mehrzeilig (Designrunde 18.11.). */
@@ -104,8 +121,24 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.compactMode ? SUCHHINWEIS_KURZ : SUCHHINWEIS;
   }
   readonly suchanfragenAbschnitt = SUCHANFRAGEN_ABSCHNITT;
+  /** Eine Zeile „Ohne Namen gespeichert · Datenschutz“ statt zwei (Schalter, Standard aus). */
+  readonly hinweiszeileKurz = inject(FunktionenService).an('hinweiszeile_kurz');
+  readonly hinweiszeile = HINWEISZEILE_KURZ;
+  readonly hinweiszeileMehr = HINWEISZEILE_MEHR;
+  readonly mehrKnopfName = HINWEIS_MEHR_KNOPF;
+  /** Ob der Satz zur Veröffentlichung unter der kurzen Zeile aufgeklappt ist. */
+  mehrOffen = false;
   /** Screenreader lesen den Hinweis mit dem Feld vor (aria-describedby). */
-  readonly hinweisId = `such-hinweis-${naechsterHinweis++}`;
+  private readonly hinweisNr = naechsterHinweis++;
+  readonly hinweisId = `such-hinweis-${this.hinweisNr}`;
+  readonly hinweisMehrId = `such-hinweis-mehr-${this.hinweisNr}`;
+  /**
+   * Mit kurzer Zeile auf dem Start auch der zugeklappte Satz: Direkt per aria-describedby verwiesen,
+   * liest ihn ein Screenreader trotz hidden vor, so geht der Hinweis auf die Veröffentlichung nicht verloren.
+   */
+  get beschreibungIds(): string {
+    return this.hinweiszeileKurz() && !this.compactMode ? `${this.hinweisId} ${this.hinweisMehrId}` : this.hinweisId;
+  }
   get feldName(): string {
     return this.compactMode ? SUCHFELD_NAME_KOMPAKT : SUCHFELD_NAME;
   }
