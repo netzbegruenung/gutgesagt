@@ -170,8 +170,13 @@ describe('NichtDabeiComponent', () => {
     const seite = starten();
     expect(seite.querySelector('.antworten-zahl')).withContext('mit Treffern nicht').toBeNull();
     ohneTreffer();
-    const zahlen = Array.from(seite.querySelectorAll('.antworten-zahl')).map((e) => (e.textContent ?? '').trim());
-    expect(zahlen).toEqual(['2 Antworten', '1 Antwort']);
+    const links = Array.from(seite.querySelectorAll<HTMLAnchorElement>('.antworten-zahl'));
+    expect(links.map((e) => (e.textContent ?? '').replace(/\s+/g, ' ').trim())).toEqual(['2 Antworten ansehen →', '1 Antwort ansehen →']);
+    // Eigener Link, nicht mehr im grauen Kasten versteckt (UX-Review 26.11.); fuehrt zu den Antworten
+    expect(links[0].tagName).toBe('A');
+    expect(links[0].closest('.aehnliche-aussage')).toBeNull();
+    expect(links[0].getAttribute('href')).toContain('/result?searchQuery=');
+    expect(links[0].getAttribute('aria-label')).toContain('2 Antworten ansehen: ');
   });
 
   it('zeigt ohne Antworten keine Zahl', () => {
@@ -192,9 +197,9 @@ describe('NichtDabeiComponent', () => {
     ohneTreffer();
 
     const link = seite.querySelector<HTMLAnchorElement>('.aehnliche .selbst-beantworten')!;
-    expect(link.textContent).toContain('Antworten');
+    expect(link.textContent?.trim()).toBe('Darauf antworten');
     expect(link.getAttribute('href')).toBe('/workflow/add-commentary?aussage=11111111-2222-4333-8444-555555555555');
-    expect(link.getAttribute('aria-label')).toBe('Antworten: Wärmepumpen lohnen sich nicht');
+    expect(link.getAttribute('aria-label')).toBe('Darauf antworten: Wärmepumpen lohnen sich nicht');
     // Vor dem Knopf fuer die eigene Formulierung
     const alle = Array.from(seite.querySelectorAll('.selbst-beantworten, button.neu'));
     expect(alle[0]).toBe(link);

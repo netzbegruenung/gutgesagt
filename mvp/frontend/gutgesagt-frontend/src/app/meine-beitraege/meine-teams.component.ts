@@ -12,11 +12,13 @@ import { AUS_NACHLADEN_MS, NACHLADEN_MS, nachladeStrom, ohneRechte } from '../sh
 import { TeamPilleComponent } from '../shared/teams/team-pille.component';
 import {
   MEINE_TEAMS_TITEL,
+  TEAM_ERSTE_WOCHE,
   TEAM_VERLASSEN,
   TEAM_WAECHST_NOCH,
   teamQuestGeschafft,
   teamQuestZiel,
   teamWocheTitel,
+  wocheVorBeitritt,
 } from '../shared/team-texte';
 import {
   BestaetigungsDialogComponent,
@@ -76,6 +78,7 @@ export class MeineTeamsComponent implements OnInit {
   readonly questGeschafft = teamQuestGeschafft;
   readonly wocheTitel = teamWocheTitel;
   readonly questZiel = teamQuestZiel;
+  readonly ersteWoche = TEAM_ERSTE_WOCHE;
 
   private readonly teamsService = inject(TeamsService);
   private readonly dialog = inject(MatDialog);
@@ -104,6 +107,24 @@ export class MeineTeamsComponent implements OnInit {
       this.cdr.markForCheck();
     });
     this.destroyRef.onDestroy(() => abo.unsubscribe());
+  }
+
+  /** Die Woche ab ``montag`` endete vor dem eigenen Beitritt: dann „Eure erste gemeinsame Woche läuft.“ */
+  vorBeitritt(montag: string, team: MeinTeam): boolean {
+    return wocheVorBeitritt(montag, team.eingetreten_am);
+  }
+
+  /**
+   * Die Woche vor der Quest-Woche ``montag`` endete vor dem eigenen Beitritt: dann kein
+   * „Euer Wochenziel letzte Woche ist geschafft“ aus der Zeit vor einem selbst.
+   */
+  vorigeVorBeitritt(montag: string | null, team: MeinTeam): boolean {
+    const teile = /^(\d{4})-(\d{2})-(\d{2})$/.exec(montag ?? '');
+    if (!teile) {
+      return false;
+    }
+    const vorige = new Date(Date.UTC(+teile[1], +teile[2] - 1, +teile[3] - 7)).toISOString().slice(0, 10);
+    return wocheVorBeitritt(vorige, team.eingetreten_am);
   }
 
   /** Bei Schalter teams aus nur mit eigenen Teams, etwa nachdem das letzte verlassen wurde. */

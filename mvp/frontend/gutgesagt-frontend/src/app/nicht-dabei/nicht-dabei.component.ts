@@ -75,6 +75,8 @@ export class NichtDabeiComponent implements OnInit, OnChanges {
   @Output() aehnlicheGeladen = new EventEmitter<StatementSearchResult[]>();
 
   readonly kommentarPfad = FORMULAR_PFAD.commentary;
+  /** Schreiblink unter der ähnlichen Aussage; nicht „Antworten“ wie der Knopf darunter (UX-Review 26.11.). */
+  readonly daraufAntworten = 'Darauf antworten';
   readonly titelId = `nicht-dabei-titel-${++naechsteNummer}`;
   readonly listenId = `aehnliche-titel-${naechsteNummer}`;
 
@@ -146,6 +148,11 @@ export class NichtDabeiComponent implements OnInit, OnChanges {
 
   antwortenText(anzahl: number): string {
     return anzahl === 1 ? '1 Antwort' : `${anzahl} Antworten`;
+  }
+
+  /** Der Link zu den vorhandenen Antworten der ähnlichen Aussage (UX-Review 26.11.). */
+  antwortenAnsehen(anzahl: number): string {
+    return `${this.antwortenText(anzahl)} ansehen`;
   }
 
   /** Query-Parameter, um im Kommentarformular auf diese Aussage zu antworten. */

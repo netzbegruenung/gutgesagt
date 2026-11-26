@@ -15,9 +15,12 @@
 </app-loading-spinner>
 
 <!-- Error Message -->
+<!-- Nie der rohe HTTP-Text (UX-Review 26.11.); bei 0/408/429/5xx versucht die Seite es selbst neu -->
 <app-error-message
     [error]="ohneSuche ? '' : ((error$ | async) || '')"
+    [title]="sucheHaktTitel"
     [showRetry]="true"
+    [retryLabel]="nochmalSuchen"
     [retryAction]="retrySearch">
 </app-error-message>
 

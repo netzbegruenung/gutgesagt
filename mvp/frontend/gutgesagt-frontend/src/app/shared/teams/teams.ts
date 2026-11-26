@@ -1,10 +1,14 @@
 // Grenzen und Motive wie im Backend (domain/teams.py, api/v1/einladungen.py).
 export const TEAM_NAME_MAX = 40;
 export const TEAM_SAISON_MAX = 20;
-// Teamname und Saison stehen an Namen und in Pillen: kein Markup, keine Schraegstriche,
-// keine Steuerzeichen (TEAM_VERBOTEN im Backend).
+// Der Teamname steht an Namen und in Pillen: kein Markup, keine Schraegstriche, keine
+// Steuerzeichen (TEAM_VERBOTEN im Backend).
 // eslint-disable-next-line no-control-regex
 const TEAM_VERBOTEN = /[<>&"\\/\x00-\x1f\x7f]/;
+// Die Saison wie bei den Saisons (SAISON_VERBOTEN in domain/teams.py): der Schraegstrich
+// geht („Winter 26/27“), damit jede angelegte Saison auch am Teamlink geht.
+// eslint-disable-next-line no-control-regex
+const SAISON_VERBOTEN = /[<>&"\\\x00-\x1f\x7f]/;
 
 /** Hinweis zum Teamnamen, falls der Server keinen mitschickt (teamname_hinweis); wie TEAMNAME_HINWEIS im Backend. */
 export const TEAMNAME_HINWEIS =
@@ -59,10 +63,16 @@ export function motivName(schluessel: string | null | undefined): string | null 
   return TEAM_MOTIVE.find((m) => m.schluessel === schluessel)?.name ?? null;
 }
 
-/** Ob Teamname bzw. Saison so durchgehen, wie das Backend sie prüft; leer zählt nicht. */
+/** Ob der Teamname so durchgeht, wie das Backend ihn prüft; leer zählt nicht. */
 export function teamTextGueltig(text: string, max: number): boolean {
   const t = text.trim().split(/\s+/).join(' ');
   return t.length > 0 && t.length <= max && !TEAM_VERBOTEN.test(text);
+}
+
+/** Ob die Saison am Teamlink so durchgeht, wie das Backend sie prüft (Schrägstrich erlaubt). */
+export function teamSaisonGueltig(text: string, max: number): boolean {
+  const t = text.trim().split(/\s+/).join(' ');
+  return t.length > 0 && t.length <= max && !SAISON_VERBOTEN.test(text);
 }
 
 /** Ein Team am Anzeigenamen (autor_teams): nur aktuelle Saison, ohne Nummer. */

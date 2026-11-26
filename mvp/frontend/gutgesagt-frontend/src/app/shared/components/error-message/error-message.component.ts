@@ -20,7 +20,7 @@ import { MatButtonModule } from '@angular/material/button';
         </div>
         <button mat-button color="primary" *ngIf="showRetry" (click)="onRetry()">
           <mat-icon>refresh</mat-icon>
-          Erneut versuchen
+          {{ retryLabel || 'Erneut versuchen' }}
         </button>
       </mat-card-content>
     </mat-card>
@@ -55,6 +55,8 @@ export class ErrorMessageComponent {
   @Input() error: string = '';
   @Input() title: string = '';
   @Input() showRetry: boolean = false;
+  /** Beschriftung des Knopfs; leer: „Erneut versuchen“. */
+  @Input() retryLabel: string = '';
   @Input() retryAction?: () => void;
 
   onRetry(): void {

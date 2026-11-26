@@ -31,6 +31,7 @@ import {
   TEAM_SAISON_MAX,
   TeamMotiv,
   motivBild,
+  teamSaisonGueltig,
   teamTextGueltig,
 } from '../../shared/teams/teams';
 
@@ -160,7 +161,7 @@ export class EinladungenComponent implements OnInit {
   }
 
   get teamSaisonUngueltig(): boolean {
-    return this.mitTeam && !teamTextGueltig(this.teamSaison, TEAM_SAISON_MAX);
+    return this.mitTeam && !teamSaisonGueltig(this.teamSaison, TEAM_SAISON_MAX);
   }
 
   /** Team nach Gruppe ohne Datum der Zustimmung, oder mit einem Datum in der Zukunft. */

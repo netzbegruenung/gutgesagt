@@ -1,8 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { LoginSelectorComponent, VERTRAUENSZEILE, VERTRAUENSZEILE_SCHALTER, WARTELISTE_TEXT } from './login-selector.component';
+import { BDK_KONTO_HINWEIS, LoginSelectorComponent, VERTRAUENSZEILE, VERTRAUENSZEILE_SCHALTER, WARTELISTE_TEXT } from './login-selector.component';
 import { FunktionenService } from '../services/funktionen.service';
+import { KampagnenwortService } from '../shared/kampagnenwort.service';
 import { ORGANISATION } from '../shared/organisation';
 import { environment } from '../../environments/environment';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
@@ -322,5 +323,60 @@ describe('LoginSelectorComponent: Vertrauenszeile', () => {
     vertrauenszeile.set(false);
     fixture.detectChanges();
     expect(zeile()).toBeNull();
+  });
+});
+
+// UX-Review 26.11.2026, Befund 4: mit ?k=bdk zuerst der Teamlink vom Stand, nur mit Schalter k_begruessung
+describe('LoginSelectorComponent: Hinweis für die BDK', () => {
+  let fixture: ComponentFixture<LoginSelectorComponent>;
+  let kBegruessung: WritableSignal<boolean>;
+
+  function starten(wort: string | null): void {
+    kBegruessung = signal(true);
+    TestBed.configureTestingModule({
+      imports: [LoginSelectorComponent, HttpClientTestingModule, BrowserAnimationsModule],
+      providers: [
+        provideRouter([]),
+        { provide: KampagnenwortService, useValue: { wort } },
+        { provide: FunktionenService, useValue: {
+          an: (name: string) => (name === 'k_begruessung' ? kBegruessung.asReadonly() : signal(false).asReadonly())
+        } }
+      ]
+    });
+    fixture = TestBed.createComponent(LoginSelectorComponent);
+    fixture.detectChanges();
+  }
+
+  function hinweis(): HTMLElement | null {
+    return fixture.nativeElement.querySelector('[data-testid="bdk-hinweis"]');
+  }
+
+  it('steht mit ?k=bdk als erster Weg unter „Noch kein Konto?“', () => {
+    starten('bdk');
+    const el = hinweis()!;
+    expect(el.textContent).toContain('Auf der BDK?');
+    expect(el.textContent).toContain(
+      'Am Gut-gesagt-Stand bekommst du einen Teamlink, damit legst du dein Konto in einer Minute an.',
+    );
+    expect(BDK_KONTO_HINWEIS.titel).toBe('Auf der BDK?');
+    expect(fixture.nativeElement.querySelector('.registration-option')).toBe(el);
+  });
+
+  it('fehlt mit Schalter k_begruessung aus, und kommt ohne Neuladen nach', () => {
+    starten('bdk');
+    kBegruessung.set(false);
+    fixture.detectChanges();
+    expect(hinweis()).toBeNull();
+    kBegruessung.set(true);
+    fixture.detectChanges();
+    expect(hinweis()).not.toBeNull();
+  });
+
+  it('fehlt ohne Kampagnenwort und bei anderen Wörtern', () => {
+    starten(null);
+    expect(hinweis()).toBeNull();
+    TestBed.resetTestingModule();
+    starten('sticker');
+    expect(hinweis()).toBeNull();
   });
 });
