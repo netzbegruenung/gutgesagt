@@ -64,6 +64,7 @@ import { TEAMS_AM_NAMEN, TeamAmNamen } from '../shared/teams/teams';
 
 const NEU_STUNDEN = 24;
 const BELIEBT_AB = 5;
+const BELIEBT_TOOLTIP = `Mindestens ${BELIEBT_AB}-mal genutzt`;
 
 /** Symbol je Plattform vor der Quelle der Einwurf-Karte (quellenSymbol). */
 const QUELLEN_SYMBOLE: Record<Plattform, string> = {
@@ -228,6 +229,7 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
   nutzungAnimiert = false;
   istNeu = false;
   istBeliebt = false;
+  readonly beliebtTooltip = BELIEBT_TOOLTIP;
   statementOffen = false;
   /** Der gewaehlte Reiter; vorgewaehlt die kuerzeste Fassung, die auf X passt (#641). */
   gewaehlteFassung: Fassung = 'mittel';

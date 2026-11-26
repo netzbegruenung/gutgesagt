@@ -52,6 +52,10 @@ def _client(**schalter) -> TestClient:
     app = FastAPI()
     app.include_router(usage_router, prefix="/api/v1/usage")
     werte = dict(gepostet_aktiv=True, startkonten="start-9")
+    # Wirkungs-Echo und Danke-Knopf wirken nur zusammen (services/schalter_service.py,
+    # NUR_ZUSAMMEN): wer einen einschaltet, bekommt hier den Partner dazu.
+    if schalter.get("wirkungs_echo_aktiv") or schalter.get("danke_knopf_aktiv"):
+        werte.update(wirkungs_echo_aktiv=True, danke_knopf_aktiv=True)
     werte.update(schalter)
     app.dependency_overrides[get_settings] = lambda: Settings(**werte)
 

@@ -96,8 +96,9 @@
             </mat-menu>
             <!-- Als Wort statt Symbol mit Tooltip: am Handy gibt es keinen Tooltip (#616) -->
             <span class="badge badge-neu" *ngIf="istVoll && istNeu">neu</span>
+            <!-- Wort plus neutrales Motiv: 🔥 heisst bei verdigado "brauche Hilfe", nie Deko -->
             <span class="badge badge-beliebt" *ngIf="istVoll && istBeliebt"
-                  matTooltip="Beliebt" matTooltipPosition="left">🔥</span>
+                  [matTooltip]="beliebtTooltip" matTooltipPosition="left"><mat-icon aria-hidden="true">trending_up</mat-icon>beliebt</span>
             <!-- Die Nutzung steht beschriftet in der Meta-Zeile unten ("1× genutzt", #599):
                  Als Kreis "1×" war sie nicht zu deuten, als Pille hier kuerzte sie den Titel. -->
         </div>

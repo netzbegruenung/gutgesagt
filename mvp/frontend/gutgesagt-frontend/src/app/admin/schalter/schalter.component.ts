@@ -55,17 +55,31 @@ const TITEL: Record<string, string> = {
   spielgefuehl_buehne: 'Spielgefühl in drei Stufen',
 };
 
-/** Schalter, die nur zusammen mit einem anderen wirken: Name → [Voraussetzung, Anzeige]. */
-const VORAUSSETZUNG: Record<string, [string, string]> = {
-  abzeichen_sichtbar: ['punkte', 'Punkte'],
-  teams_oeffentlich: ['teams', 'Teams'],
-  teamlink_vertrauenssatz: ['teams', 'Teams'],
-  // Kette wie im Backend (schalter_service._wirksam): teams → team_fortschritt → team_quests
-  team_fortschritt: ['teams', 'Teams'],
-  team_quests: ['team_fortschritt', 'Team-Fortschritt'],
-  danke_ohne_konto: ['danke_knopf', 'Danke-Knopf'],
-  gepostet_ohne_konto: ['gepostet', 'Rückfrage „Ja, gepostet“'],
-  rangliste: ['punkte', 'Punkte'],
+/**
+ * Schalter, die nur zusammen mit anderen wirken: Name → [[Voraussetzung, Anzeige], …], wie im
+ * Backend (schalter_service._wirksam). Die Zustandszeile nennt die erste, die nicht wirkt.
+ */
+const VORAUSSETZUNG: Record<string, [string, string][]> = {
+  abzeichen_sichtbar: [['punkte', 'Punkte']],
+  teams_oeffentlich: [['teams', 'Teams']],
+  // Der Satz verspricht eine Team-Summe: Teams und Team-Fortschritt
+  teamlink_vertrauenssatz: [['teams', 'Teams'], ['team_fortschritt', 'Team-Fortschritt']],
+  // Kette: teams → team_fortschritt → team_quests
+  team_fortschritt: [['teams', 'Teams']],
+  team_quests: [['team_fortschritt', 'Team-Fortschritt']],
+  // Wirkungs-Echo und Danke-Knopf nur zusammen (Jura: der Absatz nennt beide Summen)
+  wirkungs_echo: [['danke_knopf', 'Danke-Knopf']],
+  danke_knopf: [['wirkungs_echo', 'Wirkungs-Echo']],
+  danke_ohne_konto: [['danke_knopf', 'Danke-Knopf']],
+  gepostet_ohne_konto: [['gepostet', 'Rückfrage „Ja, gepostet“']],
+  rangliste: [['punkte', 'Punkte']],
+  // Die Spielgefühl-Frage gibt es nur mit Punkten
+  spielgefuehl_buehne: [['punkte', 'Punkte']],
+};
+
+/** Schalter, die nicht wirken, solange ein anderer wirkt: Name → [anderer, Anzeige, Folge]. */
+const AUSSCHLUSS: Record<string, [string, string, string]> = {
+  abzeichen_sichtbar: ['spielgefuehl_buehne', 'Spielgefühl in drei Stufen', 'Abzeichen dann nur in der Rangliste'],
 };
 
 /** Status je Schalter für Pille und Filter (siehe status()). */
@@ -221,6 +235,10 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
               <p *ngIf="!s.obergrenze" class="gesperrt" data-testid="gesperrt">
                 Gesperrt: Erst wenn der Server ihn erlaubt, lässt er sich hier einschalten.
               </p>
+              <p *ngIf="kopplung(s) as k" class="kopplung">
+                <mat-icon aria-hidden="true">link</mat-icon>
+                <span data-testid="kopplung">{{ k }}</span>
+              </p>
               <p *ngIf="s.dsfa_hinweis" class="dsfa" data-testid="dsfa-hinweis">
                 <mat-icon aria-hidden="true">gavel</mat-icon>
                 {{ s.dsfa_hinweis }}
@@ -303,7 +321,7 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
     .details { padding: 0 0 8px; }
     .zustand { font-weight: 500; color: var(--text-leise); }
     .zustand.wirkt { color: inherit; }
-    .obergrenze, .dsfa { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .obergrenze, .dsfa, .kopplung { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .obergrenze code { font-size: 0.8125rem; color: var(--text-leise); }
     .obergrenze.aus, .gesperrt { color: var(--text-leise); }
     .dsfa {
@@ -441,12 +459,35 @@ export class SchalterComponent implements OnInit {
     if (s.admin_wert && !s.obergrenze) {
       return `${admin} · wirksam: aus (Server erlaubt nicht)`;
     }
-    const [voraus, anzeige] = VORAUSSETZUNG[s.name] ?? [];
-    const basis = voraus ? this.liste?.find((v) => v.name === voraus) : undefined;
-    if (s.admin_wert && basis && !basis.wirksam) {
-      return `${admin} · wirksam: aus, weil ${anzeige} aus`;
+    if (s.admin_wert) {
+      const fehlt = (VORAUSSETZUNG[s.name] ?? []).find(([name]) => this.schalter(name)?.wirksam === false);
+      if (fehlt) {
+        return `${admin} · wirksam: aus, weil ${fehlt[1]} aus`;
+      }
+      const [anderer, anzeige, folge] = AUSSCHLUSS[s.name] ?? [];
+      if (anderer && this.schalter(anderer)?.wirksam) {
+        return `${admin} · wirksam: aus, weil ${anzeige} an (${folge})`;
+      }
     }
     return `${admin} · wirksam: aus`;
+  }
+
+  /** Mit welchen Schaltern dieser zusammenhängt, für die Details; null ohne Kopplung. */
+  kopplung(s: Schalter): string | null {
+    const teile: string[] = [];
+    const voraus = VORAUSSETZUNG[s.name] ?? [];
+    if (voraus.length > 0) {
+      teile.push(`Wirkt nur zusammen mit: ${voraus.map(([, anzeige]) => anzeige).join(', ')}.`);
+    }
+    const ausschluss = AUSSCHLUSS[s.name];
+    if (ausschluss) {
+      teile.push(`Wirkt nicht, solange ${ausschluss[1]} an ist (${ausschluss[2]}).`);
+    }
+    return teile.length > 0 ? teile.join(' ') : null;
+  }
+
+  private schalter(name: string): Schalter | undefined {
+    return this.liste?.find((v) => v.name === name);
   }
 
   umschalten(s: Schalter, ereignis: MatSlideToggleChange): void {
