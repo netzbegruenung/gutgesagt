@@ -95,19 +95,24 @@ def test_rangliste_nur_mit_punkten():
 def test_einschalt_hinweise_laut_issue():
     stand = {s.name: s for s in _dienst({}).stand(ALLE_AN)}
 
-    assert "V31" in stand["wirkungs_echo"].dsfa_hinweis
-    assert "V31" in stand["danke_knopf"].dsfa_hinweis
-    assert "Besuchermerkmal" in stand["danke_ohne_konto"].dsfa_hinweis
-    assert "Jura" in stand["rangliste"].dsfa_hinweis
-    assert (
-        stand["naechster_schritt"].dsfa_hinweis
-        == "Einschalten erst nach dem DSFA-Nachtrag Spielgefühl (V10)"
-    )
-    # Jura vorlaeufig 26.11. (#362): Bedingungen stehen am Schalter, endgueltig 27.11.
+    # Jura vorlaeufig 26.11. (interner Test): DSE-Absatz drin, rechtlich noch offen
+    for name in (
+        "wirkungs_echo",
+        "danke_knopf",
+        "rangliste",
+        "naechster_schritt",
+        "null_treffer_anzahl",
+    ):
+        assert stand[name].dsfa_hinweis.startswith(
+            "Jura vorläufig ok 26.11. (interner Test), DSE-Absatz drin"
+        ), name
+        assert stand[name].wartet_auf_recht is True
+    # Danke ohne Konto erfuellt Variante B nicht (Tages-Pruefwert aus dem Besuchermerkmal)
+    assert stand["danke_ohne_konto"].dsfa_hinweis.startswith("Nicht einschalten")
+    assert "Variante B" in stand["danke_ohne_konto"].dsfa_hinweis
+    assert "ab 10 Teilnehmenden" in stand["rangliste"].dsfa_hinweis
     assert "N ≥ 3" in stand["null_treffer_anzahl"].dsfa_hinweis
     assert "„N-mal gesucht“" in stand["null_treffer_anzahl"].dsfa_hinweis
-    assert "Suchen ohne Treffer" in stand["null_treffer_anzahl"].dsfa_hinweis
-    assert stand["null_treffer_anzahl"].wartet_auf_recht is True
     for name in (
         "saison_ziel",
         "gartenansicht",
@@ -122,11 +127,14 @@ def test_einschalt_hinweise_laut_issue():
 
 
 def test_oeffentlich_nur_ohne_eigenen_angemeldeten_endpunkt():
-    """Wirkungs-Echo und Rangliste sehen nur Angemeldete ueber eigene Abrufe."""
+    """
+    Wirkungs-Echo und Rangliste sehen nur Angemeldete ueber eigene Abrufe; den wirksamen
+    Wert (ohne Daten) meldet GET /api/v1/funktionen trotzdem, weil die
+    Datenschutzerklaerung ihre Absaetze daran haengt (Jura 26.11.).
+    """
     oeffentlich = set(oeffentliche_schalter())
 
-    assert "wirkungs_echo" not in oeffentlich
-    assert "rangliste" not in oeffentlich
+    assert {"wirkungs_echo", "rangliste", "danke_knopf"} <= oeffentlich
     assert {
         "kopiert_erfolg",
         "konter_probe",

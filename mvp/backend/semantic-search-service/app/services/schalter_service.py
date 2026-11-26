@@ -32,6 +32,15 @@ DSFA_HINWEIS = (
     "Vor dem Einschalten auf Prod: DSFA beschlossen (docs/DSFA.md Abschnitt 7)"
 )
 
+# Vorlaeufige juristische Einschaetzung vom 26.11.2026 fuer einen vereinsinternen Test
+# (Einladungen bis zum Go nur an Mitglieder): Diese Schalter duerfen dafuer an, ihr Absatz
+# steht in der Datenschutzerklaerung und haengt am Schalter. Rechtlich freigegeben sind
+# sie damit nicht; vor der Ausweitung auf Vorhut oder BDK bleibt das Go des Vorstands
+# noetig (Beschluss 25.11.).
+JURA_26_11 = "Jura vorläufig ok 26.11. (interner Test)"
+JURA_VORLAEUFIG = f"{JURA_26_11}, DSE-Absatz drin"
+GO_VOR_AUSWEITUNG = "vor Vorhut/BDK das Go des Vorstands"
+
 # Gruppen der Admin-Seite "Schalter", in dieser Reihenfolge (Sebastian 25.11.: die
 # lange Liste gruppieren). Die Seite zeigt je Gruppe einen Abschnitt.
 GRUNDFUNKTIONEN = "Grundfunktionen"
@@ -148,7 +157,7 @@ SPIEL_SCHALTER = (
             "Karte „Dein nächster Schritt“ auf der Startseite: ein Vorschlag aus den "
             "eigenen Beiträgen, ohne Frist; speichert auf dem Server nichts zusätzlich."
         ),
-        einschalt_hinweis=("Einschalten erst nach dem DSFA-Nachtrag Spielgefühl (V10)"),
+        einschalt_hinweis=JURA_VORLAEUFIG,
         oeffentlich=True,
     ),
     Schalterart(
@@ -174,9 +183,7 @@ SPIEL_SCHALTER = (
             "Aussagen, speichert nichts zusätzlich."
         ),
         einschalt_hinweis=(
-            "Jura vorläufig (26.11.): nur ab N ≥ 3, Wortlaut „N-mal gesucht“ statt "
-            "„N Personen“ und mit dem Absatz „Suchen ohne Treffer“ in der "
-            "Datenschutzerklärung; endgültig mit dem Jura-Paket (27.11.)"
+            f"{JURA_VORLAEUFIG}: Anzeige erst ab N ≥ 3, Wortlaut „N-mal gesucht“"
         ),
         oeffentlich=True,
     ),
@@ -190,8 +197,11 @@ SPIEL_SCHALTER = (
             "nur als Summe und nie, von wem."
         ),
         einschalt_hinweis=(
-            "Vor dem Einschalten auf Prod: DSFA-Nachtrag V31 beschlossen"
+            f"{JURA_VORLAEUFIG} (drei gespeicherte Zahlen, Zählerstand des Echos); "
+            "nur zusammen mit danke_knopf, der Absatz nennt beide Summen"
         ),
+        # Die Datenschutzerklaerung blendet ihren Absatz danach ein (GET /api/v1/funktionen)
+        oeffentlich=True,
     ),
     Schalterart(
         name="danke_knopf",
@@ -203,7 +213,8 @@ SPIEL_SCHALTER = (
             "Autorin sieht nur die Summe je Beitrag. Bringt keine Punkte."
         ),
         einschalt_hinweis=(
-            "Vor dem Einschalten auf Prod: DSFA-Nachtrag V31 beschlossen"
+            f"{JURA_VORLAEUFIG}; nur zusammen mit wirkungs_echo, der Absatz nennt "
+            "beide Summen"
         ),
         oeffentlich=True,
     ),
@@ -217,8 +228,9 @@ SPIEL_SCHALTER = (
             "nur zusammen mit dem Danke-Knopf."
         ),
         einschalt_hinweis=(
-            "Vor dem Einschalten auf Prod: DSFA-Nachtrag V31 beschlossen und das "
-            "Besuchermerkmal für Besucher geklärt"
+            "Nicht einschalten (Jura 26.11.): erfüllt Variante B nicht, ohne Konto "
+            "entdoppelt über einen Tages-Prüfwert aus dem Besuchermerkmal, Pfad nennt "
+            "Beitrag und „danke“, Summe nicht getrennt ausgewiesen; kein DSE-Absatz"
         ),
         oeffentlich=True,
     ),
@@ -232,9 +244,10 @@ SPIEL_SCHALTER = (
             "eingewilligt haben; wirkt nur zusammen mit den Punkten."
         ),
         einschalt_hinweis=(
-            "Vor dem Einschalten auf Prod: Jura-OK zu Wortlaut, DSFA V28 und Absatz "
-            "der Datenschutzerklärung"
+            f"{JURA_VORLAEUFIG}; Wortlaut rangliste-2026-11-25 wortgleich, sichtbar "
+            f"erst ab 10 Teilnehmenden; {GO_VOR_AUSWEITUNG}"
         ),
+        oeffentlich=True,
     ),
 )
 
@@ -252,6 +265,8 @@ SCHALTER: Dict[str, Schalterart] = {
                 "dazu die Muster-Hinweise für Admins."
             ),
             dsfa_hinweis=True,
+            einschalt_hinweis=f"{JURA_VORLAEUFIG}; {GO_VOR_AUSWEITUNG} (mit DSFA)",
+            oeffentlich=True,
         ),
         Schalterart(
             name="abzeichen_sichtbar",
@@ -263,6 +278,10 @@ SCHALTER: Dict[str, Schalterart] = {
                 "wirkt nur zusammen mit den Punkten, erscheint spätestens nach 15 Minuten."
             ),
             dsfa_hinweis=True,
+            einschalt_hinweis=(
+                "Aus lassen (Jura 26.11.): nicht in der Ampel für den internen Test, "
+                "DSFA offen; die Vertrauenszeile stimmt nur ohne Abzeichen"
+            ),
         ),
         Schalterart(
             name="gepostet",
@@ -282,9 +301,7 @@ SCHALTER: Dict[str, Schalterart] = {
                 "„Meldungen ohne Konto“, getrennt von den Menschen; wirkt nur "
                 "zusammen mit „gepostet“."
             ),
-            einschalt_hinweis=(
-                "Vor dem Einschalten auf Prod: DSE-Absatz und DSFA-Nachtrag (Jura) nötig"
-            ),
+            einschalt_hinweis=f"{JURA_VORLAEUFIG} (Variante B)",
             oeffentlich=True,
         ),
         Schalterart(
@@ -307,8 +324,9 @@ SCHALTER: Dict[str, Schalterart] = {
                 "Merkliste. Nur die Person selbst sieht sie."
             ),
             einschalt_hinweis=(
-                "Jura: neuer Einwilligungswortlaut + DSFA-Abschnitt + DSE-Absatz vor "
-                "dem Einschalten (neuer Zweck, politisches Interesse)"
+                "Aus lassen (Jura 26.11.): Zweck steht nicht im Wortlaut der "
+                "Einwilligung; braucht neuen Einwilligungswortlaut + DSFA-Abschnitt + "
+                "DSE-Absatz (neuer Zweck, politisches Interesse)"
             ),
             oeffentlich=True,
         ),
@@ -325,8 +343,8 @@ SCHALTER: Dict[str, Schalterart] = {
             ),
             dsfa_hinweis=True,
             einschalt_hinweis=(
-                "Einschalten erst nach DSB-Antwort (§ 25 TDDDG) und DSFA-Zeile "
-                "V-Messung"
+                "Aus lassen (Jura 26.11.): erst nach DSB-Antwort (§ 25 TDDDG, #495) "
+                "und DSFA-Zeile V-Messung; kein DSE-Absatz"
             ),
         ),
         Schalterart(
@@ -348,6 +366,8 @@ SCHALTER: Dict[str, Schalterart] = {
                 "Kachel „neue Antworten auf deine Aussagen“ auf der Startseite und "
                 "der Reiter „Meine Aussagen“; speichert nichts Neues."
             ),
+            # Die Datenschutzerklaerung blendet ihren Absatz danach ein
+            oeffentlich=True,
         ),
         Schalterart(
             name="sharepic",
@@ -378,6 +398,8 @@ SCHALTER: Dict[str, Schalterart] = {
                 "Zuwachs in der Unterzeile der Startseite: neue Antworten der letzten "
                 "7 Tage, unter 3 nur der Tag der letzten; zählt nur öffentliche Inhalte."
             ),
+            # Die Datenschutzerklaerung blendet ihren Absatz danach ein
+            oeffentlich=True,
         ),
         Schalterart(
             name="feedback_gestoert",
@@ -388,7 +410,10 @@ SCHALTER: Dict[str, Schalterart] = {
                 "dasselbe Feedback-Formular, nur Freitext ohne Kontakt; alle Einträge "
                 "werden am 31.12.2026 gelöscht, danach wirkt der Schalter nicht mehr."
             ),
-            einschalt_hinweis="DSE-Absatz (Jura, Paket 27.11.)",
+            einschalt_hinweis=(
+                f"{JURA_VORLAEUFIG}; ohne Kennung, der Löschlauf löscht alle am "
+                "31.12.2026"
+            ),
             oeffentlich=True,
         ),
         Schalterart(
@@ -396,14 +421,14 @@ SCHALTER: Dict[str, Schalterart] = {
             feld="dse_kurzfassung_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_DSE_KURZFASSUNG_AKTIV",
             erklaerung=(
-                "Kasten „Kurz gesagt“ oben in der Datenschutzerklärung: drei Sätze "
-                "(wer verantwortlich ist, was gespeichert wird, wie man löscht und "
-                "widerruft), je mit Sprunglink auf den Absatz im Volltext. Bleibt "
+                "Kasten „Kurz gesagt“ oben in der Datenschutzerklärung: wer "
+                "verantwortlich ist, was gespeichert wird, wie man löscht und "
+                "widerruft, je mit Sprunglink auf den Absatz im Volltext. Bleibt "
                 "unsichtbar, solange ein Satz noch Platzhalter ist."
             ),
             einschalt_hinweis=(
-                "Wortlaut von Jura (Paket 27.11.) eintragen; jeder Satz muss einem "
-                "Absatz im Volltext entsprechen"
+                f"{JURA_26_11}, Wortlaut drin; Name des "
+                "Verantwortlichen wie im Abschnitt „Verantwortlicher“"
             ),
             oeffentlich=True,
         ),
@@ -417,10 +442,7 @@ SCHALTER: Dict[str, Schalterart] = {
                 "einen ganz anderen ersetzt (#636). Gelöschte Stimmen kommen nicht "
                 "zurück; wirkt nur, wenn die Prüfung auf dieselbe Aussage an ist."
             ),
-            einschalt_hinweis=(
-                "Vor dem Einschalten auf Prod: endgültiges Jura-OK zum Halbsatz "
-                "„Bewertungen“ der Datenschutzerklärung (vorläufig freigegeben 26.11.)"
-            ),
+            einschalt_hinweis=f"{JURA_VORLAEUFIG} (Halbsatz „Bewertungen“)",
             oeffentlich=True,
         ),
         Schalterart(
@@ -452,6 +474,10 @@ SCHALTER: Dict[str, Schalterart] = {
                 "Aus, bis die Datenschutzbeauftragte geraten hat."
             ),
             dsfa_hinweis=True,
+            einschalt_hinweis=(
+                "Aus lassen (Jura 26.11.): Art. 9, Wortlaut ungeprüft, Rat der "
+                "Datenschutzbeauftragten offen; kein DSE-Absatz"
+            ),
             oeffentlich=True,
         ),
         Schalterart(
@@ -460,14 +486,14 @@ SCHALTER: Dict[str, Schalterart] = {
             feld="teamlink_vertrauenssatz_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_TEAMLINK_VERTRAUENSSATZ_AKTIV",
             erklaerung=(
-                "Vertrauenssatz vor der Frage beim Teambeitritt: „Beitreten heißt nur: "
-                "Du zählst zu diesem Team.“, bei einem Team nach Gruppe dazu, dass die "
-                "Gruppe keine Daten bekommt. Speichert nichts; wirkt nur zusammen mit "
-                "„teams“."
+                "Vertrauenssatz vor der Frage beim Teambeitritt: „Beitreten heißt: Du "
+                "zählst zu diesem Team und trägst zu seiner Summe bei.“, bei einem Team "
+                "nach Gruppe dazu, dass die Gruppe keine Daten bekommt. Speichert "
+                "nichts; wirkt nur zusammen mit „teams“."
             ),
             einschalt_hinweis=(
-                "Vor dem Einschalten: Jura prüft teams.py (was Mitglieder voneinander "
-                "sehen)."
+                f"{JURA_26_11}, Wortlaut drin; nennt die "
+                "Team-Summe, also zusammen mit team_fortschritt einschalten"
             ),
             oeffentlich=True,
         ),
@@ -492,6 +518,12 @@ TEAM_SCHALTER = (
             "Kennung; wirkt nur zusammen mit „teams“."
         ),
         dsfa_hinweis=True,
+        einschalt_hinweis=(
+            f"{JURA_VORLAEUFIG}; Summe erst ab 5 Mitgliedern mit Einwilligung; "
+            f"{GO_VOR_AUSWEITUNG}"
+        ),
+        # Die Datenschutzerklaerung nimmt danach den Satz „noch nicht eingeschaltet“ weg
+        oeffentlich=True,
     ),
     Schalterart(
         name="team_quests",
@@ -504,15 +536,20 @@ TEAM_SCHALTER = (
             "mit dem Team-Fortschritt."
         ),
         dsfa_hinweis=True,
+        einschalt_hinweis=(
+            f"{JURA_VORLAEUFIG}; an nur mit team_fortschritt; {GO_VOR_AUSWEITUNG}"
+        ),
+        # Die Datenschutzerklaerung blendet ihren Absatz danach ein
+        oeffentlich=True,
     ),
 )
 SCHALTER.update({s.name: s for s in TEAM_SCHALTER})
 
 
-# Vertrauenszeile vor dem Anmelden (vorlaeufige juristische Einschaetzung 26.11.2026,
-# Punkt a): Grundsatz Sebastian 26.11., Neues hinter einem Schalter, Obergrenze von
-# Haus aus aus. Der Satz stimmt nur, solange nichts ausser den Beitraegen fuer andere
-# sichtbar ist; deshalb steht die Bedingung als Hinweis auf der Admin-Seite.
+# Vertrauenszeile vor dem Anmelden (vorlaeufige juristische Einschaetzung 26.11.2026):
+# Neues hinter einem Schalter, Obergrenze von Haus aus aus. Der Wortlaut nennt Team-Summe
+# und Rangliste als die einzigen Wege, auf denen andere mehr als die Beitraege sehen;
+# die Bedingung dafuer steht als Hinweis auf der Admin-Seite.
 SCHALTER["vertrauenszeile"] = Schalterart(
     name="vertrauenszeile",
     gruppe=GRUNDFUNKTIONEN,
@@ -520,20 +557,24 @@ SCHALTER["vertrauenszeile"] = Schalterart(
     umgebungsvariable="SEMANTIC_SEARCH_VERTRAUENSZEILE_AKTIV",
     erklaerung=(
         "Zeile über den Anmeldewegen: Was man beiträgt, erscheint unter dem "
-        "Anzeigenamen, wie viel man sonst mitmacht, sehen andere nicht; mit Link "
+        "Anzeigenamen, wie viel man sonst mitmacht, sehen andere nicht, außer als "
+        "Teil der Team-Summe und, selbst gewählt, in der Rangliste; mit Link "
         "„Datenschutz“. Speichert und zählt nichts."
     ),
     einschalt_hinweis=(
-        "Satz stimmt nur, solange Rangliste/Team-Fortschritt aus oder freiwillig "
-        "sind; mit Vorstands-Go ergänzen."
+        f"{JURA_26_11}, Wortlaut mit Team-Summe und "
+        "Rangliste drin; stimmt nur, solange teams_oeffentlich und "
+        "abzeichen_sichtbar aus sind"
     ),
     oeffentlich=True,
 )
 
 
-# Kurze Hinweiszeile unter dem Suchknopf (Designwichtel Nr. 5): eine Zeile "Ohne Namen
-# gespeichert · Datenschutz" statt des abgestimmten Wortlauts vom 16.11.; der Satz zur
-# Veroeffentlichung klappt auf. Nur im Browser, deshalb oeffentlich.
+# Kurze Hinweiszeile unter dem Suchknopf (Designwichtel Nr. 5): eine Zeile "Wie wir
+# Suchen speichern · Datenschutz" statt des abgestimmten Wortlauts vom 16.11.; der Satz
+# zur Veroeffentlichung klappt auf. Nur im Browser, deshalb oeffentlich. Nicht "Ohne
+# Namen gespeichert" (Jura 26.11.): Suchvorgaenge Angemeldeter tragen bis Tagesende ein
+# Tagespseudonym aus der Kennung (services/search_tracking_service.py).
 HINWEIS_SCHALTER = (
     Schalterart(
         name="hinweiszeile_kurz",
@@ -541,13 +582,13 @@ HINWEIS_SCHALTER = (
         feld="hinweiszeile_kurz_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_HINWEISZEILE_KURZ_AKTIV",
         erklaerung=(
-            "Unter dem Suchknopf eine Zeile „Ohne Namen gespeichert · Datenschutz“ "
+            "Unter dem Suchknopf eine Zeile „Wie wir Suchen speichern · Datenschutz“ "
             "statt zwei; „Nach Prüfung können Suchtexte öffentlich werden“ steht "
             "aufklappbar dahinter. Speichert nichts Neues."
         ),
         einschalt_hinweis=(
-            "Vor dem Einschalten auf Prod: Jura-OK zum kurzen Wortlaut und dazu, dass "
-            "der Satz zur Veröffentlichung aufklappbar statt sichtbar genügt"
+            f"{JURA_26_11}: Wortlaut „Wie wir Suchen "
+            "speichern“, weil Suchvorgänge Angemeldeter an der Kennung hängen"
         ),
         oeffentlich=True,
     ),
@@ -557,7 +598,8 @@ SCHALTER.update({s.name: s for s in HINWEIS_SCHALTER})
 
 # Kampagnenwort ?k= (GLOSSARY.md "Kampagnenwort"): vorlaeufige Jura-Einschaetzung
 # 26.11.2026, Grundsatz Maintainer: alles hinter einem Schalter, Standard aus. Beide
-# Obergrenzen von Haus aus aus; eingeschaltet erst nach dem endgueltigen OK.
+# Obergrenzen von Haus aus aus. k_begruessung darf fuer den internen Test an (Jura
+# vorlaeufig 26.11.), k_ankuenfte bleibt aus.
 K_SCHALTER = (
     Schalterart(
         name="k_begruessung",
@@ -568,10 +610,7 @@ K_SCHALTER = (
             "Wer über ?k=sticker oder ?k=bdk kommt, liest in der Rundgang-Zeile eine "
             "passende Begrüßung statt der allgemeinen; nur Anzeige, speichert nichts."
         ),
-        einschalt_hinweis=(
-            "Jura vorläufig ok (26.11.): nur Anzeige, nichts speichern; einschalten "
-            "nach dem endgültigen OK"
-        ),
+        einschalt_hinweis=f"{JURA_VORLAEUFIG} (nur Anzeige, nichts gespeichert)",
         oeffentlich=True,
     ),
     Schalterart(
@@ -584,7 +623,10 @@ K_SCHALTER = (
             "Positivliste und Tag; ohne Kennung, Konto, Adresse oder Beitrag. Die "
             "Zahlen stehen in der Übersicht."
         ),
-        einschalt_hinweis="Jura: nur Ankünfte je k und Tag, nie an Konto/Beitrag",
+        einschalt_hinweis=(
+            "Aus lassen (Jura 26.11.): zusätzliche Anfrage aus dem Browser, § 25 "
+            "TDDDG offen; kein DSE-Absatz"
+        ),
         oeffentlich=True,
     ),
 )

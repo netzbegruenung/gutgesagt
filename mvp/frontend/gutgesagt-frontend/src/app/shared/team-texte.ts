@@ -71,11 +71,11 @@ export function teamGruppeSatz(gruppe: string): string {
 }
 
 /**
- * Vertrauenssatz beim Teambeitritt (Schalter `teamlink_vertrauenssatz`, vorläufige
- * juristische Einschätzung vom 26.11.2026, Punkt d), wortgleich. Eingeschaltet wird erst,
- * wenn Jura geprüft hat, was Mitglieder voneinander sehen.
+ * Vertrauenssatz beim Teambeitritt (Schalter `teamlink_vertrauenssatz`), wortgleich nach der
+ * vorläufigen juristischen Einschätzung vom 26.11.2026 für den internen Test: nennt die
+ * Team-Summe (team_fortschritt), zu der Mitglieder mit Einwilligung beitragen.
  */
-export const TEAM_VERTRAUENSSATZ = 'Beitreten heißt nur: Du zählst zu diesem Team.';
+export const TEAM_VERTRAUENSSATZ = 'Beitreten heißt: Du zählst zu diesem Team und trägst zu seiner Summe bei.';
 
 /** Zweiter Satz, nur bei einem Team nach Gruppe: Ein Team nach Anlass ist nach keiner Gruppe benannt. */
 export const TEAM_VERTRAUENSSATZ_GRUPPE = 'Die Gruppe, nach der es benannt ist, bekommt keine Daten über dich.';

@@ -276,9 +276,11 @@ describe('LoginSelectorComponent: Vertrauenszeile', () => {
     const el = zeile()!;
     const link = el.querySelector('a') as HTMLAnchorElement;
     expect(VERTRAUENSZEILE).toBe(
-      'Was du beiträgst, erscheint unter deinem Anzeigenamen. Ob und wie viel du sonst mitmachst, sehen andere nicht.',
+      'Was du beiträgst, erscheint unter deinem Anzeigenamen. Wie viel du sonst mitmachst, sehen andere nicht, ' +
+        'außer als Teil der Summe deiner Teams und, wenn du sie selbst wählst, in der Rangliste.',
     );
-    expect(el.textContent?.replace(/\s+/g, ' ').trim()).toBe(`${VERTRAUENSZEILE} Datenschutz`);
+    // Wortlaut Jura vorläufig 26.11.: „… in der Rangliste. · Datenschutz“
+    expect(el.textContent?.replace(/\s+/g, ' ').trim()).toBe(`${VERTRAUENSZEILE} · Datenschutz`);
     expect(link.textContent?.trim()).toBe('Datenschutz');
     expect(link.getAttribute('href')).toBe('/datenschutz');
   });

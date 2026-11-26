@@ -27,8 +27,8 @@ pytestmark = pytest.mark.unit
 URL = "/api/v1/funktionen"
 NAME = "vertrauenszeile"
 HINWEIS = (
-    "Satz stimmt nur, solange Rangliste/Team-Fortschritt aus oder freiwillig sind; "
-    "mit Vorstands-Go ergänzen."
+    "Jura vorläufig ok 26.11. (interner Test), Wortlaut mit Team-Summe und Rangliste "
+    "drin; stimmt nur, solange teams_oeffentlich und abzeichen_sichtbar aus sind"
 )
 
 

@@ -7,8 +7,7 @@
          der Schalter als aus; beim allerersten Aufruf kann die Zeile deshalb nachträglich erscheinen -->
     @if (vertrauenszeileAn()) {
         <p class="vertrauenszeile" data-testid="vertrauenszeile">
-            {{ vertrauenszeile }}
-            <a routerLink="/datenschutz" class="vertrauenszeile-link">Datenschutz</a>
+            {{ vertrauenszeile }}<span aria-hidden="true"> · </span><a routerLink="/datenschutz" class="vertrauenszeile-link">Datenschutz</a>
         </p>
     }
 

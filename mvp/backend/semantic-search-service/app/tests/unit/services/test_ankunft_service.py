@@ -81,9 +81,11 @@ class TestSchalter:
         assert not art.rechtlich_freigegeben
 
     def test_hinweis_ankuenfte_wortlaut_jura(self):
-        assert (
-            SCHALTER["k_ankuenfte"].einschalt_hinweis
-            == "Jura: nur Ankünfte je k und Tag, nie an Konto/Beitrag"
+        # Jura vorlaeufig 26.11.: Ankuenfte heute aus, die Begruessung darf an
+        assert SCHALTER["k_ankuenfte"].einschalt_hinweis.startswith("Aus lassen")
+        assert "§ 25" in SCHALTER["k_ankuenfte"].einschalt_hinweis
+        assert SCHALTER["k_begruessung"].einschalt_hinweis.startswith(
+            "Jura vorläufig ok 26.11."
         )
 
     @pytest.mark.parametrize("name", ["k_begruessung", "k_ankuenfte"])
