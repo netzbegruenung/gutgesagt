@@ -2,7 +2,9 @@
 
 Gleiche Image-Namen wie früher die GitHub-CI, damit Deployment und Renovate unverändert
 weiterlaufen; kein Pfadfilter, damit jeder Push auf main alle vier Images baut; und beide
-Workflows gleich gebaut, damit ein Release nicht anders baut als main.
+Workflows gleich gebaut, damit ein Release nicht anders baut als main. Das Release
+uebernimmt BFF, Semantic Search und postgres-app vom main-Image desselben Commits
+(scripts/main_images.py, docs/CI.md "Releases without a second test run").
 """
 
 import copy
@@ -11,6 +13,8 @@ import re
 
 import pytest
 import yaml
+
+import main_images
 
 WURZEL = pathlib.Path(__file__).resolve().parents[2]
 
@@ -23,6 +27,8 @@ BUILD = laden("build.yaml")
 RELEASE = laden("release.yaml")
 CI = laden("ci.yaml")
 TAGS = "image-tags"
+QUELLE = "image-quelle"
+VORBEREITUNG = {TAGS, QUELLE}
 
 IMAGES = {
     "frontend": "gutgesagt-frontend",
@@ -37,7 +43,7 @@ def schritte(workflow):
 
 
 def build_schritte(workflow):
-    return {n: s for n, s in schritte(workflow).items() if n != TAGS}
+    return {n: s for n, s in schritte(workflow).items() if n not in VORBEREITUNG}
 
 
 @pytest.mark.parametrize("workflow", [BUILD, RELEASE], ids=["build", "release"])
@@ -53,13 +59,14 @@ class TestBeideWorkflows:
         tags = schritte(workflow)[TAGS]
         assert tags["commands"] == ["python3 scripts/image_tags.py .image-tags"]
         for schritt in build_schritte(workflow).values():
-            assert schritt["depends_on"] == [TAGS]
+            assert schritt["depends_on"][0] == TAGS
             assert schritt["settings"]["tags_file"] == ".image-tags"
             assert "tags" not in schritt["settings"]
 
     def test_secrets_nur_im_plugin(self, workflow):
-        # Der Tag-Schritt fuehrt Befehle aus und bekommt deshalb kein Secret
-        assert "from_secret" not in str(schritte(workflow)[TAGS])
+        # Die Vorbereitung fuehrt Befehle aus und bekommt deshalb kein Secret
+        for name in VORBEREITUNG & set(schritte(workflow)):
+            assert "from_secret" not in str(schritte(workflow)[name]), name
         for schritt in build_schritte(workflow).values():
             assert schritt["settings"]["username"] == {"from_secret": "registry_user"}
             assert schritt["settings"]["password"] == {"from_secret": "registry_token"}
@@ -75,12 +82,17 @@ class TestBeideWorkflows:
 
 
 def test_build_und_release_bauen_gleich():
-    # Bis auf die Tag-Version: ein Release baut, was main gebaut hat. Ganze Schritte in
-    # derselben Reihenfolge, damit auch ein zusätzlicher Schritt auffällt.
+    # Bis auf die Tag-Version und die Dockerfiles, die image-quelle schreibt: ein Release
+    # baut, was main gebaut hat. Ganze Schritte in derselben Reihenfolge, damit auch ein
+    # zusätzlicher Schritt auffällt.
     def ohne_unterschiede(workflow):
-        gleich = copy.deepcopy(workflow["steps"])
+        gleich = [s for s in copy.deepcopy(workflow["steps"]) if s["name"] != QUELLE]
         for schritt in gleich:
-            schritt.get("settings", {}).get("build_args", {}).pop("APP_VERSION", None)
+            einstellungen = schritt.get("settings", {})
+            einstellungen.get("build_args", {}).pop("APP_VERSION", None)
+            if schritt["name"] in main_images.DOCKERFILES:
+                einstellungen.pop("dockerfile")
+                schritt["depends_on"] = [TAGS]
         return gleich
 
     assert ohne_unterschiede(BUILD) == ohne_unterschiede(RELEASE)
@@ -120,6 +132,36 @@ class TestBuild:
 
 
 class TestRelease:
+    def test_backend_images_aus_dem_dockerfile_von_image_quelle(self):
+        quelle = schritte(RELEASE)[QUELLE]
+        assert quelle["commands"] == ["python3 scripts/main_images.py quelle"]
+        assert quelle["depends_on"] == []
+        # Nur Standardbibliothek: dasselbe Python-Image wie image-tags
+        assert quelle["image"] == schritte(RELEASE)[TAGS]["image"]
+        for name in main_images.DOCKERFILES:
+            schritt = schritte(RELEASE)[name]
+            assert schritt["depends_on"] == [TAGS, QUELLE]
+            assert schritt["settings"]["dockerfile"] == f".release/{name}.Dockerfile"
+
+    def test_frontend_baut_immer_neu(self):
+        # Die Version im Footer kommt aus dem Tag: ein main-Image hat "main" eingebaut.
+        assert "frontend" not in main_images.DOCKERFILES
+        assert schritte(RELEASE)["frontend"]["settings"]["dockerfile"] == (
+            schritte(BUILD)["frontend"]["settings"]["dockerfile"]
+        )
+
+    def test_voller_build_mit_den_dockerfiles_von_main(self):
+        # Fehlt das main-Image, kopiert image-quelle das Dockerfile, mit dem build.yaml baut
+        for name, dockerfile in main_images.DOCKERFILES.items():
+            assert schritte(BUILD)[name]["settings"]["dockerfile"] == dockerfile
+
+    def test_skript_kennt_dieselben_images(self):
+        repos = {n: s["settings"]["repo"] for n, s in build_schritte(BUILD).items()}
+        assert repos == {
+            n: f"{main_images.REGISTRY}/{main_images.ORGANISATION}/{i}"
+            for n, i in main_images.IMAGES.items()
+        }
+
     def test_nur_bei_tags_mit_v(self):
         assert RELEASE["when"] == [{"event": "tag", "ref": "refs/tags/v*"}]
 

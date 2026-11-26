@@ -16,8 +16,11 @@ SCHRITTE = {s["name"]: s for s in PIPELINE["steps"]}
 DIENSTE = {d["name"]: d for d in PIPELINE["services"]}
 BERICHT = "ci-bericht"
 # Laufen nie in PR-Laeufen (Entscheidung @BanSe 14.11.), nur bei push auf main, Tag, manuell
-# Nie in PR-Laeufen: integration (main, Tags, manuell), release-platzhalter (nur Tags)
-NUR_MAIN = {"integration", "release-platzhalter"}
+# Nie in PR-Laeufen: integration (main, Tags, manuell), release-platzhalter und
+# tag-vorpruefung (nur Tags)
+VORPRUEFUNG = "tag-vorpruefung"
+NUR_TAG = {"release-platzhalter", VORPRUEFUNG}
+NUR_MAIN = {"integration"} | NUR_TAG
 
 
 def from_zeile(dockerfile, stufe=None):
@@ -72,6 +75,7 @@ def test_ci_hat_keinen_pfadfilter_auf_workflow_ebene():
         # Nur Standardbibliothek bzw. git: kein CI-Image noetig
         ("ci-bericht", PYTHON),
         ("retired-words", NODE),
+        (VORPRUEFUNG, NODE),
         ("frontend", CI_NODE),
         ("frontend-build", CI_NODE),
         ("frontend-installieren", CI_NODE),
@@ -454,7 +458,7 @@ def test_dienste_nur_wenn_integration_laeuft():
 def test_push_tag_und_manuell_laufen_voll(event):
     # Auch ein Push, der nur das Frontend aendert: auf main laeuft immer alles.
     lauf = schritte_im_lauf(event, ["mvp/frontend/gutgesagt-frontend/src/x.ts"])
-    nur_tag = set() if event == "tag" else {"release-platzhalter"}
+    nur_tag = set() if event == "tag" else NUR_TAG
     assert set(lauf) == ALLE - {"retired-words", BERICHT} - nur_tag
 
 
@@ -499,6 +503,36 @@ def test_kette_laeuft_nach_rotem_vorgaenger_weiter():
     for name in SCHWER:
         for bedingung in SCHRITTE[name]["when"]:
             assert bedingung["status"] == ROT_ODER_GRUEN, name
+
+
+def test_tag_vorpruefung_nur_bei_tags_mit_dem_skript():
+    # Releases ohne zweiten Testlauf (docs/CI.md): die Vorpruefung entscheidet ueber eine
+    # Datei, Woodpecker kann einen Schritt nicht abhaengig von einem anderen auslassen.
+    vorpruefung = SCHRITTE[VORPRUEFUNG]
+    assert vorpruefung["when"] == [{"event": "tag"}]
+    assert vorpruefung["depends_on"] == []
+    assert vorpruefung["commands"] == [
+        f"sh scripts/ci-protokoll.sh {VORPRUEFUNG} python3 scripts/main_images.py pruefen"
+    ]
+    assert "from_secret" not in str(vorpruefung)
+
+
+def test_bei_tags_wartet_jeder_testschritt_auf_die_vorpruefung():
+    # Sonst begaenne ein Schritt, bevor die Vorpruefung .ci/main-schon-gruen angelegt hat,
+    # und liefe voll. release-platzhalter laeuft bei jedem Tag, es braucht sie nicht.
+    lauf = schritte_im_lauf("tag", [])
+    for name in lauf:
+        if name not in NUR_TAG:
+            assert VORPRUEFUNG in vorfahren(lauf, name), name
+
+
+@pytest.mark.parametrize("event", ["pull_request", "push", "manual"])
+def test_ohne_tag_gibt_es_keine_vorpruefung(event):
+    lauf = schritte_im_lauf(event, [])
+    assert VORPRUEFUNG not in lauf
+    # Die leichten Schritte starten dann sofort
+    for name in ("python-installieren", "frontend-installieren", "bff"):
+        assert lauf[name] == [], name
 
 
 def test_ci_begrenzt_worker_und_speicher_der_schweren_schritte():
