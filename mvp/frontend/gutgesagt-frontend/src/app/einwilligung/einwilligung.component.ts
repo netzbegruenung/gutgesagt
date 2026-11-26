@@ -21,6 +21,7 @@ import { EINE_SEITE_TEXTE } from './einwilligung-texte';
 import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { PunkteEinwilligungComponent } from '../shared/punkte-einwilligung/punkte-einwilligung.component';
 import { PunkteEinwilligungService } from '../shared/punkte-einwilligung/punkte-einwilligung.service';
+import { WiderrufbarComponent } from './widerrufbar.component';
 import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 import { FunktionenService } from '../services/funktionen.service';
 import { HILFE_PARAM } from '../help-dialog/help-dialog.component';
@@ -73,6 +74,7 @@ type Zustand = 'laedt' | 'frage' | 'sendet' | 'eingewilligt' | 'widerruft' | 'fe
     MatCheckboxModule,
     MatDialogModule,
     PunkteEinwilligungComponent,
+    WiderrufbarComponent,
   ],
   templateUrl: './einwilligung.component.html',
   styleUrls: ['./einwilligung.component.css'],
