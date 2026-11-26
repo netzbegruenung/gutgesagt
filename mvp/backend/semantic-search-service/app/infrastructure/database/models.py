@@ -245,6 +245,21 @@ class GepostetOhneKontoWoche(Base):
     meldungen = Column(Integer, nullable=False)
 
 
+class AnkunftJeTag(Base):
+    """
+    Ankuenfte je Kampagnenwort und Tag (GLOSSARY.md "Ankunft"): wie oft die App mit
+    ``?k=<wort>`` geoeffnet wurde, nur die Zahl. Keine Kennung, kein Konto, keine
+    Adresse, kein Beitrag; nichts, womit sich eine Zeile einer Person zuordnen liesse
+    (vorlaeufige Jura-Einschaetzung 26.11.2026). Frist: services/ankunft_service.py.
+    """
+
+    __tablename__ = "ankuenfte_je_tag"
+
+    k = Column(String(20), primary_key=True)
+    tag = Column(Date, primary_key=True)
+    anzahl = Column(Integer, nullable=False)
+
+
 class WirkungJeBeitrag(Base):
     """
     Was andere mit einem Beitrag tun, nur als Summe je Beitrag fuer die Autorin:

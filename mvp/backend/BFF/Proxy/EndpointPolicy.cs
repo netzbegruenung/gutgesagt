@@ -47,6 +47,10 @@ public static class EndpointPolicy
         // damit Zugriffsprotokolle keinen Rueckschluss zulassen. Hinter dem Schalter
         // gepostet_ohne_konto, aus antwortet er mit 404.
         "/api/v1/ereignis",
+        // Ankuenfte je Kampagnenwort und Tag: das Wort steht nur im Body, gezaehlt wird
+        // ohne Kennung. Hinter dem Schalter k_ankuenfte, aus antwortet er 200 mit
+        // gezaehlt: false. Die Zahlen unter /api/v1/ankuenfte sind admin-only.
+        "/api/v1/ankunft",
         "/api/v1/moderation/report",     // anonyme Meldung (DSA Art. 16)
         // Feedback an das Team, auch von Besuchern. Nur das Senden: die Liste unter
         // /api/v1/feedback ist admin-only und bleibt hinter dem Gate.

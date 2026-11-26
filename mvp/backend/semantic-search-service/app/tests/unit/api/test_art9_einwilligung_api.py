@@ -680,6 +680,9 @@ OFFEN = {
     # Meldungen ohne Konto (#799): nur ein Wochenzaehler ohne Kennung; Angemeldete
     # zaehlen dort nicht (sie melden ueber /users/me/gepostet mit Einwilligung)
     ("POST", "/api/v1/ereignis"),
+    # Ankuenfte je Kampagnenwort und Tag: nur eine Zahl je Wort und Tag, der Endpunkt
+    # liest keine Kennung; nichts verknuepft sie mit einem Konto oder Beitrag
+    ("POST", "/api/v1/ankunft"),
     ("POST", "/api/v1/usage/users/me/besuch"),
     ("POST", "/api/v1/statement/addReplysuggestionToStatement"),
     ("PUT", "/api/v1/statement/themen/zuordnen"),

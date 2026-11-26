@@ -98,6 +98,11 @@ export interface Angebot {
   schlank?: boolean;
   /** Der Knopf „ja“ öffnet den Installieren-Dialog des Browsers statt eines Rundgangs. */
   installieren?: boolean;
+  /**
+   * Begrüßung nach dem Kampagnenwort in der schlanken Zeile: Titel und Satz stehen als ein
+   * Satz vorn und dürfen umbrechen, der Knopf zum Rundgang folgt danach.
+   */
+  begruessung?: boolean;
 }
 
 export const WILLKOMMEN: Angebot = {
@@ -131,6 +136,24 @@ export const WILLKOMMEN_ANGEMELDET: Angebot = {
   // Höchstens so lang wie der Satz für Besucher: Die Zeile bricht nicht um (rundgang-band.component.css)
   satz: 'In Sekunden zur Antwort',
 };
+
+/**
+ * Begrüßung nach dem Kampagnenwort (?k=, Schalter `k_begruessung`): Wer über den Sticker oder
+ * die BDK kommt, liest statt „Neu hier?“ eine passende Zeile; Rundgang, Schlüssel und
+ * Ausblenden bleiben wie beim Willkommen. Das Beispiel steht schon im Suchfeld (Hot Takes,
+ * shared/startbeispiel.ts). Nur Anzeige, gespeichert wird nichts (vorläufige
+ * Jura-Einschätzung 26.11.2026). Andere Wörter zeigen das allgemeine Willkommen.
+ */
+export const K_BEGRUESSUNG: Readonly<Record<string, { titel: string; satz: string }>> = {
+  sticker: { titel: 'Vom Sticker?', satz: 'Probier’s direkt aus – das Beispiel steht schon drin.' },
+  bdk: { titel: 'Von der BDK?', satz: 'Probier’s direkt aus – das Beispiel steht schon drin.' },
+};
+
+/** Das Willkommen mit der Begrüßung zum Kampagnenwort, sonst das Angebot unverändert. */
+export function mitBegruessung(angebot: Angebot, wort: string | null): Angebot {
+  const begruessung = wort && angebot.schluessel === WILLKOMMEN.schluessel ? K_BEGRUESSUNG[wort] : undefined;
+  return begruessung ? { ...angebot, ...begruessung, begruessung: true } : angebot;
+}
 
 export const MITMACHEN_ANGEBOT: Angebot = {
   rundgang: 'mitmachen',

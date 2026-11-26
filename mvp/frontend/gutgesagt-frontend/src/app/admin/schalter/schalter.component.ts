@@ -27,6 +27,8 @@ const TITEL: Record<string, string> = {
   feedback_gestoert: 'Knopf „Was hat dich gestört?“',
   dse_kurzfassung: 'Kurzfassung der Datenschutzerklärung',
   hinweiszeile_kurz: 'Kurze Hinweiszeile unter dem Suchknopf',
+  k_begruessung: 'Begrüßung nach ?k= (Sticker, BDK)',
+  k_ankuenfte: 'Ankünfte je Kampagnenwort und Tag',
   team_fortschritt: 'Team-Fortschritt',
   team_quests: 'Team-Quests',
   teams: 'Teams über Einladungen',

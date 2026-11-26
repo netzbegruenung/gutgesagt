@@ -49,6 +49,8 @@ services:
       - SEMANTIC_SEARCH_TEAM_FORTSCHRITT_AKTIV=true
       - SEMANTIC_SEARCH_TEAM_QUESTS_AKTIV=true
       - SEMANTIC_SEARCH_VERTRAUENSZEILE_AKTIV=true
+      - SEMANTIC_SEARCH_K_BEGRUESSUNG_AKTIV=true
+      - SEMANTIC_SEARCH_K_ANKUENFTE_AKTIV=true
   gutgesagt-bff:
     container_name: gutgesagt-bff-saal
     restart: "no"

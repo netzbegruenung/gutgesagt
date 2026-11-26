@@ -177,6 +177,36 @@ class TestSchalterVerlauf:
         beitraege.geloeschte_laden.assert_awaited_once()
 
 
+class TestAnkuenfte:
+    """Ankuenfte je Kampagnenwort und Tag nach zwoelf Monaten (docs/LOESCHKONZEPT.md)."""
+
+    @pytest.fixture
+    def ankuenfte(self):
+        return Mock(**{"loeschen_vor.return_value": 0})
+
+    @pytest.fixture
+    def service(self, meldungen, einwuerfe, beitraege, moderation, sperren, ankuenfte):
+        return LoeschfristenService(
+            meldungen, einwuerfe, beitraege, moderation, sperren, ankuenfte=ankuenfte
+        )
+
+    async def test_tage_vor_einem_jahr_gehen(self, service, ankuenfte):
+        await service.fristen_anwenden(HEUTE)
+
+        ankuenfte.loeschen_vor.assert_called_once_with(
+            datetime(2025, 10, 29, tzinfo=timezone.utc)
+        )
+
+    async def test_fehler_haelt_die_anderen_nicht_auf(
+        self, service, ankuenfte, beitraege
+    ):
+        ankuenfte.loeschen_vor.side_effect = RuntimeError("db weg")
+
+        await service.fristen_anwenden(HEUTE)
+
+        beitraege.geloeschte_laden.assert_awaited_once()
+
+
 class TestPostgres:
     async def test_suchereignisse_abgeschlossener_tage_werden_verdichtet(
         self, service, suchereignisse
