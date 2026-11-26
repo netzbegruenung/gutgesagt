@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { Subject } from 'rxjs';
 
 import { RanglisteService, RanglisteStand, RanglistenPlatz } from '../services/rangliste.service';
+import { SpielgefuehlService } from '../services/spielgefuehl.service';
 import { AUS_NACHLADEN_MS, NACHLADEN_MS, nachladeStrom, ohneRechte } from '../shared/selbst-nachladen';
 
 export const RANGLISTE_JA = 'Ja, zeigt mich in der Rangliste';
@@ -49,6 +50,7 @@ export class RanglisteComponent implements OnInit {
   @ViewChildren('nameWahl') nameWahl?: QueryList<ElementRef<HTMLInputElement>>;
 
   private readonly service = inject(RanglisteService);
+  private readonly spielgefuehl = inject(SpielgefuehlService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
   private readonly anstoss$ = new Subject<void>();
@@ -76,7 +78,21 @@ export class RanglisteComponent implements OnInit {
       }
       this.cdr.markForCheck();
     });
-    this.destroyRef.onDestroy(() => abo.unsubscribe());
+    // Spielgefühl-Modell: Eine neue Stufe zeigt die Liste sofort oder nimmt sie weg.
+    let stufeBekannt = false;
+    const stufeAbo = this.spielgefuehl.stufe$.subscribe((stufe) => {
+      if (stufe === undefined) {
+        return;
+      }
+      if (stufeBekannt) {
+        this.anstoss$.next();
+      }
+      stufeBekannt = true;
+    });
+    this.destroyRef.onDestroy(() => {
+      abo.unsubscribe();
+      stufeAbo.unsubscribe();
+    });
   }
 
   /** Nimmt teil und erfüllt die Voraussetzungen. */
@@ -84,10 +100,15 @@ export class RanglisteComponent implements OnInit {
     return !!this.stand && this.stand.teilnehmen === true && this.stand.voraussetzungen;
   }
 
+  /** Spielgefühl-Modell: Teilnahme und Name wählt die Person dort, hier nur die Liste. */
+  get buehne(): boolean {
+    return this.stand?.buehne === true;
+  }
+
   /** Einmal fragen: laufende Saison, Voraussetzungen erfüllt, noch nie geantwortet. */
   get fragen(): boolean {
     const stand = this.stand;
-    if (!stand || !stand.voraussetzungen || !stand.saison) {
+    if (!stand || !stand.voraussetzungen || !stand.saison || this.buehne) {
       return false;
     }
     return this.frageOffen || !stand.gefragt;
@@ -98,6 +119,9 @@ export class RanglisteComponent implements OnInit {
     const stand = this.stand;
     if (!stand) {
       return false;
+    }
+    if (this.buehne) {
+      return this.dabei || this.ruhend;
     }
     return this.fragen || this.dabei || this.ruhend || (stand.gefragt && stand.voraussetzungen && !!stand.saison);
   }

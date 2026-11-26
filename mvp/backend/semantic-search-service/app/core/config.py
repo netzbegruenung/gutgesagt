@@ -417,6 +417,10 @@ class Settings(BaseSettings):
     danke_knopf_aktiv: bool = False
     danke_ohne_konto_aktiv: bool = False
     rangliste_aktiv: bool = False
+    # Spielgefuehl als eine Einstellung in drei Stufen (domain/spielgefuehl.py): an,
+    # gilt statt der Einwilligungen Punkte, Abzeichen am Namen und Rangliste nur noch
+    # die Tabelle spielgefuehl, und alle werden neu gefragt. Standard aus.
+    spielgefuehl_buehne_aktiv: bool = False
     # Vertrauenszeile vor dem Anmelden (services/schalter_service.py, vorlaeufige
     # juristische Einschaetzung 26.11.): reiner Text, speichert nichts; Obergrenze trotzdem
     # von Haus aus aus, bis die Einschaetzung endgueltig ist.

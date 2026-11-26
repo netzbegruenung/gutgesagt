@@ -4,6 +4,7 @@ import { Subject, interval, timer } from 'rxjs';
 import { filter, switchMap, takeUntil } from 'rxjs/operators';
 
 import { PUNKTE_NICHT_GELADEN, Punktestand, UsageTrackingService } from '../services/usage-tracking.service';
+import { SpielgefuehlService, SpielgefuehlStufe } from '../services/spielgefuehl.service';
 
 /** So oft lädt die Seite den Punktestand nach, solange sie sichtbar ist. */
 export const PUNKTE_NACHLADEN_MS = 60_000;
@@ -37,6 +38,8 @@ export class PunkteComponent implements OnInit, OnDestroy {
   /** Stand noch unbekannt und schon eine Weile gewartet: Platzhalter zeigen. */
   platzhalter = false;
   private bekannt = false;
+  /** Stufe des Spielgefühls (Schalter spielgefuehl_buehne); null ohne Schalter oder Antwort. */
+  stufe: SpielgefuehlStufe | null | undefined = undefined;
   private laden$ = new Subject<void>();
   private destroy$ = new Subject<void>();
 
@@ -45,6 +48,7 @@ export class PunkteComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private zone: NgZone,
     private host: ElementRef<HTMLElement>,
+    private spielgefuehl: SpielgefuehlService,
   ) {}
 
   ngOnInit(): void {
@@ -83,6 +87,15 @@ export class PunkteComponent implements OnInit, OnDestroy {
             this.cdr.markForCheck();
           }),
         );
+    });
+    // Eine neue Stufe des Spielgefühls wirkt sofort: gleich neu laden.
+    this.spielgefuehl.stufe$.pipe(takeUntil(this.destroy$)).subscribe((stufe) => {
+      const bisher = this.stufe;
+      this.stufe = stufe;
+      if (bisher !== undefined && stufe !== undefined) {
+        this.laden$.next();
+      }
+      this.cdr.markForCheck();
     });
     this.laden$.next();
   }

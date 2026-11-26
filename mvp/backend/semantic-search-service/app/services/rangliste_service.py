@@ -126,6 +126,7 @@ class RanglisteService:
         heute: Callable[[], date] = heute_utc,
         cache_sekunden: float = CACHE_SEKUNDEN,
         uhr: Callable[[], float] = time.monotonic,
+        abzeichen: Optional[Callable[[Iterable[str]], Dict[str, int]]] = None,
     ):
         """
         ``saisons``: alle Saisons (SaisonService.alle); ``saisonpunkte(kennung,
@@ -133,7 +134,9 @@ class RanglisteService:
         ``voraussetzungen(kennungen)``: die Kennungen darunter, fuer die beide
         Einwilligungen gelten und die kein Startkonto sind, synchron;
         ``anzeigenamen``: AnzeigenameService.namen; ``nutzung_frist_tage``: Frist der
-        usage_events, None ohne Bereinigungsjob (dann gilt keine Frist).
+        usage_events, None ohne Bereinigungsjob (dann gilt keine Frist);
+        ``abzeichen(kennungen)``: die Abzeichen in der Rangliste (nur im neuen Modell,
+        AbzeichenService.in_rangliste), synchron; ohne Angabe keine.
         """
         self._repository = repository
         self._saisons = saisons
@@ -144,6 +147,7 @@ class RanglisteService:
         self._heute = heute
         self._cache_sekunden = cache_sekunden
         self._uhr = uhr
+        self._abzeichen = abzeichen or (lambda kennungen: {})
         self._sperre = threading.Lock()
         # Vergangene Saisons: je Person, Saison und Tag
         self._punkte: Dict[Tuple[str, str, date], Tuple[float, int]] = {}
@@ -239,7 +243,8 @@ class RanglisteService:
                 or (teilnahme.ranglistenname if teilnahme else None)
                 or OHNE_NAMEN
             )
-        return rangliste_bilden(punkte, namen, user_id), punkte[user_id]
+        abzeichen = await asyncio.to_thread(self._abzeichen, list(punkte))
+        return rangliste_bilden(punkte, namen, user_id, abzeichen), punkte[user_id]
 
     def _sperre_fuer_liste(self) -> asyncio.Lock:
         # Eine asyncio-Sperre gehoert zu einer Ereignisschleife.
@@ -374,9 +379,7 @@ _service: Optional[RanglisteService] = None
 def _voraussetzungen(kennungen: Iterable[str]) -> Set[str]:
     """Wer von ``kennungen`` beide Einwilligungen hat und kein Startkonto ist."""
     from core.config import settings
-    from repositories.punkte_einwilligung_repository import (
-        get_punkte_einwilligung_repository,
-    )
+    from services import spielgefuehl_service
     from services.art9_einwilligung_service import get_art9_einwilligung_service
 
     ohne_start = [k for k in kennungen if not settings.ist_startkonto(k)]
@@ -385,7 +388,9 @@ def _voraussetzungen(kennungen: Iterable[str]) -> Set[str]:
     art9 = get_art9_einwilligung_service().eingewilligte(ohne_start)
     if not art9:
         return set()
-    return art9 & get_punkte_einwilligung_repository().eingewilligte(art9)
+    # Punkte: bisherige Einwilligung oder, mit Schalter spielgefuehl_buehne, Stufe
+    # ab fuer_mich (services/spielgefuehl_service.py).
+    return art9 & spielgefuehl_service.punkte_eingewilligte(art9)
 
 
 def get_rangliste_service() -> RanglisteService:
@@ -396,15 +401,27 @@ def get_rangliste_service() -> RanglisteService:
         from repositories.rangliste_einwilligung_repository import (
             get_rangliste_einwilligung_repository,
         )
+        from repositories.spielgefuehl_repository import get_spielgefuehl_repository
+        from services.abzeichen_service import get_abzeichen_service
         from services.anzeigename_service import get_anzeigename_service
         from services.saison_service import get_saison_service
+        from services.spielgefuehl_service import RanglistenQuelle
 
         def saisonpunkte(kennung: str, zeitraum: Tuple[date, date]):
             # Erst beim ersten Rechnen gebaut: Wer nicht teilnimmt, braucht ihn nie.
             return get_punkte_service(settings).punkte(kennung, zeitraum)
 
+        def abzeichen(kennungen: Iterable[str]) -> Dict[str, int]:
+            # Nur im neuen Modell; der Dienst fragt seine Schalter selbst.
+            dienst = get_abzeichen_service()
+            return dienst.in_rangliste(kennungen) if dienst is not None else {}
+
         _service = RanglisteService(
-            get_rangliste_einwilligung_repository(),
+            # Wer mitspielt: bisherige Einwilligung oder, mit Schalter
+            # spielgefuehl_buehne, Stufe rangliste (services/spielgefuehl_service.py).
+            RanglistenQuelle(
+                get_rangliste_einwilligung_repository(), get_spielgefuehl_repository()
+            ),
             lambda: get_saison_service().alle(),
             saisonpunkte,
             _voraussetzungen,
@@ -415,6 +432,7 @@ def get_rangliste_service() -> RanglisteService:
                 if settings.enable_bereinigungsjob
                 else None
             ),
+            abzeichen=abzeichen,
         )
     return _service
 

@@ -422,6 +422,28 @@ class TestWiderrufen:
         )
         repository.widerrufen.assert_called_once()
 
+    def test_delete_nimmt_die_rangliste_im_spielgefuehl_zurueck(
+        self, client, repository, spielgefuehl_ohne_datenbank
+    ):
+        """Stufe rangliste wird zu fuer_mich, auch bei ausgeschaltetem Schalter."""
+        from datetime import datetime, timezone
+
+        from domain.spielgefuehl import AKTUELLER_WORTLAUT, Stufe
+        from repositories.spielgefuehl_repository import SpielgefuehlAntwort
+
+        spielgefuehl_ohne_datenbank.lesen.return_value = SpielgefuehlAntwort(
+            Stufe.RANGLISTE,
+            True,
+            AKTUELLER_WORTLAUT,
+            datetime(2026, 12, 1, tzinfo=timezone.utc),
+            "Kluge Eule 11",
+        )
+
+        assert client.delete(BASIS, headers=PERSON).status_code == 204
+        spielgefuehl_ohne_datenbank.antworten.assert_called_once_with(
+            "user-001", Stufe.FUER_MICH, False, AKTUELLER_WORTLAUT
+        )
+
     def test_delete_ohne_anmeldung_401(self, client, repository, stimmen):
         assert client.delete(BASIS).status_code == 401
         repository.widerrufen.assert_not_called()
@@ -658,6 +680,10 @@ OFFEN = {
     # Einwilligung zur Rangliste (#793): Ein Nein ist Zuruecknehmen, ein Ja wirkt
     # ohne Art.-9-Einwilligung nicht (Voraussetzung je Abruf).
     ("PUT", "/api/v1/rangliste/einwilligung"),
+    # Spielgefuehl: Stufe waehlen und neu wuerfeln; ohne Art.-9-Einwilligung
+    # entsteht nichts (Punkte und Rangliste setzen sie voraus), herabstufen bleibt offen.
+    ("PUT", "/api/v1/usage/users/me/spielgefuehl"),
+    ("POST", "/api/v1/usage/users/me/spielgefuehl/ranglistenname"),
     # Die Einwilligung selbst und "ohne Einwilligung weiter" (B2)
     ("POST", "/api/v1/art9-einwilligung"),
     ("POST", "/api/v1/art9-einwilligung/ohne"),

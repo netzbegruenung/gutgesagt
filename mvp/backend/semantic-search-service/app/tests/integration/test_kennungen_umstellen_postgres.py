@@ -52,6 +52,7 @@ JE_SPALTE_EINE = {
     "punkte_einwilligung.user_id": 1,
     "merkliste.user_id": 1,
     "rangliste_einwilligung.user_id": 1,
+    "spielgefuehl.user_id": 1,
     "nutzungsbedingungen_zustimmungen.user_id": 1,
     "loeschauftraege.user_id": 1,
     "votes.user_id": 1,

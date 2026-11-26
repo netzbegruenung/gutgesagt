@@ -21,6 +21,7 @@ import { NavigationService } from '../services/navigation.service';
 import { StatementService } from '../services/statement.service';
 import { TeamsService } from '../services/teams.service';
 import { RanglisteService } from '../services/rangliste.service';
+import { SpielgefuehlService } from '../services/spielgefuehl.service';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { VotingService } from '../services/voting.service';
@@ -120,6 +121,8 @@ describe('MeineBeitraegeComponent', () => {
         { provide: TeamsService, useValue: { meine: () => NEVER } },
         // Die Rangliste ebenso (#793)
         { provide: RanglisteService, useValue: { laden: () => NEVER } },
+        // Das Spielgefuehl ebenso
+        { provide: SpielgefuehlService, useValue: { laden: () => NEVER, stufe$: NEVER } },
         { provide: StatementService, useValue: { unbeantworteteAussagen: unbeantworteteLaden } },
         {
           provide: AuthService,

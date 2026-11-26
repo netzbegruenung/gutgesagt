@@ -633,6 +633,29 @@ K_SCHALTER = (
 SCHALTER.update({s.name: s for s in K_SCHALTER})
 
 
+# Spielgefuehl als eine Einstellung in drei Stufen (domain/spielgefuehl.py,
+# services/spielgefuehl_service.py): waehlt das Einwilligungsmodell, Obergrenze von
+# Haus aus aus. Wirkt fuer sich; was es zeigt, haengt weiter an punkte und rangliste.
+SCHALTER["spielgefuehl_buehne"] = Schalterart(
+    name="spielgefuehl_buehne",
+    gruppe=PUNKTE_ANERKENNUNG,
+    # Jura vorlaeufig ok 26.11. fuer den internen Test: nicht "wartet auf Recht"
+    rechtlich_freigegeben=True,
+    feld="spielgefuehl_buehne_aktiv",
+    umgebungsvariable="SEMANTIC_SEARCH_SPIELGEFUEHL_BUEHNE_AKTIV",
+    erklaerung=(
+        "Spielgefühl als eine Frage in drei Stufen (Aus, Nur für mich, in der "
+        "Saison-Rangliste mitspielen) statt der Einwilligungen Punkte, Abzeichen am "
+        "Namen und Rangliste; Abzeichen erscheinen dann nur in der Rangliste."
+    ),
+    einschalt_hinweis=(
+        "Jura vorläufig ok 26.11., interner Test; Go vor Vorhut/BDK; braucht "
+        "Salt-Obergrenze"
+    ),
+    oeffentlich=True,
+)
+
+
 class UnbekannterSchalter(KeyError):
     pass
 

@@ -25,6 +25,7 @@ from repositories.einwilligungs_moment_repository import (
     get_einwilligungs_moment_repository,
 )
 from services.schalter_service import schalter_wirksam
+from services.spielgefuehl_service import buehne_aktiv
 
 logger = get_logger(__name__)
 
@@ -52,6 +53,7 @@ def _angeboten(settings: Settings = Depends(get_settings)) -> bool:
 async def einwilligungs_moment(
     current_user: str = Depends(require_user),
     angeboten: bool = Depends(_angeboten),
+    settings: Settings = Depends(get_settings),
 ) -> EinwilligungsMomentResponse:
     """
     Ob die Person schon abgestimmt hat, wie viele Einwilligungsfragen sie beantwortet
@@ -61,7 +63,9 @@ async def einwilligungs_moment(
         return EinwilligungsMomentResponse(aktiv=False)
     try:
         moment = await asyncio.to_thread(
-            get_einwilligungs_moment_repository().lesen, current_user
+            get_einwilligungs_moment_repository().lesen,
+            current_user,
+            buehne_aktiv(settings),
         )
     except Exception as e:
         logger.error(

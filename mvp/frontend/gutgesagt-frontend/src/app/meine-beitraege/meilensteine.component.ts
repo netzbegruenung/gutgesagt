@@ -16,6 +16,7 @@ import {
 } from '../shared/punkte-einwilligung/punkte-einwilligung.service';
 import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 import { EinwilligungsMoment } from '../shared/einwilligungs-budget/einwilligungs-budget';
+import { SpielgefuehlService, SpielgefuehlStufe } from '../services/spielgefuehl.service';
 
 /**
  * Die eigenen Meilensteine in „Meine Beiträge“ (#351): je einer mit Medaillon (Motiv
@@ -77,6 +78,8 @@ export class MeilensteineComponent implements OnInit, OnDestroy {
   /** Gerade beantwortet: Satz zum neuen Stand, per role="status" angesagt. */
   punkteAntwort: 'ja' | 'nein' | null = null;
   @ViewChild('punkteStatus', { read: ElementRef }) punkteStatus?: ElementRef<HTMLElement>;
+  /** Stufe des Spielgefühls (Schalter spielgefuehl_buehne); null ohne Schalter oder Antwort. */
+  stufe: SpielgefuehlStufe | null | undefined = undefined;
   /** Nach einem frischen Lob: noch einmal entscheiden, sobald es vorbei ist. */
   private nachLob: ReturnType<typeof setTimeout> | null = null;
 
@@ -87,10 +90,20 @@ export class MeilensteineComponent implements OnInit, OnDestroy {
     @Inject(MEILENSTEIN_MERKER) private merkerAktiv: boolean,
     private punkteEinwilligung: PunkteEinwilligungService,
     private budget: EinwilligungsBudgetService,
+    private spielgefuehl: SpielgefuehlService,
   ) {}
 
   ngOnInit(): void {
     this.laden();
+    // Spielgefühl-Modell: Eine neue Stufe wirkt sofort, die Meilensteine laden nach.
+    this.spielgefuehl.stufe$.pipe(takeUntil(this.destroy$)).subscribe((stufe) => {
+      const bisher = this.stufe;
+      this.stufe = stufe;
+      if (bisher !== undefined && stufe !== undefined) {
+        this.laden();
+      }
+      this.cdr.markForCheck();
+    });
     // Die Einwilligung kann hier oder in den Datenschutz-Einstellungen wechseln: Dann
     // laden die Meilensteine selbst nach, ohne Neuladen der Seite.
     this.punkteEinwilligung.stand$.pipe(takeUntil(this.destroy$)).subscribe((stand) => {

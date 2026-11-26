@@ -76,6 +76,31 @@ describe('RanglisteComponent', () => {
     expect(el().querySelector('[data-testid="platz"]')).toBeNull();
   });
 
+  it('zeigt im Spielgefühl-Modell nur die Liste mit Abzeichen, ohne eigene Frage und Namenswahl', () => {
+    const oben = plaetze(1).map((p, i) => ({ ...p, abzeichen: i === 0 ? 4 : null }));
+    laden(stand({ buehne: true, gefragt: true, teilnehmen: true, rangliste: { oben, eigener: null, teilnehmende: 10 } }));
+
+    expect(el().querySelectorAll('[data-testid="platz"]').length).toBe(10);
+    expect(el().querySelectorAll('[data-testid="abzeichen"]').length).toBe(1);
+    expect(el().querySelector('[data-testid="abzeichen"]')!.textContent).toContain('4 Meilensteine');
+    expect(el().querySelector('[data-testid="frage"]')).toBeNull();
+    expect(el().querySelector('.rangliste-name')).toBeNull();
+    expect(knopf('raus')).toBeNull();
+  });
+
+  it('sagt im Spielgefühl-Modell, warum die Liste fehlt, wenn die Einwilligung zur Mitwirkung fehlt', () => {
+    laden(stand({ buehne: true, gefragt: true, teilnehmen: true, voraussetzungen: false }));
+
+    expect(el().querySelector('[data-testid="ruhend-buehne"]')!.textContent).toContain('Einwilligung zur Mitwirkung');
+    expect(knopf('raus-ruhend')).toBeNull();
+  });
+
+  it('zeigt im Spielgefühl-Modell nichts, solange die Person nicht mitspielt', () => {
+    laden(stand({ buehne: true, gefragt: false, teilnehmen: null }));
+
+    expect(el().querySelector('[data-testid="rangliste"]')).toBeNull();
+  });
+
   it('zeigt nichts ohne Schalter (200 mit aktiv false, kein 404 im Saal)', () => {
     http.expectOne(URL).flush({ ...stand(), aktiv: false, gefragt: true, voraussetzungen: true });
     fixture.detectChanges();

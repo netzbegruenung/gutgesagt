@@ -1,0 +1,92 @@
+.spielgefuehl {
+  margin-bottom: var(--spacing-md);
+  padding: 12px 16px;
+  border: 1px solid var(--feldrand);
+  border-radius: 8px;
+}
+
+.spielgefuehl h2 {
+  font-size: 1.1rem;
+  margin: 0 0 8px;
+}
+
+.spielgefuehl h2:focus {
+  outline: none;
+}
+
+.spielgefuehl h2:focus-visible {
+  outline: 2px solid var(--akzent-tanne);
+  outline-offset: 2px;
+}
+
+.spielgefuehl p {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.spielgefuehl-hinweis {
+  font-weight: 600;
+}
+
+/* Drei gleich grosse Stufen: je ein Knopf voller Breite, darunter der Wortlaut */
+.spielgefuehl-stufen {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.spielgefuehl-stufe .spielgefuehl-knopf {
+  width: 100%;
+}
+
+/* Lange Knopftexte duerfen umbrechen: 360 px ohne waagrechtes Scrollen */
+.spielgefuehl-knopf {
+  white-space: normal;
+  height: auto;
+  min-height: 40px;
+}
+
+.spielgefuehl-text,
+.spielgefuehl-absprachen,
+.spielgefuehl-tipp,
+.spielgefuehl-fuss {
+  color: var(--text-leise);
+}
+
+.spielgefuehl-text {
+  margin-top: 4px !important;
+}
+
+.spielgefuehl-namenswahl {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--feldrand);
+  border-radius: 8px;
+}
+
+.spielgefuehl-namenswahl legend {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 4px;
+}
+
+/* Beide Namen gleich gross und gleich gewichtet */
+.spielgefuehl-namenswahl label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  font-size: 14px;
+}
+
+.spielgefuehl-wechsel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.spielgefuehl-fehler {
+  color: var(--fehler);
+}

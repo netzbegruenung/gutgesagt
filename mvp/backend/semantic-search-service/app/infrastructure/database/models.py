@@ -1119,6 +1119,36 @@ class RanglisteEinwilligungZeile(Base):
     )
 
 
+class SpielgefuehlZeile(Base):
+    """
+    Eine Antwort auf die Frage "Spielgefuehl" (domain/spielgefuehl.py): ``stufe`` eine
+    von aus, fuer_mich, rangliste; ``mit_anzeigename`` ob die Person in der Rangliste
+    mit ihrem Anzeigenamen statt mit dem Zufallsnamen steht (nur bei Stufe rangliste
+    wahr); ``wortlaut`` die Kennung des Wortlauts; ``beantwortet_am`` der Zeitpunkt;
+    ``ranglistenname`` der zufaellige Name (beim ersten Mitspielen gewuerfelt, auf
+    Wunsch neu gewuerfelt, in jede weitere Zeile uebernommen; None davor). Es gilt die
+    juengste Zeile der Kennung; jede Aenderung ist eine neue Zeile, damit belegt
+    bleibt, wann die Person welche Stufe gewaehlt hat (Art. 7 Abs. 1 DSGVO). Punkte
+    und Plaetze stehen hier nicht, sie werden je Abruf berechnet.
+
+    Neue Tabelle: create_all legt sie beim Start an. Das Skript
+    postgres-app/migrations/2026-11-26-spielgefuehl.sql dokumentiert das Schema.
+    Loeschen: docs/LOESCHKONZEPT.md, Schritt 2.
+    """
+
+    __tablename__ = "spielgefuehl"
+
+    id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(String(255), nullable=False)
+    stufe = Column(String(16), nullable=False)
+    mit_anzeigename = Column(Boolean, nullable=False)
+    wortlaut = Column(String(64), nullable=False)
+    beantwortet_am = Column(DateTime(timezone=True), nullable=False)
+    ranglistenname = Column(String(64), nullable=True)
+
+    __table_args__ = (Index("idx_spielgefuehl_user", "user_id", "beantwortet_am"),)
+
+
 class LoeschauftragZeile(Base):
     """
     Ein Loeschauftrag nach dem Widerruf der Art.-9-Einwilligung (GLOSSARY.md

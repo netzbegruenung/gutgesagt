@@ -238,6 +238,28 @@ def rangliste_ohne_datenbank(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def spielgefuehl_ohne_datenbank(monkeypatch):
+    """
+    Die Antworten auf die Frage "Spielgefuehl" (services/spielgefuehl_service.py) ohne
+    Datenbank: niemand hat geantwortet. Der Widerruf der Art.-9-Einwilligung fragt
+    sie auch bei ausgeschaltetem Schalter; Tests mit Antworten stellen
+    ``spielgefuehl_ohne_datenbank.lesen.return_value`` ein.
+    """
+    import repositories.spielgefuehl_repository as modul
+    from services.spielgefuehl_service import spielgefuehl_service_setzen
+
+    repository = MagicMock()
+    repository.lesen.return_value = None
+    repository.teilnehmende.return_value = {}
+    repository.wirksame_stufen.return_value = {}
+    repository.vergebene_namen.return_value = set()
+    monkeypatch.setattr(modul, "_repository", repository)
+    spielgefuehl_service_setzen(None)
+    yield repository
+    spielgefuehl_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
 def teams_ohne_datenbank():
     """
     Der TeamService haengt an Antworten mit Anzeigenamen (Teams am Namen). Ohne Ersatz

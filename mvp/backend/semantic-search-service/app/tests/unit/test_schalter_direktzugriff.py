@@ -255,7 +255,13 @@ OBERGRENZE = FELDER | {"abzeichen_sichtbar"}
 ERLAUBT = {
     Path("core/config.py"): None,
     Path("services/schalter_service.py"): None,
-    Path("main.py"): {"settings.abzeichen_sichtbar"},
+    Path("main.py"): {
+        "settings.abzeichen_sichtbar",
+        # Im Spielgefuehl-Modell rechnet der Takt die Abzeichen fuer die Rangliste.
+        "settings.spielgefuehl_buehne_aktiv",
+        "settings.punkte_aktiv",
+        "settings.rangliste_aktiv",
+    },
 }
 
 

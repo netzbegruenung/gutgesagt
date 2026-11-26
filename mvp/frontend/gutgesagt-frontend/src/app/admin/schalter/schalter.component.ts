@@ -52,6 +52,7 @@ const TITEL: Record<string, string> = {
   danke_knopf: 'Danke-Knopf',
   danke_ohne_konto: 'Danke-Knopf ohne Konto',
   rangliste: 'Rangliste je Saison',
+  spielgefuehl_buehne: 'Spielgefühl in drei Stufen',
 };
 
 /** Schalter, die nur zusammen mit einem anderen wirken: Name → [Voraussetzung, Anzeige]. */

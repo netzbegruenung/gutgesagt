@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { RouterModule } from '@angular/router';
+import { DSE_SPIELGEFUEHL, DSE_SPIELGEFUEHL_TITEL } from './dse-spielgefuehl';
 import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
 import { FunktionenService } from '../services/funktionen.service';
@@ -55,6 +56,13 @@ export class DatenschutzComponent {
   }
   /** Merker der Meilensteine im Browser; der Absatz dazu steht erst, wenn er an ist (§ 25 TDDDG). */
   readonly meilensteinMerker = inject(MEILENSTEIN_MERKER);
+  /**
+   * Spielgefühl in drei Stufen (Schalter spielgefuehl_buehne): der Absatz „Spielgefühl“
+   * ersetzt unter „Punkte“ die Einwilligungsteile zu Punkten, Abzeichen und Rangliste.
+   */
+  readonly spielgefuehlBuehne = this.funktionen.an('spielgefuehl_buehne');
+  readonly spielgefuehlTitel = DSE_SPIELGEFUEHL_TITEL;
+  readonly spielgefuehlText = DSE_SPIELGEFUEHL;
   /** Merker „Hinweis Home-Bildschirm ausgeblendet“; der Absatz dazu steht nur, wenn er an ist. */
   readonly homeHinweisMerker = inject(HOME_HINWEIS_MERKER);
   /**

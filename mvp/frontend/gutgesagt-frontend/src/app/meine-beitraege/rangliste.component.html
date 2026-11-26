@@ -33,8 +33,9 @@
             </p>
         </ng-template>
 
-        <!-- Aktive Wahl: Standard ist der zufaellige Ranglistenname, der Anzeigename nur auf Klick -->
-        <fieldset class="rangliste-name" [disabled]="speichert">
+        <!-- Aktive Wahl: Standard ist der zufaellige Ranglistenname, der Anzeigename nur auf Klick.
+             Im Spielgefuehl-Modell waehlt die Person Teilnahme und Namen im Spielgefuehl. -->
+        <fieldset *ngIf="!buehne" class="rangliste-name" [disabled]="speichert">
             <legend>Dein Name in der Rangliste</legend>
             <label>
                 <input #nameWahl type="radio" name="rangliste-name" value="zufall" data-testid="name-zufall" [checked]="!mitAnzeigename" (change)="nameWaehlen(false)">
@@ -53,26 +54,30 @@
             </ul>
         </ng-container>
 
-        <p class="rangliste-stand">
+        <p *ngIf="!buehne" class="rangliste-stand">
             <button mat-button type="button" class="rangliste-raus" data-testid="raus" [disabled]="speichert"
                     (click)="antworten(false)">Aus der Rangliste nehmen</button>
         </p>
     </ng-container>
 
-    <p *ngIf="ruhend" class="rangliste-stand" data-testid="ruhend">
+    <!-- Spielgefuehl-Modell: Stufe gewaehlt, aber ohne Einwilligung zur Mitwirkung keine Liste -->
+    <p *ngIf="ruhend && buehne" class="rangliste-stand" data-testid="ruhend-buehne">
+        Du hast „In der Saison-Rangliste mitspielen“ gewählt, stehst aber gerade nicht darin: Dafür braucht es auch deine Einwilligung zur Mitwirkung.
+    </p>
+    <p *ngIf="ruhend && !buehne" class="rangliste-stand" data-testid="ruhend">
         Du hast der Rangliste zugestimmt, stehst aber gerade nicht darin: Dafür braucht es auch deine Einwilligungen zur Mitwirkung und zu „Punkte und Meilensteine“.
         <button mat-button type="button" class="rangliste-raus" data-testid="raus-ruhend" [disabled]="speichert"
                 (click)="antworten(false)">Aus der Rangliste nehmen</button>
     </p>
 
-    <p *ngIf="stand.gefragt && stand.teilnehmen === false && !fragen" class="rangliste-stand" data-testid="ohne">
+    <p *ngIf="!buehne && stand.gefragt && stand.teilnehmen === false && !fragen" class="rangliste-stand" data-testid="ohne">
         Du bist nicht in der Rangliste.
         <button mat-button type="button" class="rangliste-doch" [disabled]="speichert" (click)="doch()">In die Rangliste</button>
     </p>
 
     <ng-template #zeile let-platz>
         <span class="rangliste-nummer">{{ platz.platz }}.</span>
-        <span class="rangliste-name-text">{{ platz.name }}<span *ngIf="platz.ich" class="rangliste-du"> (du)</span></span>
+        <span class="rangliste-name-text">{{ platz.name }}<span *ngIf="platz.ich" class="rangliste-du"> (du)</span><span *ngIf="platz.abzeichen" class="rangliste-abzeichen" data-testid="abzeichen"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M6 .8l1.5 3.3 3.6.4-2.7 2.4.8 3.6L6 8.7 2.8 10.5l.8-3.6L.9 4.5l3.6-.4z" fill="currentColor"></path></svg><span aria-hidden="true">{{ platz.abzeichen }}</span><span class="visually-hidden">, {{ platz.abzeichen }} Meilensteine</span></span></span>
         <span class="rangliste-punkte">{{ platz.punkte }} Punkte</span>
     </ng-template>
 

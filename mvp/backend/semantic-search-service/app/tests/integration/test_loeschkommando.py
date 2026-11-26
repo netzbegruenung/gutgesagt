@@ -34,6 +34,7 @@ from infrastructure.database.models import (
     NutzungsbedingungenZustimmungZeile,
     PunkteEinwilligungZeile,
     RanglisteEinwilligungZeile,
+    SpielgefuehlZeile,
     Einwurf,
     AusformuliertIn,
     Satz,
@@ -315,6 +316,17 @@ def spuren(datenbank, einwuerfe):
                 mit_anzeigename=False,
                 wortlaut="rangliste-2026-11-25",
                 beantwortet_am=datetime.now(timezone.utc),
+            )
+        )
+        # Das Spielgefuehl (domain/spielgefuehl.py).
+        s.add(
+            SpielgefuehlZeile(
+                user_id=PERSON,
+                stufe="rangliste",
+                mit_anzeigename=False,
+                wortlaut="spielgefuehl-2026-11-26",
+                beantwortet_am=datetime.now(timezone.utc),
+                ranglistenname="Kluge Eule 11",
             )
         )
         # Die Zustimmung zu den Nutzungsbedingungen in der App.

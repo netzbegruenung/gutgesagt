@@ -798,6 +798,11 @@
         was gilt, sobald wir sie einschalten. Bis dahin entsteht nichts von dem, was hier
         steht.
       </p>
+      <!-- Spielgefuehl in drei Stufen (Schalter spielgefuehl_buehne, dse-spielgefuehl.ts): ersetzt
+           die Einwilligungsteile zu Punkten, Abzeichen und Rangliste; die Rechenregeln bleiben. -->
+      <p *ngIf="spielgefuehlBuehne()" id="spielgefuehl" data-testid="dse-spielgefuehl">
+        <strong>{{ spielgefuehlTitel }}</strong> {{ spielgefuehlText }}
+      </p>
       <p>
         Mit Punkten zeigen wir dir, wie deine Mitwirkung wirkt: wenige Punkte für deine
         Beiträge und ausformulierten Einwürfe, die meisten dafür, dass andere deine Beiträge
@@ -820,7 +825,7 @@
         Antwort führt. Dafür zählen wir auch, wie viele Einwürfe anderer du ausformuliert
         hast und wie viele Einwürfe du eingeworfen hast (verworfene nicht), und sehen nach,
         ob eine Aussage einen deiner Kommentare als Antwort führt. Deine Meilensteine
-        <strong>siehst nur du</strong>. Wir speichern sie nicht, sondern berechnen sie bei
+        <strong>siehst nur du</strong><ng-container *ngIf="spielgefuehlBuehne()">; deine Abzeichen zeigen wir nur in der Rangliste, wenn du mitspielst</ng-container>. Wir speichern sie nicht, sondern berechnen sie bei
         jedem Abruf aus deinen gespeicherten Beiträgen, Einwürfen und den Bewertungen und
         Zählern, die wir für die Punkte ohnehin haben. Es zählen nur nicht gesperrte Beiträge;
         wird einer gesperrt oder gelöscht, kann ein Meilenstein wieder wegfallen. Startkonten
@@ -833,8 +838,8 @@
             erreicht hast, still als gesehen, und genannt wird nur, was danach dazukommt.
         </ng-container>
         Keine Erinnerungen, keine Mails. Für Meilensteine gelten Zweck und Rechtsgrundlage wie
-        für die Punkte (unten); ohne deine Einwilligung „Punkte und Meilensteine“ gibt es
-        keine, auch keine Wegmarken.
+        für die Punkte (unten); <ng-container *ngIf="!spielgefuehlBuehne()">ohne deine Einwilligung „Punkte und Meilensteine“ gibt es
+        keine</ng-container><ng-container *ngIf="spielgefuehlBuehne()">ohne die Stufe ‚Nur für mich‘ oder ‚In der Saison-Rangliste mitspielen‘ beim Spielgefühl gibt es keine</ng-container>, auch keine Wegmarken.
       </p>
       <p>
         Damit Punkte nicht durch Absprachen entstehen, achten wir darauf, ob sich zwei Konten
@@ -859,7 +864,9 @@
       <p>
         <strong>Zweck:</strong> dir die Wirkung deiner Mitwirkung zeigen und die Punkte gegen
         Absprachen schützen.<br>
-        <strong>Rechtsgrundlage:</strong> deine eigene, freiwillige Einwilligung „Punkte und
+        <ng-container *ngIf="spielgefuehlBuehne()"><strong>Rechtsgrundlage:</strong> siehe
+        „Spielgefühl“ oben.<br></ng-container>
+        <ng-container *ngIf="!spielgefuehlBuehne()"><strong>Rechtsgrundlage:</strong> deine eigene, freiwillige Einwilligung „Punkte und
         Meilensteine“ nach Artikel 6 Absatz 1 Buchstabe a und Artikel 9 Absatz 2 Buchstabe a
         DSGVO. Du gibst sie selbst unter „Meine Beiträge“ (Häkchen oder Frage mit zwei
         gleichwertigen Knöpfen) oder mit einem eigenen Häkchen in den
@@ -872,13 +879,15 @@
         nichts mehr berechnet. Deine Antwort speichern wir mit der Kennung des Wortlauts und
         dem Zeitpunkt als Nachweis, bis dein Konto gelöscht wird; ein Widerruf ist ein
         weiterer Eintrag. Kopien, die ein Konto ohne Einwilligung zu seiner Mitwirkung macht,
-        bringen niemandem Punkte (siehe „Verwendung von Beiträgen“).<br>
+        bringen niemandem Punkte (siehe „Verwendung von Beiträgen“).<br></ng-container>
         <strong>Dauer:</strong> Paar-Prüfwerte löschen wir sieben Tage nach der letzten
         Nutzung in ihrer Richtung, Muster-Hinweise acht Wochen nach dem letzten auffälligen
         Tag, jeweils automatisch (täglicher Löschlauf, also spätestens einen Tag danach). Wird
         ein Konto gelöscht, gehen die Muster-Hinweise, die es nennen, mit; seine Paar-Prüfwerte
         laufen nach spätestens sieben Tagen aus.
       </p>
+      <!-- Mit Schalter spielgefuehl_buehne entfallen „Abzeichen an deinem Namen“ und die Rangliste: Absatz „Spielgefühl“ oben -->
+      <ng-container *ngIf="!spielgefuehlBuehne()">
       <p>
         <strong>Abzeichen an deinem Namen.</strong><ng-container *ngIf="!punkte()"> Auch</ng-container> Abzeichen sind noch nicht eingeschaltet,
         und wir schalten sie getrennt von den Punkten ein; bis dahin sieht sie niemand außer
@@ -918,6 +927,7 @@
         einschalten, beschreiben wir hier, was dafür verarbeitet wird, wer sie sieht und wie
         du deine Einwilligung widerrufst.
       </p>
+      </ng-container>
     </section>
 
     <mat-divider></mat-divider>

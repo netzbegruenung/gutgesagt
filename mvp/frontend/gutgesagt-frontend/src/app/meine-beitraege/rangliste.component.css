@@ -154,3 +154,13 @@
   font-size: 14px;
   color: var(--fehler);
 }
+
+/* Abzeichen nur im Spielgefuehl-Modell: erreichte Meilensteine neben dem Namen */
+.rangliste-abzeichen {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--text-leise);
+}
