@@ -129,7 +129,7 @@ describe('FooterComponent - Meldeweg', () => {
     const zeile = fixture.nativeElement.querySelector('.meldeweg') as HTMLElement;
     const text = zeile.textContent!.replace(/\s+/g, ' ').trim();
     expect(text).toBe(
-      `Beiträge meldest du über „Melden“ an jeder Karte, auch ohne Konto, oder per E-Mail an ${LEGAL_ENTITY.KONTAKT_MAIL}.`,
+      `Fällt dir ein Beitrag auf, der nicht hierher gehört? Melde ihn über „Melden“ an der Karte, auch ohne Konto, oder per E-Mail an ${LEGAL_ENTITY.KONTAKT_MAIL}.`,
     );
     const mails = Array.from(zeile.querySelectorAll('a[href^="mailto:"]')).map((a) => a.getAttribute('href'));
     expect(mails).toEqual([`mailto:${LEGAL_ENTITY.KONTAKT_MAIL}`]);

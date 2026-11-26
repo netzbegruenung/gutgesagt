@@ -76,7 +76,7 @@ describe('KartenAktionenComponent - Melden sichtbar', () => {
     expect(await menueMelden()).toEqual(['flagInhalt melden']);
   });
 
-  it('Schalter an: Knopf mit Symbol und Text „Melden“, nicht mehr doppelt im Menü', async () => {
+  it('Schalter an: Knopf mit Symbol und Text „Melden“, der Menüeintrag bleibt', async () => {
     meldeweg.set(true);
     fixture.detectChanges();
 
@@ -85,9 +85,9 @@ describe('KartenAktionenComponent - Melden sichtbar', () => {
     expect(k.querySelector('mat-icon')!.getAttribute('aria-hidden')).toBe('true');
     expect(k.querySelector('mat-icon')!.textContent!.trim()).toBe('outlined_flag');
     expect(k.querySelector('.melden-wort')!.textContent!.trim()).toBe('Melden');
-    // Der sichtbare Text steckt im Namen des Knopfs (WCAG 2.5.3)
-    expect(k.getAttribute('aria-label')!.toLowerCase()).toContain('melden');
-    expect(await menueMelden()).toEqual([]);
+    // Kein abweichendes aria-label: der sichtbare Text „Melden“ ist der Name (WCAG 2.5.3)
+    expect(k.hasAttribute('aria-label')).toBeFalse();
+    expect(await menueMelden()).toEqual(['flagInhalt melden']);
   });
 
   it('kommt und geht ohne Neuladen, sobald der Schalter umschaltet', () => {
@@ -109,6 +109,15 @@ describe('KartenAktionenComponent - Melden sichtbar', () => {
     expect(k.classList).not.toContain('gutgesagt-primary-dark');
     expect(k.classList).not.toContain('mat-mdc-raised-button');
     expect(parseFloat(getComputedStyle(k).fontSize)).toBeLessThan(parseFloat(getComputedStyle(kopieren).fontSize));
+  });
+
+  it('überlappt das ⋮ darüber nicht (Tippziele, WCAG 2.5.8)', () => {
+    meldeweg.set(true);
+    fixture.detectChanges();
+
+    const menue = (fixture.nativeElement.querySelector('.menue-knopf') as HTMLElement).getBoundingClientRect();
+    const melden = knopf()!.getBoundingClientRect();
+    expect(melden.top).toBeGreaterThanOrEqual(menue.bottom);
   });
 
   it('öffnet den Melde-Dialog mit Beitrag und Typ', () => {

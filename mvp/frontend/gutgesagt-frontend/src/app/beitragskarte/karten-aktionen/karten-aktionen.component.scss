@@ -103,11 +103,10 @@
 }
 
 // „Melden“ sichtbar (Schalter meldeweg_sichtbar): Textknopf in leiser Schrift, rechts unter
-// dem ⋮-Menü; rückt an die Leiste heran, damit die Karte kaum höher wird.
+// dem ⋮-Menü. Kein negativer Abstand: das Tippziel darf das ⋮ darüber nicht überlappen (WCAG 2.5.8).
 .melden-zeile {
   display: flex;
   justify-content: flex-end;
-  margin-top: calc(-1 * var(--spacing-sm));
   padding: 0 var(--spacing-sm) var(--spacing-xs);
 }
 
@@ -133,7 +132,6 @@
 
 @include bp.mobile-only {
   .melden-zeile {
-    margin-top: calc(-1 * var(--spacing-xs));
     padding: 0 var(--spacing-xs) var(--spacing-xs);
   }
 

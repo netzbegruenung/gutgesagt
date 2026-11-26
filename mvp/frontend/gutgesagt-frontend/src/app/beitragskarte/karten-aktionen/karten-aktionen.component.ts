@@ -146,7 +146,7 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
   /** „Als Bild teilen“ steht nur im Menue, wenn der Schalter an ist (#756, Standard aus). */
   readonly sharepicAn = inject(FunktionenService).an('sharepic');
   /**
-   * „Melden“ als eigener, leiser Knopf unter der Leiste statt nur im ⋮-Menü (Schalter
+   * „Melden“ als eigener, leiser Knopf unter der Leiste, zusätzlich zum ⋮-Menü (Schalter
    * `meldeweg_sichtbar`, Standard aus); der Melde-Dialog ist derselbe.
    */
   readonly meldewegAn = inject(FunktionenService).an('meldeweg_sichtbar');
@@ -605,7 +605,7 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
     this.router.navigate([pfad], { queryParams });
   }
 
-  /** Der sichtbare Knopf „Melden“; nie in der Vorschau. Steht er, entfällt der Menüeintrag. */
+  /** Der sichtbare Knopf „Melden“; nie in der Vorschau. Der Menüeintrag bleibt daneben. */
   get meldenSichtbar(): boolean {
     return this.meldewegAn() && !this.vorschau;
   }

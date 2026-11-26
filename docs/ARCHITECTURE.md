@@ -541,11 +541,13 @@ officer has advised.
 
 `meldeweg_sichtbar` (group Grundfunktionen, upper bound `SEMANTIC_SEARCH_MELDEWEG_SICHTBAR_AKTIV`,
 default off, public, no condition for switching on: preliminary legal assessment 26.11. without
-conditions): "Melden" as its own quiet button below the action bar of every Beitrag card instead of
-the ⋮ menu entry, and "Melden & Kontakt" in the footer with the reporting route and only the
-function address from the imprint (`LEGAL_ENTITY.KONTAKT_MAIL`), linking to the Art. 16 DSA section
-of the imprint (`/impressum#melden`). Display only: the report dialog and what it stores stay as
-they are.
+conditions): "Melden" as its own quiet button below the action bar of every Beitrag card, in
+addition to the ⋮ menu entry, and "Melden & Kontakt" in the footer with the reporting route and only the
+function address from the imprint (`LEGAL_ENTITY.KONTAKT_MAIL`), linking to the imprint section
+DSA-Kontaktstelle (Art. 11/12, with reports under Art. 16; `/impressum#melden`). Display only: the
+report dialog and what it stores stay as they are. Because the footer reads the Schalter,
+`GET /api/v1/funktionen` is now also requested on pages without cards (imprint, privacy policy);
+it stays public, always 200 and shared through the 5-minute cache.
 
 #### Saisons and Gemeinschaftsziel (#782)
 
