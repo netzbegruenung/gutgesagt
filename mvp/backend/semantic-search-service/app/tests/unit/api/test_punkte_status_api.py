@@ -76,7 +76,7 @@ def test_spielgefuehl_modell_keine_abzeichen_am_namen():
         "abzeichen_sichtbar": False,
         "spielgefuehl_buehne": True,
     }
-    # Die Frage nach der Sichtbarkeit gibt es im neuen Modell nicht: lesen aus, aendern 404.
+    # Die Frage nach der Sichtbarkeit gibt es im neuen Modell nicht: lesen aus, Ja 409.
     sichtbarkeit = "/api/v1/usage/users/me/abzeichen-sichtbarkeit"
     assert (
         client.get(sichtbarkeit, headers={"X-User": "kim-1"}).json()["aktiv"] is False
@@ -86,4 +86,4 @@ def test_spielgefuehl_modell_keine_abzeichen_am_namen():
         headers={"X-User": "kim-1"},
         json={"zeigen": True, "wortlaut": "2026-11-09"},
     )
-    assert antwort.status_code == 404
+    assert antwort.status_code == 409

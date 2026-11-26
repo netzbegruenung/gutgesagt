@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import List, Optional, Sequence
 
-from sqlalchemy import delete, desc, exists, func, select
+from sqlalchemy import delete, desc, exists, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 
 from infrastructure.database.connection import AppDatabase, get_app_database
@@ -109,6 +109,18 @@ class MusterHinweisRepository:
                 MusterHinweis(z.konto_a, z.konto_b, z.tage, z.erster_tag, z.letzter_tag)
                 for z in session.execute(abfrage).scalars()
             ]
+
+    def vergessen(self, user_id: str) -> int:
+        """Alle Hinweise loeschen, die ``user_id`` nennen (Widerruf); liefert die Anzahl."""
+        with self.db.get_session() as session:
+            return session.execute(
+                delete(MusterHinweisZeile).where(
+                    or_(
+                        MusterHinweisZeile.konto_a == user_id,
+                        MusterHinweisZeile.konto_b == user_id,
+                    )
+                )
+            ).rowcount
 
     def paare_verwerfen_vor(self, tag: date) -> int:
         """Paar-Pruefwerte, deren letzter Tag vor ``tag`` liegt, verwerfen."""

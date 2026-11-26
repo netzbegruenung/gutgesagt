@@ -196,18 +196,88 @@ def test_art9_widerruf_nimmt_nur_die_rangliste_zurueck(speicher):
     assert antwort.ranglistenname == "Kluge Eule 11"
 
 
-def test_herabstufen_gilt_auch_im_bisherigen_modell(speicher):
+def test_jede_antwort_gilt_auch_im_bisherigen_modell(speicher):
+    """
+    Auch Stufe rangliste: Ein altes Ja zu Abzeichen am Namen lebte sonst nach dem
+    Ausschalten des Schalters wieder auf (_alt_zuruecknehmen schreibt dort nur Neins).
+    """
     alt = MagicMock()
     dienst = SpielgefuehlService(
         speicher, lambda: set(), lambda u: False, alt_zuruecknehmen=alt
     )
 
     dienst.antworten("kim", Stufe.RANGLISTE, True, AKTUELLER_WORTLAUT)
-    alt.assert_not_called()
+    alt.assert_called_with("kim", Stufe.RANGLISTE)
     dienst.antworten("kim", Stufe.FUER_MICH, None, AKTUELLER_WORTLAUT)
     alt.assert_called_with("kim", Stufe.FUER_MICH)
     dienst.antworten("kim", Stufe.AUS, None, AKTUELLER_WORTLAUT)
     alt.assert_called_with("kim", Stufe.AUS)
+
+
+def test_aus_loescht_die_muster_hinweise(speicher):
+    vergessen = MagicMock()
+    dienst = SpielgefuehlService(
+        speicher, lambda: set(), lambda u: False, hinweise_vergessen=vergessen
+    )
+
+    dienst.antworten("kim", Stufe.RANGLISTE, True, AKTUELLER_WORTLAUT)
+    dienst.antworten("kim", Stufe.FUER_MICH, None, AKTUELLER_WORTLAUT)
+    vergessen.assert_not_called()
+    dienst.antworten("kim", Stufe.AUS, None, AKTUELLER_WORTLAUT)
+    vergessen.assert_called_once_with("kim")
+
+
+def test_aus_gilt_auch_wenn_das_loeschen_der_hinweise_scheitert(speicher):
+    dienst = SpielgefuehlService(
+        speicher,
+        lambda: set(),
+        lambda u: False,
+        hinweise_vergessen=MagicMock(side_effect=RuntimeError("weg")),
+    )
+
+    dienst.antworten("kim", Stufe.AUS, None, AKTUELLER_WORTLAUT)
+
+    assert speicher.lesen("kim").stufe is Stufe.AUS
+
+
+@pytest.mark.parametrize(
+    "bisher, stufe, erwartet",
+    [
+        (None, Stufe.AUS, True),
+        (None, Stufe.FUER_MICH, False),
+        (None, Stufe.RANGLISTE, False),
+        (Stufe.RANGLISTE, Stufe.FUER_MICH, True),
+        (Stufe.RANGLISTE, Stufe.RANGLISTE, False),
+        (Stufe.FUER_MICH, Stufe.FUER_MICH, False),
+        (Stufe.FUER_MICH, Stufe.RANGLISTE, False),
+        (Stufe.AUS, Stufe.AUS, True),
+    ],
+)
+def test_herabstufung(dienst, speicher, bisher, stufe, erwartet):
+    if bisher is not None:
+        speicher.antworten("kim", bisher, False, AKTUELLER_WORTLAUT, "X")
+
+    assert dienst.herabstufung("kim", stufe) is erwartet
+
+
+def test_herabstufung_zu_altem_wortlaut_gilt_als_aus(dienst, speicher):
+    speicher.antworten("kim", Stufe.RANGLISTE, True, "spielgefuehl-1999", "X")
+
+    assert dienst.herabstufung("kim", Stufe.FUER_MICH) is False
+    assert dienst.herabstufung("kim", Stufe.AUS) is True
+
+
+def test_zuruecknehmen_bis_aus(speicher):
+    speicher.antworten("kim", Stufe.RANGLISTE, True, AKTUELLER_WORTLAUT, "X")
+    speicher.antworten("bo", Stufe.FUER_MICH, False, AKTUELLER_WORTLAUT)
+
+    zuruecknehmen("kim", speicher, bis=Stufe.AUS)
+    zuruecknehmen("bo", speicher, bis=Stufe.AUS)
+    zuruecknehmen("ida", speicher, bis=Stufe.AUS)
+
+    assert speicher.lesen("kim").stufe is Stufe.AUS
+    assert speicher.lesen("bo").stufe is Stufe.AUS
+    assert speicher.lesen("ida") is None
 
 
 def test_alt_zuruecknehmen_schreibt_nur_neins(monkeypatch):
@@ -234,6 +304,30 @@ def test_alt_zuruecknehmen_schreibt_nur_neins(monkeypatch):
 
     spielgefuehl_service._alt_zuruecknehmen("kim", Stufe.AUS)
     punkte.antworten.assert_called_once_with("kim", False, "2026-11-13")
+
+
+def test_alt_zuruecknehmen_bei_rangliste_nur_die_abzeichen(monkeypatch):
+    """Stufe rangliste: Abzeichen am Namen Nein, Rangliste und Punkte unberuehrt."""
+    from repositories.abzeichen_sichtbarkeit_repository import Sichtbarkeit
+    from repositories.punkte_einwilligung_repository import PunkteEinwilligung
+
+    sichtbarkeit, punkte = MagicMock(), MagicMock()
+    sichtbarkeit.lesen.return_value = Sichtbarkeit(True, "2026-11-09", None)
+    punkte.lesen.return_value = PunkteEinwilligung(True, "2026-11-13", None)
+    monkeypatch.setattr(
+        "repositories.abzeichen_sichtbarkeit_repository._repository", sichtbarkeit
+    )
+    monkeypatch.setattr(
+        "repositories.punkte_einwilligung_repository._repository", punkte
+    )
+    rangliste = MagicMock()
+    monkeypatch.setattr("services.rangliste_service.zuruecknehmen", rangliste)
+
+    spielgefuehl_service._alt_zuruecknehmen("kim", Stufe.RANGLISTE)
+
+    sichtbarkeit.antworten.assert_called_once_with("kim", False, "2026-11-09")
+    rangliste.assert_not_called()
+    punkte.antworten.assert_not_called()
 
 
 def test_neu_wuerfeln_gedrosselt(speicher):

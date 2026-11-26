@@ -57,9 +57,61 @@ def test_ohne_schalter_aktiv_false_ohne_abfrage(dienst, buehne, punkte):
     assert antwort.status_code == 200
     assert antwort.json()["aktiv"] is False
     dienst.stand.assert_not_called()
-    body = {"stufe": "aus", "wortlaut": AKTUELLER_WORTLAUT}
-    assert client.put(URL, json=body, headers=KIM).status_code == 404
     assert client.post(URL + "/ranglistenname", headers=KIM).status_code == 404
+
+
+@pytest.mark.parametrize("buehne, punkte", [(False, True), (True, False)])
+def test_ohne_schalter_aus_immer_speicherbar(dienst, buehne, punkte):
+    """Widerruf so einfach wie die Einwilligung (Art. 7 Abs. 3 DSGVO), auch nach Not-Aus."""
+    dienst.herabstufung.return_value = True
+
+    antwort = _client(buehne, punkte).put(
+        URL, json={"stufe": "aus", "wortlaut": AKTUELLER_WORTLAUT}, headers=KIM
+    )
+
+    assert antwort.status_code == 204
+    dienst.herabstufung.assert_called_once_with("kim-1", Stufe.AUS)
+    dienst.antworten.assert_called_once_with(
+        "kim-1", Stufe.AUS, None, AKTUELLER_WORTLAUT
+    )
+
+
+def test_ohne_schalter_herabstufen_aus_der_rangliste(dienst):
+    dienst.herabstufung.return_value = True
+
+    antwort = _client(buehne=False).put(
+        URL, json={"stufe": "fuer_mich", "wortlaut": AKTUELLER_WORTLAUT}, headers=KIM
+    )
+
+    assert antwort.status_code == 204
+    dienst.antworten.assert_called_once_with(
+        "kim-1", Stufe.FUER_MICH, None, AKTUELLER_WORTLAUT
+    )
+
+
+@pytest.mark.parametrize("stufe", ["fuer_mich", "rangliste"])
+@pytest.mark.parametrize("buehne, punkte", [(False, True), (True, False)])
+def test_ohne_schalter_kein_heraufstufen(dienst, buehne, punkte, stufe):
+    """Ein Ja bleibt an die Schalter gebunden; 409 statt 404 (Gateway-fail2ban)."""
+    dienst.herabstufung.return_value = False
+
+    antwort = _client(buehne, punkte).put(
+        URL,
+        json={"stufe": stufe, "mit_anzeigename": False, "wortlaut": AKTUELLER_WORTLAUT},
+        headers=KIM,
+    )
+
+    assert antwort.status_code == 409
+    dienst.antworten.assert_not_called()
+
+
+def test_mit_schalter_ohne_pruefung_der_herabstufung(dienst):
+    _client().put(
+        URL, json={"stufe": "fuer_mich", "wortlaut": AKTUELLER_WORTLAUT}, headers=KIM
+    )
+
+    dienst.herabstufung.assert_not_called()
+    dienst.antworten.assert_called_once()
 
 
 def test_ohne_anmeldung_401(dienst):

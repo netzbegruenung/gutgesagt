@@ -103,9 +103,7 @@ def test_teilnehmend_mit_rangliste(dienst):
 
 
 @pytest.mark.parametrize("rangliste,punkte", [(False, True), (True, False)])
-def test_ohne_schalter_oder_ohne_punkte_lesen_aus_aendern_404(
-    dienst, rangliste, punkte
-):
+def test_ohne_schalter_oder_ohne_punkte_lesen_aus_ja_409(dienst, rangliste, punkte):
     client = _client(rangliste=rangliste, punkte=punkte)
 
     # Lesen laedt die Seite selbst nach: 200 mit aktiv false statt 404 (Gateway-fail2ban)
@@ -122,8 +120,72 @@ def test_ohne_schalter_oder_ohne_punkte_lesen_aus_aendern_404(
         json={"teilnehmen": True, "wortlaut": AKTUELLER_WORTLAUT},
         headers=KIM,
     )
-    assert antwort.status_code == 404
+    assert antwort.status_code == 409
     dienst.antworten.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "rangliste,punkte,buehne",
+    [
+        (False, True, False),
+        (True, False, False),
+        (True, True, True),
+        (True, True, False),
+    ],
+)
+def test_nein_immer_speicherbar(
+    dienst,
+    rangliste_ohne_datenbank,
+    spielgefuehl_ohne_datenbank,
+    rangliste,
+    punkte,
+    buehne,
+):
+    """Widerruf so einfach wie die Einwilligung, auch nach Not-Aus und im neuen Modell."""
+    from domain.spielgefuehl import AKTUELLER_WORTLAUT as SPIELGEFUEHL_WORTLAUT
+    from domain.spielgefuehl import Stufe
+    from repositories.spielgefuehl_repository import SpielgefuehlAntwort
+
+    spielgefuehl_ohne_datenbank.lesen.return_value = SpielgefuehlAntwort(
+        Stufe.RANGLISTE,
+        True,
+        SPIELGEFUEHL_WORTLAUT,
+        datetime(2026, 12, 1, tzinfo=timezone.utc),
+        "Kluge Eule 11",
+    )
+    app = FastAPI()
+    app.include_router(router, prefix=URL)
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        punkte_aktiv=punkte, rangliste_aktiv=rangliste, spielgefuehl_buehne_aktiv=buehne
+    )
+
+    antwort = TestClient(app).put(
+        f"{URL}/einwilligung",
+        json={"teilnehmen": False, "wortlaut": AKTUELLER_WORTLAUT},
+        headers=KIM,
+    )
+
+    assert antwort.status_code == 204
+    rangliste_ohne_datenbank.antworten.assert_called_once_with(
+        "kim-1", False, False, AKTUELLER_WORTLAUT
+    )
+    # Auch im Spielgefuehl: rangliste -> fuer_mich, sonst gaelte das Ja nach dem
+    # Umschalten weiter.
+    spielgefuehl_ohne_datenbank.antworten.assert_called_once_with(
+        "kim-1", Stufe.FUER_MICH, False, SPIELGEFUEHL_WORTLAUT
+    )
+    dienst.antworten.assert_not_called()
+
+
+def test_nein_unbekannter_wortlaut_422(dienst, rangliste_ohne_datenbank):
+    antwort = _client(rangliste=False).put(
+        f"{URL}/einwilligung",
+        json={"teilnehmen": False, "wortlaut": "1999"},
+        headers=KIM,
+    )
+
+    assert antwort.status_code == 422
+    rangliste_ohne_datenbank.antworten.assert_not_called()
 
 
 def test_ohne_anmeldung_401(dienst):
@@ -209,7 +271,7 @@ def test_spielgefuehl_modell_liste_mit_abzeichen_ohne_eigene_frage(dienst):
         json={"teilnehmen": True, "wortlaut": AKTUELLER_WORTLAUT},
         headers=KIM,
     )
-    assert antwort.status_code == 404
+    assert antwort.status_code == 409
     dienst.antworten.assert_not_called()
 
 

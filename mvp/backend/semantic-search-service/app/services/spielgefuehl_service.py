@@ -60,6 +60,10 @@ class ZuOftGewuerfelt(RuntimeError):
     """Neu wuerfeln hoechstens einmal je WUERFELN_ABSTAND_SEKUNDEN und Person."""
 
 
+# Rang der Stufen fuers Herabstufen: hoeher heisst mehr eingewilligt.
+_RANG: Dict[Stufe, int] = {Stufe.AUS: 0, Stufe.FUER_MICH: 1, Stufe.RANGLISTE: 2}
+
+
 # Jeder Wurf ist eine Nachweiszeile: gegen Klick-Serien hoechstens einer je so viele
 # Sekunden und Person (nur im Arbeitsspeicher).
 WUERFELN_ABSTAND_SEKUNDEN = 10.0
@@ -99,10 +103,15 @@ def punkte_eingewilligt(user_id: str) -> bool:
     return get_punkte_einwilligung_repository().eingewilligt(user_id)
 
 
-def punkte_eingewilligte(kennungen: Iterable[str]) -> Set[str]:
-    """Wie ``punkte_eingewilligt`` fuer viele Kennungen in einer Abfrage (Rangliste)."""
+def punkte_eingewilligte(
+    kennungen: Iterable[str], einstellungen: Optional[Settings] = None
+) -> Set[str]:
+    """
+    Wie ``punkte_eingewilligt`` fuer viele Kennungen in einer Abfrage (Rangliste,
+    Muster-Hinweise im Admin-Dashboard).
+    """
     liste = list(kennungen)
-    if buehne_aktiv():
+    if buehne_aktiv(einstellungen):
         stufen = _neues_repository().wirksame_stufen(liste)
         return {k for k, stufe in stufen.items() if punkte_wirksam(stufe)}
     from repositories.punkte_einwilligung_repository import (
@@ -181,15 +190,17 @@ class SpielgefuehlService:
         abzeichen_vergessen: Callable[[str], None] = lambda user_id: None,
         alt_zuruecknehmen: Callable[[str, Stufe], None] = lambda user_id, stufe: None,
         uhr: Callable[[], float] = time.monotonic,
+        hinweise_vergessen: Callable[[str], None] = lambda user_id: None,
     ):
         """
         ``alte_namen``: Ranglistennamen aus der bisherigen Einwilligung (zum Wuerfeln
         ohne Doppelung); ``zeigte_abzeichen(kennung)``: ob die juengste bisherige
         Antwort zur Sichtbarkeit "zeigen" war; ``abzeichen_vergessen``: die Abzeichen
         der Person sofort aus der Rangliste nehmen (AbzeichenService.vergessen);
-        ``alt_zuruecknehmen(kennung, stufe)``: dasselbe Herabstufen in den bisherigen
-        Einwilligungen festhalten, damit es auch nach dem Ausschalten des Schalters
-        gilt. Alle synchron.
+        ``alt_zuruecknehmen(kennung, stufe)``: die gewaehlte Stufe in den bisherigen
+        Einwilligungen festhalten, soweit sie dort ein Nein ist, damit sie auch nach
+        dem Ausschalten des Schalters gilt; ``hinweise_vergessen(kennung)``: die
+        Muster-Hinweise der Person loeschen (bei ``aus``). Alle synchron.
         """
         self._repository = repository
         self._alte_namen = alte_namen
@@ -197,6 +208,7 @@ class SpielgefuehlService:
         self._abzeichen_vergessen = abzeichen_vergessen
         self._alt_zuruecknehmen = alt_zuruecknehmen
         self._uhr = uhr
+        self._hinweise_vergessen = hinweise_vergessen
         self._gewuerfelt: Dict[str, float] = {}
         self._sperre = threading.Lock()
 
@@ -218,6 +230,19 @@ class SpielgefuehlService:
             abzeichen_hinweis=False,
         )
 
+    def herabstufung(self, user_id: str, stufe: Stufe) -> bool:
+        """
+        Ob ``stufe`` ein Widerruf ist: ``aus`` immer, sonst nur unter der wirksamen
+        Stufe der Person (rangliste -> fuer_mich). Ein Widerruf geht auch bei
+        ausgeschaltetem Schalter (Art. 7 Abs. 3 DSGVO, api/v1/spielgefuehl.py);
+        ``aus`` ohne Datenbankabfrage.
+        """
+        if stufe is Stufe.AUS:
+            return True
+        antwort = self._repository.lesen(user_id)
+        bisher = antwort.wirksame_stufe if antwort is not None else Stufe.AUS
+        return _RANG[stufe] < _RANG[bisher]
+
     def antworten(
         self,
         user_id: str,
@@ -233,7 +258,12 @@ class SpielgefuehlService:
         wechseln kann. Herabstufen nimmt die Abzeichen sofort aus der Rangliste und
         haelt es auch in den bisherigen Einwilligungen fest: Ein "Aus" gilt dann auch,
         wenn der Schalter wieder ausgeht (Widerruf, Art. 7 Abs. 3 DSGVO). Hochgestuft
-        wird dort nie.
+        wird dort nie. Ein frueheres Ja zu Abzeichen am Namen wird bei jeder Antwort
+        zum Nein, auch bei Stufe rangliste: Die Person liest, dass Abzeichen jetzt nur
+        noch in der Rangliste stehen, und sie sollen nach dem Ausschalten des Schalters
+        nicht wieder am Namen erscheinen. ``aus`` loescht auch die Muster-Hinweise,
+        die die Person nennen; Fehler dabei nur im Log (die Admin-Ansicht filtert
+        ohnehin nach der aktuellen Einwilligung).
         """
         if wortlaut not in WORTLAUTE or (
             stufe is not Stufe.AUS and wortlaut != AKTUELLER_WORTLAUT
@@ -253,7 +283,15 @@ class SpielgefuehlService:
         self._repository.antworten(user_id, stufe, mit_anzeigename, wortlaut, name)
         if not in_rangliste(stufe):
             self._abzeichen_vergessen(user_id)
-            self._alt_zuruecknehmen(user_id, stufe)
+        self._alt_zuruecknehmen(user_id, stufe)
+        if stufe is Stufe.AUS:
+            try:
+                self._hinweise_vergessen(user_id)
+            except Exception as e:
+                logger.error(
+                    f"Muster-Hinweise nach Spielgefuehl aus nicht geloescht: {type(e).__name__}",
+                    exc_info=True,
+                )
 
     def neu_wuerfeln(self, user_id: str) -> str:
         """Ein neuer Zufallsname als neue Nachweiszeile; nur mit Stufe rangliste."""
@@ -285,20 +323,28 @@ class SpielgefuehlService:
 
 
 def zuruecknehmen(
-    user_id: str, repository: Optional[SpielgefuehlRepository] = None
+    user_id: str,
+    repository: Optional[SpielgefuehlRepository] = None,
+    bis: Stufe = Stufe.FUER_MICH,
 ) -> None:
     """
-    Beim Widerruf der Art.-9-Einwilligung (api/v1/art9_einwilligung.py), auch bei
-    ausgeschaltetem Schalter: Stufe ``rangliste`` als ``fuer_mich`` festhalten, wie
-    im bisherigen Modell Rangliste und Abzeichen am Namen zurueckgenommen werden und
-    "Punkte und Meilensteine" als eigene Einwilligung bleibt. Sonst stuende die
-    Person nach einer neuen Art.-9-Einwilligung ohne neue Frage wieder in der
-    Rangliste. Wer nicht mitspielt, bekommt keine Zeile. Synchron.
+    Eine hoehere Stufe als ``bis`` als ``bis`` festhalten, auch bei ausgeschaltetem
+    Schalter; nie hochstufen. Wer darunter steht oder nie geantwortet hat, bekommt
+    keine Zeile. Synchron.
+
+    - Widerruf der Art.-9-Einwilligung (api/v1/art9_einwilligung.py) und Nein zur
+      bisherigen Rangliste (api/v1/rangliste.py): ``rangliste`` als ``fuer_mich``, wie
+      im bisherigen Modell Rangliste und Abzeichen am Namen zurueckgenommen werden und
+      "Punkte und Meilensteine" als eigene Einwilligung bleibt.
+    - Widerruf von "Punkte und Meilensteine" (api/v1/usage.py): ``bis=aus``.
+
+    Sonst stuende die Person nach dem Einschalten des Schalters spielgefuehl_buehne
+    oder einer neuen Art.-9-Einwilligung ohne neue Frage wieder auf der alten Stufe.
     """
     repository = repository or _neues_repository()
     antwort: Optional[SpielgefuehlAntwort] = repository.lesen(user_id)
-    if antwort is not None and antwort.stufe is Stufe.RANGLISTE:
-        repository.antworten(user_id, Stufe.FUER_MICH, False, antwort.wortlaut)
+    if antwort is not None and _RANG[antwort.stufe] > _RANG[bis]:
+        repository.antworten(user_id, bis, False, antwort.wortlaut)
 
 
 _service: Optional[SpielgefuehlService] = None
@@ -323,9 +369,11 @@ def _abzeichen_vergessen(user_id: str) -> None:
 
 def _alt_zuruecknehmen(user_id: str, stufe: Stufe) -> None:
     """
-    Herabstufen auch in den bisherigen Einwilligungen festhalten (nur ein frueheres Ja
-    als Nein, nie hochstufen): Abzeichen am Namen und Rangliste immer, "Punkte und
-    Meilensteine" bei ``aus``.
+    Die Stufe auch in den bisherigen Einwilligungen festhalten (nur ein frueheres Ja
+    als Nein, nie hochstufen): Abzeichen am Namen bei jeder Stufe (im neuen Modell nie
+    am Namen, sonst lebte ein altes Ja nach dem Ausschalten des Schalters wieder auf),
+    Rangliste unter ``rangliste``,
+    "Punkte und Meilensteine" bei ``aus``.
     """
     from repositories.abzeichen_sichtbarkeit_repository import (
         get_abzeichen_sichtbarkeit_repository,
@@ -339,12 +387,20 @@ def _alt_zuruecknehmen(user_id: str, stufe: Stufe) -> None:
     antwort = sichtbarkeit.lesen(user_id)
     if antwort is not None and antwort.zeigen:
         sichtbarkeit.antworten(user_id, False, antwort.wortlaut)
-    rangliste_service.zuruecknehmen(user_id)
+    if not in_rangliste(stufe):
+        rangliste_service.zuruecknehmen(user_id)
     if stufe is Stufe.AUS:
         punkte = get_punkte_einwilligung_repository()
         stand = punkte.lesen(user_id)
         if stand is not None and stand.eingewilligt:
             punkte.antworten(user_id, False, stand.wortlaut)
+
+
+def muster_hinweise_vergessen(user_id: str) -> None:
+    """Die Muster-Hinweise, die die Person nennen, loeschen (Widerruf)."""
+    from dependencies import get_muster_hinweise_service
+
+    get_muster_hinweise_service().vergessen(user_id)
 
 
 def get_spielgefuehl_service() -> SpielgefuehlService:
@@ -360,6 +416,7 @@ def get_spielgefuehl_service() -> SpielgefuehlService:
             _zeigte_abzeichen,
             _abzeichen_vergessen,
             _alt_zuruecknehmen,
+            hinweise_vergessen=muster_hinweise_vergessen,
         )
     return _service
 

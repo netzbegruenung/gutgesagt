@@ -3,12 +3,15 @@ Rangliste je Saison (#793, services/rangliste_service.py), unter /api/v1/ranglis
 nur fuer die angemeldete Person selbst (``X-User``). Solange der Schalter ``rangliste``
 nicht wirkt (er wirkt nur zusammen mit den Punkten, services/schalter_service.py),
 antwortet ``GET`` mit 200 und ``aktiv: false`` (die Seite laedt selbst nach, ein 404 je
-Abruf sperrte am Gateway ein Saal-WLAN, docs/ARCHITECTURE.md), ``PUT`` mit 404.
+Abruf sperrte am Gateway ein Saal-WLAN, docs/ARCHITECTURE.md). ``PUT`` nimmt ein Nein
+immer an (Widerruf so einfach wie die Einwilligung, Art. 7 Abs. 3 DSGVO), ein Ja dann
+nicht (409).
 
 - ``GET ""``: Antwort der Person, ihr Ranglistenname und, wenn sie selbst
   teilnimmt, die Rangliste der laufenden Saison (Top 10 und eigener Platz, erst ab
   zehn Teilnehmenden) und vergangene Saisons als Summe.
-- ``PUT /einwilligung``: Ja oder Nein und die Wahl des Anzeigenamens, jederzeit.
+- ``PUT /einwilligung``: Ja oder Nein und die Wahl des Anzeigenamens, jederzeit; ein
+  Ja nur mit wirksamem Schalter und nicht im Spielgefuehl-Modell.
 
 Kein teilbarer Link, keine Linkvorschau, kein Export: Es gibt nur diesen Abruf fuer
 die angemeldete Person.
@@ -32,6 +35,7 @@ from domain.rangliste import (
     Platz,
     UnbekannterWortlaut,
 )
+from services import rangliste_service
 from services.rangliste_service import RanglisteService, get_rangliste_service
 from services.schalter_service import schalter_wirksam
 from services.spielgefuehl_service import buehne_aktiv
@@ -104,11 +108,9 @@ class EinwilligungRequest(BaseModel):
     wortlaut: str
 
 
-def _dienst(settings: Settings = Depends(get_settings)) -> RanglisteService:
+def _frage_angeboten(settings: Settings) -> bool:
     # Im Spielgefuehl-Modell gibt es die eigene Frage zur Rangliste nicht mehr.
-    if not schalter_wirksam("rangliste", settings) or buehne_aktiv(settings):
-        raise HTTPException(status_code=404, detail="Not found")
-    return get_rangliste_service()
+    return schalter_wirksam("rangliste", settings) and not buehne_aktiv(settings)
 
 
 def _dienst_oder_aus(
@@ -207,20 +209,29 @@ async def stand(
 async def einwilligung(
     request: EinwilligungRequest,
     current_user: str = Depends(require_user),
-    dienst: RanglisteService = Depends(_dienst),
+    settings: Settings = Depends(get_settings),
 ) -> Response:
     """
     Ja oder Nein zur Rangliste, jederzeit aenderbar; ein Nein wirkt beim naechsten
-    Abruf jeder Rangliste. Ein Ja nur zum aktuellen Wortlaut.
+    Abruf jeder Rangliste. Ein Ja nur zum aktuellen Wortlaut und nur, solange die
+    Frage angeboten wird (sonst 409); ein Nein immer, auch bei ausgeschaltetem
+    Schalter und im Spielgefuehl-Modell (dort stuft es ``rangliste`` auf ``fuer_mich``).
     """
+    if request.teilnehmen and not _frage_angeboten(settings):
+        raise HTTPException(status_code=409, detail="Not active")
     try:
-        await asyncio.to_thread(
-            dienst.antworten,
-            current_user,
-            request.teilnehmen,
-            request.mit_anzeigename,
-            request.wortlaut,
-        )
+        if request.teilnehmen:
+            await asyncio.to_thread(
+                get_rangliste_service().antworten,
+                current_user,
+                True,
+                request.mit_anzeigename,
+                request.wortlaut,
+            )
+        else:
+            await asyncio.to_thread(
+                rangliste_service.nein, current_user, request.wortlaut
+            )
     except UnbekannterWortlaut:
         raise HTTPException(status_code=422, detail="Unbekannter Wortlaut")
     except Exception as e:
