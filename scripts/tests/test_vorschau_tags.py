@@ -10,6 +10,7 @@ import re
 WURZEL = pathlib.Path(__file__).resolve().parents[2]
 FRONTEND = WURZEL / "mvp/frontend/gutgesagt-frontend"
 INDEX = FRONTEND / "src/index.html"
+PRODUKTION = "https://gutgesagt.netzbegruenung.de/"
 
 META = re.compile(r'<meta\s+(?:property|name)="([^"]+)"\s+content="([^"]*)"\s*/?>')
 
@@ -22,7 +23,24 @@ def test_og_grundtags_vorhanden():
     meta = _meta()
     for name in ("og:type", "og:site_name", "og:title", "og:description", "og:image"):
         assert meta.get(name), f"{name} fehlt in index.html"
-    assert meta["twitter:card"] == "summary"
+    assert meta["twitter:card"] == "summary_large_image"
+
+
+def test_og_bild_im_grossformat():
+    # Querformat zwischen 1,91:1 und 4:1, mindestens 1200 breit: WhatsApp zeigt bis 4:1 gross
+    # (Meta, WhatsApp Business Platform, Link previews). Die Angaben im Kopf muessen zur Datei
+    # passen, sonst schneidet WhatsApp falsch zu.
+    from PIL import Image
+
+    meta = _meta()
+    bild = FRONTEND / "public" / meta["og:image"].removeprefix(PRODUKTION)
+    breite, hoehe = int(meta["og:image:width"]), int(meta["og:image:height"])
+    with Image.open(bild) as im:
+        assert im.size == (breite, hoehe)
+    assert breite >= 1200
+    assert 1.9 <= breite / hoehe <= 4
+    assert bild.stat().st_size < 300_000, "WhatsApp laesst grosse Bilder als Vorschau weg"
+    assert meta.get("og:image:alt")
 
 
 def test_og_title_gleicht_seitentitel():
@@ -39,9 +57,8 @@ def test_beschreibung_freigegeben_und_gleich():
 
 def test_og_bild_absolut_und_im_public_ordner():
     bild = _meta()["og:image"]
-    praefix = "https://gutgesagt.netzbegruenung.de/"
-    assert bild.startswith(praefix), "WhatsApp zeigt nur Bilder mit absoluter Adresse"
-    assert (FRONTEND / "public" / bild[len(praefix) :]).is_file()
+    assert bild.startswith(PRODUKTION), "WhatsApp zeigt nur Bilder mit absoluter Adresse"
+    assert (FRONTEND / "public" / bild.removeprefix(PRODUKTION)).is_file()
 
 
 # Vorschau je Beitrag und fuer die Ergebnisseite (#360): nginx ersetzt per SSI den Block
