@@ -148,10 +148,10 @@ describe('SearchComponent', () => {
       expect(feld.getAttribute('aria-describedby')).toBe(fixture.nativeElement.querySelector('.such-hinweis').id);
     });
 
-    it('zeigt mit Schalter an eine Zeile „Ohne Namen gespeichert · Datenschutz“ mit Link auf den Abschnitt', () => {
+    it('zeigt mit Schalter an eine Zeile „Wie wir Suchen speichern · Datenschutz“ mit Link auf den Abschnitt', () => {
       anschalten();
-      expect(HINWEISZEILE_KURZ).toBe('Ohne Namen gespeichert');
-      expect(text(kurz()!)).toBe('Ohne Namen gespeichert · Datenschutz');
+      expect(HINWEISZEILE_KURZ).toBe('Wie wir Suchen speichern');
+      expect(text(kurz()!)).toBe('Wie wir Suchen speichern · Datenschutz');
       const link = kurz()!.querySelector('a') as HTMLAnchorElement;
       expect(link.textContent!.trim()).toBe('Datenschutz');
       expect(link.getAttribute('href')).toBe(`/datenschutz#${SUCHANFRAGEN_ABSCHNITT}`);
@@ -187,7 +187,7 @@ describe('SearchComponent', () => {
     it('gilt auch über den Treffern (compactMode), dort ohne Info-Knopf und Satz wie seit E5', () => {
       fixture.componentRef.setInput('compactMode', true);
       anschalten();
-      expect(text(kurz()!)).toBe('Ohne Namen gespeichert · Datenschutz');
+      expect(text(kurz()!)).toBe('Wie wir Suchen speichern · Datenschutz');
       expect(fixture.nativeElement.querySelector('.such-hinweis-kurz button')).toBeNull();
       expect(mehr()).toBeNull();
       const feld = fixture.nativeElement.querySelector('input') as HTMLInputElement;

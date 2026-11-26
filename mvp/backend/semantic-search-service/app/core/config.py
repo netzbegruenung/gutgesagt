@@ -343,9 +343,9 @@ class Settings(BaseSettings):
     # uebertragen wird; Standard aus ist der Admin-Wert (ohne Eintrag aus).
     abkuerzungen_aktiv: bool = True
     # Antworten auf eigene Aussagen (#760): Kachel auf der Startseite und Reiter "Meine
-    # Aussagen" (services/antworten_hinweis.py). Nichts wird gespeichert, aber die
-    # Datenschutzerklaerung nennt bisher nur zwei 7-Tage-Zahlen: Standard aus wie bei
-    # gepostet_aktiv, bis der Satz dort steht.
+    # Aussagen" (services/antworten_hinweis.py). Nichts wird gespeichert; der Satz der
+    # Datenschutzerklaerung dazu haengt am Schalter (Jura 25.11./26.11.). Standard aus
+    # wie bei gepostet_aktiv, eingeschaltet wird ueber die Obergrenze je Umgebung.
     antworten_hinweis_aktiv: bool = False
     # Seitenaufrufe und Besucher je Tag (#761, services/aufrufe_service.py): das
     # Tagespseudonym (#446) an einer Zeile je Besucher und Tag, am Tagesende zu zwei

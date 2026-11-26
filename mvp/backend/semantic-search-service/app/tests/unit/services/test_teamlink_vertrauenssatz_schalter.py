@@ -53,7 +53,8 @@ def test_gruppe_teams_oeffentlich_und_jura_hinweis():
     assert art.gruppe == TEAMS
     assert NAME in oeffentliche_schalter()
     assert stand[NAME].dsfa_hinweis == (
-        "Vor dem Einschalten: Jura prüft teams.py (was Mitglieder voneinander sehen)."
+        "Jura vorläufig ok 26.11. (interner Test), Wortlaut drin; nennt die "
+        "Team-Summe, also zusammen mit team_fortschritt einschalten"
     )
     assert stand[NAME].wartet_auf_recht is True
 

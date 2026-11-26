@@ -171,7 +171,7 @@ describe('EinladungComponent mit Team', () => {
   });
 
   describe('Vertrauenssatz (Schalter teamlink_vertrauenssatz)', () => {
-    const ERSTER = 'Beitreten heißt nur: Du zählst zu diesem Team.';
+    const ERSTER = 'Beitreten heißt: Du zählst zu diesem Team und trägst zu seiner Summe bei.';
     const ZWEITER = 'Die Gruppe, nach der es benannt ist, bekommt keine Daten über dich.';
 
     function vertrauen(): HTMLElement | null {
@@ -187,7 +187,7 @@ describe('EinladungComponent mit Team', () => {
       pruefen({ einloesbar: true, team: team({ art: 'gruppe', name: 'Netzfeuerwehr' }) });
 
       expect(vertrauen()).toBeNull();
-      expect(el().textContent).not.toContain('Beitreten heißt nur');
+      expect(el().textContent).not.toContain('Beitreten heißt');
       expect(beschreibung()).toBe('team-gruppe team-erklaerung');
     });
 

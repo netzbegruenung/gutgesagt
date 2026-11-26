@@ -80,9 +80,20 @@ def test_obergrenze_aus_schlaegt_admin_wert(werte):
 
 
 def test_nur_oeffentliche_schalter(werte):
-    werte.update(punkte=True, gepostet=True)
+    werte.update(gepostet=True, herkunft_pruefen=True)
 
-    funktionen = _client(punkte_aktiv=True, gepostet_aktiv=True).get(URL).json()
+    funktionen = (
+        _client(gepostet_aktiv=True, herkunft_pruefen_aktiv=True).get(URL).json()
+    )
 
-    assert "punkte" not in funktionen["funktionen"]
     assert "gepostet" not in funktionen["funktionen"]
+    assert "herkunft_pruefen" not in funktionen["funktionen"]
+
+
+def test_punkte_oeffentlich_fuer_die_datenschutzerklaerung(werte):
+    """Jura 26.11.: der Vorbehalt „noch nicht eingeschaltet“ haengt am wirksamen Wert."""
+    werte.update(punkte=True)
+
+    funktionen = _client(punkte_aktiv=True).get(URL).json()
+
+    assert funktionen["funktionen"]["punkte"] is True

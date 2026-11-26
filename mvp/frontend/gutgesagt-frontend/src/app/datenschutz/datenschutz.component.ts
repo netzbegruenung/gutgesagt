@@ -7,7 +7,7 @@ import { DSE_SPIELGEFUEHL, DSE_SPIELGEFUEHL_TITEL } from './dse-spielgefuehl';
 import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
 import { FunktionenService } from '../services/funktionen.service';
-import { KURZFASSUNG, KurzfassungSatz, kurzfassungFertig } from './dse-kurzfassung';
+import { KURZFASSUNG, KURZFASSUNG_SCHLUSS, KurzfassungSatz, kurzfassungFertig } from './dse-kurzfassung';
 
 @Component({
   selector: 'app-datenschutz',
@@ -26,6 +26,8 @@ export class DatenschutzComponent {
   private readonly funktionen = inject(FunktionenService);
   /** Sätze des Kastens „Kurz gesagt“ (dse-kurzfassung.ts). */
   readonly kurzfassungSaetze: readonly KurzfassungSatz[] = inject(KURZFASSUNG);
+  /** Schlusssatz unter den drei Sätzen des Kastens (Wortlaut Jura). */
+  readonly kurzfassungSchluss = KURZFASSUNG_SCHLUSS;
   private readonly kurzfassungAn = this.funktionen.an('dse_kurzfassung');
   /**
    * Kasten „Kurz gesagt“ oben: nur mit Schalter dse_kurzfassung und nur, wenn alle drei
@@ -76,6 +78,37 @@ export class DatenschutzComponent {
    * solange der Schalter stimmen_text_verfall an ist; sonst verfallen Stimmen nur beim Titel.
    */
   readonly textVerfall = inject(FunktionenService).an('stimmen_text_verfall');
+
+  /*
+   * Absätze und Sätze, die an einem Schalter hängen (Grundsatz: kein Schalter ohne seinen
+   * Absatz, vorläufige juristische Einschätzung 26.11.2026). Jeder Schalter hier muss in
+   * services/schalter_service.py öffentlich sein, sonst meldet GET /api/v1/funktionen ihn
+   * nicht und der Absatz bliebe auch bei eingeschaltetem Schalter weg.
+   */
+  /** Punkte: der Vorbehalt „noch nicht eingeschaltet“ entfällt, die Muster-Hinweise gelten. */
+  readonly punkte = this.funktionen.an('punkte');
+  /** Rangliste (#793): Absatz statt des Hinweises „noch nicht eingeschaltet“. */
+  readonly rangliste = this.funktionen.an('rangliste');
+  /** Team-Summe (#784): der Satz „noch nicht eingeschaltet“ entfällt. */
+  readonly teamFortschritt = this.funktionen.an('team_fortschritt');
+  /** Team-Quests (#792): Absatz unter „Teams“; wirkt nur mit team_fortschritt. */
+  readonly teamQuests = this.funktionen.an('team_quests');
+  /** Wirkungs-Echo (#790): dritte gespeicherte Zahl und der Zählerstand des Echos. */
+  readonly wirkungsEcho = this.funktionen.an('wirkungs_echo');
+  /** Danke-Knopf (#791): die Sätze zum Danke und zum Tages-Prüfwert. */
+  readonly dankeKnopf = this.funktionen.an('danke_knopf');
+  /** „Ja, gepostet“ ohne Konto (#799). */
+  readonly gepostetOhneKonto = this.funktionen.an('gepostet_ohne_konto');
+  /** Neue Antworten auf eigene Aussagen (#760). */
+  readonly antwortenHinweis = this.funktionen.an('antworten_hinweis');
+  /** „Melden“ in der Meta-Zeile und „Melden & Kontakt“ im Fuß (#843). */
+  readonly meldewegSichtbar = this.funktionen.an('meldeweg_sichtbar');
+  /** „Was hat dich gestört?“ in der Startphase. */
+  readonly feedbackGestoert = this.funktionen.an('feedback_gestoert');
+  /** Begrüßung nach dem Kampagnenwort ?k=. */
+  readonly kBegruessung = this.funktionen.an('k_begruessung');
+  /** Bestandszahl samt Zuwachs der letzten sieben Tage auf der Startseite. */
+  readonly bestandszahlZuwachs = this.funktionen.an('bestandszahl_zuwachs');
   /**
    * „Ton bei Erfolgen“ (#787) gibt es nur im großen Moment „Lücke zu!“ hinter dem Schalter
    * luecke_zu_gross; der Absatz zu seinem Eintrag im Browser steht, solange der Schalter an ist
