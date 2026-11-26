@@ -364,6 +364,29 @@ TEAM_SCHALTER = (
 SCHALTER.update({s.name: s for s in TEAM_SCHALTER})
 
 
+# Kurze Hinweiszeile unter dem Suchknopf (Designwichtel Nr. 5): eine Zeile "Ohne Namen
+# gespeichert · Datenschutz" statt des abgestimmten Wortlauts vom 16.11.; der Satz zur
+# Veroeffentlichung klappt auf. Nur im Browser, deshalb oeffentlich.
+HINWEIS_SCHALTER = (
+    Schalterart(
+        name="hinweiszeile_kurz",
+        feld="hinweiszeile_kurz_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_HINWEISZEILE_KURZ_AKTIV",
+        erklaerung=(
+            "Unter dem Suchknopf eine Zeile „Ohne Namen gespeichert · Datenschutz“ "
+            "statt zwei; „Nach Prüfung können Suchtexte öffentlich werden“ steht "
+            "aufklappbar dahinter. Speichert nichts Neues."
+        ),
+        einschalt_hinweis=(
+            "Vor dem Einschalten auf Prod: Jura-OK zum kurzen Wortlaut und dazu, dass "
+            "der Satz zur Veröffentlichung aufklappbar statt sichtbar genügt"
+        ),
+        oeffentlich=True,
+    ),
+)
+SCHALTER.update({s.name: s for s in HINWEIS_SCHALTER})
+
+
 class UnbekannterSchalter(KeyError):
     pass
 

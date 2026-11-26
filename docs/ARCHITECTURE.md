@@ -539,6 +539,14 @@ officer has advised.
 | `danke_ohne_konto` | `SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV` | off | yes | V31 and visitor marker (#495); works only with `danke_knopf` |
 | `rangliste` | `SEMANTIC_SEARCH_RANGLISTE_AKTIV` | off | no | legal OK (wording, DSFA V28, privacy policy) and Punkte on (#793); works only with `punkte` |
 
+#### Short hint line under the search button (`hinweiszeile_kurz`)
+
+`SEMANTIC_SEARCH_HINWEISZEILE_KURZ_AKTIV`, default `false`, public, group Grundfunktionen. On,
+the search field shows one line "Ohne Namen gespeichert · Datenschutz" instead of the wording
+agreed on 16.11.; "Nach Prüfung können Suchtexte öffentlich werden." folds out behind an info
+button and is always part of the field's `aria-describedby`. Condition for switching on: legal OK
+on the short wording and on the folded sentence.
+
 #### Saisons and Gemeinschaftsziel (#782)
 
 Table `saisons` (name, first and last day, goal in Widerspruchs-Wochen; no personal data),

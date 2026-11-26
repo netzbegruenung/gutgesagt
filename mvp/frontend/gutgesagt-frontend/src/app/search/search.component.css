@@ -214,3 +214,60 @@ textarea.suchfeld-mehrzeilig.mat-mdc-input-element {
     min-height: calc(2 * var(--zeile));
     max-height: calc(4 * var(--zeile));
 }
+
+/* Schalter hinweiszeile_kurz: eine Zeile, Link und Info-Knopf mit mindestens 24 px Zielflaeche
+   (WCAG 2.5.8); Farbe wie der Hinweis (--text auf dem gelben Band bzw. Schiefer, ueber 4,5:1) */
+.such-hinweis-kurz {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    margin-top: var(--spacing-xs);
+}
+
+.such-hinweis-kurz .such-hinweis {
+    margin: 0;
+}
+
+.compact-mode .such-hinweis-kurz {
+    justify-content: flex-start;
+}
+
+.hinweis-ziel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    min-width: 24px;
+    vertical-align: middle;
+}
+
+.such-hinweis-kurz a.hinweis-ziel {
+    padding: 0 2px;
+}
+
+.hinweis-mehr-knopf {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.compact-mode .hinweis-mehr-knopf {
+    color: var(--text-leise);
+}
+
+.hinweis-mehr-knopf mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+}
+
+.such-hinweis-mehr {
+    margin-top: 0;
+}
+
+.search-container:not(.compact-mode) .such-hinweis-mehr {
+    text-align: center;
+}
