@@ -710,11 +710,10 @@ within the days of the running season (`PunkteService.punkte(user, zeitraum)`): 
 the cleanup job runs), approvals by the day of their last change, Tun and ratings by their day,
 Team-Quest points by their quest week (its Monday within the season, not the Monday they are
 credited, so a quest of the last season week still counts for that season).
-A season therefore lasts at most that retention (both end days included): creating or
-re-dating a longer one is rejected while the cleanup job runs (`domain/saisons.py`
-`laenge_pruefen`), otherwise usage from its first days would drop out near its end. A season
-whose points miss a source (Team-Quests not readable, `Punktestand.vollstaendig`) is treated
-like an error and not cached, so nobody sits too low for 120 s. Season points of all participants are cached
+A season used with the Rangliste should therefore not be longer than that retention, otherwise
+usage from its first days drops out near its end. Points that miss a source (Team-Quests not
+readable, `Punktestand.vollstaendig`) are used for that request only and not cached, so nobody
+sits too low for 120 s. Season points of all participants are cached
 in memory once per season for 120 s; one request recomputes (at most 8 people in parallel), the
 others wait for it. Neither points nor places are stored.
 

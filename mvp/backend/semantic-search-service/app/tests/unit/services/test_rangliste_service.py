@@ -326,35 +326,63 @@ async def test_fehler_wird_beim_naechsten_abruf_erneut_versucht():
     assert (await dienst.stand("p3")).rangliste.teilnehmende == 10
 
 
+def _ohne_quests_fuer(welt, kennungen, schalter):
+    """Saisonpunkte, die fuer ``kennungen`` unvollstaendig sind, solange schalter[0]."""
+    original = welt.saisonpunkte
+
+    async def saisonpunkte(kennung, zeitraum):
+        stand = await original(kennung, zeitraum)
+        if kennung in kennungen and schalter[0]:
+            return Punktestand(
+                tun=stand.tun, quests=0, wirkung=stand.wirkung, vollstaendig=False
+            )
+        return stand
+
+    welt.saisonpunkte = saisonpunkte
+
+
 @pytest.mark.asyncio
 async def test_unvollstaendiger_stand_wird_nicht_gemerkt():
     """
     Fehlen einer Person die Quest-Punkte, waere ihre Summe zu niedrig; der Cache hielte
-    den zu tiefen Platz 120 s lang. Sie fehlt lieber bis zum naechsten Abruf.
+    den zu tiefen Platz 120 s lang (Gamification-Check 26.11., Befund 25). Die Summe
+    gilt nur fuer diesen Abruf, der naechste rechnet sie neu.
     """
     welt = _zehn()
-    welt.punkte["p10"] = 5
-    welt.dazu("p10")
-    original = welt.saisonpunkte
-    unvollstaendig = [True]
-
-    async def ohne_quests(kennung, zeitraum):
-        stand = await original(kennung, zeitraum)
-        if kennung == "p0" and unvollstaendig[0]:
-            return Punktestand(
-                tun=stand.tun,
-                quests=0,
-                wirkung=stand.wirkung,
-                vollstaendig=False,
-            )
-        return stand
-
-    welt.saisonpunkte = ohne_quests
+    _ohne_quests_fuer(welt, {"p0"}, [True])
     dienst = welt.dienst()
-    assert (await dienst.stand("p3")).rangliste.teilnehmende == 10
-    unvollstaendig[0] = False
 
-    assert (await dienst.stand("p3")).rangliste.teilnehmende == 11
+    assert (await dienst.stand("p3")).rangliste.teilnehmende == 10
+    await dienst.stand("p3")
+
+    assert [k for k, _ in welt.aufrufe].count("p0") == 2
+    assert [k for k, _ in welt.aufrufe].count("p1") == 1
+
+
+@pytest.mark.asyncio
+async def test_unvollstaendige_eigene_punkte_zeigen_trotzdem_die_liste():
+    """Fehlen der fragenden Person die Quest-Punkte, kein 500 (Review zu Befund 25)."""
+    welt = _zehn()
+    _ohne_quests_fuer(welt, {"p3"}, [True])
+
+    stand = await welt.dienst().stand("p3")
+
+    assert stand.rangliste.teilnehmende == 10
+    assert stand.eigene_punkte == 30
+
+
+@pytest.mark.asyncio
+async def test_unvollstaendige_vergangene_saison_wird_nicht_gemerkt():
+    welt = _zehn()
+    _ohne_quests_fuer(welt, {"p3"}, [True])
+    dienst = welt.dienst(frist=90)
+
+    for _ in range(2):
+        stand = await dienst.stand("p3")
+        assert [(v.name, v.punkte) for v in stand.vergangene] == [("Herbst 26", 30)]
+
+    herbst = (VORBEI.beginn, VORBEI.ende)
+    assert welt.aufrufe.count(("p3", herbst)) == 2
 
 
 @pytest.mark.asyncio

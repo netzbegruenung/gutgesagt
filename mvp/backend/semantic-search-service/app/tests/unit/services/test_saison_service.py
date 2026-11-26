@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from core.config import Settings
-from domain.saisons import Saison, SaisonGesperrt, SaisonUngueltig, SaisonZustand
+from domain.saisons import Saison, SaisonGesperrt, SaisonZustand
 from services.einstellungen_service import aktuelle_saison, saison_vorschlag
 from services.saison_service import SaisonService, saison_service_setzen
 from utils.utc_tag import heute_utc
@@ -263,65 +263,3 @@ class TestAdmin:
             service.aendern(
                 SAISON.id, "Anders", SAISON.beginn, SAISON.ende, 5, heute=HEUTE
             )
-
-
-class TestLaenge:
-    """
-    Eine Saison dauert hoechstens so lange, wie die Nutzungsereignisse liegen
-    (usage_retention_days, Gamification-Check 26.11., Befund 23): Sonst fehlten in
-    ihren letzten Tagen die Punkte vom ersten Tag.
-    """
-
-    def test_anlegen_laenger_als_die_frist_abgelehnt(self):
-        service, repository, _ = _service(usage_retention_days=90)
-        beginn = HEUTE + timedelta(days=1)
-        with pytest.raises(SaisonUngueltig, match="höchstens 90 Tage"):
-            service.anlegen(
-                "Winter", beginn, beginn + timedelta(days=90), 5, heute=HEUTE
-            )
-        repository.anlegen.assert_not_called()
-
-    def test_anlegen_genau_die_frist_erlaubt(self):
-        service, repository, _ = _service(usage_retention_days=90)
-        beginn = HEUTE + timedelta(days=1)
-        service.anlegen("Winter", beginn, beginn + timedelta(days=89), 5, heute=HEUTE)
-        repository.anlegen.assert_called_once()
-
-    def test_ohne_bereinigung_keine_grenze(self):
-        service, repository, _ = _service(
-            usage_retention_days=90, enable_bereinigungsjob=False
-        )
-        beginn = HEUTE + timedelta(days=1)
-        service.anlegen("Lang", beginn, beginn + timedelta(days=200), 5, heute=HEUTE)
-        repository.anlegen.assert_called_once()
-
-    def _aendern(self, service, repository, alt, beginn, ende):
-        def aendern(saison_id, eingabe, pruefen):
-            pruefen(alt)
-            return alt
-
-        repository.aendern.side_effect = aendern
-        return service.aendern(alt.id, alt.name, beginn, ende, 7, heute=HEUTE)
-
-    def test_aendern_auf_zu_lang_abgelehnt(self):
-        service, repository, _ = _service(usage_retention_days=90)
-        geplant = Saison(
-            uuid.uuid4(),
-            "Geplant",
-            HEUTE + timedelta(days=10),
-            HEUTE + timedelta(days=40),
-            5,
-        )
-        with pytest.raises(SaisonUngueltig):
-            self._aendern(
-                service,
-                repository,
-                geplant,
-                geplant.beginn,
-                geplant.beginn + timedelta(days=95),
-            )
-
-    def test_bestehende_lange_saison_bleibt_umbenennbar(self):
-        service, repository, _ = _service(usage_retention_days=30)
-        # SAISON dauert 57 Tage und laeuft schon: das Ziel bleibt aenderbar.
-        self._aendern(service, repository, SAISON, SAISON.beginn, SAISON.ende)

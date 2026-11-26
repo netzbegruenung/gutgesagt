@@ -42,7 +42,7 @@ def _unlesbar() -> ValidationError:
 @pytest.fixture
 def repository():
     repo = MagicMock()
-    repo.get = AsyncMock(return_value=object())
+    repo.get = AsyncMock(return_value=MagicMock(original_author="kennung-2"))
     return repo
 
 

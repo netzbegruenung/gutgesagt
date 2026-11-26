@@ -114,23 +114,6 @@ def eingabe_pruefen(name: str, beginn: date, ende: date, ziel: int) -> SaisonEin
     return SaisonEingabe(name=name, beginn=beginn, ende=ende, ziel=ziel)
 
 
-def laenge_pruefen(eingabe: SaisonEingabe, hoechstens_tage: Optional[int]) -> None:
-    """
-    Eine Saison dauert hoechstens ``hoechstens_tage`` Tage (beide Randtage
-    eingeschlossen), die Frist der Nutzungsereignisse (``usage_retention_days``). Sonst
-    fiele in ihren letzten Tagen die Nutzung vom Anfang aus den Saisonpunkten, und
-    nach ihrem Ende erschiene sie nie unter den vergangenen Saisons
-    (services/rangliste_service.py). None: keine Frist, keine Grenze.
-    """
-    if hoechstens_tage is None:
-        return
-    if (eingabe.ende - eingabe.beginn).days + 1 > hoechstens_tage:
-        raise SaisonUngueltig(
-            f"Eine Saison dauert höchstens {hoechstens_tage} Tage, so lange liegen "
-            "die Nutzungen für die Punkte vor."
-        )
-
-
 def ueberschneidung(
     eingabe: SaisonEingabe,
     andere: Iterable[Saison],

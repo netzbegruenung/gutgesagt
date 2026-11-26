@@ -33,8 +33,6 @@ async def nur_sichtbarer_beitrag(
     content_id: uuid.UUID, laden: BeitragLader = Depends(get_beitrag_laden)
 ) -> Optional[str]:
     """
-    Gibt die Kennung der Autorin zurueck, soweit bekannt (fuer den Team-Fortschritt,
-    ``_fuers_team_zaehlen``); None, wenn sich der Beitrag nicht lesen liess.
 
     Abstimmen nur auf einen Beitrag, den die Person sehen kann: Gesperrt, geloescht
     oder nie vorhanden gibt 404 und keine Stimme. Zuruecknehmen prueft das nicht,
@@ -58,6 +56,8 @@ async def nur_sichtbarer_beitrag(
         return None
     if beitrag is None:
         raise HTTPException(status_code=404, detail="Content not found")
+    # Die Autorin, fuer den Team-Fortschritt (``_fuers_team_zaehlen``); None oben,
+    # wenn sich der Beitrag nicht lesen liess.
     return getattr(beitrag, "original_author", None)
 
 
