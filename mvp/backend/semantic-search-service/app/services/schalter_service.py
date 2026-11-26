@@ -164,6 +164,23 @@ SPIEL_SCHALTER = (
         oeffentlich=True,
     ),
     Schalterart(
+        name="null_treffer_anzahl",
+        gruppe=SPIELGEFUEHL,
+        feld="null_treffer_anzahl_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_NULL_TREFFER_ANZAHL_AKTIV",
+        erklaerung=(
+            "Seite ohne Treffer: „Danach wurde in den letzten vier Wochen schon "
+            "N-mal gesucht“ ab N ≥ 3, auch ohne Anmeldung; nur zu für alle sichtbaren "
+            "Aussagen, speichert nichts zusätzlich."
+        ),
+        einschalt_hinweis=(
+            "Jura vorläufig (26.11.): nur ab N ≥ 3, Wortlaut „N-mal gesucht“ statt "
+            "„N Personen“ und mit dem Absatz „Suchen ohne Treffer“ in der "
+            "Datenschutzerklärung; endgültig mit dem Jura-Paket (27.11.)"
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
         name="wirkungs_echo",
         gruppe=PUNKTE_ANERKENNUNG,
         feld="wirkungs_echo_aktiv",

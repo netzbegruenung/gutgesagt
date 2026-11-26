@@ -27,6 +27,7 @@ ERWARTET = {
     "luecke_zu_gross": "SEMANTIC_SEARCH_LUECKE_ZU_GROSS_AKTIV",
     "einwilligung_im_gewinn": "SEMANTIC_SEARCH_EINWILLIGUNG_IM_GEWINN_AKTIV",
     "naechster_schritt": "SEMANTIC_SEARCH_NAECHSTER_SCHRITT_AKTIV",
+    "null_treffer_anzahl": "SEMANTIC_SEARCH_NULL_TREFFER_ANZAHL_AKTIV",
     "wirkungs_echo": "SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV",
     "danke_knopf": "SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV",
     "danke_ohne_konto": "SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV",
@@ -102,6 +103,11 @@ def test_einschalt_hinweise_laut_issue():
         stand["naechster_schritt"].dsfa_hinweis
         == "Einschalten erst nach dem DSFA-Nachtrag Spielgefühl (V10)"
     )
+    # Jura vorlaeufig 26.11. (#362): Bedingungen stehen am Schalter, endgueltig 27.11.
+    assert "N ≥ 3" in stand["null_treffer_anzahl"].dsfa_hinweis
+    assert "„N-mal gesucht“" in stand["null_treffer_anzahl"].dsfa_hinweis
+    assert "Suchen ohne Treffer" in stand["null_treffer_anzahl"].dsfa_hinweis
+    assert stand["null_treffer_anzahl"].wartet_auf_recht is True
     for name in (
         "saison_ziel",
         "gartenansicht",
@@ -126,4 +132,5 @@ def test_oeffentlich_nur_ohne_eigenen_angemeldeten_endpunkt():
         "konter_probe",
         "danke_ohne_konto",
         "saal_spruch",
+        "null_treffer_anzahl",
     } <= oeffentlich

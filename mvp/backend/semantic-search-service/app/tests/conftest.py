@@ -391,6 +391,8 @@ def suchen_ohne_treffer_ohne_datenbank(monkeypatch):
     repository.haeufigste.return_value = []
     # Keine Suchanfrage ueber der Schwelle (und damit keine fuer alle sichtbar).
     repository.ueber_der_schwelle.return_value = []
+    # Niemand hat schon ohne Treffer gesucht (#362, schon_gesucht).
+    repository.personen.return_value = 0
     monkeypatch.setattr(modul, "_repository", repository)
     yield repository
 
