@@ -60,7 +60,11 @@
         </p>
     </ng-container>
 
-    <p *ngIf="ruhend" class="rangliste-stand" data-testid="ruhend">
+    <!-- Spielgefuehl-Modell: Stufe gewaehlt, aber ohne Einwilligung zur Mitwirkung keine Liste -->
+    <p *ngIf="ruhend && buehne" class="rangliste-stand" data-testid="ruhend-buehne">
+        Du hast „In der Saison-Rangliste mitspielen“ gewählt, stehst aber gerade nicht darin: Dafür braucht es auch deine Einwilligung zur Mitwirkung.
+    </p>
+    <p *ngIf="ruhend && !buehne" class="rangliste-stand" data-testid="ruhend">
         Du hast der Rangliste zugestimmt, stehst aber gerade nicht darin: Dafür braucht es auch deine Einwilligungen zur Mitwirkung und zu „Punkte und Meilensteine“.
         <button mat-button type="button" class="rangliste-raus" data-testid="raus-ruhend" [disabled]="speichert"
                 (click)="antworten(false)">Aus der Rangliste nehmen</button>

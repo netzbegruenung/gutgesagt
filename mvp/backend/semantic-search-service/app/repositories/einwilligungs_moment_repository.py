@@ -16,6 +16,7 @@ from typing import Optional
 
 from sqlalchemy import text
 
+from domain.spielgefuehl import GELTENDE_WORTLAUTE as SPIELGEFUEHL_GELTEND
 from infrastructure.database.connection import AppDatabase, get_app_database
 
 # Eine Abfrage, damit die Seite "Meine Beitraege" nur einmal fragt. LEAST uebergeht
@@ -29,8 +30,12 @@ _BISHER = """
                 THEN 1 ELSE 0 END)
         + (CASE WHEN EXISTS (SELECT 1 FROM abzeichen_sichtbarkeit WHERE user_id = :u)
                 THEN 1 ELSE 0 END)"""
-_BUEHNE = """
-        + (CASE WHEN EXISTS (SELECT 1 FROM spielgefuehl WHERE user_id = :u)
+# Nur Antworten zu einem geltenden Wortlaut: Eine neue Fassung fragt neu, das Budget
+# soll sie nicht wegen der alten Antwort bremsen. Die Kennungen sind feste Konstanten.
+_GELTEND = ", ".join(f"'{k}'" for k in sorted(SPIELGEFUEHL_GELTEND))
+_BUEHNE = f"""
+        + (CASE WHEN EXISTS (SELECT 1 FROM spielgefuehl WHERE user_id = :u
+                    AND wortlaut IN ({_GELTEND}))
                 THEN 1 ELSE 0 END)"""
 
 

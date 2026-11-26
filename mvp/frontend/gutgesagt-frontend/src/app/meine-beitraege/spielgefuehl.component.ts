@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  ElementRef,
+  OnInit,
+  QueryList,
+  ViewChild,
+  ViewChildren,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
@@ -64,6 +75,8 @@ export class SpielgefuehlComponent implements OnInit {
   /** Mit Schalter einwilligung_im_gewinn: Die Frage darf in diesem Besuch stehen. */
   budgetFrei = false;
   @ViewChild('titel') titel?: ElementRef<HTMLElement>;
+  /** Die beiden Knöpfe für den Namen im Stand; nach einem Fehler zurück auf die gespeicherte Wahl. */
+  @ViewChildren('nameWahl') nameWahl?: QueryList<ElementRef<HTMLInputElement>>;
 
   private readonly service = inject(SpielgefuehlService);
   private readonly budget = inject(EinwilligungsBudgetService);
@@ -192,6 +205,11 @@ export class SpielgefuehlComponent implements OnInit {
     if (!this.stand || this.stand.mit_anzeigename === mitAnzeigename) {
       return;
     }
+    if (this.speichert) {
+      // Während des Speicherns keine zweite Wahl: die angeklickte zurücksetzen.
+      this.nameWahlZuruecksetzen();
+      return;
+    }
     this.speichern('rangliste', mitAnzeigename);
   }
 
@@ -248,18 +266,30 @@ export class SpielgefuehlComponent implements OnInit {
         };
         this.stand = neu;
         this.service.melden(neu);
-        this.ansage = stufe === 'rangliste' && stand.stufe === 'rangliste' ? this.namensAnsage(mitAnzeigename) : ANSAGE_STUFE[stufe];
+        const nurName = stufe === 'rangliste' && stand.stufe === 'rangliste';
+        this.ansage = nurName ? this.namensAnsage(mitAnzeigename) : ANSAGE_STUFE[stufe];
         this.cdr.detectChanges();
-        this.titel?.nativeElement.focus();
+        // Beim Namenswechsel bleibt der Fokus in der Gruppe; nur eine neue Stufe springt zur Überschrift.
+        if (!nurName) {
+          this.titel?.nativeElement.focus();
+        }
         // Den Zufallsnamen beim ersten Mitspielen vergibt der Server: frisch holen.
         this.anstoss$.next();
       },
       error: () => {
         this.speichert = false;
         this.fehler = true;
+        // [checked] hat sich nicht geändert, Angular setzt den angeklickten Knopf also nicht
+        // zurück: Sonst sähe die Person eine Wahl, die nicht gespeichert ist.
+        this.nameWahlZuruecksetzen();
         this.cdr.markForCheck();
       },
     });
+  }
+
+  private nameWahlZuruecksetzen(): void {
+    const gespeichert = this.stand?.mit_anzeigename ? 'anzeigename' : 'zufall';
+    this.nameWahl?.forEach((ref) => (ref.nativeElement.checked = ref.nativeElement.value === gespeichert));
   }
 
   private namensAnsage(mitAnzeigename: boolean | null): string {

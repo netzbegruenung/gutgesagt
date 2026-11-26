@@ -43,7 +43,7 @@ def _client(buehne=True, punkte=True) -> TestClient:
     app = FastAPI()
     app.include_router(router, prefix="/api/v1/usage")
     app.dependency_overrides[get_settings] = lambda: Settings(
-        spielgefuehl_buehne_aktiv=buehne, punkte_aktiv=punkte
+        spielgefuehl_buehne_aktiv=buehne, punkte_aktiv=punkte, rangliste_aktiv=True
     )
     return TestClient(app)
 
@@ -150,3 +150,39 @@ def test_neu_wuerfeln_ausserhalb_der_rangliste_409(dienst):
     dienst.neu_wuerfeln.side_effect = NichtInRangliste()
 
     assert _client().post(URL + "/ranglistenname", headers=KIM).status_code == 409
+
+
+def _client_ohne_rangliste() -> TestClient:
+    app = FastAPI()
+    app.include_router(router, prefix="/api/v1/usage")
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        spielgefuehl_buehne_aktiv=True, punkte_aktiv=True, rangliste_aktiv=False
+    )
+    return TestClient(app)
+
+
+def test_ohne_schalter_rangliste_keine_stufe_rangliste(dienst):
+    client = _client_ohne_rangliste()
+
+    stufen = client.get(URL, headers=KIM).json()["aktueller_wortlaut"]["stufen"]
+    antwort = client.put(
+        URL,
+        json={
+            "stufe": "rangliste",
+            "mit_anzeigename": False,
+            "wortlaut": AKTUELLER_WORTLAUT,
+        },
+        headers=KIM,
+    )
+
+    assert [s["stufe"] for s in stufen] == ["fuer_mich", "aus"]
+    assert antwort.status_code == 422
+    dienst.antworten.assert_not_called()
+
+
+def test_neu_wuerfeln_zu_oft_429(dienst):
+    from services.spielgefuehl_service import ZuOftGewuerfelt
+
+    dienst.neu_wuerfeln.side_effect = ZuOftGewuerfelt()
+
+    assert _client().post(URL + "/ranglistenname", headers=KIM).status_code == 429

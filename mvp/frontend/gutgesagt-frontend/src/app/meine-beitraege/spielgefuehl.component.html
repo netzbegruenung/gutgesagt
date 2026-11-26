@@ -34,7 +34,7 @@
             </div>
         </div>
         <p class="spielgefuehl-fuss">{{ stand.aktueller_wortlaut.fuss }}
-            <a routerLink="/datenschutz" fragment="spielgefuehl" target="_blank" rel="noopener">Zur Datenschutzerklärung</a></p>
+            <a routerLink="/datenschutz" fragment="spielgefuehl" target="_blank" rel="noopener">Zur Datenschutzerklärung<span class="visually-hidden"> (öffnet in neuem Tab)</span></a></p>
         <p *ngIf="frageOffen"><button mat-button type="button" data-testid="abbrechen" (click)="abbrechen()">Abbrechen</button></p>
     </ng-container>
 
@@ -48,15 +48,16 @@
         </div>
 
         <ng-container *ngIf="stand.stufe === 'rangliste'">
-            <fieldset class="spielgefuehl-namenswahl" data-testid="name-umstellen" [disabled]="speichert">
+            <!-- Nicht deaktivieren: Sonst verliert die Tastatur beim Umstellen mit Pfeiltasten den Fokus -->
+            <fieldset class="spielgefuehl-namenswahl" data-testid="name-umstellen" [attr.aria-busy]="speichert">
                 <legend>{{ stand.aktueller_wortlaut.namenswahl.frage }}</legend>
                 <label>
-                    <input type="radio" name="spielgefuehl-name" data-testid="name-anzeigename"
+                    <input #nameWahl type="radio" name="spielgefuehl-name" value="anzeigename" data-testid="name-anzeigename"
                            [checked]="stand.mit_anzeigename === true" (change)="nameUmstellen(true)">
                     {{ stand.aktueller_wortlaut.namenswahl.anzeigename }}<ng-container *ngIf="stand.anzeigename"> ({{ stand.anzeigename }})</ng-container>
                 </label>
                 <label>
-                    <input type="radio" name="spielgefuehl-name" data-testid="name-zufallsname"
+                    <input #nameWahl type="radio" name="spielgefuehl-name" value="zufall" data-testid="name-zufallsname"
                            [checked]="stand.mit_anzeigename === false" (change)="nameUmstellen(false)">
                     {{ stand.aktueller_wortlaut.namenswahl.zufallsname }}<ng-container *ngIf="stand.ranglistenname"> ({{ stand.ranglistenname }})</ng-container>
                 </label>

@@ -1,10 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
-import { distinctUntilChanged, map, tap } from 'rxjs/operators';
+import { distinctUntilChanged, map, switchMap, tap } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
 import { stillerKontext } from '../shared/selbst-nachladen';
+import { FunktionenService } from './funktionen.service';
+
+/** Der öffentliche Schalter des Spielgefühl-Modells (GET /api/v1/funktionen). */
+export const SPIELGEFUEHL_SCHALTER = 'spielgefuehl_buehne';
 
 /** Die drei Stufen des Spielgefühls (GLOSSARY.md „Spielgefühl“). */
 export type SpielgefuehlStufe = 'aus' | 'fuer_mich' | 'rangliste';
@@ -71,6 +75,7 @@ export class SpielgefuehlService {
   // Optional wie im Einwilligungs-Budget: Karten, die nur auf die Stufe hören, laufen auch in
   // Tests ohne HttpClient; ohne ihn gilt der Schalter als aus.
   private readonly http = inject(HttpClient, { optional: true });
+  private readonly funktionen = inject(FunktionenService);
   private readonly url = `${environment.baseUrl}/api/v1/usage/users/me/spielgefuehl`;
   /** undefined: noch nicht geladen; null: Schalter aus. */
   private readonly stand = new BehaviorSubject<SpielgefuehlStand | null | undefined>(undefined);
@@ -78,12 +83,21 @@ export class SpielgefuehlService {
 
   /** Der eigene Stand; null bei ausgeschaltetem Schalter. ``still``: ohne Umleitung bei 401. */
   laden(still = false): Observable<SpielgefuehlStand | null> {
-    if (!this.http) {
+    const http = this.http;
+    if (!http) {
       this.melden(null);
       return of(null);
     }
-    return this.http.get<SpielgefuehlStand>(this.url, { context: still ? stillerKontext() : undefined }).pipe(
-      map((stand) => (stand?.aktiv === false ? null : stand)),
+    // Meldet FunktionenService den Schalter sicher aus, fragt die Seite den Endpunkt gar nicht
+    // (CODING_STANDARDS „Endpoints“, Gateway-fail2ban im Saal-WLAN).
+    return this.funktionen.stand$(SPIELGEFUEHL_SCHALTER).pipe(
+      switchMap((an) =>
+        an === false
+          ? of(null)
+          : http
+              .get<SpielgefuehlStand>(this.url, { context: still ? stillerKontext() : undefined })
+              .pipe(map((stand) => (stand?.aktiv === false ? null : stand))),
+      ),
       tap((stand) => this.melden(stand)),
     );
   }

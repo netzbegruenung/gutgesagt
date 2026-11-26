@@ -14,7 +14,12 @@ docs/ARCHITECTURE.md), ``PUT`` und ``POST`` mit 404.
 - ``PUT /users/me/spielgefuehl``: eine Stufe waehlen, jederzeit; Herabstufen wirkt
   sofort. Stufe rangliste nur mit Namenswahl.
 - ``POST /users/me/spielgefuehl/ranglistenname``: einen neuen Zufallsnamen wuerfeln
-  (nur mit Stufe rangliste); eine neue Nachweiszeile.
+  (nur mit Stufe rangliste, 409 sonst; hoechstens einmal je 10 s, 429 sonst); eine
+  neue Nachweiszeile.
+
+Stufe rangliste gibt es nur, solange der Schalter ``rangliste`` wirkt: Sonst fehlt sie
+in der Frage, und ``PUT`` nimmt sie nicht an (422). Niemand willigt in eine Rangliste
+ein, die es nicht gibt.
 """
 
 import asyncio
@@ -41,6 +46,7 @@ from services.schalter_service import schalter_wirksam
 from services.spielgefuehl_service import (
     NichtInRangliste,
     SpielgefuehlService,
+    ZuOftGewuerfelt,
     buehne_aktiv,
     get_spielgefuehl_service,
 )
@@ -111,7 +117,11 @@ def _dienst(settings: Settings = Depends(get_settings)) -> SpielgefuehlService:
     return get_spielgefuehl_service()
 
 
-def _wortlaut() -> WortlautResponse:
+def _rangliste_angeboten(settings: Settings) -> bool:
+    return schalter_wirksam("rangliste", settings)
+
+
+def _wortlaut(mit_rangliste: bool = True) -> WortlautResponse:
     wortlaut = WORTLAUTE[AKTUELLER_WORTLAUT]
     return WortlautResponse(
         kennung=AKTUELLER_WORTLAUT,
@@ -124,6 +134,7 @@ def _wortlaut() -> WortlautResponse:
                 text=wortlaut.stufen[stufe].text,
             )
             for stufe in REIHENFOLGE
+            if mit_rangliste or stufe is not Stufe.RANGLISTE
         ],
         namenswahl=NamenswahlResponse(
             frage=wortlaut.namenswahl_frage,
@@ -164,7 +175,7 @@ async def spielgefuehl(
         abzeichen_hinweis=(
             HINWEIS_ABZEICHEN_NUR_RANGLISTE if stand.abzeichen_hinweis else None
         ),
-        aktueller_wortlaut=_wortlaut(),
+        aktueller_wortlaut=_wortlaut(_rangliste_angeboten(settings)),
     )
 
 
@@ -173,7 +184,10 @@ async def spielgefuehl_waehlen(
     request: SpielgefuehlRequest,
     current_user: str = Depends(require_user),
     dienst: SpielgefuehlService = Depends(_dienst),
+    settings: Settings = Depends(get_settings),
 ) -> Response:
+    if request.stufe is Stufe.RANGLISTE and not _rangliste_angeboten(settings):
+        raise HTTPException(status_code=422, detail="Stufe nicht angeboten")
     try:
         await asyncio.to_thread(
             dienst.antworten,
@@ -206,6 +220,8 @@ async def neu_wuerfeln(
         name = await asyncio.to_thread(dienst.neu_wuerfeln, current_user)
     except NichtInRangliste:
         raise HTTPException(status_code=409, detail="Nicht in der Rangliste")
+    except ZuOftGewuerfelt:
+        raise HTTPException(status_code=429, detail="Zu oft gewuerfelt")
     except Exception as e:
         logger.error(
             f"Ranglistenname fuer {log_pseudonym(current_user)} nicht gewuerfelt: {type(e).__name__}",

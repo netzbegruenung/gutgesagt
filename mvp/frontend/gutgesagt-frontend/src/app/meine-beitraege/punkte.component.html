@@ -2,7 +2,7 @@
     <h2 id="punkte-titel">Punkte <span class="punkte-zahl">{{ punkte.gesamt }}</span></h2>
     <p class="punkte-hinweis">
         <ng-container *ngIf="stufe !== 'rangliste'">Nur du siehst deine Punkte.</ng-container>
-        <ng-container *ngIf="stufe === 'rangliste'">Deine Punkte der Saison sehen in der Rangliste auch die anderen Mitspielenden.</ng-container>
+        <ng-container *ngIf="stufe === 'rangliste'">Stehst du unter den ersten zehn der Rangliste, sehen die anderen Mitspielenden deine Punkte der Saison.</ng-container>
         Die meisten gibt es, wenn andere deine Beiträge nutzen oder ihnen zustimmen.
     </p>
     <ul class="punkte-stufen">

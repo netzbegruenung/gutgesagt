@@ -132,3 +132,16 @@ def test_namen_aus_der_zuordnung_ohne_eintrag_ersatz():
 
     assert rangliste.oben[0].name == "Kim B."
     assert rangliste.oben[1].name == OHNE_NAMEN
+
+
+def test_abzeichen_stehen_am_platz_nur_wo_vorhanden():
+    punkte = {f"k{i}": 100 - i for i in range(10)}
+    namen = {k: f"Name {k}" for k in punkte}
+
+    liste = rangliste_bilden(punkte, namen, "k0", {"k0": 3, "k5": 1})
+
+    assert liste.oben[0].abzeichen == 3
+    assert liste.oben[5].abzeichen == 1
+    assert liste.oben[1].abzeichen is None
+    # Ohne Angabe (bisheriges Modell) keine Abzeichen
+    assert all(p.abzeichen is None for p in rangliste_bilden(punkte, namen, "k0").oben)

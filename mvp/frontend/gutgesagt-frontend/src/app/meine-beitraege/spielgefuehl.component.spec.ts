@@ -10,6 +10,7 @@ import { SpielgefuehlStand } from '../services/spielgefuehl.service';
 import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 import { EinwilligungsMoment } from '../shared/einwilligungs-budget/einwilligungs-budget';
 import { environment } from '../../environments/environment';
+import { FunktionenService } from '../services/funktionen.service';
 
 const URL = `${environment.baseUrl}/api/v1/usage/users/me/spielgefuehl`;
 const KENNUNG = 'spielgefuehl-2026-11-26';
@@ -49,6 +50,8 @@ describe('SpielgefuehlComponent', () => {
   let moment: EinwilligungsMoment | null;
   let faellig: boolean;
   let budget: jasmine.SpyObj<EinwilligungsBudgetService> & { gewinn$: Subject<void> };
+  /** Stand des Schalters laut FunktionenService: null unbekannt, false sicher aus. */
+  let schalter: boolean | null;
 
   function erstellen(): void {
     fixture = TestBed.createComponent(SpielgefuehlComponent);
@@ -59,6 +62,7 @@ describe('SpielgefuehlComponent', () => {
   beforeEach(async () => {
     moment = null;
     faellig = false;
+    schalter = null;
     budget = Object.assign(jasmine.createSpyObj<EinwilligungsBudgetService>('Budget', ['moment', 'punkteFaellig', 'gezeigt']), {
       gewinn$: new Subject<void>(),
     });
@@ -72,6 +76,7 @@ describe('SpielgefuehlComponent', () => {
         provideNoopAnimations(),
         provideRouter([]),
         { provide: EinwilligungsBudgetService, useValue: budget },
+        { provide: FunktionenService, useValue: { stand$: () => of(schalter) } },
       ],
     }).compileComponents();
   });
@@ -103,6 +108,29 @@ describe('SpielgefuehlComponent', () => {
     laden({ ...stand(), aktiv: false });
 
     expect(el().querySelector('[data-testid="spielgefuehl"]')).toBeNull();
+  });
+
+  it('fragt den Endpunkt nicht, wenn der Schalter sicher aus ist', () => {
+    schalter = false;
+    erstellen();
+
+    http.expectNone(URL);
+    expect(el().querySelector('[data-testid="spielgefuehl"]')).toBeNull();
+  });
+
+  it('setzt die Namenswahl nach einem Fehler auf die gespeicherte zurück und behält den Fokus', () => {
+    erstellen();
+    laden(stand({ stufe: 'rangliste', mit_anzeigename: false, ranglistenname: 'Kluge Eule 11' }));
+
+    radio('name-anzeigename').focus();
+    radio('name-anzeigename').click();
+    http.expectOne((r) => r.method === 'PUT' && r.url === URL).flush('', { status: 500, statusText: 'Fehler' });
+    fixture.detectChanges();
+
+    expect(radio('name-anzeigename').checked).toBeFalse();
+    expect(radio('name-zufallsname').checked).toBeTrue();
+    expect(document.activeElement).toBe(radio('name-anzeigename'));
+    expect(el().textContent).toContain('Das hat nicht geklappt');
   });
 
   it('fragt mit drei gleich großen Knöpfen ohne Vorauswahl, Gemeinschaft zuerst', () => {

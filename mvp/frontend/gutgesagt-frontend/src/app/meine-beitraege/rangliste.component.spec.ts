@@ -88,6 +88,13 @@ describe('RanglisteComponent', () => {
     expect(knopf('raus')).toBeNull();
   });
 
+  it('sagt im Spielgefühl-Modell, warum die Liste fehlt, wenn die Einwilligung zur Mitwirkung fehlt', () => {
+    laden(stand({ buehne: true, gefragt: true, teilnehmen: true, voraussetzungen: false }));
+
+    expect(el().querySelector('[data-testid="ruhend-buehne"]')!.textContent).toContain('Einwilligung zur Mitwirkung');
+    expect(knopf('raus-ruhend')).toBeNull();
+  });
+
   it('zeigt im Spielgefühl-Modell nichts, solange die Person nicht mitspielt', () => {
     laden(stand({ buehne: true, gefragt: false, teilnehmen: null }));
 

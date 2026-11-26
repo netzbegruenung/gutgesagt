@@ -176,9 +176,14 @@ def test_wuerfeln_meidet_namen_aus_beiden_tabellen(speicher):
     assert "Alte Amsel 10" in gesehen["vergeben"]
 
 
-def test_zuruecknehmen_haelt_aus_fest(speicher):
+def test_art9_widerruf_nimmt_nur_die_rangliste_zurueck(speicher):
     zuruecknehmen("kim", speicher)
     assert speicher.lesen("kim") is None
+
+    speicher.antworten("bo", Stufe.FUER_MICH, False, AKTUELLER_WORTLAUT)
+    zuruecknehmen("bo", speicher)
+    # "Nur fuer mich" bleibt wie die bisherige Einwilligung "Punkte und Meilensteine".
+    assert len(speicher.zeilen["bo"]) == 1
 
     speicher.antworten(
         "kim", Stufe.RANGLISTE, True, AKTUELLER_WORTLAUT, "Kluge Eule 11"
@@ -186,8 +191,63 @@ def test_zuruecknehmen_haelt_aus_fest(speicher):
     zuruecknehmen("kim", speicher)
 
     antwort = speicher.lesen("kim")
-    assert antwort.stufe is Stufe.AUS
+    assert antwort.stufe is Stufe.FUER_MICH
+    assert antwort.mit_anzeigename is False
     assert antwort.ranglistenname == "Kluge Eule 11"
+
+
+def test_herabstufen_gilt_auch_im_bisherigen_modell(speicher):
+    alt = MagicMock()
+    dienst = SpielgefuehlService(
+        speicher, lambda: set(), lambda u: False, alt_zuruecknehmen=alt
+    )
+
+    dienst.antworten("kim", Stufe.RANGLISTE, True, AKTUELLER_WORTLAUT)
+    alt.assert_not_called()
+    dienst.antworten("kim", Stufe.FUER_MICH, None, AKTUELLER_WORTLAUT)
+    alt.assert_called_with("kim", Stufe.FUER_MICH)
+    dienst.antworten("kim", Stufe.AUS, None, AKTUELLER_WORTLAUT)
+    alt.assert_called_with("kim", Stufe.AUS)
+
+
+def test_alt_zuruecknehmen_schreibt_nur_neins(monkeypatch):
+    """Herabstufen haelt fruehere Ja-Antworten im bisherigen Modell als Nein fest."""
+    from repositories.abzeichen_sichtbarkeit_repository import Sichtbarkeit
+    from repositories.punkte_einwilligung_repository import PunkteEinwilligung
+
+    sichtbarkeit, punkte = MagicMock(), MagicMock()
+    sichtbarkeit.lesen.return_value = Sichtbarkeit(True, "2026-11-09", None)
+    punkte.lesen.return_value = PunkteEinwilligung(True, "2026-11-13", None)
+    monkeypatch.setattr(
+        "repositories.abzeichen_sichtbarkeit_repository._repository", sichtbarkeit
+    )
+    monkeypatch.setattr(
+        "repositories.punkte_einwilligung_repository._repository", punkte
+    )
+    rangliste = MagicMock()
+    monkeypatch.setattr("services.rangliste_service.zuruecknehmen", rangliste)
+
+    spielgefuehl_service._alt_zuruecknehmen("kim", Stufe.FUER_MICH)
+    sichtbarkeit.antworten.assert_called_once_with("kim", False, "2026-11-09")
+    rangliste.assert_called_once_with("kim")
+    punkte.antworten.assert_not_called()
+
+    spielgefuehl_service._alt_zuruecknehmen("kim", Stufe.AUS)
+    punkte.antworten.assert_called_once_with("kim", False, "2026-11-13")
+
+
+def test_neu_wuerfeln_gedrosselt(speicher):
+    uhr = {"t": 100.0}
+    dienst = SpielgefuehlService(
+        speicher, lambda: set(), lambda u: False, uhr=lambda: uhr["t"]
+    )
+    dienst.antworten("kim", Stufe.RANGLISTE, False, AKTUELLER_WORTLAUT)
+
+    dienst.neu_wuerfeln("kim")
+    with pytest.raises(spielgefuehl_service.ZuOftGewuerfelt):
+        dienst.neu_wuerfeln("kim")
+    uhr["t"] += spielgefuehl_service.WUERFELN_ABSTAND_SEKUNDEN
+    dienst.neu_wuerfeln("kim")
 
 
 def test_antwort_zu_altem_wortlaut_gilt_als_keine(dienst, speicher):

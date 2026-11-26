@@ -336,7 +336,7 @@ async def _eingewilligt(kennung: str) -> bool:
         return False
 
 
-async def _punkte_eingewilligt(kennung: str) -> bool:
+async def _punkte_eingewilligt(kennung: str, settings: Settings) -> bool:
     """
     Gilt fuer das Konto die Einwilligung "Punkte und Meilensteine" (#351)? Fuer die
     Muster-Hinweise; im Zweifel nicht erteilt, der Zaehler laeuft trotzdem.
@@ -345,7 +345,7 @@ async def _punkte_eingewilligt(kennung: str) -> bool:
     Muster-Hinweise fuer Admins nicht, also entstehen dann keine
     (domain/spielgefuehl.py).
     """
-    if spielgefuehl_service.buehne_aktiv():
+    if spielgefuehl_service.buehne_aktiv(settings):
         return False
     try:
         return await asyncio.to_thread(
@@ -510,8 +510,8 @@ async def track_content_usage(
             schalter_wirksam("punkte", settings)
             and angemeldet
             and beitrag is not None
-            and await _punkte_eingewilligt(aufrufer)
-            and await _punkte_eingewilligt(beitrag.original_author)
+            and await _punkte_eingewilligt(aufrufer, settings)
+            and await _punkte_eingewilligt(beitrag.original_author, settings)
         ):
             try:
                 await asyncio.to_thread(

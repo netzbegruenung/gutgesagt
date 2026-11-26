@@ -61,3 +61,29 @@ def test_status_ohne_anmeldung_und_als_besucher_lesbar():
 
     assert client.get(URL).status_code == 200
     assert client.get(URL, headers={"X-User": "anonymous"}).status_code == 200
+
+
+def test_spielgefuehl_modell_keine_abzeichen_am_namen():
+    app = FastAPI()
+    app.include_router(usage_router, prefix="/api/v1/usage")
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        punkte_aktiv=True, abzeichen_sichtbar_aktiv=True, spielgefuehl_buehne_aktiv=True
+    )
+    client = TestClient(app)
+
+    assert client.get(URL).json() == {
+        "aktiv": True,
+        "abzeichen_sichtbar": False,
+        "spielgefuehl_buehne": True,
+    }
+    # Die Frage nach der Sichtbarkeit gibt es im neuen Modell nicht: lesen aus, aendern 404.
+    sichtbarkeit = "/api/v1/usage/users/me/abzeichen-sichtbarkeit"
+    assert (
+        client.get(sichtbarkeit, headers={"X-User": "kim-1"}).json()["aktiv"] is False
+    )
+    antwort = client.put(
+        sichtbarkeit,
+        headers={"X-User": "kim-1"},
+        json={"zeigen": True, "wortlaut": "2026-11-09"},
+    )
+    assert antwort.status_code == 404

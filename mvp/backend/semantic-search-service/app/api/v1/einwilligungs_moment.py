@@ -53,6 +53,7 @@ def _angeboten(settings: Settings = Depends(get_settings)) -> bool:
 async def einwilligungs_moment(
     current_user: str = Depends(require_user),
     angeboten: bool = Depends(_angeboten),
+    settings: Settings = Depends(get_settings),
 ) -> EinwilligungsMomentResponse:
     """
     Ob die Person schon abgestimmt hat, wie viele Einwilligungsfragen sie beantwortet
@@ -64,7 +65,7 @@ async def einwilligungs_moment(
         moment = await asyncio.to_thread(
             get_einwilligungs_moment_repository().lesen,
             current_user,
-            buehne_aktiv(),
+            buehne_aktiv(settings),
         )
     except Exception as e:
         logger.error(

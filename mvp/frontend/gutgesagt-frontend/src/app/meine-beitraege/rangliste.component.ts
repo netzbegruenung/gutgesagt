@@ -121,7 +121,7 @@ export class RanglisteComponent implements OnInit {
       return false;
     }
     if (this.buehne) {
-      return this.dabei;
+      return this.dabei || this.ruhend;
     }
     return this.fragen || this.dabei || this.ruhend || (stand.gefragt && stand.voraussetzungen && !!stand.saison);
   }
@@ -131,7 +131,7 @@ export class RanglisteComponent implements OnInit {
    * Widerruf bleibt trotzdem hier erreichbar.
    */
   get ruhend(): boolean {
-    return !!this.stand && !this.buehne && this.stand.teilnehmen === true && !this.stand.voraussetzungen;
+    return !!this.stand && this.stand.teilnehmen === true && !this.stand.voraussetzungen;
   }
 
   /** Gespeichert ist der Anzeigename als Name in der Rangliste (und es gibt einen). */
