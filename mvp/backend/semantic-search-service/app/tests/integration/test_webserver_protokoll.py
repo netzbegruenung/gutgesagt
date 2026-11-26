@@ -156,6 +156,20 @@ def test_keine_zeile_je_meldung_ohne_konto():
     assert not [zeile for zeile in zugriffe if "ereignis" in zeile.lower()]
 
 
+@pytest.mark.usefixtures("docker_noetig")
+def test_keine_zeile_je_ankunft():
+    """Ankunft mit Kampagnenwort: Adresse und Uhrzeit liessen sich anderen Zugriffen zuordnen."""
+    with _nginx("nginx.docker.conf") as (basis, name):
+        _anfrage(f"{basis}/api/v1/ankunft", methode="POST")
+        _anfrage(f"{basis}/api/v1/Ankunft/", methode="POST")
+        _anfrage(f"{basis}/api/v1/metrics/getMetrics")
+
+        zugriffe = _zugriffe(name)
+
+    assert any("/api/v1/metrics/getMetrics" in zeile for zeile in zugriffe), zugriffe
+    assert not [zeile for zeile in zugriffe if "ankunft" in zeile.lower()]
+
+
 def test_browser_schickt_den_suchtext_nicht_als_verweisende_seite():
     """Fuer den vorgelagerten Webserver, dessen Format nicht hier im Repo steht.
 

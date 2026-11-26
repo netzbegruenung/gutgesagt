@@ -22,7 +22,7 @@ import { RundgangService } from './rundgang.service';
       <aside class="zeile" [attr.aria-label]="angebot.titel">
         <img class="zeile-bild" src="marke/wegweiser.svg" alt="" width="28" height="28" />
         <p>
-          <span class="zeile-titel">{{ angebot.titel }}</span>&ngsp;<button type="button" class="zeile-link" (click)="rundgang.bandBeantworten(true)">{{ angebot.ja }}</button>&ngsp;<span class="zeile-satz"><span aria-hidden="true">· </span>{{ angebot.satz }}</span>
+          <span class="zeile-titel">{{ angebot.titel }}</span>&ngsp;<button type="button" class="zeile-link" (click)="rundgang.bandBeantworten(true)">{{ angebot.ja }}</button>&ngsp;<span class="zeile-satz" [class.umbrechen]="angebot.satzUmbrechen"><span aria-hidden="true">· </span>{{ angebot.satz }}</span>
         </p>
         <button type="button" class="zeile-zu" [attr.aria-label]="angebot.neinLabel ?? angebot.nein"
                 [attr.title]="angebot.nein" (click)="ausblenden()">

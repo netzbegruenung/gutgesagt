@@ -364,6 +364,40 @@ TEAM_SCHALTER = (
 SCHALTER.update({s.name: s for s in TEAM_SCHALTER})
 
 
+# Kampagnenwort ?k= (GLOSSARY.md "Kampagnenwort"): vorlaeufige Jura-Einschaetzung
+# 26.11.2026, Grundsatz Maintainer: alles hinter einem Schalter, Standard aus. Beide
+# Obergrenzen von Haus aus aus; eingeschaltet erst nach dem endgueltigen OK.
+K_SCHALTER = (
+    Schalterart(
+        name="k_begruessung",
+        feld="k_begruessung_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_K_BEGRUESSUNG_AKTIV",
+        erklaerung=(
+            "Wer über ?k=sticker oder ?k=bdk kommt, liest in der Rundgang-Zeile eine "
+            "passende Begrüßung statt der allgemeinen; nur Anzeige, speichert nichts."
+        ),
+        einschalt_hinweis=(
+            "Jura vorläufig ok (26.11.): nur Anzeige, nichts speichern; einschalten "
+            "nach dem endgültigen OK"
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="k_ankuenfte",
+        feld="k_ankuenfte_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_K_ANKUENFTE_AKTIV",
+        erklaerung=(
+            "Zählt, wie oft die App mit ?k=<Wort> geöffnet wurde, je Wort aus der "
+            "Positivliste und Tag; ohne Kennung, Konto, Adresse oder Beitrag. Die "
+            "Zahlen stehen in der Übersicht."
+        ),
+        einschalt_hinweis="Jura: nur Ankünfte je k und Tag, nie an Konto/Beitrag",
+        oeffentlich=True,
+    ),
+)
+SCHALTER.update({s.name: s for s in K_SCHALTER})
+
+
 class UnbekannterSchalter(KeyError):
     pass
 

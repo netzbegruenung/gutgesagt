@@ -6,7 +6,8 @@ Suchereignissen (#495) und fuer erledigte Loeschauftraege (DSFA R9b).
 Fachliche Quelle der Fristen ist docs/LOESCHKONZEPT.md ("Fristen"); im Code stehen
 ihre Zahlen hier und nur hier, damit die Datenschutzerklaerung sie zitieren kann.
 Andere Fristen stehen bei ihrer Datenart: Feedback in services/feedback_service.py, Suchen ohne Treffer in
-services/suchen_ohne_treffer_service.py, Nutzungsereignisse in core/config.py.
+services/suchen_ohne_treffer_service.py, Nutzungsereignisse in core/config.py, Ankuenfte je
+Kampagnenwort in services/ankunft_service.py (angewendet hier).
 
 - Meldungen: bearbeitete und abgewiesene MELDUNG_NACH_BEARBEITUNG_TAGE nach der
   Bearbeitung. Sechs Monate, weil so lange eine Entscheidung nach Art. 20 Abs. 1 DSA
@@ -63,6 +64,7 @@ from typing import Any, Dict, List, Optional
 from core.logging import get_logger
 from domain.interfaces.konten_im_realm import MAIL_GUELTIG_SEKUNDEN, INieBenutzteKonten
 from domain.models.content_status import FELD_GELOESCHT_AM
+from repositories.ankunft_repository import AnkunftRepository
 from repositories.content_report_repository import ContentReportRepository
 from repositories.interfaces.moderation_repository import IModerationRepository
 from repositories.einwurf_repository import EinwurfRepository
@@ -71,6 +73,7 @@ from repositories.schalter_repository import SchalterRepository
 from repositories.search_tracking_repository import SearchTrackingRepository
 from repositories.sperre_repository import SperreRepository
 from repositories.team_repository import TeamRepository
+from services.ankunft_service import ANKUNFT_TAGE
 from services.moderation_service import ModerationService
 from utils.utc_tag import heute_utc, sekunden_bis_mitternacht
 
@@ -119,6 +122,7 @@ class LoeschfristenService:
         loeschauftraege: Optional[LoeschauftragRepository] = None,
         schalter: Optional[SchalterRepository] = None,
         teams: Optional[TeamRepository] = None,
+        ankuenfte: Optional[AnkunftRepository] = None,
     ):
         self._meldungen = meldungen
         self._einwuerfe = einwuerfe
@@ -130,6 +134,7 @@ class LoeschfristenService:
         self._loeschauftraege = loeschauftraege
         self._schalter = schalter
         self._teams = teams
+        self._ankuenfte = ankuenfte
         # True, wenn der letzte Lauf Suchereignisse nicht verdichten konnte.
         self.verdichten_offen = False
 
@@ -173,6 +178,12 @@ class LoeschfristenService:
                 self._schalter.verlauf_loeschen_vor,
                 _grenze(heute, SCHALTER_VERLAUF_TAGE),
                 "Schalter history entries",
+            )
+        if self._ankuenfte is not None:
+            await self._frist_anwenden(
+                self._ankuenfte.loeschen_vor,
+                _grenze(heute, ANKUNFT_TAGE),
+                "Ankuenfte per Kampagnenwort and day",
             )
         if self._konten is not None:
             await self._nie_benutzte_konten(heute)

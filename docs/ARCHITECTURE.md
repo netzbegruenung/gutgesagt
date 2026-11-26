@@ -278,6 +278,7 @@ reported off reload every 5 minutes instead of every 30 seconds (`AUS_NACHLADEN_
 | `GET /api/v1/rangliste` | Meine Beiträge, every 30 s | `aktiv: false`, nothing asked |
 | `GET /api/v1/usage/users/me/punkte`, `/meilensteine`, `/abzeichen-sichtbarkeit`, `/punkte-einwilligung` | Meine Beiträge, Einwilligungen | `aktiv: false` |
 | `GET /api/v1/usage/users/me/gepostet` | after a copy, once per signed-in person until reload | `angeboten: false`; consent checked (403) only while on |
+| `POST /api/v1/ankunft` | app start with `?k=<word>`, once per page load, only while `k_ankuenfte` is not surely off | `gezaehlt: false` (switch off or word not on the allow list); 429 above the throttle |
 
 ## Deployment Configurations
 
@@ -538,6 +539,31 @@ officer has advised.
 | `danke_knopf` | `SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV` | off | yes | DSFA addendum V31 (#791) |
 | `danke_ohne_konto` | `SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV` | off | yes | V31 and visitor marker (#495); works only with `danke_knopf` |
 | `rangliste` | `SEMANTIC_SEARCH_RANGLISTE_AKTIV` | off | no | legal OK (wording, DSFA V28, privacy policy) and Punkte on (#793); works only with `punkte` |
+
+#### Kampagnenwort ?k= (preliminary legal assessment 26.11.2026)
+
+The app reads `?k=<word>` once at start (`shared/kampagnenwort.service.ts`), lower case,
+`[a-z0-9-]{1,20}`, and keeps it in memory only. Two switches in `K_SCHALTER`
+(`services/schalter_service.py`), group Grundfunktionen, both public, upper bound default
+`false`; like every switch they also need the admin value.
+
+| Schalter | Upper bound | Default | Public | Condition for switching on |
+|----------|-------------|---------|--------|----------------------------|
+| `k_begruessung` | `SEMANTIC_SEARCH_K_BEGRUESSUNG_AKTIV` | off | yes | final legal OK; display only, nothing stored |
+| `k_ankuenfte` | `SEMANTIC_SEARCH_K_ANKUENFTE_AKTIV` | off | yes | legal: only arrivals per word and day, never linked to an account or Beitrag |
+
+- `k_begruessung`: for `sticker` and `bdk` the Willkommen line shows a matching greeting
+  (`K_BEGRUESSUNG` in `rundgang/rundgang-daten.ts`) instead of "Neu hier?"; same tour, same
+  browser entry, same "Ausblenden". Other words change nothing.
+- `k_ankuenfte`: once per page load `POST /api/v1/ankunft` with `{"k": "<word>"}` in the body
+  (unknown fields 422). The service counts only words of `SEMANTIC_SEARCH_K_WOERTER` (default
+  `vorhut,g1,g2,g3,g4,bdk,sticker`, at most 20 characters each) into `ankuenfte_je_tag`
+  (word, UTC day, count; no identifier, account, address or Beitrag), throttled in memory per
+  second for all callers together (`SEMANTIC_SEARCH_ANKUNFT_JE_SEKUNDE`, default 20). The
+  endpoint does not read the caller; the frontend nginx writes no access line for it
+  (`nginx.protokoll.conf`), like `/api/v1/ereignis`. Admins see the last 30 days under
+  Admin → Übersicht (`GET /api/v1/ankuenfte`, `{"aktiv": false, "tage": []}` while off);
+  rows are deleted 365 days after their day (`docs/LOESCHKONZEPT.md`).
 
 #### Saisons and Gemeinschaftsziel (#782)
 

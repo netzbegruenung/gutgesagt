@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RundgangBandComponent } from './rundgang-band.component';
 import { RundgangService } from './rundgang.service';
-import { Angebot, APP_INSTALLIEREN_ANGEBOT, HOME_ANGEBOT, MITMACHEN_ANGEBOT, WILLKOMMEN } from './rundgang-daten';
+import { Angebot, APP_INSTALLIEREN_ANGEBOT, HOME_ANGEBOT, MITMACHEN_ANGEBOT, WILLKOMMEN, mitBegruessung } from './rundgang-daten';
 import { ALS_APP_GESTARTET } from './app-installieren.service';
 import { installierenEreignis } from '../testing/installieren-ereignis';
 
@@ -41,6 +41,25 @@ describe('RundgangBandComponent', () => {
     expect(aside.querySelector('h2')?.textContent).toContain(MITMACHEN_ANGEBOT.titel);
     expect(aside.textContent).toContain(MITMACHEN_ANGEBOT.satz);
     expect(aside.getAttribute('aria-labelledby')).toBe(aside.querySelector('h2')!.id);
+  });
+
+  it('zeigt die Begrüßung nach ?k= in derselben Zeile, der lange Satz darf umbrechen', () => {
+    fixture.componentRef.setInput('ort', 'start');
+    band.set(mitBegruessung(WILLKOMMEN, 'sticker'));
+    fixture.detectChanges();
+    const aside = el().querySelector('aside.zeile')!;
+    expect(aside.getAttribute('aria-label')).toBe('Vom Sticker?');
+    expect(aside.querySelector('p')!.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+      'Vom Sticker? Rundgang (1 Min.) · Probier’s direkt aus – das Beispiel steht schon drin.',
+    );
+    expect(aside.querySelector('.zeile-satz')!.classList).toContain('umbrechen');
+  });
+
+  it('lässt den kurzen Satz des Willkommens ohne Umbruch', () => {
+    fixture.componentRef.setInput('ort', 'start');
+    band.set(WILLKOMMEN);
+    fixture.detectChanges();
+    expect(el().querySelector('.zeile-satz')!.classList).not.toContain('umbrechen');
   });
 
   it('zeigt das Willkommen als eine schlanke Zeile mit kleinem Wegweiser (Persona-Runde 18.11.)', () => {

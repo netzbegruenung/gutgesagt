@@ -298,6 +298,26 @@ class Settings(BaseSettings):
     # Drosselung von POST /api/v1/ereignis (#799): hoechstens so viele Meldungen je
     # Sekunde fuer alle zusammen, nur im Arbeitsspeicher, ohne Adresse.
     ereignis_je_sekunde: int = Field(default=10, ge=1)
+    # Kampagnenwort ?k= (GLOSSARY.md "Kampagnenwort"): Begruessung nach dem Wort (nur
+    # Anzeige im Browser) und Ankuenfte je Wort und Tag (services/ankunft_service.py),
+    # beide Standard aus (vorlaeufige Jura-Einschaetzung 26.11.2026). Gezaehlt werden nur
+    # Woerter aus k_woerter (kommagetrennt, klein); andere zaehlen nicht.
+    k_begruessung_aktiv: bool = False
+    k_ankuenfte_aktiv: bool = False
+    k_woerter: str = "vorhut,g1,g2,g3,g4,bdk,sticker"
+    # Drosselung von POST /api/v1/ankunft: hoechstens so viele Ankuenfte je Sekunde fuer
+    # alle zusammen, nur im Arbeitsspeicher, ohne Adresse (wie ereignis_je_sekunde).
+    ankunft_je_sekunde: int = Field(default=20, ge=1)
+
+    def kampagnenwoerter(self) -> frozenset:
+        """Die erlaubten Kampagnenwoerter, klein geschrieben; laengere als 20 Zeichen
+        (Spalte ``ankuenfte_je_tag.k``) fallen weg."""
+        return frozenset(
+            w.strip().lower()
+            for w in self.k_woerter.split(",")
+            if w.strip() and len(w.strip()) <= 20
+        )
+
     # Herkunft pruefen (#759): nachts die Links aller Herkuenfte abrufen und tote oder
     # umgezogene fuer Admins auflisten (services/herkunft_pruefen.py). Obergrenze an,
     # weil dabei nichts zur Person entsteht: kein Name, keine Kennung, nur Adresse und
