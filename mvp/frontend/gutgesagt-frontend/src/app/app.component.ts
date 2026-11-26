@@ -30,6 +30,7 @@ import { PAGE_TITLES, ROUTES } from './shared/constants/app.constants';
 import { RundgangComponent } from './rundgang/rundgang.component';
 import { RundgangBandComponent } from './rundgang/rundgang-band.component';
 import { RundgangService } from './rundgang/rundgang.service';
+import { KampagnenwortService } from './shared/kampagnenwort.service';
 import { NEU_HINWEIS } from './rundgang/rundgang-daten';
 
 @Component({
@@ -85,6 +86,7 @@ export class AppComponent implements OnInit, OnDestroy {
   userInfo: UserInfo | null = null;
 
   protected readonly rundgang = inject(RundgangService);
+  private readonly kampagnenwort = inject(KampagnenwortService);
   private readonly destroyRef = inject(DestroyRef);
 
   constructor(
@@ -143,6 +145,9 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Willkommen beim ersten Besuch, Mitmachen nach der ersten Anmeldung (#389)
     this.rundgang.beobachten(this.destroyRef);
+
+    // Ankunft mit Kampagnenwort (?k=) melden, einmal je geöffneter Seite (Schalter k_ankuenfte)
+    this.kampagnenwort.ankunftMelden();
 
     // Rueckmeldung beim Anmelden, wie oft die eigenen Beitraege genutzt wurden (#349)
     this.rueckmeldung.starten();

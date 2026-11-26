@@ -303,6 +303,10 @@
                 (dislikeToggled)="gueteNachladen()"
                 (kopiert)="nutzungHochzaehlen()">
             </app-karten-aktionen>
+            <!-- Merkliste (#758): nur angemeldet und mit Schalter; der Knopf entscheidet selbst, ob er dasteht -->
+            <div class="karte-merken" *ngIf="!vorschau && !eigenesAlbum && !istEigen">
+                <app-merken-knopf [inhaltId]="daten.id"></app-merken-knopf>
+            </div>
             <!-- Varianten (#356): Beitraege, die auf diesem beruhen -->
             <a class="karte-varianten" *ngIf="variantenAnzeige as varianten"
                [routerLink]="['/varianten', daten.id]"

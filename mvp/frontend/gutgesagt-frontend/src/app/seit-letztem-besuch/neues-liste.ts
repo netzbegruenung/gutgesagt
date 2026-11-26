@@ -212,21 +212,27 @@ export function eigenesNeuesSichtbar(stand: NeuesStand | null, erledigt: Readonl
 
 /**
  * Wer auf der Startseite die eine Stelle mit neuer Richtung bekommt (Review Spielgefühl
- * 25.11.): der Block „Seit deinem letzten Besuch“ oder die Karte „Dein nächster Schritt“,
- * nie beide. „offen“: Es fehlt noch eine der beiden Antworten (Besuch oder Vorschläge),
- * dann zeigt keiner etwas, statt dass eine Karte erscheint und gleich wieder verschwindet.
+ * 25.11.): der Block „Seit deinem letzten Besuch“, die Karte „Heute im Saal gehört:“
+ * („spruch“, Schalter saal_spruch) oder die Karte „Dein nächster Schritt“, nie zwei davon.
+ * „offen“: Es fehlt noch eine der Antworten (Besuch, Vorschläge, Saal-Spruch), dann zeigt
+ * keiner etwas, statt dass eine Karte erscheint und gleich wieder verschwindet.
  */
-export type StartVorrang = 'offen' | 'block' | 'karte';
+export type StartVorrang = 'offen' | 'block' | 'spruch' | 'karte';
 
 /**
- * Vorrang: Neues zu eigenen Beiträgen geht vor (es ist, was die Person bewirkt hat), sonst
- * der eine Vorschlag, sonst der Block mit den allgemeinen Zahlen. `undefined` heißt
- * „Antwort steht noch aus“, null beim Stand „keine Antwort“ (Fehler, Zeitgrenze).
+ * Vorrang: Neues zu eigenen Beiträgen geht vor (es ist, was die Person bewirkt hat), dann
+ * der eine Vorschlag, dann an seinen Tagen der Saal-Spruch, sonst der Block mit den
+ * allgemeinen Zahlen. Der Saal-Spruch verdrängt also nur die allgemeinen Zahlen (Auftrag
+ * Strategiewichtel Nr. 3, #846), nichts Persönliches. `undefined` heißt „Antwort steht
+ * noch aus“ (beim Saal-Spruch 'offen'; auf ihn wird nur gewartet, wenn kein Vorschlag da
+ * ist), null beim Stand „keine Antwort“ (Fehler, Zeitgrenze). Ohne Angabe zum Saal-Spruch
+ * gibt es heute keinen.
  */
 export function startVorrang(
   stand: NeuesStand | null | undefined,
   erledigt: ReadonlySet<NeuesArt>,
   naechsterSchrittDa: boolean | undefined,
+  saalSpruchDa: boolean | 'offen' = false,
 ): StartVorrang {
   if (stand === undefined || naechsterSchrittDa === undefined) {
     return 'offen';
@@ -234,7 +240,13 @@ export function startVorrang(
   if (eigenesNeuesSichtbar(stand, erledigt)) {
     return 'block';
   }
-  return naechsterSchrittDa ? 'karte' : 'block';
+  if (naechsterSchrittDa) {
+    return 'karte';
+  }
+  if (saalSpruchDa === 'offen') {
+    return 'offen';
+  }
+  return saalSpruchDa ? 'spruch' : 'block';
 }
 
 /**

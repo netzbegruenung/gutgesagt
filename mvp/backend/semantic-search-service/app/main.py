@@ -46,9 +46,14 @@ from api.v1.vormoderation import router as vormoderation_router
 from api.v1.loeschauftraege import router as loeschauftraege_router
 from api.v1.schalter import router as schalter_router
 from api.v1.funktionen import router as funktionen_router
+from api.v1.merkliste import router as merkliste_router
 from api.v1.ereignis import router as ereignis_router
+from api.v1.ankunft import admin_router as ankuenfte_admin_router
+from api.v1.ankunft import router as ankunft_router
 from api.v1.saisons import admin_router as saisons_admin_router
 from api.v1.saisons import router as saisons_router
+from api.v1.saal_spruch import admin_router as saal_spruch_admin_router
+from api.v1.saal_spruch import router as saal_spruch_router
 from api.v1.rangliste import router as rangliste_router
 from api.v1.konter_probe import router as konter_probe_router
 from api.v1.sperren import router as sperren_router
@@ -64,6 +69,7 @@ from api.v1.kuerzungsvorschlag import router as kuerzungsvorschlag_router
 from api.v1.art9_einwilligung import router as art9_einwilligung_router
 from api.v1.nutzungsbedingungen import router as nutzungsbedingungen_router
 from api.v1.herkunft_pruefen import router as herkunft_pruefen_router
+from api.v1.aufrufe import router as aufrufe_router
 from services.cleanup.bereinigungsjob import bereinigungsjob_starten
 from services.suchen_ohne_treffer_service import (
     get_personen_des_tages,
@@ -90,6 +96,8 @@ from services.herkunft_pruefen import (
     herkunft_pruefen_bauen,
     pruefen_im_takt,
 )
+from services.aufrufe_service import verdichten_im_takt as aufrufe_verdichten_im_takt
+from repositories.aufrufe_repository import get_aufrufe_repository
 from services.muster_hinweise_service import (
     loeschen_im_takt as muster_hinweise_loeschen_im_takt,
 )
@@ -103,6 +111,7 @@ from utils.rate_limiter import (
     einladung_pruefen_rate_limiter,
     einladung_rate_limiter,
     feedback_rate_limiter,
+    aufrufe_rate_limiter,
     gegenlesen_rate_limiter,
     spracherkennung_rate_limiter,
     kuerzungsvorschlag_rate_limiter,
@@ -177,6 +186,7 @@ async def lifespan(app: FastAPI):
                     aehnliche_aussagen_rate_limiter,
                     search_query_statement_rate_limiter,
                     feedback_rate_limiter,
+                    aufrufe_rate_limiter,
                     einladung_rate_limiter,
                     einladung_pruefen_rate_limiter,
                     team_beitreten_rate_limiter,
@@ -261,6 +271,12 @@ async def lifespan(app: FastAPI):
             pruefen_im_takt(herkunft_pruefen_bauen())
         )
 
+        # Seitenaufrufe (#761): Tagespseudonyme vergangener Tage zu Tageszahlen
+        # verdichten und loeschen, auch bei ausgeschaltetem Schalter (loescht nur).
+        app.state.aufrufe_verdichten = asyncio.create_task(
+            aufrufe_verdichten_im_takt(get_aufrufe_repository())
+        )
+
         logger.info(
             "✅ Application startup complete - server ready to accept connections"
         )
@@ -283,6 +299,7 @@ async def lifespan(app: FastAPI):
                 "muster_hinweise_loeschen",
                 "abzeichen_rechnen",
                 "herkunft_pruefen",
+                "aufrufe_verdichten",
             ):
                 task = getattr(app.state, name, None)
                 if task is not None:
@@ -364,6 +381,12 @@ from middleware.tagesdeckel import TagesdeckelMiddleware
 
 app.add_middleware(TagesdeckelMiddleware)
 
+# Aufrufe zaehlen (#761, middleware/aufrufe_zaehlen.py): aus Abrufen, die die App ohnehin
+# macht, nach der Antwort; ohne wirksamen Schalter tut die Middleware nichts.
+from middleware.aufrufe_zaehlen import AufrufeZaehlenMiddleware
+
+app.add_middleware(AufrufeZaehlenMiddleware)
+
 app.include_router(commentary_router, prefix="/api/v1/commentary", tags=["commentary"])
 app.include_router(content_router, prefix="/api/v1/content", tags=["content"])
 app.include_router(
@@ -403,13 +426,26 @@ app.include_router(
 )
 # Welche Funktionen hinter einem Schalter an sind (#756), ohne Anmeldung
 app.include_router(funktionen_router, prefix="/api/v1/funktionen", tags=["schalter"])
+# Merkliste (#758), hinter dem Schalter merkliste
+app.include_router(merkliste_router, prefix="/api/v1/merkliste", tags=["merkliste"])
 # Neutraler Sammelpfad (#799): die Art der Meldung steht nur im Body.
 app.include_router(ereignis_router, prefix="/api/v1/ereignis", tags=["ereignis"])
+# Ankuenfte je Kampagnenwort und Tag: Melden ohne Anmeldung, das Wort nur im Body;
+# die Zahlen nur fuer Admins (api/v1/ankunft.py)
+app.include_router(ankunft_router, prefix="/api/v1/ankunft", tags=["ankunft"])
+app.include_router(ankuenfte_admin_router, prefix="/api/v1/ankuenfte", tags=["ankunft"])
 # Saisons mit Gemeinschaftsziel (#782): Balken ohne Anmeldung, Pflege nur Admins
 app.include_router(saisons_router, prefix="/api/v1/saisons", tags=["saisons"])
 app.include_router(rangliste_router, prefix="/api/v1/rangliste", tags=["rangliste"])
 app.include_router(
     saisons_admin_router, prefix="/api/v1/moderation/saisons", tags=["moderation"]
+)
+# Saal-Spruch: Spruch ohne Anmeldung, Pflege nur Admins
+app.include_router(saal_spruch_router, prefix="/api/v1/saal-spruch", tags=["spiel"])
+app.include_router(
+    saal_spruch_admin_router,
+    prefix="/api/v1/moderation/saal-sprueche",
+    tags=["moderation"],
 )
 # Konter-Probe (#786), ohne Anmeldung, nur lesend; der Tipp bleibt im Browser
 app.include_router(konter_probe_router, prefix="/api/v1/konter-probe", tags=["spiel"])
@@ -449,6 +485,7 @@ app.include_router(
     prefix="/api/v1/herkunft-pruefen",
     tags=["herkunft-pruefen"],
 )
+app.include_router(aufrufe_router, prefix="/api/v1/aufrufe", tags=["aufrufe"])
 
 # Betriebskennzahlen unter /metrics (#420). Zuletzt hinzugefuegt, also aussen: Die
 # Middleware zaehlt auch, was das Rate-Limit abweist. Am BFF ist /metrics gesperrt.

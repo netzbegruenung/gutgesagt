@@ -92,6 +92,12 @@ AUFBEWAHRUNG_WOCHEN = 8
 WOCHEN_STANDARD = 4
 WOCHEN_MAX = AUFBEWAHRUNG_WOCHEN
 MINDESTANZAHL = 2
+# Seite ohne Treffer (#362): "Danach wurde schon N-mal gesucht" erst ab drei. Jura
+# vorlaeufig 26.11.: hoeher als die Listen-Schwelle, und "N-mal" statt "N Personen", weil
+# das Tagespseudonym Anschluesse je Tag zaehlt, nicht Personen.
+ANZEIGE_AB = 3
+# Schalter der Anzeige (services/schalter_service.py, Gruppe Spielgefuehl)
+NULL_TREFFER_ANZAHL = "null_treffer_anzahl"
 LIMIT_STANDARD = 20
 LOESCH_TAKT_SEKUNDEN = 24 * 60 * 60
 # Obergrenze der Merkliste: Eintraege je Tag, einer je (Person, Aussage); je
@@ -285,6 +291,29 @@ class SuchenOhneTrefferService:
             if neue_person:
                 self._personen.vergessen(pseudonym, statement_id)
             raise
+
+    async def schon_gesucht(
+        self, statement_id: Optional[uuid.UUID], heute: Optional[date] = None
+    ) -> Optional[int]:
+        """
+        Fuer die Seite ohne Treffer (#362): wie oft im Zeitraum der Liste
+        (WOCHEN_STANDARD) ohne Treffer nach dieser Aussage gesucht wurde, gezaehlt wie
+        die Listen je Tagespseudonym und Tag, ueber die Wochen summiert, die eben
+        gezaehlte Suche eingerechnet;
+        None unter ANZEIGE_AB. Nur eine Zahl, gelesen aus den Zaehlern, die erfassen
+        ohnehin schreibt: kein Text, nichts zusaetzlich gespeichert. Auch Besucher sehen
+        sie (Entscheidung des Maintainers vom 28.10.2026 in #362), aber nur zu einer
+        Aussage, die sie sehen duerfen, und nur mit dem Schalter null_treffer_anzahl:
+        Das prueft der Suchpfad (api/v1/search.py, Vormoderation P6).
+        """
+        if statement_id is None:
+            return None
+        anzahl = await asyncio.to_thread(
+            self._repository.personen,
+            statement_id,
+            _seit_woche(WOCHEN_STANDARD, heute),
+        )
+        return anzahl if anzahl >= ANZEIGE_AB else None
 
     async def haeufigste(
         self,

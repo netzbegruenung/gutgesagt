@@ -21,6 +21,8 @@ from typing import Callable, Dict, List, Optional
 
 from core.config import Settings, settings as globale_settings
 from core.logging import get_logger
+from domain.feedback_gestoert import gestoert_offen
+from utils.utc_tag import heute_utc
 
 logger = get_logger(__name__)
 
@@ -150,6 +152,35 @@ SPIEL_SCHALTER = (
         oeffentlich=True,
     ),
     Schalterart(
+        name="saal_spruch",
+        gruppe=SPIELGEFUEHL,
+        feld="saal_spruch_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_SAAL_SPRUCH_AKTIV",
+        erklaerung=(
+            "Karte „Heute im Saal gehört:“ oben auf der Startseite mit dem heutigen "
+            "Saal-Spruch (Abschnitt Saal-Sprüche) und dem Knopf „Antworten ansehen“; an "
+            "Tagen ohne Spruch nichts. Speichert nichts zur Person."
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="null_treffer_anzahl",
+        gruppe=SPIELGEFUEHL,
+        feld="null_treffer_anzahl_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_NULL_TREFFER_ANZAHL_AKTIV",
+        erklaerung=(
+            "Seite ohne Treffer: „Danach wurde in den letzten vier Wochen schon "
+            "N-mal gesucht“ ab N ≥ 3, auch ohne Anmeldung; nur zu für alle sichtbaren "
+            "Aussagen, speichert nichts zusätzlich."
+        ),
+        einschalt_hinweis=(
+            "Jura vorläufig (26.11.): nur ab N ≥ 3, Wortlaut „N-mal gesucht“ statt "
+            "„N Personen“ und mit dem Absatz „Suchen ohne Treffer“ in der "
+            "Datenschutzerklärung; endgültig mit dem Jura-Paket (27.11.)"
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
         name="wirkungs_echo",
         gruppe=PUNKTE_ANERKENNUNG,
         feld="wirkungs_echo_aktiv",
@@ -266,6 +297,39 @@ SCHALTER: Dict[str, Schalterart] = {
             ),
         ),
         Schalterart(
+            name="merkliste",
+            gruppe=GRUNDFUNKTIONEN,
+            feld="merkliste_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_MERKLISTE_AKTIV",
+            erklaerung=(
+                "Merken an der Beitragskarte und der Reiter „Gemerkt“ in Meine "
+                "Beiträge, nur mit Art.-9-Einwilligung; der Widerruf löscht die "
+                "Merkliste. Nur die Person selbst sieht sie."
+            ),
+            einschalt_hinweis=(
+                "Jura: neuer Einwilligungswortlaut + DSFA-Abschnitt + DSE-Absatz vor "
+                "dem Einschalten (neuer Zweck, politisches Interesse)"
+            ),
+            oeffentlich=True,
+        ),
+        Schalterart(
+            name="aufrufe_zaehlen",
+            gruppe=GRUNDFUNKTIONEN,
+            feld="aufrufe_zaehlen_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_AUFRUFE_ZAEHLEN_AKTIV",
+            erklaerung=(
+                "Zählt Aufrufe und Besucher je Tag am Server aus den Abrufen von "
+                "Startseite, Suche, Thema und Beitrag, ohne eigene Anfrage aus dem "
+                "Browser und ohne Cookie; die IP-Adresse wird nicht gespeichert. "
+                "Zeigt sie unter Kennzahlen."
+            ),
+            dsfa_hinweis=True,
+            einschalt_hinweis=(
+                "Einschalten erst nach DSB-Antwort (§ 25 TDDDG) und DSFA-Zeile "
+                "V-Messung"
+            ),
+        ),
+        Schalterart(
             name="abkuerzungen",
             feld="abkuerzungen_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_ABKUERZUNGEN_AKTIV",
@@ -316,6 +380,50 @@ SCHALTER: Dict[str, Schalterart] = {
             ),
         ),
         Schalterart(
+            name="feedback_gestoert",
+            feld="feedback_gestoert_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_FEEDBACK_GESTOERT_AKTIV",
+            erklaerung=(
+                "Knopf „Was hat dich gestört?“ auf der Startseite für die Startphase: "
+                "dasselbe Feedback-Formular, nur Freitext ohne Kontakt; alle Einträge "
+                "werden am 31.12.2026 gelöscht, danach wirkt der Schalter nicht mehr."
+            ),
+            einschalt_hinweis="DSE-Absatz (Jura, Paket 27.11.)",
+            oeffentlich=True,
+        ),
+        Schalterart(
+            name="dse_kurzfassung",
+            feld="dse_kurzfassung_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_DSE_KURZFASSUNG_AKTIV",
+            erklaerung=(
+                "Kasten „Kurz gesagt“ oben in der Datenschutzerklärung: drei Sätze "
+                "(wer verantwortlich ist, was gespeichert wird, wie man löscht und "
+                "widerruft), je mit Sprunglink auf den Absatz im Volltext. Bleibt "
+                "unsichtbar, solange ein Satz noch Platzhalter ist."
+            ),
+            einschalt_hinweis=(
+                "Wortlaut von Jura (Paket 27.11.) eintragen; jeder Satz muss einem "
+                "Absatz im Volltext entsprechen"
+            ),
+            oeffentlich=True,
+        ),
+        Schalterart(
+            name="stimmen_text_verfall",
+            gruppe=GRUNDFUNKTIONEN,
+            feld="stimmen_text_verfall_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_STIMMEN_TEXT_VERFALL_AKTIV",
+            erklaerung=(
+                "Stimmen verfallen auch, wenn die Autorin oder der Autor den Text durch "
+                "einen ganz anderen ersetzt (#636). Gelöschte Stimmen kommen nicht "
+                "zurück; wirkt nur, wenn die Prüfung auf dieselbe Aussage an ist."
+            ),
+            einschalt_hinweis=(
+                "Vor dem Einschalten auf Prod: endgültiges Jura-OK zum Halbsatz "
+                "„Bewertungen“ der Datenschutzerklärung (vorläufig freigegeben 26.11.)"
+            ),
+            oeffentlich=True,
+        ),
+        Schalterart(
             name="teams",
             gruppe=TEAMS,
             rechtlich_freigegeben=True,
@@ -344,6 +452,23 @@ SCHALTER: Dict[str, Schalterart] = {
                 "Aus, bis die Datenschutzbeauftragte geraten hat."
             ),
             dsfa_hinweis=True,
+            oeffentlich=True,
+        ),
+        Schalterart(
+            name="teamlink_vertrauenssatz",
+            gruppe=TEAMS,
+            feld="teamlink_vertrauenssatz_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_TEAMLINK_VERTRAUENSSATZ_AKTIV",
+            erklaerung=(
+                "Vertrauenssatz vor der Frage beim Teambeitritt: „Beitreten heißt nur: "
+                "Du zählst zu diesem Team.“, bei einem Team nach Gruppe dazu, dass die "
+                "Gruppe keine Daten bekommt. Speichert nichts; wirkt nur zusammen mit "
+                "„teams“."
+            ),
+            einschalt_hinweis=(
+                "Vor dem Einschalten: Jura prüft teams.py (was Mitglieder voneinander "
+                "sehen)."
+            ),
             oeffentlich=True,
         ),
         *SPIEL_SCHALTER,
@@ -382,6 +507,88 @@ TEAM_SCHALTER = (
     ),
 )
 SCHALTER.update({s.name: s for s in TEAM_SCHALTER})
+
+
+# Vertrauenszeile vor dem Anmelden (vorlaeufige juristische Einschaetzung 26.11.2026,
+# Punkt a): Grundsatz Sebastian 26.11., Neues hinter einem Schalter, Obergrenze von
+# Haus aus aus. Der Satz stimmt nur, solange nichts ausser den Beitraegen fuer andere
+# sichtbar ist; deshalb steht die Bedingung als Hinweis auf der Admin-Seite.
+SCHALTER["vertrauenszeile"] = Schalterart(
+    name="vertrauenszeile",
+    gruppe=GRUNDFUNKTIONEN,
+    feld="vertrauenszeile_aktiv",
+    umgebungsvariable="SEMANTIC_SEARCH_VERTRAUENSZEILE_AKTIV",
+    erklaerung=(
+        "Zeile über den Anmeldewegen: Was man beiträgt, erscheint unter dem "
+        "Anzeigenamen, wie viel man sonst mitmacht, sehen andere nicht; mit Link "
+        "„Datenschutz“. Speichert und zählt nichts."
+    ),
+    einschalt_hinweis=(
+        "Satz stimmt nur, solange Rangliste/Team-Fortschritt aus oder freiwillig "
+        "sind; mit Vorstands-Go ergänzen."
+    ),
+    oeffentlich=True,
+)
+
+
+# Kurze Hinweiszeile unter dem Suchknopf (Designwichtel Nr. 5): eine Zeile "Ohne Namen
+# gespeichert · Datenschutz" statt des abgestimmten Wortlauts vom 16.11.; der Satz zur
+# Veroeffentlichung klappt auf. Nur im Browser, deshalb oeffentlich.
+HINWEIS_SCHALTER = (
+    Schalterart(
+        name="hinweiszeile_kurz",
+        gruppe=GRUNDFUNKTIONEN,
+        feld="hinweiszeile_kurz_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_HINWEISZEILE_KURZ_AKTIV",
+        erklaerung=(
+            "Unter dem Suchknopf eine Zeile „Ohne Namen gespeichert · Datenschutz“ "
+            "statt zwei; „Nach Prüfung können Suchtexte öffentlich werden“ steht "
+            "aufklappbar dahinter. Speichert nichts Neues."
+        ),
+        einschalt_hinweis=(
+            "Vor dem Einschalten auf Prod: Jura-OK zum kurzen Wortlaut und dazu, dass "
+            "der Satz zur Veröffentlichung aufklappbar statt sichtbar genügt"
+        ),
+        oeffentlich=True,
+    ),
+)
+SCHALTER.update({s.name: s for s in HINWEIS_SCHALTER})
+
+
+# Kampagnenwort ?k= (GLOSSARY.md "Kampagnenwort"): vorlaeufige Jura-Einschaetzung
+# 26.11.2026, Grundsatz Maintainer: alles hinter einem Schalter, Standard aus. Beide
+# Obergrenzen von Haus aus aus; eingeschaltet erst nach dem endgueltigen OK.
+K_SCHALTER = (
+    Schalterart(
+        name="k_begruessung",
+        gruppe=GRUNDFUNKTIONEN,
+        feld="k_begruessung_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_K_BEGRUESSUNG_AKTIV",
+        erklaerung=(
+            "Wer über ?k=sticker oder ?k=bdk kommt, liest in der Rundgang-Zeile eine "
+            "passende Begrüßung statt der allgemeinen; nur Anzeige, speichert nichts."
+        ),
+        einschalt_hinweis=(
+            "Jura vorläufig ok (26.11.): nur Anzeige, nichts speichern; einschalten "
+            "nach dem endgültigen OK"
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="k_ankuenfte",
+        gruppe=GRUNDFUNKTIONEN,
+        feld="k_ankuenfte_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_K_ANKUENFTE_AKTIV",
+        erklaerung=(
+            "Zählt, wie oft die App mit ?k=<Wort> geöffnet wurde, je Wort aus der "
+            "Positivliste und Tag; ohne Kennung, Konto, Adresse oder Beitrag. Die "
+            "Zahlen stehen in der Übersicht."
+        ),
+        einschalt_hinweis="Jura: nur Ankünfte je k und Tag, nie an Konto/Beitrag",
+        oeffentlich=True,
+    ),
+)
+SCHALTER.update({s.name: s for s in K_SCHALTER})
 
 
 class UnbekannterSchalter(KeyError):
@@ -509,6 +716,9 @@ def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool
     if name == "teams_oeffentlich":
         # Ohne Teams keine Teams am Namen
         return an and _wirksam("teams", einstellungen, werte)
+    if name == "teamlink_vertrauenssatz":
+        # Ohne Teams keine Frage zum Teambeitritt, an der der Satz stehen koennte
+        return an and _wirksam("teams", einstellungen, werte)
     if name == "gepostet_ohne_konto":
         # Unterschalter: ohne "Ja, gepostet" keine Meldungen ohne Konto
         return an and _wirksam("gepostet", einstellungen, werte)
@@ -518,6 +728,9 @@ def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool
     if name == "rangliste":
         # Rangliste aus Punkten (ADR 0004): ohne Punkte keine Rangliste
         return an and _wirksam("punkte", einstellungen, werte)
+    if name == "feedback_gestoert":
+        # Nur in der Startphase: ab dem Loeschtag nimmt der Knopf nichts mehr an
+        return an and gestoert_offen(heute_utc())
     return an
 
 

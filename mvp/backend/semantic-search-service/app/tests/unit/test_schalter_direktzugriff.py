@@ -25,6 +25,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import api.v1.funktionen as funktionen_module
+import api.v1.merkliste as merkliste_module
 import api.v1.metrics as metrics_module
 import api.v1.rangliste as rangliste_module
 import api.v1.usage as usage_module
@@ -53,6 +54,7 @@ ALLE_OBERGRENZEN_AN = dict(
     punkte_aktiv=True,
     abzeichen_sichtbar_aktiv=True,
     gepostet_aktiv=True,
+    merkliste_aktiv=True,
     abkuerzungen_aktiv=True,
     sharepic_aktiv=True,
     rangliste_aktiv=True,
@@ -94,10 +96,11 @@ def abzeichen():
 
 
 @pytest.fixture
-def client(muster, abzeichen):
+def client(muster, abzeichen, art9_einwilligung_ohne_datenbank):
     app = FastAPI()
     app.include_router(usage_module.router, prefix="/api/v1/usage")
     app.include_router(metrics_module.router, prefix="/api/v1/metrics")
+    app.include_router(merkliste_module.router, prefix="/api/v1/merkliste")
     app.include_router(funktionen_module.router, prefix="/api/v1/funktionen")
     app.include_router(rangliste_module.router, prefix="/api/v1/rangliste")
     app.dependency_overrides[get_settings] = lambda: Settings(**ALLE_OBERGRENZEN_AN)
@@ -128,6 +131,10 @@ def client(muster, abzeichen):
         usage_module, "get_muster_hinweise_service", return_value=muster
     ), patch.object(
         usage_module, "get_gepostet_service", return_value=gepostet
+    ), patch.object(
+        merkliste_module,
+        "get_merkliste_repository",
+        return_value=Mock(**{"liste.return_value": []}),
     ):
         yield TestClient(app, raise_server_exceptions=False)
 
@@ -211,6 +218,7 @@ STELLEN = {
         ("gepostet",),
     ),
     "gepostet_admin": (_admin_aktiv_aus("/api/v1/metrics/gepostet"), ("gepostet",)),
+    "merkliste": (_feld_aus("/api/v1/merkliste"), ("merkliste",)),
     "abkuerzungen": (_funktion_aus("abkuerzungen"), ("abkuerzungen",)),
     "sharepic": (_funktion_aus("sharepic"), ("sharepic",)),
     # Rangliste je Saison (#793): wirkt nur zusammen mit den Punkten.

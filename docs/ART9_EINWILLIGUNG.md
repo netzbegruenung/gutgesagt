@@ -56,7 +56,8 @@ die die App selbst einholt, nicht Keycloak (Entscheidung Maintainer, 05.11.2026,
   „Bitte versuche es erneut“; anderswo (etwa bei den Stimm-Knöpfen) eine Snackbar.
   Gesperrt: Beiträge anlegen und ändern, Herkunft anlegen, Einwurf und Satz, einen Einwurf
   ausformulieren, Stimmen abgeben, „Ja, gepostet“ nach dem Kopieren melden und erfragen, ob es
-  angeboten wird (#643). Offen bleiben Lesen, Suchen, Löschen, einen Einwurf
+  angeboten wird (#643), die eigene Merkliste lesen und etwas merken (#758; Entfernen bleibt
+  offen). Offen bleiben Lesen, Suchen, Löschen, einen Einwurf
   verwerfen, Melden, Feedback, Gegenlesen, Sprachhinweis, Kürzungsvorschlag und Widerspruch
   gegen eine Sperre. Die Liste prüft `tests/unit/api/test_art9_einwilligung_api.py`
   (`GESPERRT`, `OFFEN`): Ein neuer schreibender Endpunkt fällt dort auf, bis er in einer der
@@ -107,7 +108,7 @@ die die App selbst einholt, nicht Keycloak (Entscheidung Maintainer, 05.11.2026,
 - **Widerrufen:** jederzeit unter `/einwilligung` (Profilmenü „Datenschutz-Einstellungen“, bis #644 „Einwilligung“; Seitentitel ebenso). Die Zeile bekommt
   den Zeitpunkt des Widerrufs und bleibt stehen, als Nachweis, dass die Verarbeitung bis dahin
   auf der Einwilligung beruhte (Art. 7 Abs. 1); danach ist wieder gesperrt. In derselben
-  Transaktion löscht der Widerruf alle Stimmen der Person (`Art9EinwilligungService.widerrufen`,
+  Transaktion löscht der Widerruf alle Stimmen und die Merkliste der Person (#758, `Art9EinwilligungService.widerrufen`,
   Art. 17 Abs. 1 lit. b DSGVO, juristische Vorprüfung vom 12.11.2026); scheitert das, gilt auch
   der Widerruf nicht, die Antwort ist 500, und die Person kann über die Seite erneut widerrufen.
   Das Abzeichen nimmt der Endpunkt vorher und unabhängig davon zurück. In derselben Transaktion

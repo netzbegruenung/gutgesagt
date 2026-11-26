@@ -321,6 +321,41 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   eigene Zahlen und steuert nichts; keine Namen, die eine weitere besondere Kategorie erkennen
   lassen (Hinweis im Admin-Formular, GLOSSARY „Team“). Keine Nummer am Namen.
 
+### T14 Merkliste (gebaut, ausgeschaltet)
+
+- **Zweck:** Beiträge, die eine Person öfter braucht, für sie selbst vormerken und unter „Meine
+  Beiträge“, „Gemerkt“ wiederfinden (#758).
+- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. b, zusätzlich Art.-9-Einwilligung: Was jemand merkt,
+  kann politische Meinungen erkennen lassen. Ohne Einwilligung kein Merken (403). Offen vor
+  dem Einschalten (neuer Zweck): eigener Einwilligungswortlaut, DSFA-Abschnitt und Absatz der
+  Datenschutzerklärung; Entwürfe im PR zu #758.
+- **Betroffene:** angemeldete Personen, die etwas merken.
+- **Daten:** Kennung, Beitrag, Zeitpunkt des letzten Merkens (Tabelle `merkliste`).
+- **Empfänger:** nur die Person selbst; keine Zähler für andere. Admins nur in der Datenbank.
+- **Fristen:** LK „Fristen“: bis die Person den Eintrag entfernt, mit dem Konto, sofort beim
+  Widerruf der Art.-9-Einwilligung und mit dem endgültig entfernten Beitrag; höchstens 500
+  Einträge je Person.
+- **TOM:** hinter dem Schalter `merkliste` (Standard aus), nur über die eigene Kennung aus der
+  Anmeldung erreichbar (`X-User`, #284).
+
+### T15 Seitenaufrufe und Besucher je Tag (gebaut, ausgeschaltet)
+
+- **Zweck:** zählen, wie viele Menschen die App an einem Tag öffnen, auch ohne Suche (#761).
+- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f; für das Tagespseudonym der Besucher **offen** mit
+  § 25 TDDDG wie T5 (DSFA V7, `docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md` Frage 2). Gezählt wird am
+  Server aus Abrufen, die die App ohnehin macht; der Browser schickt keine eigene Zähl-Anfrage.
+- **Betroffene:** alle, die die Startseite, eine Suche, ein Thema oder einen Beitrag abrufen,
+  angemeldet oder nicht.
+- **Daten:** je Besucher und laufendem Tag ein Tagespseudonym aus Anschluss und Tag (eigener
+  Raum, nicht verknüpfbar mit dem an Suchereignissen) und die Zahl der Aufrufe; keine
+  IP-Adresse, keine Kennung, kein Pfad, nichts im Browser. Im Arbeitsspeicher bis Mitternacht
+  ein Prüfwert aus Pseudonym und Seite (Wiederholsperre). Danach je Tag zwei Zahlen.
+- **Empfänger:** Admins (Kennzahlen).
+- **Fristen:** LK „Fristen“ (Pseudonyme bis zum Ende ihres Tages).
+- **TOM:** Schalter `aufrufe_zaehlen`, Obergrenze Standard aus, mit Einschalt-Hinweis;
+  dieselbe Seite binnen 5 Minuten zählt einmal; höchstens 500 Aufrufe je Besucher und Tag;
+  Rate-Limit je Anschluss.
+
 ## Offen
 
 Gesammelt in DSFA 8.6: AV-Vertrag (F1), SMTP-Server (F2), Verschlüsselung der Sicherungen (F3),

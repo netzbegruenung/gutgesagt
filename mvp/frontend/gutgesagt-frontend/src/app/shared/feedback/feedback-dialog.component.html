@@ -1,11 +1,17 @@
-<h2 mat-dialog-title>Feedback</h2>
+<h2 mat-dialog-title>{{ gestoert ? 'Was hat dich gestört?' : 'Feedback' }}</h2>
 
 <mat-dialog-content>
   <ng-container *ngIf="!gesendet; else danke">
-    <p>Was ist dir aufgefallen? Was fehlt, was stört, was gefällt dir?</p>
+    <ng-container *ngIf="gestoert; else allgemein">
+      <p>Was hat nicht geklappt, war umständlich oder unklar? Ein Satz reicht.</p>
+      <p class="keine-namen" data-testid="feedback-keine-namen">Bitte keine Namen oder Daten anderer.</p>
+    </ng-container>
+    <ng-template #allgemein>
+      <p>Was ist dir aufgefallen? Was fehlt, was stört, was gefällt dir?</p>
+    </ng-template>
 
     <mat-form-field appearance="outline" class="feld">
-      <mat-label>Dein Feedback</mat-label>
+      <mat-label>{{ gestoert ? 'Was hat dich gestört?' : 'Dein Feedback' }}</mat-label>
       <textarea matInput
                 name="text"
                 [(ngModel)]="text"
@@ -16,7 +22,7 @@
       <mat-hint align="end">{{ text.length }} / {{ textMax }}</mat-hint>
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="feld">
+    <mat-form-field *ngIf="!gestoert" appearance="outline" class="feld">
       <mat-label>Kontakt (optional)</mat-label>
       <input matInput
              name="kontakt"
@@ -26,11 +32,18 @@
       <mat-hint>Nur wenn wir dir antworten sollen, etwa eine Mail-Adresse.</mat-hint>
     </mat-form-field>
 
-    <p class="hinweis">
-      Gespeichert werden nur dein Text, der Kontakt, falls du einen angibst, und der Tag.
+    <p *ngIf="gestoert; else hinweisAllgemein" class="hinweis">
+      Gespeichert werden nur dein Text und der Tag, ohne Kontakt.
       Bist du angemeldet, wird dein Konto nicht mitgespeichert. Nur Admins lesen es.
-      Nach {{ aufbewahrungTage }} Tagen wird alles gelöscht.
+      Am {{ gestoertGeloeschtAm }} wird alles gelöscht.
     </p>
+    <ng-template #hinweisAllgemein>
+      <p class="hinweis">
+        Gespeichert werden nur dein Text, der Kontakt, falls du einen angibst, und der Tag.
+        Bist du angemeldet, wird dein Konto nicht mitgespeichert. Nur Admins lesen es.
+        Nach {{ aufbewahrungTage }} Tagen wird alles gelöscht.
+      </p>
+    </ng-template>
 
     <p *ngIf="fehler" class="fehler" role="alert">{{ fehler }}</p>
   </ng-container>

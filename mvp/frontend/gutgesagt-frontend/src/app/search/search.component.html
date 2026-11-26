@@ -13,7 +13,7 @@
                 <textarea matInput #feld class="suchfeld-mehrzeilig" [id]="feldId"
                           [ngModel]="searchQuery" (ngModelChange)="feldGeaendert($event)" name="searchQuery"
                           cdkTextareaAutosize enterkeyhint="search"
-                          [attr.aria-describedby]="hinweisId"
+                          [attr.aria-describedby]="beschreibungIds"
                           [placeholder]="beispielAnimation && !searchQuery ? beispielText : ''"
                           (keydown.enter)="enterImFeld($event)" (keydown.shift.enter)="enterImFeld($event)"
                           (beforeinput)="umbruchImFeld($event)"
@@ -21,7 +21,7 @@
             } @else {
                 <input matInput #feld [id]="feldId" [(ngModel)]="searchQuery" name="searchQuery"
                        enterkeyhint="search"
-                       [attr.aria-describedby]="hinweisId"
+                       [attr.aria-describedby]="beschreibungIds"
                        [placeholder]="beispielAnimation && !searchQuery ? beispielText : ''"
                        (keydown.enter)="enterImFeld($event)"
                        (pointerdown)="beispielBeenden()" (input)="beispielBeenden()" (paste)="beispielBeenden()">
@@ -46,8 +46,25 @@
     </form>
     <!-- Leise unter dem Feld, ohne Symbol: Information, keine Warnung (Persona-Test Gerd);
          ueber den Treffern einzeilig (E5) -->
-    <p class="such-hinweis" [id]="hinweisId">
-        {{ suchhinweis }}
-        <a routerLink="/datenschutz" [fragment]="suchanfragenAbschnitt">{{ compactMode ? 'Mehr' : 'Mehr dazu im Datenschutz' }}</a>
-    </p>
+    @if (hinweiszeileKurz()) {
+        <!-- Schalter hinweiszeile_kurz (Designwichtel Nr. 5): eine Zeile; auf dem Start klappt der
+             Satz zur Veroeffentlichung auf und steht immer in aria-describedby. Ueber den Treffern
+             ohne den Satz, wie seit E5 -->
+        <div class="such-hinweis-kurz">
+            <p class="such-hinweis" [id]="hinweisId">{{ hinweiszeile }}<span aria-hidden="true"> · </span><a class="hinweis-ziel" routerLink="/datenschutz" [fragment]="suchanfragenAbschnitt">Datenschutz</a></p>
+            @if (!compactMode) {
+                <button type="button" class="hinweis-ziel hinweis-mehr-knopf"
+                        [attr.aria-expanded]="mehrOffen" [attr.aria-controls]="hinweisMehrId"
+                        [attr.aria-label]="mehrKnopfName" (click)="mehrOffen = !mehrOffen"><mat-icon aria-hidden="true">info_outline</mat-icon></button>
+            }
+        </div>
+        @if (!compactMode) {
+            <p class="such-hinweis such-hinweis-mehr" [id]="hinweisMehrId" [hidden]="!mehrOffen">{{ hinweiszeileMehr }}</p>
+        }
+    } @else {
+        <p class="such-hinweis" [id]="hinweisId">
+            {{ suchhinweis }}
+            <a routerLink="/datenschutz" [fragment]="suchanfragenAbschnitt">{{ compactMode ? 'Mehr' : 'Mehr dazu im Datenschutz' }}</a>
+        </p>
+    }
 </div>

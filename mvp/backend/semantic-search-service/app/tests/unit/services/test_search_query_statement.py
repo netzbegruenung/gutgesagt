@@ -17,6 +17,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.requests import Request
 
+from core.config import settings
 from api.v1.search import router as search_router
 from dependencies import (
     get_commentary_service,
@@ -128,7 +129,9 @@ def _mittag(tag):
 
 @pytest.fixture
 def suchen_ohne_treffer():
-    return MagicMock()
+    dienst = MagicMock()
+    dienst.schon_gesucht = AsyncMock(return_value=None)
+    return dienst
 
 
 @pytest.fixture
@@ -360,6 +363,143 @@ class TestSuchenOhneTreffer:
         )
 
         assert eins != zwei
+
+    @pytest.fixture(autouse=True)
+    def null_treffer_anzahl_obergrenze(self, monkeypatch):
+        """Schalter null_treffer_anzahl: Obergrenze an (Admin-Wert setzt conftest)."""
+        monkeypatch.setattr(settings, "null_treffer_anzahl_aktiv", True)
+
+    def _vorhandene_aussage(self, app, service, suchen_ohne_treffer, **felder):
+        """Die Suche landet auf einer vorhandenen Aussage; schon dreimal gesucht."""
+        aussage = uuid.uuid4()
+        service.add_statement = AsyncMock(return_value=(False, aussage, "klima"))
+        werte = {
+            "origin": ContentOrigin.MANUALLY_CREATED,
+            "replysuggestions_count": 1,
+            **felder,
+        }
+        service.get = AsyncMock(return_value=MagicMock(**werte))
+        suchen_ohne_treffer.sichtbar_fuer_alle = AsyncMock(return_value=frozenset())
+        suchen_ohne_treffer.schon_gesucht.return_value = 3
+        app.dependency_overrides[get_search_query_statement_recorder] = _recorder
+        return aussage
+
+    def test_ohne_treffer_nennt_wie_oft_schon_gesucht_wurde(
+        self, suchapp, suchen_ohne_treffer
+    ):
+        """#362: "Danach wurde schon N-mal gesucht", auch fuer Besucher."""
+        app, service = suchapp
+        aussage = self._vorhandene_aussage(app, service, suchen_ohne_treffer)
+
+        resp = TestClient(app).post(
+            SEARCH_URL, json={"query_text": "klima", "limit": 10}, headers=BESUCHER
+        )
+
+        assert resp.json()["schon_gesucht_anzahl"] == 3
+        assert suchen_ohne_treffer.schon_gesucht.await_args.args == (aussage,)
+        # Erst gezaehlt, dann gelesen: die eigene Suche ist eingerechnet.
+        namen = [aufruf[0] for aufruf in suchen_ohne_treffer.method_calls]
+        assert namen.index("erfassen") < namen.index("schon_gesucht")
+
+    @pytest.mark.parametrize("obergrenze,admin_wert", [(False, True), (True, False)])
+    def test_schalter_aus_keine_zahl_und_keine_abfrage(
+        self,
+        suchapp,
+        suchen_ohne_treffer,
+        monkeypatch,
+        schalter_admin_alle_an,
+        obergrenze,
+        admin_wert,
+    ):
+        """Schalter null_treffer_anzahl (Jura vorlaeufig 26.11.): aus heisst keine Zahl."""
+        app, service = suchapp
+        self._vorhandene_aussage(app, service, suchen_ohne_treffer)
+        monkeypatch.setattr(settings, "null_treffer_anzahl_aktiv", obergrenze)
+        schalter_admin_alle_an["null_treffer_anzahl"] = admin_wert
+
+        resp = TestClient(app).post(
+            SEARCH_URL, json={"query_text": "klima", "limit": 10}, headers=BESUCHER
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["schon_gesucht_anzahl"] is None
+        suchen_ohne_treffer.schon_gesucht.assert_not_awaited()
+
+    def test_verborgene_suchanfrage_bekommt_keine_zahl(
+        self, suchapp, suchen_ohne_treffer
+    ):
+        """Vormoderation (P6): unter der Schwelle, ungeprueft oder abgelehnt."""
+        app, service = suchapp
+        self._vorhandene_aussage(
+            app,
+            service,
+            suchen_ohne_treffer,
+            origin=ContentOrigin.SEARCH_QUERY,
+            replysuggestions_count=0,
+        )
+
+        resp = TestClient(app).post(
+            SEARCH_URL, json={"query_text": "klima", "limit": 10}, headers=BESUCHER
+        )
+
+        assert resp.json()["schon_gesucht_anzahl"] is None
+        suchen_ohne_treffer.schon_gesucht.assert_not_awaited()
+
+    def test_freigegebene_suchanfrage_bekommt_die_zahl(
+        self, suchapp, suchen_ohne_treffer
+    ):
+        app, service = suchapp
+        aussage = self._vorhandene_aussage(
+            app,
+            service,
+            suchen_ohne_treffer,
+            origin=ContentOrigin.SEARCH_QUERY,
+            replysuggestions_count=0,
+        )
+        suchen_ohne_treffer.sichtbar_fuer_alle.return_value = frozenset({aussage})
+
+        resp = TestClient(app).post(
+            SEARCH_URL, json={"query_text": "klima", "limit": 10}, headers=BESUCHER
+        )
+
+        assert resp.json()["schon_gesucht_anzahl"] == 3
+
+    def test_eben_angelegte_aussage_fragt_nicht(self, suchapp, suchen_ohne_treffer):
+        app, _ = suchapp
+        app.dependency_overrides[get_search_query_statement_recorder] = _recorder
+
+        resp = TestClient(app).post(
+            SEARCH_URL, json={"query_text": "klima", "limit": 10}
+        )
+
+        assert resp.json()["schon_gesucht_anzahl"] is None
+        suchen_ohne_treffer.schon_gesucht.assert_not_awaited()
+
+    def test_nicht_gezaehlt_fragt_nicht(self, suchapp, suchen_ohne_treffer):
+        app, service = suchapp
+        self._vorhandene_aussage(app, service, suchen_ohne_treffer)
+        suchen_ohne_treffer.erfassen.side_effect = RuntimeError("weg")
+
+        resp = TestClient(app).post(
+            SEARCH_URL, json={"query_text": "klima", "limit": 10}
+        )
+
+        assert resp.json()["schon_gesucht_anzahl"] is None
+        suchen_ohne_treffer.schon_gesucht.assert_not_awaited()
+
+    def test_fehler_beim_lesen_der_zahl_laesst_die_suche_nicht_scheitern(
+        self, suchapp, suchen_ohne_treffer
+    ):
+        app, service = suchapp
+        self._vorhandene_aussage(app, service, suchen_ohne_treffer)
+        suchen_ohne_treffer.schon_gesucht.side_effect = RuntimeError("weg")
+
+        resp = TestClient(app).post(
+            SEARCH_URL, json={"query_text": "klima", "limit": 10}
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["schon_gesucht_anzahl"] is None
 
     def test_fehler_der_kennzahl_laesst_die_suche_nicht_scheitern(
         self, suchapp, suchen_ohne_treffer

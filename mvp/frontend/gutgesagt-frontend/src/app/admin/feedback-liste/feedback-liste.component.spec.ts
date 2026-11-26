@@ -88,6 +88,15 @@ describe('FeedbackListeComponent', () => {
       expect(text()).toContain('180 Tagen');
     });
 
+    it('kennzeichnet Einträge aus „Was hat dich gestört?“, die anderen nicht', () => {
+      laden(OFFEN, [eintrag(), eintrag({ id: 'b', text: 'Zu langsam', kontakt: null, kategorie: 'gestoert' })]);
+
+      const marken = (fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="feedback-kategorie"]');
+      expect(marken.length).toBe(1);
+      expect(marken[0].textContent).toBe('Was hat dich gestört?');
+      expect(text()).toContain('am 31.12.2026 gelöscht');
+    });
+
     it('sagt, wenn kein offenes Feedback da ist', () => {
       laden(OFFEN, []);
 

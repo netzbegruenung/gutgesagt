@@ -74,7 +74,10 @@ describe('SearchViewComponent', () => {
     const willkommen = band.nextElementSibling as HTMLElement;
 
     expect(willkommen.tagName.toLowerCase()).toBe('app-rundgang-band');
-    expect(willkommen.nextElementSibling!.tagName.toLowerCase()).toBe('app-seit-letztem-besuch');
+    // Dazwischen der Saal-Spruch (Schalter saal_spruch), nur an Tagen mit Spruch
+    const spruch = willkommen.nextElementSibling as HTMLElement;
+    expect(spruch.tagName.toLowerCase()).toBe('app-saal-spruch');
+    expect(spruch.nextElementSibling!.tagName.toLowerCase()).toBe('app-seit-letztem-besuch');
   });
 
   // Persona-Runde 18.11.: Der Weg ohne Konto (Community-Karten) kommt vor den Kacheln

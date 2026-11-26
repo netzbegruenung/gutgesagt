@@ -84,6 +84,30 @@ class TestLoeschenVor:
         assert geloescht == 3
 
 
+class TestPersonen:
+    def test_personen_summiert_die_personen_der_aussage_ab_woche(
+        self, repository, session
+    ):
+        session.execute.return_value.scalar.return_value = 3
+
+        personen = repository.personen(AUSSAGE, date(2026, 10, 5))
+
+        abfrage = session.execute.call_args.args[0]
+        sql = _sql(abfrage)
+        assert "sum(suchen_ohne_treffer.personen)" in sql
+        assert "suchen_ohne_treffer.statement_id =" in sql
+        assert "suchen_ohne_treffer.woche >=" in sql
+        params = _params(abfrage)
+        assert AUSSAGE in params.values()
+        assert date(2026, 10, 5) in params.values()
+        assert personen == 3
+
+    def test_personen_ohne_zeile_ist_null(self, repository, session):
+        session.execute.return_value.scalar.return_value = None
+
+        assert repository.personen(AUSSAGE, date(2026, 10, 5)) == 0
+
+
 class TestHaeufigste:
     def test_haeufigste_summiert_ab_woche_mit_mindestanzahl_an_personen(
         self, repository, session

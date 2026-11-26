@@ -25,6 +25,10 @@
      Suchfeld sonst erst weit unten (Nutzerfuehrung 13.11.) -->
 <app-rundgang-band ort="start"></app-rundgang-band>
 
+<!-- Saal-Spruch (Schalter saal_spruch): nur an Tagen mit Spruch; geht nur allgemeinen
+     Zahlen vor, nicht eigenem Neuem oder Vorschlag; wartet auf Rundgang-Angebote -->
+<app-saal-spruch></app-saal-spruch>
+
 <!-- Fuer Angemeldete, nur wenn es Neues gibt (Nutzerfuehrung 13.11.); nicht beim ersten
      Besuch, neben „Dein nächster Schritt“ nur mit Neuem zu eigenen Beitraegen (Review 25.11.) -->
 <app-seit-letztem-besuch></app-seit-letztem-besuch>
@@ -68,6 +72,9 @@
         <mat-icon class="kachel-pfeil" aria-hidden="true">arrow_forward</mat-icon>
     </a>
 </section>
+
+<!-- „Was hat dich gestört?“ fuer die Startphase (Schalter feedback_gestoert) -->
+<app-gestoert-einstieg></app-gestoert-einstieg>
 
 <!-- Weg zur Gartenansicht, fuer alle (#783, Schalter gartenansicht) -->
 <app-garten-hinweis></app-garten-hinweis>

@@ -142,6 +142,12 @@ team_beitreten_rate_limiter = RateLimiter(
     max_requests=settings.team_beitreten_rate_limit_anfragen, window_minutes=15
 )
 
+# Aufrufe zaehlen (#761, middleware/aufrufe_zaehlen.py): 120 gezaehlte Aufrufe je
+# Anschluss in 10 Minuten; hinter einem gemeinsamen Anschluss (Buero, Parteitag) lesen
+# viele. Darueber wird still nicht gezaehlt, es entsteht keine Schreiblast; die Antwort
+# auf den Abruf selbst bleibt unberuehrt.
+aufrufe_rate_limiter = RateLimiter(max_requests=120, window_minutes=10)
+
 # Gegenlesen beim Schreiben (#358): 300 je Person in 10 Minuten. Das Formular fragt
 # etwa eine Sekunde nach jeder Eingabepause nach; das sind beim zuegigen Schreiben
 # weniger als 30 in der Minute.

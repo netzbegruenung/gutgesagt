@@ -1,4 +1,4 @@
-import { ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, signal } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { BehaviorSubject, of } from 'rxjs';
@@ -16,6 +16,7 @@ import { StatementService } from '../services/statement.service';
 import { routes } from '../app.routes';
 import { ohneWaechter } from '../testing/routen-ohne-waechter';
 import { StateManagementService } from '../services/state-management.service';
+import { FunktionenService } from '../services/funktionen.service';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { TEILEN_LINK_KOPIERT, TEILEN_NAVIGATOR, TeilenNavigator } from '../shared/teilen.service';
@@ -332,7 +333,13 @@ describe('ResultViewComponent: Nicht dabei?', () => {
     },
   };
 
-  function oeffnen(mobil: boolean, mitTreffer: boolean, vorschlaege = [SCHON_DA, AEHNLICH]): HTMLElement {
+  function oeffnen(
+    mobil: boolean,
+    mitTreffer: boolean,
+    vorschlaege = [SCHON_DA, AEHNLICH],
+    schonGesucht: number | null = null,
+    nullTrefferAnzahlAn = false,
+  ): HTMLElement {
     statementService = jasmine.createSpyObj('StatementService', ['aehnlicheAussagen']);
     statementService.aehnlicheAussagen.and.returnValue(of(vorschlaege));
     TestBed.configureTestingModule({
@@ -346,6 +353,10 @@ describe('ResultViewComponent: Nicht dabei?', () => {
           provide: BreakpointObserver,
           useValue: { observe: (query: string[]) => of({ matches: mobil && query[0] === '(max-width: 599px)', breakpoints: {} }) },
         },
+        {
+          provide: FunktionenService,
+          useValue: { an: (name: string) => signal(name === 'null_treffer_anzahl' && nullTrefferAnzahlAn) },
+        },
       ],
     });
     router = TestBed.inject(Router);
@@ -358,6 +369,7 @@ describe('ResultViewComponent: Nicht dabei?', () => {
       commentary_search_results: mitTreffer ? [KOMMENTAR as any] : [],
       generictext_search_results_count: 0,
       generictext_search_results: [],
+      schon_gesucht_anzahl: schonGesucht,
     });
     fixture = TestBed.createComponent(ResultViewComponent);
     fixture.detectChanges();
@@ -392,6 +404,28 @@ describe('ResultViewComponent: Nicht dabei?', () => {
     expect(bereich.querySelector('.keine-antwort-noetig')?.textContent).toContain('Nicht jede Aussage braucht eine Antwort.');
     bereich.querySelector<HTMLButtonElement>('.nur-link button')!.click();
     expect(navigate).toHaveBeenCalledWith(['/einwerfen']);
+  });
+
+  it('sagt ohne Treffer mit Schalter an, wie oft schon danach gesucht wurde (#362, Jura 26.11.)', () => {
+    const seite = oeffnen(true, false, [SCHON_DA, AEHNLICH], 3, true);
+    const zeile = seite.querySelector('.unified-empty-state .schon-gesucht')?.textContent ?? '';
+    expect(zeile).toContain('Danach wurde in den letzten vier Wochen schon 3-mal gesucht.');
+    expect(zeile).not.toContain('Personen');
+  });
+
+  it('zeigt mit Schalter aus keine Zahl, auch wenn das Backend eine schickt (#362)', () => {
+    const seite = oeffnen(true, false, [SCHON_DA, AEHNLICH], 5, false);
+    expect(seite.querySelector('.schon-gesucht')).toBeNull();
+  });
+
+  it('zeigt unter drei keine Zahl, auch mit Schalter an (#362, Jura 26.11.)', () => {
+    const seite = oeffnen(true, false, [SCHON_DA, AEHNLICH], 2, true);
+    expect(seite.querySelector('.schon-gesucht')).toBeNull();
+  });
+
+  it('zeigt ohne Zahl keinen Hinweis (#362)', () => {
+    const seite = oeffnen(false, false, [SCHON_DA, AEHNLICH], null, true);
+    expect(seite.querySelector('.schon-gesucht')).toBeNull();
   });
 
   it('gibt ohne Treffer einen Suchtipp, der zur Suche nach Aussagen passt (#617)', () => {
@@ -1524,7 +1558,11 @@ describe('ResultViewComponent: Testeingabe', () => {
   }
 
   // Keine weiteren Aufrufe, etwa an andere Endpunkte, die eine Aussage anlegen koennten.
-  afterEach(() => http.verify());
+  // Ausgenommen der lesende Schalterstand (/api/v1/funktionen), den das Suchfeld fragt.
+  afterEach(() => {
+    http.match((r) => r.url.endsWith('/api/v1/funktionen'));
+    http.verify();
+  });
 
   it('zeigt keine spaete Antwort einer vorigen Suche unter der Karte', async () => {
     const { harness, seite } = await oeffnen('Klimaschutz ist zu teuer');

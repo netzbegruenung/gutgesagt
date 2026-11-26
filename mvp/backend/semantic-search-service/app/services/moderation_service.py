@@ -9,6 +9,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+from repositories.merkliste_repository import (
+    MerklisteRepository,
+    get_merkliste_repository,
+)
 from repositories.content_report_repository import (
     BeitragGesperrt,
     BeitragNichtGesperrt,
@@ -157,6 +161,7 @@ class ModerationService:
         mitteilung: Optional[MeldungMitteilung] = None,
         varianten_repo: Optional[VariantenRepository] = None,
         anzeigenamen: Optional[AnzeigenameService] = None,
+        merkliste_repo: Optional[MerklisteRepository] = None,
     ):
         self.report_repo = report_repo or get_content_report_repository()
         self.moderation_repo = moderation_repo or get_moderation_repository()
@@ -165,6 +170,7 @@ class ModerationService:
         self._einwurf_repo = einwurf_repo
         self._sperre_repo = sperre_repo
         self._varianten_repo = varianten_repo
+        self._merkliste_repo = merkliste_repo
         # Mails an die meldende Person (#493); ohne eingerichteten Versand geht nichts hinaus.
         self._mitteilung = mitteilung
         # Anzeigenamen fuer "Gemeldet von" und "Bearbeitet von"; erst beim Lesen gebraucht.
@@ -728,7 +734,7 @@ class ModerationService:
 
         Die Verweise gehen fuer jeden Beitragstyp weg, unabhaengig von content_type:
         Aussagen verweisen auf Beitraege jedes Typs (#294). Erst Verweise, Stimmen,
-        "ausformuliert in" und Varianten, dann der Beitrag: Scheitert davor etwas,
+        "ausformuliert in", Varianten und Merkliste (#758), dann der Beitrag: Scheitert davor etwas,
         bleibt der Beitrag stehen und ein erneuter Versuch raeumt auf. Andersherum
         stuende ein Verweis auf einen Beitrag, den kein zweiter Aufruf mehr findet. Was ein abgebrochener Lauf
         ohne zweiten Versuch hinterlaesst: services/content/verweise_entfernen.py.
@@ -750,8 +756,8 @@ class ModerationService:
         Raises:
             VerweiseNichtEntfernt: Aussagen verweisen noch auf den Beitrag; er ist
                 nicht entfernt.
-            Datenbankfehler beim Loeschen von Stimmen oder "ausformuliert in" gehen
-                weiter; der Beitrag ist dann ebenfalls nicht entfernt.
+            Datenbankfehler beim Loeschen von Stimmen, "ausformuliert in" oder
+                Merkliste gehen weiter; der Beitrag ist dann ebenfalls nicht entfernt.
         """
         beitrag = await self._beitrag_laden(content_id)
         if beitrag is None:
@@ -769,9 +775,15 @@ class ModerationService:
         varianten = await asyncio.to_thread(
             self._varianten().verknuepfungen_entfernen, UUID(content_id)
         )
+        # Gemerkt hat ihn danach niemand mehr (#758); wie die Stimmen vor dem Beitrag,
+        # sonst blieben Eintraege, die kein zweiter Lauf mehr findet.
+        gemerkt = await asyncio.to_thread(
+            self._merkliste().loeschen_fuer_beitrag, UUID(content_id)
+        )
         logger.info(
             f"Content {content_id}: {stimmen} votes, {ausformuliert} "
-            f"raw input links and {varianten} variant links deleted"
+            f"raw input links, {varianten} variant links and {gemerkt} "
+            f"Merkliste entries deleted"
         )
 
         if not await self.moderation_repo.entfernen(content_id):
@@ -847,6 +859,11 @@ class ModerationService:
         if self._einwurf_repo is None:
             self._einwurf_repo = get_einwurf_repository()
         return self._einwurf_repo
+
+    def _merkliste(self) -> MerklisteRepository:
+        if self._merkliste_repo is None:
+            self._merkliste_repo = get_merkliste_repository()
+        return self._merkliste_repo
 
     def _varianten(self) -> VariantenRepository:
         if self._varianten_repo is None:

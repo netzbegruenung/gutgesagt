@@ -24,6 +24,7 @@ public class EndpointPolicyTests
     [InlineData("/api/v1/funktionen")]           // oeffentliche Schalter (#756)
     [InlineData("/api/v1/saisons/aktuell")]      // Saisonbalken, nur Summen (#782)
     [InlineData("/api/v1/konter-probe")]         // Konter-Probe ohne Konto (#786)
+    [InlineData("/api/v1/saal-spruch/heute")]    // Saal-Spruch, nur Text
     [InlineData("/api/v1/moderation/report")]
     [InlineData("/api/v1/metrics/getmetrics")]   // Bestandszaehler der Startseite
     [InlineData("/api/v1/metrics/getMetrics")]   // Schreibweise darf keine Rolle spielen
@@ -53,11 +54,15 @@ public class EndpointPolicyTests
     [InlineData("/api/v1/content/beitraege")]    // Segmentgrenze
     [InlineData("/api/v1/usage/users/me/punkte")]  // nur /punkte/status ist offen (B20)
     [InlineData("/api/v1/usage/punkte/statusx")]   // Segmentgrenze
+    [InlineData("/api/v1/aufrufe")]                 // Tageszahlen nur fuer Admins (#761)
     [InlineData("/api/v1/funktionenx")]            // Segmentgrenze (#756)
     [InlineData("/api/v1/konter-probenx")]         // Segmentgrenze (#786)
     [InlineData("/api/v1/moderation/schalter")]    // Admin-Seite der Schalter (#708)
     [InlineData("/api/v1/saisons")]                // nur /aktuell ist offen (#782)
     [InlineData("/api/v1/moderation/saisons")]     // Pflege der Saisons, admin-only
+    [InlineData("/api/v1/saal-spruch")]            // nur /heute ist offen
+    [InlineData("/api/v1/saal-spruch/heutex")]     // Segmentgrenze
+    [InlineData("/api/v1/moderation/saal-sprueche")]  // Pflege der Saal-Sprueche, admin-only
     public void IsAnonymousAllowed_FalseForProtectedPaths(string path)
     {
         Assert.False(EndpointPolicy.IsAnonymousAllowed(path));

@@ -70,6 +70,7 @@ from repositories.sperre_repository import get_sperre_repository
 from repositories.loeschauftrag_repository import get_loeschauftrag_repository
 from repositories.schalter_repository import get_schalter_repository
 from repositories.team_repository import get_team_repository
+from repositories.ankunft_repository import get_ankunft_repository
 from core.fehler import INTERNER_FEHLER
 from core.logging import get_logger
 
@@ -450,6 +451,23 @@ def get_ereignis_rate_limiter() -> RateLimiter:
     return _ereignis_rate_limiter
 
 
+_ankunft_rate_limiter: Optional[RateLimiter] = None
+
+
+def get_ankunft_rate_limiter() -> RateLimiter:
+    """
+    Drosselung von POST /api/v1/ankunft (Ankuenfte je Kampagnenwort): wie bei
+    /api/v1/ereignis ein Schluessel fuer alle, Fenster eine Sekunde, nur im
+    Arbeitsspeicher; keine Adresse.
+    """
+    global _ankunft_rate_limiter
+    if _ankunft_rate_limiter is None:
+        _ankunft_rate_limiter = RateLimiter(
+            max_requests=settings.ankunft_je_sekunde, window_seconds=1
+        )
+    return _ankunft_rate_limiter
+
+
 def get_gegenlesen_service() -> GegenlesenService:
     """Einmal je Prozess: die Listen "statt X sag Y" und Parteistimme werden beim
     ersten Aufruf gelesen."""
@@ -538,6 +556,8 @@ def get_loeschfristen_service() -> LoeschfristenService:
         get_schalter_repository(),
         # Teamdaten nie benutzter Konten gehen mit dem Konto.
         get_team_repository(),
+        # Ankuenfte je Kampagnenwort und Tag nach zwoelf Monaten.
+        ankuenfte=get_ankunft_repository(),
     )
 
 
@@ -588,6 +608,12 @@ def get_beitrag_aendern_service(
             else None
         ),
         stimmen_loeschen=VoteRepository().loeschen_fuer_beitrag,
+        # ... und bei gleichem Titel, wenn der Text ein ganz anderer ist (#636).
+        gleicher_text=(
+            statement_service_instance.gleicher_text
+            if statement_service_instance is not None
+            else None
+        ),
     )
 
 

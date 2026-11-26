@@ -14,3 +14,8 @@
 .danke {
   font-size: 16px;
 }
+
+/* Hinweis beim Knopf „Was hat dich gestört?“ (Jura 26.11.): gut lesbar, nicht klein */
+.keine-namen {
+  font-weight: 600;
+}

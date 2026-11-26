@@ -245,6 +245,21 @@ class GepostetOhneKontoWoche(Base):
     meldungen = Column(Integer, nullable=False)
 
 
+class AnkunftJeTag(Base):
+    """
+    Ankuenfte je Kampagnenwort und Tag (GLOSSARY.md "Ankunft"): wie oft die App mit
+    ``?k=<wort>`` geoeffnet wurde, nur die Zahl. Keine Kennung, kein Konto, keine
+    Adresse, kein Beitrag; nichts, womit sich eine Zeile einer Person zuordnen liesse
+    (vorlaeufige Jura-Einschaetzung 26.11.2026). Frist: services/ankunft_service.py.
+    """
+
+    __tablename__ = "ankuenfte_je_tag"
+
+    k = Column(String(20), primary_key=True)
+    tag = Column(Date, primary_key=True)
+    anzahl = Column(Integer, nullable=False)
+
+
 class WirkungJeBeitrag(Base):
     """
     Was andere mit einem Beitrag tun, nur als Summe je Beitrag fuer die Autorin:
@@ -421,6 +436,9 @@ class FeedbackZeile(Base):
     # Von Admins gesetzt, wenn das Feedback erledigt ist (#425); nur ein Merker,
     # ohne Zeitpunkt und ohne wer.
     erledigt = Column(Boolean, nullable=False, default=False, server_default="false")
+    # None: der Knopf "Feedback"; "gestoert": der Knopf "Was hat dich gestört?" der
+    # Startphase, ohne Kontakt und mit eigener Frist (domain/feedback_gestoert.py).
+    kategorie = Column(Text, nullable=True)
 
     __table_args__ = (Index("idx_feedback_eingegangen_am", "eingegangen_am"),)
 
@@ -1219,6 +1237,28 @@ class SaisonZeile(Base):
     )
 
 
+# Hoechstlaenge eines Saal-Spruchs (services/saal_spruch_service.py, Spalte text)
+SAAL_SPRUCH_MAX = 200
+
+
+class SaalSpruchZeile(Base):
+    """
+    Der Saal-Spruch eines Tages (services/saal_spruch_service.py): ein oeffentlicher
+    Spruch, den ein Admin vorab fuer einen Tag (Europe/Berlin) festlegt, etwa fuer die
+    Tage der BDK. Je Tag hoechstens einer. Nichts zur Person, auch nicht, welcher Admin
+    ihn festgelegt hat.
+
+    Neue Tabelle: create_all legt sie beim Start an. Das Skript
+    postgres-app/migrations/2026-11-26-saal-sprueche.sql dokumentiert das Schema.
+    """
+
+    __tablename__ = "saal_sprueche"
+
+    datum = Column(Date, primary_key=True)
+    text = Column(String(SAAL_SPRUCH_MAX), nullable=False)
+    geaendert_am = Column(DateTime(timezone=True), nullable=False)
+
+
 class HerkunftPruefungZeile(Base):
     """
     Ergebnis von "Herkunft pruefen" (#759) je Herkunft mit Link: zuletzt gesehener
@@ -1246,6 +1286,33 @@ class HerkunftPruefungZeile(Base):
     __table_args__ = (Index("idx_herkunft_pruefung_ergebnis", "ergebnis"),)
 
 
+class AufrufHeuteZeile(Base):
+    """
+    Seitenaufrufe des laufenden Tages je Tagespseudonym (#761,
+    services/aufrufe_service.py). Das Pseudonym lebt nur bis zum Ende seines Tages:
+    Danach verdichtet der Takt den Tag zu ``aufrufe_tage`` und loescht die Zeilen.
+
+    Neue Tabelle: create_all legt sie beim Start an. Das Skript
+    postgres-app/migrations/2026-11-22-761-aufrufe.sql dokumentiert das Schema.
+    """
+
+    __tablename__ = "aufrufe_heute"
+
+    tag = Column(Date, primary_key=True)
+    pseudonym = Column(String(64), primary_key=True)
+    aufrufe = Column(Integer, nullable=False)
+
+
+class AufrufTagZeile(Base):
+    """Seitenaufrufe und Besucher je vergangenem Tag (#761), ohne Personenbezug."""
+
+    __tablename__ = "aufrufe_tage"
+
+    tag = Column(Date, primary_key=True)
+    aufrufe = Column(Integer, nullable=False)
+    besucher = Column(Integer, nullable=False)
+
+
 class MigrationsprotokollZeile(Base):
     """
     Welche Migration aus postgres-app/migrations eingespielt ist, eine Zeile je Datei.
@@ -1268,3 +1335,27 @@ class MigrationsprotokollZeile(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     fehler = Column(Text, nullable=True)
+
+
+class MerklisteZeile(Base):
+    """
+    Ein gemerkter Beitrag (#758, GLOSSARY.md "Merkliste"): wer ihn wann zuletzt gemerkt
+    hat. Nur die Person selbst sieht ihre Merkliste; Zaehler fuer andere gibt es nicht.
+    Erneutes Merken setzt ``gemerkt_am`` neu, die Liste steht nach zuletzt gemerkt.
+
+    Neue Tabelle: create_all legt sie beim Start an. Das Skript
+    postgres-app/migrations/2026-11-23-758-merkliste.sql dokumentiert das Schema.
+    Loeschen: docs/LOESCHKONZEPT.md, Schritt 2 (mit dem Konto), beim Widerruf der
+    Art.-9-Einwilligung und mit dem endgueltig entfernten Beitrag.
+    """
+
+    __tablename__ = "merkliste"
+
+    user_id = Column(String(255), primary_key=True)
+    content_id = Column(SQLUUID(as_uuid=True), primary_key=True)
+    gemerkt_am = Column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        Index("idx_merkliste_user_gemerkt", "user_id", "gemerkt_am"),
+        Index("idx_merkliste_content", "content_id"),
+    )

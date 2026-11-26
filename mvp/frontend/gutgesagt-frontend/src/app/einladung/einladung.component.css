@@ -147,6 +147,11 @@ form .email + button {
   color: var(--akzent-schrift);
 }
 
+/* Vertrauenssatz beim Teambeitritt: gut lesbar, nicht leise */
+.team-vertrauen {
+  font-weight: 600;
+}
+
 .team-leise {
   font-size: 14px;
   color: var(--text-leise);
