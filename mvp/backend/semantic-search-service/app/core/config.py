@@ -323,6 +323,11 @@ class Settings(BaseSettings):
     # weil dabei nichts zur Person entsteht: kein Name, keine Kennung, nur Adresse und
     # Ergebnis. Wirksam erst, wenn ein Admin den Schalter einschaltet (Standard aus).
     herkunft_pruefen_aktiv: bool = True
+    # Merkliste (#758): Angemeldete merken Beitraege und finden sie unter "Meine
+    # Beitraege" wieder (Tabelle merkliste, api/v1/merkliste.py), nur mit
+    # Art.-9-Einwilligung. Obergrenze Standard aus: Vor dem Einschalten auf Prod braucht
+    # es Einwilligungswortlaut, DSFA-Abschnitt und DSE-Absatz (Hinweis auf der Admin-Seite).
+    merkliste_aktiv: bool = False
     # App-Abkuerzungen im Manifest (#757): Langes Druecken aufs App-Symbol bietet
     # Einwerfen, Suchen und Fangkorb an. Das Manifest ist statisch, der Schalter wirkt an
     # der Zielroute /abkuerzung/<name> (aus: Startseite). Obergrenze an, weil nichts

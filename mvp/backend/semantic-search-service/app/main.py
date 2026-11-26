@@ -46,6 +46,7 @@ from api.v1.vormoderation import router as vormoderation_router
 from api.v1.loeschauftraege import router as loeschauftraege_router
 from api.v1.schalter import router as schalter_router
 from api.v1.funktionen import router as funktionen_router
+from api.v1.merkliste import router as merkliste_router
 from api.v1.ereignis import router as ereignis_router
 from api.v1.ankunft import admin_router as ankuenfte_admin_router
 from api.v1.ankunft import router as ankunft_router
@@ -407,6 +408,8 @@ app.include_router(
 )
 # Welche Funktionen hinter einem Schalter an sind (#756), ohne Anmeldung
 app.include_router(funktionen_router, prefix="/api/v1/funktionen", tags=["schalter"])
+# Merkliste (#758), hinter dem Schalter merkliste
+app.include_router(merkliste_router, prefix="/api/v1/merkliste", tags=["merkliste"])
 # Neutraler Sammelpfad (#799): die Art der Meldung steht nur im Body.
 app.include_router(ereignis_router, prefix="/api/v1/ereignis", tags=["ereignis"])
 # Ankuenfte je Kampagnenwort und Tag: Melden ohne Anmeldung, das Wort nur im Body;

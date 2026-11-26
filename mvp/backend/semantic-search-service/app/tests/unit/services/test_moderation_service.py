@@ -316,6 +316,26 @@ class TestLoeschen:
         # Bearbeitete Meldungen behalten Entscheidung und Loeschfrist.
         assert aufruf["nur_offene"] is True
 
+    async def test_loeschen_nimmt_die_merkliste_mit(
+        self, service, speicher, merkliste_ohne_datenbank
+    ):
+        """Gemerkt hat ihn danach niemand mehr (#758), geloescht vor dem Beitrag."""
+        assert await service.delete_content(CONTENT_ID, "commentary", "admin-1")
+
+        merkliste_ohne_datenbank.loeschen_fuer_beitrag.assert_called_once_with(
+            uuid.UUID(CONTENT_ID)
+        )
+
+    async def test_loeschen_merkliste_scheitert_beitrag_bleibt(
+        self, service, speicher, merkliste_ohne_datenbank
+    ):
+        merkliste_ohne_datenbank.loeschen_fuer_beitrag.side_effect = RuntimeError("weg")
+
+        with pytest.raises(RuntimeError):
+            await service.delete_content(CONTENT_ID, "commentary", "admin-1")
+
+        assert CONTENT_ID in speicher.get_data()
+
     async def test_loeschen_stimmen_scheitern_beitrag_bleibt(self, service, speicher):
         """Erst Stimmen und "ausformuliert in", dann der Beitrag: Ein neuer Versuch findet ihn."""
         service._vote_repo.loeschen_fuer_beitrag.side_effect = RuntimeError("weg")

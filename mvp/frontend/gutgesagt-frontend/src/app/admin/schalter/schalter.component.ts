@@ -20,6 +20,7 @@ const TITEL: Record<string, string> = {
   gepostet: 'Rückfrage „Ja, gepostet“',
   gepostet_ohne_konto: '„Ja, gepostet“ ohne Konto',
   herkunft_pruefen: 'Links unter „Herkunft“ prüfen',
+  merkliste: 'Merkliste',
   abkuerzungen: 'App-Abkürzungen',
   antworten_hinweis: 'Neue Antworten auf eigene Aussagen',
   sharepic: 'Teilen als Bild',

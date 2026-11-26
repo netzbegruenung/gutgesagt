@@ -321,6 +321,23 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   eigene Zahlen und steuert nichts; keine Namen, die eine weitere besondere Kategorie erkennen
   lassen (Hinweis im Admin-Formular, GLOSSARY „Team“). Keine Nummer am Namen.
 
+### T14 Merkliste (gebaut, ausgeschaltet)
+
+- **Zweck:** Beiträge, die eine Person öfter braucht, für sie selbst vormerken und unter „Meine
+  Beiträge“, „Gemerkt“ wiederfinden (#758).
+- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. b, zusätzlich Art.-9-Einwilligung: Was jemand merkt,
+  kann politische Meinungen erkennen lassen. Ohne Einwilligung kein Merken (403). Offen vor
+  dem Einschalten (neuer Zweck): eigener Einwilligungswortlaut, DSFA-Abschnitt und Absatz der
+  Datenschutzerklärung; Entwürfe im PR zu #758.
+- **Betroffene:** angemeldete Personen, die etwas merken.
+- **Daten:** Kennung, Beitrag, Zeitpunkt des letzten Merkens (Tabelle `merkliste`).
+- **Empfänger:** nur die Person selbst; keine Zähler für andere. Admins nur in der Datenbank.
+- **Fristen:** LK „Fristen“: bis die Person den Eintrag entfernt, mit dem Konto, sofort beim
+  Widerruf der Art.-9-Einwilligung und mit dem endgültig entfernten Beitrag; höchstens 500
+  Einträge je Person.
+- **TOM:** hinter dem Schalter `merkliste` (Standard aus), nur über die eigene Kennung aus der
+  Anmeldung erreichbar (`X-User`, #284).
+
 ## Offen
 
 Gesammelt in DSFA 8.6: AV-Vertrag (F1), SMTP-Server (F2), Verschlüsselung der Sicherungen (F3),

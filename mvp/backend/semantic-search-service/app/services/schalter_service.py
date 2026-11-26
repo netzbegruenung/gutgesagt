@@ -297,6 +297,22 @@ SCHALTER: Dict[str, Schalterart] = {
             ),
         ),
         Schalterart(
+            name="merkliste",
+            gruppe=GRUNDFUNKTIONEN,
+            feld="merkliste_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_MERKLISTE_AKTIV",
+            erklaerung=(
+                "Merken an der Beitragskarte und der Reiter „Gemerkt“ in Meine "
+                "Beiträge, nur mit Art.-9-Einwilligung; der Widerruf löscht die "
+                "Merkliste. Nur die Person selbst sieht sie."
+            ),
+            einschalt_hinweis=(
+                "Jura: neuer Einwilligungswortlaut + DSFA-Abschnitt + DSE-Absatz vor "
+                "dem Einschalten (neuer Zweck, politisches Interesse)"
+            ),
+            oeffentlich=True,
+        ),
+        Schalterart(
             name="abkuerzungen",
             feld="abkuerzungen_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_ABKUERZUNGEN_AKTIV",

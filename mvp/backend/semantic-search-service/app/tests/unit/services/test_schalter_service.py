@@ -162,6 +162,7 @@ def test_stand_nennt_obergrenze_admin_wert_wirksam_und_dsfa_hinweis():
     assert "DSFA" in stand["punkte"].dsfa_hinweis
     assert "DSFA" in stand["abzeichen_sichtbar"].dsfa_hinweis
     assert stand["gepostet"].dsfa_hinweis is None
+    assert stand["merkliste"].wartet_auf_recht is True
     assert stand["abkuerzungen"].dsfa_hinweis is None
     assert stand["sharepic"].dsfa_hinweis is None
     assert all(s.erklaerung for s in stand.values())

@@ -638,6 +638,10 @@ GESPERRT = {
     # Meinung; GET mit, damit das Frontend den Knopf nur mit Einwilligung zeigt.
     ("GET", "/api/v1/usage/users/me/gepostet"),
     ("POST", "/api/v1/usage/users/me/gepostet"),
+    # Merkliste (#758): Was jemand merkt, verraet die politische Meinung; GET mit,
+    # damit die Liste nur mit Einwilligung steht. Entfernen bleibt offen (DELETE).
+    ("GET", "/api/v1/merkliste"),
+    ("PUT", "/api/v1/merkliste/{content_id}"),
 }
 
 
@@ -735,6 +739,7 @@ OFFEN = {
 
 
 def _gesperrte_routen():
+    from api.v1.merkliste import merkliste_angeboten
     from api.v1.usage import gepostet_angeboten
     from main import app
 
@@ -743,7 +748,8 @@ def _gesperrte_routen():
         if not isinstance(route, APIRoute):
             continue
         if any(
-            d.call in (require_art9_einwilligung, gepostet_angeboten)
+            d.call
+            in (require_art9_einwilligung, gepostet_angeboten, merkliste_angeboten)
             for d in route.dependant.dependencies
         ):
             gesperrt |= {(methode, route.path) for methode in route.methods}

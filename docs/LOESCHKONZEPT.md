@@ -47,8 +47,8 @@ Umgebung benutzt** — die Kommandos sind identisch, nur der eingesetzte Wert ni
   nicht nach dem Zustand.
 - **Ein Admin entfernt endgültig**
   (`DELETE /api/v1/moderation/content/{content_type}/{id}`): Der Punkt ist danach aus
-  Qdrant weg, mit ihm seine Stimmen (`votes`) und das „ausformuliert in“ der Einwürfe
-  zu ihm (`raw_input_content_links`); offene Meldungen zu ihm stehen danach auf
+  Qdrant weg, mit ihm seine Stimmen (`votes`), das „ausformuliert in“ der Einwürfe
+  zu ihm (`raw_input_content_links`) und die Einträge in Merklisten (`merkliste`, #758); offene Meldungen zu ihm stehen danach auf
   bearbeitet, bearbeitete und abgewiesene behalten ihre Entscheidung. Das ist der Weg
   für Schritt 3, wenn ein Text die Person erkennbar macht, und sonst für nichts:
   Gemeldete Beiträge sperrt ein Admin, statt sie zu entfernen. Denselben Weg nimmt die
@@ -117,7 +117,8 @@ dann jede folgende Anfrage ab, nach dem Entfernen nicht mehr.
    Rangliste samt Wahl des Anzeigenamens und Ranglistenname, auch ein Nein; #793), in `nutzungsbedingungen_zustimmungen` (jede Zustimmung zu den
    Nutzungsbedingungen in der App mit Zeitpunkt und Stand), in `team_mitgliedschaften` (jede
    Mitgliedschaft in einem Team samt Kennung des Wortlauts und Zeitpunkt der Einwilligung), in
-   `team_oeffentlich` (die Antwort auf „Team öffentlich am Namen zeigen“) und die in
+   `team_oeffentlich` (die Antwort auf „Team öffentlich am Namen zeigen“), in `merkliste`
+   (gemerkte Beiträge mit Zeitpunkt, #758) und die in
    `loeschauftraege` (offene und erledigte Löschaufträge nach einem Widerruf)
    löschen; in `einstellungen` die Kennung eines Admins (`geaendert_von`) auf `NULL` setzen,
    der Wert bleibt; ebenso jeden Muster-Hinweis
@@ -165,7 +166,7 @@ dann jede folgende Anfrage ab, nach dem Entfernen nicht mehr.
 
 Widerruft eine Person ihre Art.-9-Einwilligung, fehlt für die Zuordnung ihrer Beiträge,
 Einwürfe und Sätze die Rechtsgrundlage (DSFA V2, R9; `docs/ART9_EINWILLIGUNG.md`). Der Widerruf
-löscht sofort ihre Stimmen und legt in derselben Transaktion einen **Löschauftrag** an: Kennung,
+löscht sofort ihre Stimmen und ihre Merkliste (#758) und legt in derselben Transaktion einen **Löschauftrag** an: Kennung,
 Zeitpunkt und Frist, sieben Tage später (Tabelle `loeschauftraege`,
 `Art9EinwilligungService.widerrufen`). Einen Auftrag gibt es nur, wenn dabei eine geltende
 Einwilligung widerrufen wurde; je Person höchstens einen offenen, ein zweiter Widerruf legt
@@ -259,6 +260,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Muster-Hinweise (`muster_hinweise`) | 56 Tage (8 Wochen) | letzter Tag mit gegenseitiger Nutzung (`letzter_tag`) |
 | Löschaufträge (`loeschauftraege`), offen | keine | — sie sind Arbeit und bleiben, bis ein Admin den Löschablauf ausführt (Frist dafür: sieben Tage ab dem Widerruf, unter „Löschauftrag nach dem Widerruf“) |
 | Löschaufträge, erledigt | 365 Tage (entschieden 13.11.2026) | Ausführung (`erledigt_am`); mit dem Konto sofort (Schritt 2) |
+| Merkliste (`merkliste`, #758): gemerkter Beitrag und Zeitpunkt | solange die Person ihn gemerkt hat | — geht beim Entfernen aus der Merkliste, mit dem Konto (Schritt 2), beim Widerruf der Art.-9-Einwilligung und mit dem endgültig entfernten Beitrag; höchstens 500 Einträge je Person. Schaltet ein Admin den Schalter wieder aus, bleiben die Einträge, Entfernen bleibt für die Person offen |
 | Zustimmung zur Sichtbarkeit der Abzeichen (`abzeichen_sichtbarkeit`) | solange das Konto besteht | — Nachweis der Zustimmung (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Einwilligung „Punkte und Meilensteine“ (`punkte_einwilligung`, #351) | solange das Konto besteht | — Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Einwilligung zur Rangliste (`rangliste_einwilligung`, #793) | solange das Konto besteht | — Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2); Plätze und Punkte werden nicht gespeichert |
@@ -315,7 +317,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
   UTC-Tag nach `geloescht_am`; die 30 Tage zählen ab dann, also höchstens einen Tag nach
   dem Löschen. Das gilt auch für Altbestand, der vor #421 gelöscht wurde. Entfernt wird
   über `ModerationService.delete_content`, denselben Weg wie beim Admin: erst Verweise der
-  Aussagen, Stimmen und „ausformuliert in“, dann der Punkt. Wie beim Admin stehen offene
+  Aussagen, Stimmen, „ausformuliert in“ und Merkliste, dann der Punkt. Wie beim Admin stehen offene
   Meldungen zum Beitrag danach auf bearbeitet, hier ohne Admin (`reviewed_by` leer), und
   ihre 180 Tage beginnen. Bearbeitete und abgewiesene behalten Entscheidung und Frist.
   Scheitert ein Schritt, bleibt der Beitrag stehen und der nächste Lauf versucht es erneut. Gesperrte Beiträge
@@ -763,7 +765,7 @@ docker exec -i gutgesagt-app-postgres psql -U app_user -d gutgesagt_app \
 #   -v ON_ERROR_STOP=1 -v uid="$KENNUNG"
 
 docker exec -i gutgesagt-app-postgres psql -U app_user -d gutgesagt_app -c \
-  "VACUUM FULL votes, content_reports, raw_inputs, raw_input_content_links, raw_input_drafts, usage_events, users, gesehene_nutzung, muster_hinweise, art9_einwilligungen, art9_ohne_einwilligung, abzeichen_sichtbarkeit, punkte_einwilligung, rangliste_einwilligung, nutzungsbedingungen_zustimmungen, team_mitgliedschaften, team_oeffentlich, loeschauftraege;"
+  "VACUUM FULL votes, content_reports, raw_inputs, raw_input_content_links, raw_input_drafts, usage_events, users, gesehene_nutzung, muster_hinweise, art9_einwilligungen, art9_ohne_einwilligung, abzeichen_sichtbarkeit, punkte_einwilligung, rangliste_einwilligung, nutzungsbedingungen_zustimmungen, team_mitgliedschaften, team_oeffentlich, merkliste, loeschauftraege;"
 ```
 
 ```bash

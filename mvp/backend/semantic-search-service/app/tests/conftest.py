@@ -293,6 +293,22 @@ def anzeigenamen_ohne_datenbank(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def merkliste_ohne_datenbank(monkeypatch):
+    """
+    Das endgueltige Entfernen eines Beitrags und der Widerruf raeumen die Merkliste mit
+    auf (#758). Ohne diesen Ersatz verbaende sich ``get_merkliste_repository()`` mit dem
+    PostgreSQL aus den Settings (siehe anzeigenamen_ohne_datenbank). Tests gegen
+    PostgreSQL bauen ihr eigenes ``MerklisteRepository(datenbank)``.
+    """
+    import repositories.merkliste_repository as modul
+
+    repository = MagicMock()
+    repository.liste.return_value = []
+    monkeypatch.setattr(modul, "_repository", repository)
+    yield repository
+
+
+@pytest.fixture(autouse=True)
 def art9_einwilligung_ohne_datenbank(monkeypatch):
     """
     Die schreibenden Endpunkte pruefen die Art.-9-Einwilligung (#489,
