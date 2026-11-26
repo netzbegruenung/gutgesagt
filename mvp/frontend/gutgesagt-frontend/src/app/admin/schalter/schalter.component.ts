@@ -11,6 +11,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Einstellung, ModerationService, Schalter, SchalterListe } from '../../services/moderation.service';
 import { ohneRechte, selbstNachladen } from '../../shared/selbst-nachladen';
 import { SaisonsComponent } from '../saisons/saisons.component';
+import { SaalSpruecheComponent } from '../saal-sprueche/saal-sprueche.component';
 
 /** Anzeigenamen der Schalter; unbekannte zeigen ihren technischen Namen. */
 const TITEL: Record<string, string> = {
@@ -39,6 +40,7 @@ const TITEL: Record<string, string> = {
   gartenansicht: 'Gartenansicht',
   kopiert_erfolg: 'Erfolgstext nach dem Kopieren',
   konter_probe: 'Konter-Probe',
+  saal_spruch: 'Saal-Spruch „Heute im Saal gehört:“',
   luecke_zu_gross: '„Lücke zu!“ als großer Moment',
   einwilligung_im_gewinn: 'Einwilligung im passenden Moment',
   naechster_schritt: '„Dein nächster Schritt“',
@@ -120,6 +122,7 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
     MatSlideToggleModule,
     MatSnackBarModule,
     SaisonsComponent,
+    SaalSpruecheComponent,
   ],
   template: `
     <h2>Schalter</h2>
@@ -245,6 +248,8 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
       </section>
       <!-- Saisons mit Gemeinschaftsziel (#782) -->
       <app-saisons></app-saisons>
+      <!-- Saal-Sprüche je Tag (Schalter saal_spruch) -->
+      <app-saal-sprueche></app-saal-sprueche>
     </ng-container>
   `,
   styles: [`

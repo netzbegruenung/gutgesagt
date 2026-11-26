@@ -1237,6 +1237,28 @@ class SaisonZeile(Base):
     )
 
 
+# Hoechstlaenge eines Saal-Spruchs (services/saal_spruch_service.py, Spalte text)
+SAAL_SPRUCH_MAX = 200
+
+
+class SaalSpruchZeile(Base):
+    """
+    Der Saal-Spruch eines Tages (services/saal_spruch_service.py): ein oeffentlicher
+    Spruch, den ein Admin vorab fuer einen Tag (Europe/Berlin) festlegt, etwa fuer die
+    Tage der BDK. Je Tag hoechstens einer. Nichts zur Person, auch nicht, welcher Admin
+    ihn festgelegt hat.
+
+    Neue Tabelle: create_all legt sie beim Start an. Das Skript
+    postgres-app/migrations/2026-11-26-saal-sprueche.sql dokumentiert das Schema.
+    """
+
+    __tablename__ = "saal_sprueche"
+
+    datum = Column(Date, primary_key=True)
+    text = Column(String(SAAL_SPRUCH_MAX), nullable=False)
+    geaendert_am = Column(DateTime(timezone=True), nullable=False)
+
+
 class HerkunftPruefungZeile(Base):
     """
     Ergebnis von "Herkunft pruefen" (#759) je Herkunft mit Link: zuletzt gesehener

@@ -31,6 +31,7 @@ ERWARTET = {
     "danke_knopf": "SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV",
     "danke_ohne_konto": "SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV",
     "rangliste": "SEMANTIC_SEARCH_RANGLISTE_AKTIV",
+    "saal_spruch": "SEMANTIC_SEARCH_SAAL_SPRUCH_AKTIV",
 }
 
 ALLE_AN = Settings(**{SCHALTER[n].feld: True for n in ERWARTET}, punkte_aktiv=True)
@@ -108,6 +109,7 @@ def test_einschalt_hinweise_laut_issue():
         "konter_probe",
         "luecke_zu_gross",
         "einwilligung_im_gewinn",
+        "saal_spruch",
     ):
         assert stand[name].dsfa_hinweis is None
         assert stand[name].erklaerung
@@ -119,4 +121,9 @@ def test_oeffentlich_nur_ohne_eigenen_angemeldeten_endpunkt():
 
     assert "wirkungs_echo" not in oeffentlich
     assert "rangliste" not in oeffentlich
-    assert {"kopiert_erfolg", "konter_probe", "danke_ohne_konto"} <= oeffentlich
+    assert {
+        "kopiert_erfolg",
+        "konter_probe",
+        "danke_ohne_konto",
+        "saal_spruch",
+    } <= oeffentlich

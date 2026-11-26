@@ -392,6 +392,9 @@ class Settings(BaseSettings):
     # Kurze Hinweiszeile unter dem Suchknopf (services/schalter_service.py
     # HINWEIS_SCHALTER): Obergrenze von Haus aus aus, bis Jura den Wortlaut bestaetigt.
     hinweiszeile_kurz_aktiv: bool = False
+    # Saal-Spruch (services/saal_spruch_service.py): Karte auf der Startseite
+    # mit einem vorab festgelegten, oeffentlichen Spruch je Tag; nur Text, nichts zur Person.
+    saal_spruch_aktiv: bool = False
     # Saison und Gemeinschaftsziel (#782, domain/saisons.py): Den Balken sehen alle erst,
     # wenn es einmal so viele abgeschlossene Wochen hintereinander mit je mindestens so
     # vielen verschiedenen Menschen gab, die "Ja, gepostet" gemeldet haben; vorher nur

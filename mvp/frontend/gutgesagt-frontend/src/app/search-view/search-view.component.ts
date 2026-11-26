@@ -15,6 +15,7 @@ import { map } from 'rxjs/operators';
 import { RundgangBandComponent } from '../rundgang/rundgang-band.component';
 import { SeitLetztemBesuchComponent } from '../seit-letztem-besuch/seit-letztem-besuch.component';
 import { NaechsterSchrittComponent } from '../naechster-schritt/naechster-schritt.component';
+import { SaalSpruchComponent } from '../saal-spruch/saal-spruch.component';
 import { GartenHinweisComponent } from '../garten/garten-hinweis.component';
 import { GestoertEinstiegComponent } from '../shared/feedback/gestoert-einstieg.component';
 import { SaisonZielComponent } from '../saison-ziel/saison-ziel.component';
@@ -44,6 +45,7 @@ export const AUTOFOKUS_MEDIEN = '(min-width: 960px) and (hover: hover) and (poin
     RundgangBandComponent,
     SeitLetztemBesuchComponent,
     NaechsterSchrittComponent,
+    SaalSpruchComponent,
     GartenHinweisComponent,
     GestoertEinstiegComponent,
     SaisonZielComponent,

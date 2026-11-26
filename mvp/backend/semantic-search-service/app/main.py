@@ -51,6 +51,8 @@ from api.v1.ankunft import admin_router as ankuenfte_admin_router
 from api.v1.ankunft import router as ankunft_router
 from api.v1.saisons import admin_router as saisons_admin_router
 from api.v1.saisons import router as saisons_router
+from api.v1.saal_spruch import admin_router as saal_spruch_admin_router
+from api.v1.saal_spruch import router as saal_spruch_router
 from api.v1.rangliste import router as rangliste_router
 from api.v1.konter_probe import router as konter_probe_router
 from api.v1.sperren import router as sperren_router
@@ -416,6 +418,13 @@ app.include_router(saisons_router, prefix="/api/v1/saisons", tags=["saisons"])
 app.include_router(rangliste_router, prefix="/api/v1/rangliste", tags=["rangliste"])
 app.include_router(
     saisons_admin_router, prefix="/api/v1/moderation/saisons", tags=["moderation"]
+)
+# Saal-Spruch: Spruch ohne Anmeldung, Pflege nur Admins
+app.include_router(saal_spruch_router, prefix="/api/v1/saal-spruch", tags=["spiel"])
+app.include_router(
+    saal_spruch_admin_router,
+    prefix="/api/v1/moderation/saal-sprueche",
+    tags=["moderation"],
 )
 # Konter-Probe (#786), ohne Anmeldung, nur lesend; der Tipp bleibt im Browser
 app.include_router(konter_probe_router, prefix="/api/v1/konter-probe", tags=["spiel"])
