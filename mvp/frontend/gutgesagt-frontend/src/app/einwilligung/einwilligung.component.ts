@@ -23,9 +23,6 @@ import { PunkteEinwilligungComponent } from '../shared/punkte-einwilligung/punkt
 import { PunkteEinwilligungService } from '../shared/punkte-einwilligung/punkte-einwilligung.service';
 import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 import { FunktionenService } from '../services/funktionen.service';
-import { SpielgefuehlService, SpielgefuehlStand } from '../services/spielgefuehl.service';
-import { of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
 import { HILFE_PARAM } from '../help-dialog/help-dialog.component';
 import {
   BestaetigungsDialogComponent,
@@ -99,15 +96,6 @@ export class EinwilligungComponent implements OnInit {
   /** Stand des Schalters vom Server; null, solange er nicht bekannt ist. */
   private imGewinn: boolean | null = null;
   private punkteEingewilligt = false;
-  /**
-   * Spielgefühl (Schalter spielgefuehl_buehne): Im neuen Modell gibt es das Häkchen
-   * „Punkte und Meilensteine“ nicht mehr; wer hier nach dem Widerruf sucht, findet eine
-   * Zeile mit der gewählten Stufe und dem Weg zu „Meine Beiträge“. null: Schalter aus,
-   * nichts gewählt oder nicht geladen.
-   */
-  private readonly spielgefuehl = inject(SpielgefuehlService);
-  spielgefuehlStand: SpielgefuehlStand | null = null;
-  readonly meineBeitraege = ROUTES.MEINE_BEITRAEGE;
 
   constructor(
     private einwilligung: Art9EinwilligungService,
@@ -154,18 +142,6 @@ export class EinwilligungComponent implements OnInit {
     // Der eigene Stand der Punkte-Einwilligung: Wer eingewilligt hat, sieht das Häkchen
     // zum Widerrufen immer, auch wenn diese Seite die erste im Besuch ist.
     this.punkteDienst.laden().subscribe();
-    // Still (ohne Umleitung bei 401); fragt den Endpunkt nur, wenn der Schalter nicht sicher aus ist.
-    this.spielgefuehl
-      .laden(true)
-      .pipe(catchError(() => of(null)))
-      .subscribe((stand) => (this.spielgefuehlStand = stand));
-  }
-
-  /** Die gewählte Stufe, wie die Frage sie nennt; null ohne Wahl. '' wenn die Stufe gerade nicht angeboten wird. */
-  get spielgefuehlStufe(): string | null {
-    const s = this.spielgefuehlStand;
-    if (!s?.stufe) return null;
-    return s.aktueller_wortlaut.stufen.find((t) => t.stufe === s.stufe)?.titel ?? '';
   }
 
   /**

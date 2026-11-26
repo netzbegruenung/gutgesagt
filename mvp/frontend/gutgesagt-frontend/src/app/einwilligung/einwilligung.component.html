@@ -141,10 +141,5 @@
     </ng-container>
     <!-- Eigene, freiwillige Einwilligung, getrennt von der zur Mitwirkung (#351); nur mit Punkten -->
     <app-punkte-einwilligung *ngIf="punkteHaekchenZeigen" ueberschrift="Punkte und Meilensteine"></app-punkte-einwilligung>
-    <!-- Spielgefuehl (Schalter spielgefuehl_buehne): geaendert und widerrufen wird in Meine Beitraege -->
-    <p *ngIf="spielgefuehlStufe !== null" class="spielgefuehl-zeile" data-testid="spielgefuehl-zeile">
-      <ng-container *ngIf="spielgefuehlStufe">Spielgefühl: {{ spielgefuehlStufe }}. </ng-container>{{ spielgefuehlStand?.stufe === 'aus' ? 'Ändern' : 'Ändern oder ausschalten' }} kannst du es unter
-      <a [routerLink]="meineBeitraege">Meine Beiträge</a>.
-    </p>
   </mat-card-content>
 </mat-card>

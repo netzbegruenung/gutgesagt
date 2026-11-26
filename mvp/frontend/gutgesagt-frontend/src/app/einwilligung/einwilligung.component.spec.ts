@@ -12,7 +12,6 @@ import { PUNKTE_EINWILLIGUNG_AUS } from '../shared/punkte-einwilligung/punkte-ei
 import { signal } from '@angular/core';
 import { FunktionenService } from '../services/funktionen.service';
 import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
-import { SpielgefuehlService, SpielgefuehlStand } from '../services/spielgefuehl.service';
 
 const URL = `${environment.baseUrl}/api/v1/art9-einwilligung`;
 const WORTLAUT = { kennung: '2026-11-05', text: 'Ich willige ausdrücklich ein, dass …' };
@@ -39,9 +38,6 @@ describe('EinwilligungComponent', () => {
   /** Schalter einwilligung_im_gewinn (#788). */
   const imGewinn = signal(false);
   afterEach(() => imGewinn.set(false));
-  /** Stand des Spielgefühls (Schalter spielgefuehl_buehne); null: Schalter aus. */
-  let spielgefuehl: SpielgefuehlStand | null = null;
-  afterEach(() => (spielgefuehl = null));
 
   function starten(returnUrl: string | null = '/einwerfen') {
     rueckfrage = true;
@@ -55,7 +51,6 @@ describe('EinwilligungComponent', () => {
         provideNoopAnimations(),
         PUNKTE_EINWILLIGUNG_AUS,
         { provide: FunktionenService, useValue: { frisch: () => of(imGewinn()) } },
-        { provide: SpielgefuehlService, useValue: { laden: () => of(spielgefuehl) } },
         provideRouter([]),
         {
           provide: ActivatedRoute,
@@ -595,67 +590,6 @@ describe('EinwilligungComponent', () => {
       standLiefern(stand({ eingewilligt: true, wortlaut: WORTLAUT.kennung, eingewilligt_am: '2026-11-20T10:00:00Z' }));
 
       expect(el().querySelector('app-punkte-einwilligung')).not.toBeNull();
-    });
-  });
-  describe('Spielgefühl (Gamification-Check 26.11., Befund 20)', () => {
-    function spielgefuehlStand(stufe: SpielgefuehlStand['stufe'], angeboten = true): SpielgefuehlStand {
-      const stufen = [
-        { stufe: 'rangliste' as const, titel: 'In der Saison-Rangliste mitspielen', text: '' },
-        { stufe: 'fuer_mich' as const, titel: 'Nur für mich', text: '' },
-        { stufe: 'aus' as const, titel: 'Aus', text: '' },
-      ].filter((t) => angeboten || t.stufe !== stufe);
-      return {
-        stufe,
-        mit_anzeigename: null,
-        ranglistenname: null,
-        anzeigename: null,
-        abzeichen_hinweis: null,
-        aktueller_wortlaut: { stufen } as unknown as SpielgefuehlStand['aktueller_wortlaut'],
-      };
-    }
-
-    function zeile(): HTMLElement | null {
-      return el().querySelector('[data-testid="spielgefuehl-zeile"]');
-    }
-
-    it('nennt die gewählte Stufe und den Weg zu „Meine Beiträge“', () => {
-      spielgefuehl = spielgefuehlStand('fuer_mich');
-      starten();
-      standLiefern(stand({ eingewilligt: true, wortlaut: WORTLAUT.kennung }));
-
-      expect(zeile()!.textContent).toContain('Spielgefühl: Nur für mich.');
-      expect(zeile()!.querySelector('a')!.getAttribute('href')).toBe('/contributions');
-    });
-
-    it('ohne Schalter keine Zeile', () => {
-      starten();
-      standLiefern(stand({ eingewilligt: true, wortlaut: WORTLAUT.kennung }));
-      expect(zeile()).toBeNull();
-    });
-
-    it('ohne Wahl keine Zeile', () => {
-      spielgefuehl = spielgefuehlStand(null);
-      starten();
-      standLiefern(stand({ eingewilligt: true, wortlaut: WORTLAUT.kennung }));
-      expect(zeile()).toBeNull();
-    });
-
-    it('Stufe „Aus“: nur „Ändern“, nicht „ausschalten“', () => {
-      spielgefuehl = spielgefuehlStand('aus');
-      starten();
-      standLiefern(stand({ eingewilligt: true, wortlaut: WORTLAUT.kennung }));
-
-      expect(zeile()!.textContent).toContain('Spielgefühl: Aus.');
-      expect(zeile()!.textContent).not.toContain('ausschalten');
-    });
-
-    it('Stufe gerade nicht angeboten: nur der Weg, kein leerer Name', () => {
-      spielgefuehl = spielgefuehlStand('rangliste', false);
-      starten();
-      standLiefern(stand({ eingewilligt: true, wortlaut: WORTLAUT.kennung }));
-
-      expect(zeile()!.textContent).not.toContain('Spielgefühl:');
-      expect(zeile()!.textContent).toContain('Meine Beiträge');
     });
   });
 });
