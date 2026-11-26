@@ -13,8 +13,8 @@ const NICHTS: Widerrufbar = { spielgefuehl: null, punkte: null, rangliste: null,
 const ALLES: Widerrufbar = {
   spielgefuehl: { stufe: 'rangliste', titel: 'In der Saison-Rangliste mitspielen', wortlaut: 'spielgefuehl-2026-11-26' },
   punkte: { wortlaut: '2026-11-13' },
-  rangliste: { wortlaut: 'rangliste-2026-11-20' },
-  abzeichen: { wortlaut: '2026-11-09' },
+  rangliste: { wortlaut: 'rangliste-2026-11-25' },
+  abzeichen: { wortlaut: '2026-11-09-b' },
 };
 
 /** Widerruf jederzeit, auch bei ausgeschalteten Schaltern (Art. 7 Abs. 3 DSGVO). */
@@ -82,8 +82,8 @@ describe('WiderrufbarComponent', () => {
   const FAELLE: Array<[keyof Widerrufbar, string, object]> = [
     ['spielgefuehl', `${BASIS}/usage/users/me/spielgefuehl`, { stufe: 'aus', mit_anzeigename: null, wortlaut: 'spielgefuehl-2026-11-26' }],
     ['punkte', `${BASIS}/usage/users/me/punkte-einwilligung`, { eingewilligt: false, wortlaut: '2026-11-13' }],
-    ['rangliste', `${BASIS}/rangliste/einwilligung`, { teilnehmen: false, mit_anzeigename: false, wortlaut: 'rangliste-2026-11-20' }],
-    ['abzeichen', `${BASIS}/usage/users/me/abzeichen-sichtbarkeit`, { zeigen: false, wortlaut: '2026-11-09' }],
+    ['rangliste', `${BASIS}/rangliste/einwilligung`, { teilnehmen: false, mit_anzeigename: false, wortlaut: 'rangliste-2026-11-25' }],
+    ['abzeichen', `${BASIS}/usage/users/me/abzeichen-sichtbarkeit`, { zeigen: false, wortlaut: '2026-11-09-b' }],
   ];
 
   for (const [art, url, body] of FAELLE) {
@@ -99,8 +99,68 @@ describe('WiderrufbarComponent', () => {
 
       expect(zeile(art)).toBeNull();
       expect(punkteLaden).toHaveBeenCalled();
+      expect(el().querySelector('[data-testid="widerruf-status"]')?.textContent).toContain('Ausgeschaltet:');
     });
   }
+
+  it('setzt den Fokus nach dem Ausschalten auf die nächste Zeile, nach der letzten auf die Meldung', () => {
+    starten({ ...NICHTS, rangliste: ALLES.rangliste, abzeichen: ALLES.abzeichen });
+    document.body.appendChild(el());
+
+    (zeile('rangliste')?.querySelector('button') as HTMLButtonElement).click();
+    http.expectOne({ method: 'PUT', url: `${BASIS}/rangliste/einwilligung` }).flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne({ method: 'GET', url: URL }).flush({ ...NICHTS, abzeichen: ALLES.abzeichen });
+    fixture.detectChanges();
+    expect(document.activeElement).toBe(zeile('abzeichen')?.querySelector('button') ?? null);
+
+    (zeile('abzeichen')?.querySelector('button') as HTMLButtonElement).click();
+    http
+      .expectOne({ method: 'PUT', url: `${BASIS}/usage/users/me/abzeichen-sichtbarkeit` })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne({ method: 'GET', url: URL }).flush(NICHTS);
+    fixture.detectChanges();
+    expect(document.activeElement?.classList.contains('meldungen')).toBeTrue();
+    expect(el().querySelector('[data-testid="widerruf-status"]')?.textContent).toContain('Abzeichen am Namen');
+    el().remove();
+  });
+
+  it('nach dem Abwählen des Punkte-Häkchens keine Punkte-Zeile mit altem Stand', () => {
+    starten(ALLES);
+    punkteStand.next({ eingewilligt: true, wortlaut: '2026-11-13', aktueller_wortlaut: { kennung: '2026-11-13', text: '' } });
+    fixture.detectChanges();
+
+    punkteStand.next({ eingewilligt: false, wortlaut: '2026-11-13', aktueller_wortlaut: { kennung: '2026-11-13', text: '' } });
+    fixture.detectChanges();
+
+    expect(zeile('punkte')).toBeNull();
+    // Der Server hat dabei auch das Spielgefühl ausgeschaltet: Stand frisch geholt.
+    http.expectOne({ method: 'GET', url: URL }).flush({ ...ALLES, punkte: null, spielgefuehl: null });
+    fixture.detectChanges();
+    expect(zeile('spielgefuehl')).toBeNull();
+    expect(zeile('punkte')).toBeNull();
+  });
+
+  it('nimmt die erledigte Zeile weg, auch wenn das Nachladen scheitert', () => {
+    starten(ALLES);
+
+    (zeile('rangliste')?.querySelector('button') as HTMLButtonElement).click();
+    http.expectOne({ method: 'PUT', url: `${BASIS}/rangliste/einwilligung` }).flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne({ method: 'GET', url: URL }).flush(null, { status: 500, statusText: 'Fehler' });
+    fixture.detectChanges();
+
+    expect(zeile('rangliste')).toBeNull();
+    expect(zeile('abzeichen')).not.toBeNull();
+  });
+
+  it('neuLaden holt den Stand frisch (nach einem Widerruf auf der Seite)', () => {
+    starten(ALLES);
+
+    fixture.componentInstance.neuLaden();
+    http.expectOne({ method: 'GET', url: URL }).flush(NICHTS);
+    fixture.detectChanges();
+
+    expect(el().querySelector('[data-testid="widerrufbar"]')).toBeNull();
+  });
 
   it('meldet einen Fehler und lässt die Zeile stehen', () => {
     starten(ALLES);

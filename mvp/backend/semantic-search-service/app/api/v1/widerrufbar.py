@@ -6,7 +6,8 @@ einwilligung/widerrufbar.component.ts), auch wenn die Schalter aus sind und die
 Fragen selbst nicht erscheinen.
 
 - ``GET /users/me/widerrufbar``: je gespeicherter Antwort, die kein Nein bzw. ``aus``
-  ist, ihr Wortlaut (zum Mitschicken beim Widerruf); sonst null. Immer 200, auch bei
+  ist, ihr Wortlaut (zum Mitschicken beim Widerruf; ein unbekannter wird durch den
+  aktuellen ersetzt); sonst null. Immer 200, auch bei
   ausgeschalteten Schaltern (die Seite fragt beim Oeffnen, ein 404 zaehlte fuer den
   Gateway-fail2ban, docs/ARCHITECTURE.md). Gezeigt wird kein Ja und nichts zum
   Einwilligen; widerrufen wird ueber die bisherigen ``PUT``-Endpunkte, die ein Nein
@@ -25,6 +26,7 @@ from pydantic import BaseModel
 from core.fehler import INTERNER_FEHLER
 from core.logging import get_logger, log_pseudonym
 from dependencies import require_user
+from domain import abzeichen_sichtbarkeit, punkte_einwilligung, rangliste
 from domain.spielgefuehl import AKTUELLER_WORTLAUT, WORTLAUTE, Stufe
 
 logger = get_logger(__name__)
@@ -42,6 +44,15 @@ class GespeicherteStufe(BaseModel):
     # Der Name der Stufe aus dem Wortlaut, wie die Frage ihn nennt (eine Quelle)
     titel: str
     wortlaut: str
+
+
+def _bekannt(wortlaut: str, bekannte, aktueller: str) -> str:
+    """
+    Der Wortlaut zum Mitschicken: der gespeicherte, wenn der Endpunkt ihn kennt, sonst
+    der aktuelle. Ein Nein nehmen die Endpunkte zu jedem bekannten Wortlaut an; ein
+    unbekannter (etwa nach einem Zurueckrollen) liesse den Widerruf mit 422 scheitern.
+    """
+    return wortlaut if wortlaut in bekannte else aktueller
 
 
 def _titel(stufe: Stufe, wortlaut: str) -> str:
@@ -73,7 +84,7 @@ def _lesen(user_id: str) -> WiderrufbarResponse:
 
     spielgefuehl = get_spielgefuehl_repository().lesen(user_id)
     punkte = get_punkte_einwilligung_repository().lesen(user_id)
-    rangliste = get_rangliste_einwilligung_repository().lesen(user_id)
+    rangliste_antwort = get_rangliste_einwilligung_repository().lesen(user_id)
     abzeichen = get_abzeichen_sichtbarkeit_repository().lesen(user_id)
     return WiderrufbarResponse(
         spielgefuehl=(
@@ -82,27 +93,41 @@ def _lesen(user_id: str) -> WiderrufbarResponse:
                 titel=_titel(spielgefuehl.stufe, spielgefuehl.wortlaut),
                 # "aus" geht zu jedem bekannten Wortlaut; ein unbekannter (spaetere
                 # Fassung) wird durch den aktuellen ersetzt, damit der Widerruf klappt.
-                wortlaut=(
-                    spielgefuehl.wortlaut
-                    if spielgefuehl.wortlaut in WORTLAUTE
-                    else AKTUELLER_WORTLAUT
-                ),
+                wortlaut=_bekannt(spielgefuehl.wortlaut, WORTLAUTE, AKTUELLER_WORTLAUT),
             )
             if spielgefuehl is not None and spielgefuehl.stufe is not Stufe.AUS
             else None
         ),
         punkte=(
-            GespeichertesJa(wortlaut=punkte.wortlaut)
+            GespeichertesJa(
+                wortlaut=_bekannt(
+                    punkte.wortlaut,
+                    punkte_einwilligung.WORTLAUTE,
+                    punkte_einwilligung.AKTUELLER_WORTLAUT,
+                )
+            )
             if punkte is not None and punkte.eingewilligt
             else None
         ),
         rangliste=(
-            GespeichertesJa(wortlaut=rangliste.wortlaut)
-            if rangliste is not None and rangliste.teilnehmen
+            GespeichertesJa(
+                wortlaut=_bekannt(
+                    rangliste_antwort.wortlaut,
+                    rangliste.WORTLAUTE,
+                    rangliste.AKTUELLER_WORTLAUT,
+                )
+            )
+            if rangliste_antwort is not None and rangliste_antwort.teilnehmen
             else None
         ),
         abzeichen=(
-            GespeichertesJa(wortlaut=abzeichen.wortlaut)
+            GespeichertesJa(
+                wortlaut=_bekannt(
+                    abzeichen.wortlaut,
+                    abzeichen_sichtbarkeit.WORTLAUTE,
+                    abzeichen_sichtbarkeit.AKTUELLER_WORTLAUT,
+                )
+            )
             if abzeichen is not None and abzeichen.zeigen
             else None
         ),

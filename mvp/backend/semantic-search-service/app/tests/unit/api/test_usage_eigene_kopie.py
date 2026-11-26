@@ -453,5 +453,7 @@ class TestSpielgefuehlEinwilligungBeimErzeugen:
         assert zaehlen(client_buehne, "bo-2").status_code == 200
 
         assert muster.nutzung_melden.called is gemeldet
+        if gemeldet:
+            assert muster.nutzung_melden.call_args.args[:2] == ("bo-2", AUTORIN)
         # Im neuen Modell zaehlt die alte Einwilligung nicht.
         punkte_einwilligung_ohne_datenbank.eingewilligt.assert_not_called()

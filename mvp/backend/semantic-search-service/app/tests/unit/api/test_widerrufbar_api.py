@@ -66,9 +66,9 @@ def test_gespeicherte_ja_mit_wortlaut(
         True, "2026-11-13", AM
     )
     rangliste_ohne_datenbank.lesen.return_value = RanglisteAntwort(
-        True, False, "rangliste-2026-11-20", AM
+        True, False, "rangliste-2026-11-25", AM
     )
-    abzeichen.lesen.return_value = Sichtbarkeit(True, "2026-11-09", AM)
+    abzeichen.lesen.return_value = Sichtbarkeit(True, "2026-11-09-b", AM)
 
     daten = _client().get(URL, headers=KIM).json()
 
@@ -79,8 +79,8 @@ def test_gespeicherte_ja_mit_wortlaut(
             "wortlaut": AKTUELLER_WORTLAUT,
         },
         "punkte": {"wortlaut": "2026-11-13"},
-        "rangliste": {"wortlaut": "rangliste-2026-11-20"},
-        "abzeichen": {"wortlaut": "2026-11-09"},
+        "rangliste": {"wortlaut": "rangliste-2026-11-25"},
+        "abzeichen": {"wortlaut": "2026-11-09-b"},
     }
 
 
@@ -97,9 +97,9 @@ def test_nein_und_aus_zeigen_nichts(
         False, "2026-11-13", AM
     )
     rangliste_ohne_datenbank.lesen.return_value = RanglisteAntwort(
-        False, False, "rangliste-2026-11-20", AM
+        False, False, "rangliste-2026-11-25", AM
     )
-    abzeichen.lesen.return_value = Sichtbarkeit(False, "2026-11-09", AM)
+    abzeichen.lesen.return_value = Sichtbarkeit(False, "2026-11-09-b", AM)
 
     daten = _client().get(URL, headers=KIM).json()
 
@@ -136,3 +136,24 @@ def test_lesefehler_500_ohne_details(abzeichen):
 
     assert antwort.status_code == 500
     assert "geheim" not in antwort.text
+
+
+def test_unbekannte_wortlaute_werden_durch_den_aktuellen_ersetzt(
+    abzeichen, punkte_einwilligung_ohne_datenbank, rangliste_ohne_datenbank
+):
+    """Sonst scheiterte der Widerruf mit 422 (etwa nach einem Zurueckrollen)."""
+    from domain import abzeichen_sichtbarkeit, punkte_einwilligung, rangliste
+
+    punkte_einwilligung_ohne_datenbank.lesen.return_value = PunkteEinwilligung(
+        True, "punkte-2099", AM
+    )
+    rangliste_ohne_datenbank.lesen.return_value = RanglisteAntwort(
+        True, False, "rangliste-2099", AM
+    )
+    abzeichen.lesen.return_value = Sichtbarkeit(True, "abzeichen-2099", AM)
+
+    daten = _client().get(URL, headers=KIM).json()
+
+    assert daten["punkte"] == {"wortlaut": punkte_einwilligung.AKTUELLER_WORTLAUT}
+    assert daten["rangliste"] == {"wortlaut": rangliste.AKTUELLER_WORTLAUT}
+    assert daten["abzeichen"] == {"wortlaut": abzeichen_sichtbarkeit.AKTUELLER_WORTLAUT}
