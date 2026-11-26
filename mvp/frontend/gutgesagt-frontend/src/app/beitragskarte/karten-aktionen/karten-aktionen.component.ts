@@ -145,6 +145,11 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
 
   /** „Als Bild teilen“ steht nur im Menue, wenn der Schalter an ist (#756, Standard aus). */
   readonly sharepicAn = inject(FunktionenService).an('sharepic');
+  /**
+   * „Melden“ als eigener, leiser Knopf unter der Leiste statt nur im ⋮-Menü (Schalter
+   * `meldeweg_sichtbar`, Standard aus); der Melde-Dialog ist derselbe.
+   */
+  readonly meldewegAn = inject(FunktionenService).an('meldeweg_sichtbar');
   /** „Danke an die Autorin“ nach dem Kopieren (#791); ohne Konto nur mit Unterschalter. */
   readonly dankeKnopfAn = inject(FunktionenService).an('danke_knopf');
   readonly dankeOhneKontoAn = inject(FunktionenService).an('danke_ohne_konto');
@@ -598,6 +603,11 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
     }
     const { pfad, queryParams } = vorlageAdresse(this.typ, this.inhaltId);
     this.router.navigate([pfad], { queryParams });
+  }
+
+  /** Der sichtbare Knopf „Melden“; nie in der Vorschau. Steht er, entfällt der Menüeintrag. */
+  get meldenSichtbar(): boolean {
+    return this.meldewegAn() && !this.vorschau;
   }
 
   openReportDialog(): void {

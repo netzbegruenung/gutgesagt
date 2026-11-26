@@ -539,6 +539,14 @@ officer has advised.
 | `danke_ohne_konto` | `SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV` | off | yes | V31 and visitor marker (#495); works only with `danke_knopf` |
 | `rangliste` | `SEMANTIC_SEARCH_RANGLISTE_AKTIV` | off | no | legal OK (wording, DSFA V28, privacy policy) and Punkte on (#793); works only with `punkte` |
 
+`meldeweg_sichtbar` (group Grundfunktionen, upper bound `SEMANTIC_SEARCH_MELDEWEG_SICHTBAR_AKTIV`,
+default off, public, no condition for switching on: preliminary legal assessment 26.11. without
+conditions): "Melden" as its own quiet button below the action bar of every Beitrag card instead of
+the ⋮ menu entry, and "Melden & Kontakt" in the footer with the reporting route and only the
+function address from the imprint (`LEGAL_ENTITY.KONTAKT_MAIL`), linking to the Art. 16 DSA section
+of the imprint (`/impressum#melden`). Display only: the report dialog and what it stores stay as
+they are.
+
 #### Saisons and Gemeinschaftsziel (#782)
 
 Table `saisons` (name, first and last day, goal in Widerspruchs-Wochen; no personal data),

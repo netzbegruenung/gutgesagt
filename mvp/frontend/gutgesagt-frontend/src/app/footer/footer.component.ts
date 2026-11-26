@@ -3,6 +3,8 @@ import { Component, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { RouterModule } from '@angular/router';
 import { hilfeOeffnen } from '../help-dialog/help-dialog.component';
+import { FunktionenService } from '../services/funktionen.service';
+import { LEGAL_ENTITY } from '../shared/legal-entity';
 // Default-Import: Der Karma-Builder (webpack) lehnt benannte Importe aus JSON ab.
 import paket from '../../../package.json';
 
@@ -51,6 +53,13 @@ function gesetzt(wert: string | undefined): wert is string {
 export class FooterComponent {
   private readonly buildWerte = buildWerteAusSeite(inject(DOCUMENT));
   readonly buildKennung = buildKennung(paket.version, this.buildWerte.gitSha, this.buildWerte.appVersion);
+  /** „Melden & Kontakt“ und der Meldeweg im Fuß (Schalter meldeweg_sichtbar, Standard aus). */
+  readonly meldewegAn = inject(FunktionenService).an('meldeweg_sichtbar');
+  /**
+   * Die Funktionsadresse für Meldungen, dieselbe wie in Impressum (Art. 16 DSA) und
+   * Nutzungsbedingungen (Abschnitt 7); keine Personennamen.
+   */
+  readonly meldeMail = LEGAL_ENTITY.KONTAKT_MAIL;
 
   constructor(
     private dialog: MatDialog) {

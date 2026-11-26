@@ -296,6 +296,17 @@ SCHALTER: Dict[str, Schalterart] = {
             oeffentlich=True,
         ),
         Schalterart(
+            name="meldeweg_sichtbar",
+            feld="meldeweg_sichtbar_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_MELDEWEG_SICHTBAR_AKTIV",
+            erklaerung=(
+                "„Melden“ als eigener Knopf an jeder Beitragskarte statt nur im "
+                "⋮-Menü, dazu „Melden & Kontakt“ mit der Funktionsadresse im Fuß; "
+                "speichert und zählt nichts Neues."
+            ),
+            oeffentlich=True,
+        ),
+        Schalterart(
             name="teams",
             gruppe=TEAMS,
             rechtlich_freigegeben=True,

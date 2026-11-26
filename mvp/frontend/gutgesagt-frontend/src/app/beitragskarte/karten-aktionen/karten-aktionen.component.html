@@ -90,7 +90,8 @@
             <mat-icon>call_split</mat-icon>
             <span>Als Vorlage nehmen</span>
         </button>
-        <button mat-menu-item type="button" (click)="openReportDialog()">
+        <!-- Mit Schalter meldeweg_sichtbar steht „Melden“ als Knopf unter der Leiste, nicht doppelt hier -->
+        <button mat-menu-item type="button" class="melden-eintrag" *ngIf="!meldenSichtbar" (click)="openReportDialog()">
             <mat-icon>flag</mat-icon>
             <span>Inhalt melden</span>
         </button>
@@ -101,6 +102,16 @@
             <span>Beitrag öffnen</span>
         </button>
     </mat-menu>
+</div>
+<!--
+    „Melden“ direkt sichtbar (Schalter meldeweg_sichtbar): leise unter der Leiste rechts, kleiner
+    als Kopieren; eine eigene Zeile, damit Kopieren bei 360 px seine Breite behält.
+-->
+<div class="melden-zeile" *ngIf="!album && meldenSichtbar">
+    <button mat-button type="button" class="melden-knopf" aria-label="Inhalt melden" (click)="openReportDialog()">
+        <mat-icon aria-hidden="true">outlined_flag</mat-icon>
+        <span class="melden-wort">Melden</span>
+    </button>
 </div>
 <!-- Danke an die Autorin nach dem Kopieren (#791) -->
 <app-danke-knopf *ngIf="dankeSichtbar" [inhaltId]="inhaltId"></app-danke-knopf>

@@ -318,6 +318,11 @@ class Settings(BaseSettings):
     # nichts uebertragen oder gespeichert wird; Standard aus ist der Admin-Wert
     # (services/schalter_service.py, ohne Eintrag aus).
     sharepic_aktiv: bool = True
+    # "Melden" sichtbar an jeder Beitragskarte und "Melden & Kontakt" im Fuss
+    # (Schalter meldeweg_sichtbar): nur Anzeige, die Meldefunktion selbst gibt es
+    # schon. Jura vorlaeufig ohne Bedingung (26.11.); Obergrenze trotzdem von Haus aus
+    # aus wie alles Neue zur BDK, eingeschaltet wird auf Ansage.
+    meldeweg_sichtbar_aktiv: bool = False
     # Teams ueber Einladungen (services/team_service.py): Teamfelder an der Einladung,
     # Beitreten mit eigener Einwilligung, "Meine Teams". Standard aus: Die
     # Mitgliedschaft ist im Zweifel ein Art.-9-Datum; erst mit DSFA-Nachtrag,
