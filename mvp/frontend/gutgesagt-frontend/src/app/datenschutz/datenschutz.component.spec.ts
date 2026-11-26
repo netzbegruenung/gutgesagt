@@ -1063,6 +1063,7 @@ describe('DatenschutzComponent: Spielgefühl', () => {
 
     expect(seite.querySelector('[data-testid="dse-spielgefuehl"]')).toBeNull();
     expect(abschnittIn(seite, 'Punkte')).toContain('Abzeichen an deinem Namen.');
+    expect(abschnittIn(seite, 'Punkte')).toContain('ohne deine Einwilligung „Punkte und Meilensteine“ gibt es keine, auch keine Wegmarken');
     expect(seite.querySelector('[data-testid="dse-rangliste-platzhalter"]')).not.toBeNull();
     expect(abschnittIn(seite, 'Punkte')).toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
   });
@@ -1079,6 +1080,10 @@ describe('DatenschutzComponent: Spielgefühl', () => {
     expect(punkte).not.toContain('Abzeichen an deinem Namen.');
     expect(punkte).toContain('und mit deiner Stufe gilt auch der Schutz gegen Absprachen (unten)');
     expect(punkte).toContain('deine Abzeichen zeigen wir nur in der Rangliste, wenn du mitspielst');
+    expect(punkte).toContain(
+      'ohne die Stufe ‚Nur für mich‘ oder ‚In der Saison-Rangliste mitspielen‘ beim Spielgefühl gibt es keine, auch keine Wegmarken',
+    );
+    expect(punkte).not.toContain('ohne deine Einwilligung „Punkte und Meilensteine“ gibt es keine');
     expect(punkte).toContain('Muster-Hinweis');
     expect(seite.querySelector('[data-testid="dse-rangliste-platzhalter"]')).toBeNull();
     expect(punkte).not.toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');

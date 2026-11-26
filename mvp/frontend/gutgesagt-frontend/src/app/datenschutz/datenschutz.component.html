@@ -838,8 +838,8 @@
             erreicht hast, still als gesehen, und genannt wird nur, was danach dazukommt.
         </ng-container>
         Keine Erinnerungen, keine Mails. Für Meilensteine gelten Zweck und Rechtsgrundlage wie
-        für die Punkte (unten); ohne deine Einwilligung „Punkte und Meilensteine“ gibt es
-        keine, auch keine Wegmarken.
+        für die Punkte (unten); <ng-container *ngIf="!spielgefuehlBuehne()">ohne deine Einwilligung „Punkte und Meilensteine“ gibt es
+        keine</ng-container><ng-container *ngIf="spielgefuehlBuehne()">ohne die Stufe ‚Nur für mich‘ oder ‚In der Saison-Rangliste mitspielen‘ beim Spielgefühl gibt es keine</ng-container>, auch keine Wegmarken.
       </p>
       <p>
         Damit Punkte nicht durch Absprachen entstehen, achten wir darauf, ob sich zwei Konten
