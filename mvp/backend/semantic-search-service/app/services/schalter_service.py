@@ -300,7 +300,7 @@ SCHALTER: Dict[str, Schalterart] = {
             feld="meldeweg_sichtbar_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_MELDEWEG_SICHTBAR_AKTIV",
             erklaerung=(
-                "„Melden“ als eigener Knopf an jeder Beitragskarte statt nur im "
+                "„Melden“ klein in der Meta-Zeile jeder Beitragskarte statt nur im "
                 "⋮-Menü, dazu „Melden & Kontakt“ mit der Funktionsadresse im Fuß; "
                 "speichert und zählt nichts Neues."
             ),

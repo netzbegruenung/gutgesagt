@@ -697,6 +697,57 @@ h4.karte-titel {
   color: var(--text-leise);
 }
 
+// Schalter meldeweg_sichtbar: „Melden“ klein am Ende der Meta-Zeile, die Angaben davor
+// linksbuendig. Bricht bei wenig Platz als Ganzes in eine eigene Zeile rechts um.
+.karte-meta--melden {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--spacing-sm);
+  text-align: left;
+}
+
+.karte-meta-text {
+  min-width: 0;
+}
+
+// Tippziel 24 x 24 px (WCAG 2.5.8); der negative Abstand oben und unten haelt die Zeile so
+// hoch wie ihre Schrift, das Tippziel ragt in den Innenabstand der Zeile.
+.melden-knopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 24px;
+  min-height: 24px;
+  margin: -5px 0 -5px auto;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  font: inherit;
+  white-space: nowrap;
+  color: var(--text-leise);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+
+  mat-icon {
+    width: 14px;
+    height: 14px;
+    font-size: 14px;
+  }
+
+  &:hover {
+    background-color: var(--mulde);
+    color: var(--text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--akzent-klee);
+    outline-offset: 1px;
+  }
+}
+
 /* Teams der aktuellen Saison am Anzeigenamen; brechen um, statt die Karte zu verbreitern */
 .autor-teams {
   display: inline-flex;

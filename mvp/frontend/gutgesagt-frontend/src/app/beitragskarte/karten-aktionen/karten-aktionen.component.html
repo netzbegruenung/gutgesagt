@@ -90,7 +90,7 @@
             <mat-icon>call_split</mat-icon>
             <span>Als Vorlage nehmen</span>
         </button>
-        <!-- Bleibt auch mit Schalter meldeweg_sichtbar: wer den Weg über das Menü kennt, findet ihn weiter -->
+        <!-- Bleibt auch mit Schalter meldeweg_sichtbar („Melden“ in der Meta-Zeile der Karte): wer den Weg über das Menü kennt, findet ihn weiter -->
         <button mat-menu-item type="button" class="melden-eintrag" (click)="openReportDialog()">
             <mat-icon>flag</mat-icon>
             <span>Inhalt melden</span>
@@ -102,16 +102,6 @@
             <span>Beitrag öffnen</span>
         </button>
     </mat-menu>
-</div>
-<!--
-    „Melden“ direkt sichtbar (Schalter meldeweg_sichtbar): leise unter der Leiste rechts, kleiner
-    als Kopieren; eine eigene Zeile, damit Kopieren bei 360 px seine Breite behält.
--->
-<div class="melden-zeile" *ngIf="!album && meldenSichtbar">
-    <button mat-button type="button" class="melden-knopf" (click)="openReportDialog()">
-        <mat-icon aria-hidden="true">outlined_flag</mat-icon>
-        <span class="melden-wort">Melden</span>
-    </button>
 </div>
 <!-- Danke an die Autorin nach dem Kopieren (#791) -->
 <app-danke-knopf *ngIf="dankeSichtbar" [inhaltId]="inhaltId"></app-danke-knopf>

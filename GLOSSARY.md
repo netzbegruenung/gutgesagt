@@ -416,7 +416,7 @@ Der Hinweis einer Person an die Admins, dass ein Beitrag problematisch ist; auch
 _Avoid_: Report, Flag, Beschwerde
 
 **Meldeweg**:
-Wie eine Person einen Beitrag meldet: über „Melden“ an der Beitragskarte, auch ohne Konto, oder per E-Mail an die Funktionsadresse aus dem Impressum (Abschnitt DSA-Kontaktstelle, Art. 11/12, mit den Meldungen nach Art. 16). Mit dem Schalter `meldeweg_sichtbar` steht „Melden“ zusätzlich als eigener leiser Knopf unter der Aktionsleiste, und der Fuß nennt unter „Melden & Kontakt“ diesen Weg mit der Adresse; „Inhalt melden“ im ⋮-Menü bleibt in beiden Fällen.
+Wie eine Person einen Beitrag meldet: über „Melden“ an der Beitragskarte, auch ohne Konto, oder per E-Mail an die Funktionsadresse aus dem Impressum (Abschnitt DSA-Kontaktstelle, Art. 11/12, mit den Meldungen nach Art. 16). Mit dem Schalter `meldeweg_sichtbar` steht „Melden“ zusätzlich klein am Ende der Meta-Zeile der Karte, und der Fuß nennt unter „Melden & Kontakt“ diesen Weg mit der Adresse; „Inhalt melden“ im ⋮-Menü bleibt in beiden Fällen.
 _Avoid_: Beschwerdeweg, Report-Link
 
 **Erklärung guten Glaubens**:
