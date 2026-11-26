@@ -434,6 +434,12 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   7 days; `null` while off) and `GET /api/v1/usage/users/me/aussagen` lists one's own Aussagen
   with their answers (404 while off; only opened by a click on its tab, which shows only
   while on), `services/antworten_hinweis.py`.
+- `SEMANTIC_SEARCH_SHAREPIC_AKTIV` - upper bound of the Schalter `sharepic` (#756, default `true`:
+  the card draws the image in the browser and hands it to the device's share menu, nothing is
+  sent or stored); takes effect only when an admin switches it on.
+- `SEMANTIC_SEARCH_MELDEWEG_SICHTBAR_AKTIV` - upper bound of the Schalter `meldeweg_sichtbar`
+  (default `false`): "Melden" in the meta line of every Beitrag card and "Melden & Kontakt" in the
+  footer, display only; details below (section "Schalter für das Spielgefühl").
 - `SEMANTIC_SEARCH_TEAMS_AKTIV` - upper bound of the Schalter `teams` (Teams over
   invitations, GLOSSARY.md "Team", "Teamlink", "Mitgliedschaft", "Saison"; default `false`: a
   Mitgliedschaft may reveal political leaning and place, so it needs its own consent, the DSFA

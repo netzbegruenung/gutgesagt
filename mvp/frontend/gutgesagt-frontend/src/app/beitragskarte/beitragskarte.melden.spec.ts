@@ -26,6 +26,7 @@ describe('Beitragskarte: Melden in der Meta-Zeile', () => {
   let fixture: ComponentFixture<BeitragskarteComponent>;
   let dialog: jasmine.SpyObj<MatDialog>;
   let meldeweg: WritableSignal<boolean>;
+  let auth: jasmine.SpyObj<AuthService>;
 
   function daten(felder: Record<string, unknown> = {}) {
     return ausSuchergebnis({
@@ -76,9 +77,9 @@ describe('Beitragskarte: Melden in der Meta-Zeile', () => {
   beforeEach(async () => {
     meldeweg = signal(false);
     dialog = jasmine.createSpyObj('MatDialog', ['open']);
-    const auth = jasmine.createSpyObj('AuthService', ['getUserInfo', 'login']);
-    auth.getUserInfo.and.returnValue({ isAuthenticated: false });
-    auth.userInfo$ = new BehaviorSubject<UserInfo | null>({ isAuthenticated: false } as UserInfo);
+    auth = jasmine.createSpyObj('AuthService', ['getUserInfo', 'login']);
+    auth.getUserInfo.and.returnValue({ isAuthenticated: false } as UserInfo);
+    (auth as any).userInfo$ = new BehaviorSubject<UserInfo | null>({ isAuthenticated: false } as UserInfo);
 
     await TestBed.configureTestingModule({
       imports: [BeitragskarteComponent, NoopAnimationsModule],
@@ -142,6 +143,32 @@ describe('Beitragskarte: Melden in der Meta-Zeile', () => {
 
     expect(knopf()).not.toBeNull();
     expect(meta()!.getBoundingClientRect().height).toBeLessThanOrEqual(vorher + 1);
+  });
+
+  it('angemeldet mit Autorzeile und Teams, schmal: „Melden“ bleibt in der ersten Zeile', () => {
+    auth.getUserInfo.and.returnValue({ isAuthenticated: true, userId: 'test-user' } as UserInfo);
+    const teams = ['Nordwind', 'Sonnenblume', 'Lastenrad'].map((name) => ({ name, motiv: null, motiv_name: null }));
+    fixture = TestBed.createComponent(BeitragskarteComponent);
+    fixture.nativeElement.style.display = 'block';
+    fixture.nativeElement.style.width = '256px';
+    fixture.componentRef.setInput('daten', daten({ autor_name: 'Kim Beispiel', autor_teams: teams }));
+    fixture.detectChanges();
+    expect(meta()!.textContent).toContain('Von: Kim Beispiel');
+
+    meldeweg.set(true);
+    fixture.detectChanges();
+
+    const text = meta()!.querySelector('.karte-meta-text')!.getBoundingClientRect();
+    const k = knopf()!.getBoundingClientRect();
+    // Rechts neben dem Text, nicht darunter: oben auf Höhe der ersten Textzeile
+    expect(k.left).toBeGreaterThanOrEqual(text.right);
+    expect(k.top).toBeLessThan(text.top + 4);
+    // Keine eigene Zeile nur für „Melden“: unter dem Text folgt nur der Innenabstand der Zeile.
+    // (Wird der Text schmaler, kann er selbst eine Zeile mehr brauchen; das misst dieser Test nicht.)
+    expect(meta()!.getBoundingClientRect().bottom - text.bottom).toBeLessThanOrEqual(
+      parseFloat(getComputedStyle(meta()!).paddingBottom) + 1,
+    );
+    expect(k.bottom).toBeLessThanOrEqual(text.bottom + 7);
   });
 
   it('Tippziel mindestens 24 × 24 px (WCAG 2.5.8)', () => {

@@ -698,28 +698,34 @@ h4.karte-titel {
 }
 
 // Schalter meldeweg_sichtbar: „Melden“ klein am Ende der Meta-Zeile, die Angaben davor
-// linksbuendig. Bricht bei wenig Platz als Ganzes in eine eigene Zeile rechts um.
+// linksbuendig. Kein Umbruch zwischen beiden: Lange Angaben (Autorzeile mit Teams) brechen
+// in sich um, „Melden“ bleibt rechts in der ersten Zeile, statt eine eigene Zeile zu kosten.
 .karte-meta--melden {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-wrap: nowrap;
+  align-items: flex-start;
   column-gap: var(--spacing-sm);
   text-align: left;
+
+  .karte-meta-text {
+    flex: 1 1 0;
+    min-width: 0;
+  }
 }
 
-.karte-meta-text {
-  min-width: 0;
-}
-
-// Tippziel 24 x 24 px (WCAG 2.5.8); der negative Abstand oben und unten haelt die Zeile so
-// hoch wie ihre Schrift, das Tippziel ragt in den Innenabstand der Zeile.
+// Tippziel 24 x 24 px (WCAG 2.5.8). Der negative Abstand oben und unten haelt die Zeile so
+// hoch wie ihre Schrift: Unten ragt das Tippziel in den Innenabstand der Meta-Zeile, oben
+// rund 3 px in den unteren Innenabstand der Aktionsleiste (16 px), ohne deren Knoepfe zu
+// ueberlappen.
 .melden-knopf {
   display: inline-flex;
   align-items: center;
   gap: 2px;
   min-width: 24px;
   min-height: 24px;
-  margin: -5px 0 -5px auto;
+  flex: none;
+  // oben 3 px weniger als unten: so steht „Melden“ auf Hoehe der ersten Textzeile
+  margin: -3px 0 -7px auto;
   padding: 0 4px;
   border: 0;
   border-radius: 4px;
