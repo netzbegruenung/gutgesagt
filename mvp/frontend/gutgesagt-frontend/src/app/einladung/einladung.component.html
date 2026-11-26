@@ -23,7 +23,13 @@
       <p>Hast du schon ein Konto? Dann <a routerLink="/login">melde dich an</a>.</p>
     </form>
 
-    <p *ngIf="stand === 'pruefe'">Einladung wird geprüft …</p>
+    <ng-container *ngIf="stand === 'pruefe'">
+      <p *ngIf="!vielLos">Einladung wird geprüft …</p>
+      <!-- Angesagt über die Live-Region oben (ansage); hier nur sichtbar. -->
+      <p *ngIf="vielLos" class="viel-los" data-testid="viel-los">
+        {{ vielLosText }} Lass die Seite einfach offen, dein Link bleibt erhalten.
+      </p>
+    </ng-container>
 
     <ng-container *ngIf="stand === 'ungueltig'">
       <p>
@@ -227,6 +233,9 @@
       <button mat-raised-button color="primary" type="submit" [disabled]="!vollstaendig || stand === 'sendet'">
         Konto anlegen
       </button>
+      <p *ngIf="stand === 'sendet' && vielLos" class="viel-los" data-testid="viel-los">
+        {{ vielLosText }} Lass die Seite einfach offen, deine Angaben<ng-container *ngIf="team"> und deine Wahl zum Team</ng-container> bleiben erhalten.
+      </p>
     </form>
 
     <ng-container *ngIf="stand === 'gesendet'">

@@ -1,4 +1,5 @@
-import { Component, ElementRef, Injector, OnInit, Signal, ViewChild, afterNextRender, inject } from '@angular/core';
+import { Component, DestroyRef, ElementRef, Injector, OnInit, Signal, ViewChild, afterNextRender, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
@@ -8,7 +9,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { forkJoin, of } from 'rxjs';
+import { Subscription, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { EINLADUNG_NAME_MAX, EinladungService, nameGueltig } from '../shared/einladung/einladung.service';
 import {
@@ -25,6 +26,7 @@ import { teamBegruessungSaetze, teamBegruessungTitel, teamDabeiSatz, teamGruppeS
 import { teamMerkerAblegen, teamMerkerLesen, teamMerkerLoeschen, teamMerkerNehmen } from './team-merker';
 import { ERSTER_SPRUCH } from './erster-spruch';
 import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
+import { mitNeuversuch, voruebergehend } from '../shared/neuversuch';
 
 /**
  * Stände der Seite. Ohne Konto: eingeben … gesendet, bei einer Einladung mit Team mit dem
@@ -110,6 +112,30 @@ function fehlerBei422(e: HttpErrorResponse): Fehler {
 function wortlautBeimBeitretenVeraltet(e: HttpErrorResponse): boolean {
   const felder = felderBei422(e);
   return e.status === 422 && (felder.includes('einwilligung_kennung') || felder.includes('oeffentlich_kennung'));
+}
+
+/** Hinweis, solange die Seite nach 429, Netz- oder Serverfehler selbst noch einmal fragt. */
+export const VIEL_LOS = 'Gerade ist viel los – wir versuchen es gleich noch einmal …';
+
+/**
+ * So oft sendet Einlösen nach Netz- oder Serverfehlern selbst noch einmal (etwa 30 s), bevor
+ * die Seite den Fehler zeigt; nach 429 ohne Grenze, denn dann hat der Server nichts getan.
+ */
+export const EINLOESEN_NEUVERSUCHE = 4;
+
+/**
+ * Ob Einlösen nach diesem Fehler noch einmal gesendet wird. 503 mit „Registration not
+ * configured“ (api/v1/einladungen.py) ist kein Engpass, sondern fehlende Einrichtung.
+ */
+export function einloesenNochmal(fehler: unknown, versuch: number): boolean {
+  const e = fehler as HttpErrorResponse | null;
+  if (e?.status === 429) {
+    return true;
+  }
+  if (e?.status === 503 && e.error?.detail === 'Registration not configured') {
+    return false;
+  }
+  return voruebergehend(fehler) && versuch <= EINLOESEN_NEUVERSUCHE;
 }
 
 /** Zeichen eines Codes: secrets.token_urlsafe im Backend, hoechstens CODE_MAX (api/v1/einladungen.py). */
@@ -217,6 +243,16 @@ export class EinladungComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly funktionen = inject(FunktionenService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /**
+   * Prüfen oder Einlösen scheiterte vorübergehend (429 im Saal-WLAN, Netz, 5xx), und die Seite
+   * fragt gleich selbst noch einmal. Code, Team und Eingaben bleiben dabei stehen.
+   */
+  vielLos = false;
+  readonly vielLosText = VIEL_LOS;
+  /** Die laufende Prüfung; eine neue (anderer Link, neuer Wortlaut) ersetzt sie samt Neuversuchen. */
+  private pruefung: Subscription | null = null;
 
   /** Das Team der Einladung aus /pruefen; null ohne Team oder bei Schalter aus. */
   team: TeamBeimPruefen | null = null;
@@ -310,44 +346,57 @@ export class EinladungComponent implements OnInit {
     this.teamOeffentlich = false;
     this.nochmalGefragt = false;
     this.wortlautNeu = false;
-    forkJoin({
-      // Pruefen ist nur Komfort: Im Zweifel das Formular zeigen, Einloesen prueft erneut.
-      antwort: this.einladungService.pruefen(code).pipe(catchError(() => of<PruefenAntwort | null>(null))),
+    this.vielLos = false;
+    this.pruefung?.unsubscribe();
+    this.pruefung = forkJoin({
+      antwort: this.einladungService.pruefen(code).pipe(
+        // Im vollen Saal reisst das Limit je Anschluss: nicht still ohne Team weiter, sondern
+        // mit Hinweis warten und selbst noch einmal fragen, bis die Antwort da ist.
+        mitNeuversuch({ beimWarten: () => (this.vielLos = true) }),
+        // Andere Fehler (etwa 422 bei einem kaputten Code): das Formular, Einloesen prueft erneut.
+        catchError(() => of<PruefenAntwort | null>(null)),
+      ),
       angemeldet: sitzungPruefen(this.http),
-    }).subscribe(({ antwort, angemeldet }) => {
-      this.angemeldet = angemeldet;
-      // Der Merker gilt einmal und nur für diesen Code; ohne Anmeldung bleibt er für den Rücksprung.
-      const merker = angemeldet && teamMerkerLesen()?.code === code ? teamMerkerNehmen() : null;
-      if (!antwort) {
-        this.stand = 'formular';
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(({ antwort, angemeldet }) => this.geprueft(code, antwort, angemeldet));
+  }
+
+  /** Die Antwort von /pruefen ist da (nach Neuversuchen erst jetzt): weiter nach Stand. */
+  private geprueft(code: string, antwort: PruefenAntwort | null, angemeldet: boolean) {
+    this.vielLos = false;
+    this.angemeldet = angemeldet;
+    // Der Merker gilt einmal und nur für diesen Code; ohne Anmeldung bleibt er für den Rücksprung.
+    const merker = angemeldet && teamMerkerLesen()?.code === code ? teamMerkerNehmen() : null;
+    if (!antwort) {
+      this.stand = 'formular';
+      return;
+    }
+    const mitJa = !!merker?.kennung;
+    if (!antwort.einloesbar) {
+      if (angemeldet && antwort.team && antwort.team.eigene_nummer != null) {
+        // Auch nach Ablauf: Ein Mitglied sieht seine Nummer statt „gilt nicht“.
+        this.team = antwort.team;
+        this.schonImTeam(antwort.team, mitJa);
         return;
       }
-      const mitJa = !!merker?.kennung;
-      if (!antwort.einloesbar) {
-        if (angemeldet && antwort.team && antwort.team.eigene_nummer != null) {
-          // Auch nach Ablauf: Ein Mitglied sieht seine Nummer statt „gilt nicht“.
-          this.team = antwort.team;
-          this.schonImTeam(antwort.team, mitJa);
-          return;
-        }
-        // Nach „Ja“ beim Anlegen, aber ohne Mitgliedschaft, und der Link gilt nicht mehr.
-        this.stand = angemeldet && mitJa ? 'kein_team' : 'ungueltig';
-        return;
-      }
-      this.team = antwort.team;
-      if (this.team) {
-        // Signal aus dem geteilten Stand: Ein Umschalten auf der Admin-Seite kommt ohne Neuladen
-        // an, spätestens mit dem nächsten Abruf nach FUNKTIONEN_NACHLADEN_MS (5 Minuten).
-        this.vertrauenssatzAn = this.funktionen.an('teamlink_vertrauenssatz');
-      }
-      if (!angemeldet) {
-        this.stand = 'formular';
-      } else if (this.team) {
-        this.angemeldetMitTeam(this.team, mitJa);
-      } else {
-        this.angemeldetOhneTeam();
-      }
-    });
+      // Nach „Ja“ beim Anlegen, aber ohne Mitgliedschaft, und der Link gilt nicht mehr.
+      this.stand = angemeldet && mitJa ? 'kein_team' : 'ungueltig';
+      return;
+    }
+    this.team = antwort.team;
+    if (this.team) {
+      // Signal aus dem geteilten Stand: Ein Umschalten auf der Admin-Seite kommt ohne Neuladen
+      // an, spätestens mit dem nächsten Abruf nach FUNKTIONEN_NACHLADEN_MS (5 Minuten).
+      this.vertrauenssatzAn = this.funktionen.an('teamlink_vertrauenssatz');
+    }
+    if (!angemeldet) {
+      this.stand = 'formular';
+    } else if (this.team) {
+      this.angemeldetMitTeam(this.team, mitJa);
+    } else {
+      this.angemeldetOhneTeam();
+    }
   }
 
   /** Mit Ja beim Anlegen: gerade beim Anlegen des Kontos beigetreten; sonst schon länger dabei. */
@@ -491,29 +540,38 @@ export class EinladungComponent implements OnInit {
     const team = this.team;
     const ja = !!team && this.teamWahl === 'ja';
     const teamAntwort = team ? this.teamAntwort(team, ja) : undefined;
-    this.einladungService.einloesen(this.code, email, this.vorname.trim(), this.nachname.trim(), teamAntwort).subscribe({
-      next: () => {
-        // Für den Rücksprung nach der Mail: nur nach „Ja“, nur Code und Kennung des Wortlauts.
-        if (team && ja) {
-          teamMerkerAblegen({ code: this.code, kennung: team.einwilligung_kennung, oeffentlich: !!teamAntwort?.oeffentlich });
-        } else {
-          teamMerkerLoeschen();
-        }
-        this.stand = 'gesendet';
-      },
-      error: (e: HttpErrorResponse) => {
-        if (e.status === 410) {
-          this.stand = 'ungueltig';
-          return;
-        }
-        this.fehler = e.status === 422 ? fehlerBei422(e) : (FEHLER_NACH_STATUS[e.status] ?? 'unbekannt');
-        if (this.fehler === 'wortlaut') {
-          this.wortlautNeuHolen();
-          return;
-        }
-        this.stand = 'fehler';
-      },
-    });
+    this.vielLos = false;
+    this.einladungService
+      .einloesen(this.code, email, this.vorname.trim(), this.nachname.trim(), teamAntwort)
+      .pipe(
+        mitNeuversuch({ nochmal: einloesenNochmal, beimWarten: () => (this.vielLos = true) }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.vielLos = false;
+          // Für den Rücksprung nach der Mail: nur nach „Ja“, nur Code und Kennung des Wortlauts.
+          if (team && ja) {
+            teamMerkerAblegen({ code: this.code, kennung: team.einwilligung_kennung, oeffentlich: !!teamAntwort?.oeffentlich });
+          } else {
+            teamMerkerLoeschen();
+          }
+          this.stand = 'gesendet';
+        },
+        error: (e: HttpErrorResponse) => {
+          this.vielLos = false;
+          if (e.status === 410) {
+            this.stand = 'ungueltig';
+            return;
+          }
+          this.fehler = e.status === 422 ? fehlerBei422(e) : (FEHLER_NACH_STATUS[e.status] ?? 'unbekannt');
+          if (this.fehler === 'wortlaut') {
+            this.wortlautNeuHolen();
+            return;
+          }
+          this.stand = 'fehler';
+        },
+      });
   }
 
   /** Neuen Wortlaut holen und noch einmal fragen, ohne dass jemand die Seite neu laden muss. */
@@ -523,6 +581,9 @@ export class EinladungComponent implements OnInit {
   }
 
   get ansage(): string {
+    if (this.vielLos && (this.stand === 'pruefe' || this.stand === 'sendet')) {
+      return VIEL_LOS;
+    }
     if (this.stand === 'formular' && this.team && !this.angemeldet) {
       return `Einladung ins Team ${this.team.name} gefunden.`;
     }
