@@ -94,9 +94,11 @@ def test_einschalt_hinweise_teams():
     # die Anzeige am Namen nicht
     assert stand["teams_oeffentlich"].dsfa_hinweis.startswith("Aus lassen")
     assert stand["teams_oeffentlich"].wartet_auf_recht is True
-    for name in ("team_fortschritt", "team_quests"):
-        assert stand[name].dsfa_hinweis.startswith("Jura vorläufig ok 26.11.")
-        assert "Go des Vorstands" in stand[name].dsfa_hinweis
-        assert stand[name].wartet_auf_recht is True
+    assert stand["team_fortschritt"].dsfa_hinweis.startswith("Jura vorläufig ok 26.11.")
+    assert "Go des Vorstands" in stand["team_fortschritt"].dsfa_hinweis
     assert "ab 5 Mitgliedern" in stand["team_fortschritt"].dsfa_hinweis
+    # Kein DSE-Satz zu Team-Quests: aus lassen
+    assert stand["team_quests"].dsfa_hinweis.startswith("Aus lassen")
+    for name in ("team_fortschritt", "team_quests"):
+        assert stand[name].wartet_auf_recht is True
     assert DSFA_HINWEIS not in stand["team_fortschritt"].dsfa_hinweis

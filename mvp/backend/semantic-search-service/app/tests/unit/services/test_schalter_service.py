@@ -3,6 +3,9 @@ Schalter mit Obergrenze und Admin-Wert (#708): wirksam nur, wenn beide an sind; 
 Admin-Wert aus; Einschalten ueber die Obergrenze hinaus abgelehnt; kurzer Cache.
 """
 
+import re
+from pathlib import Path
+
 import pytest
 
 from core.config import Settings
@@ -161,6 +164,7 @@ def test_stand_nennt_obergrenze_admin_wert_wirksam_und_dsfa_hinweis():
     assert stand["gepostet"].admin_wert is False
     assert "DSFA" in stand["punkte"].dsfa_hinweis
     assert "DSFA" in stand["abzeichen_sichtbar"].dsfa_hinweis
+    assert stand["abzeichen_sichtbar"].dsfa_hinweis.startswith("Aus lassen")
     assert stand["gepostet"].dsfa_hinweis is None
     assert stand["merkliste"].wartet_auf_recht is True
     assert stand["abkuerzungen"].dsfa_hinweis is None
@@ -269,27 +273,25 @@ def test_stimmen_text_verfall_standard_aus_mit_jura_bedingung():
     assert stand["stimmen_text_verfall"].wartet_auf_recht is True
 
 
-# Schalter, an denen die Datenschutzerklaerung einen Absatz oder Satz haengt
-# (datenschutz.component.ts). Grundsatz Jura 26.11.: kein Schalter ohne seinen Absatz.
-# Das Frontend kennt nur, was GET /api/v1/funktionen meldet; ein nicht oeffentlicher
-# Schalter liesse den Absatz auch eingeschaltet weg.
-DSE_SCHALTER = (
-    "dse_kurzfassung",
-    "punkte",
-    "rangliste",
-    "team_fortschritt",
-    "wirkungs_echo",
-    "danke_knopf",
-    "gepostet_ohne_konto",
-    "antworten_hinweis",
-    "naechster_schritt",
-    "meldeweg_sichtbar",
-    "feedback_gestoert",
-    "null_treffer_anzahl",
-    "k_begruessung",
-    "bestandszahl_zuwachs",
-    "stimmen_text_verfall",
+# Schalter, an denen die Datenschutzerklaerung einen Absatz oder Satz haengt, gelesen
+# aus datenschutz.component.ts (jedes ``.an('<name>')``). Grundsatz Jura 26.11.: kein
+# Schalter ohne seinen Absatz. Das Frontend kennt nur, was GET /api/v1/funktionen
+# meldet; ein nicht oeffentlicher Schalter liesse den Absatz auch eingeschaltet weg.
+_DSE_KOMPONENTE = (
+    Path(__file__).resolve().parents[6]
+    / "frontend/gutgesagt-frontend/src/app/datenschutz/datenschutz.component.ts"
 )
+DSE_SCHALTER = tuple(
+    sorted(set(re.findall(r"\.an\('([a-z_]+)'\)", _DSE_KOMPONENTE.read_text())))
+)
+
+
+def test_dse_schalter_aus_der_komponente_gelesen():
+    # Die Erklaerung haengt heute mindestens an diesen; faellt das Lesen still aus,
+    # waere der Test darunter leer
+    assert {"punkte", "rangliste", "wirkungs_echo", "dse_kurzfassung"} <= set(
+        DSE_SCHALTER
+    )
 
 
 @pytest.mark.parametrize("name", DSE_SCHALTER)
@@ -301,7 +303,14 @@ def test_schalter_der_datenschutzerklaerung_sind_oeffentlich(name):
 
 @pytest.mark.parametrize(
     "name",
-    ["teams_oeffentlich", "merkliste", "aufrufe_zaehlen", "k_ankuenfte"],
+    [
+        "teams_oeffentlich",
+        "merkliste",
+        "aufrufe_zaehlen",
+        "k_ankuenfte",
+        "team_quests",
+        "abzeichen_sichtbar",
+    ],
 )
 def test_aus_lassen_laut_jura_26_11(name):
     """Jura vorlaeufig 26.11.: diese bleiben fuer den internen Test aus, mit Grund."""
@@ -310,3 +319,12 @@ def test_aus_lassen_laut_jura_26_11(name):
     hinweis = SCHALTER[name].einschalt_hinweis
     assert hinweis.startswith("Aus lassen (Jura 26.11.): ")
     assert len(hinweis) > len("Aus lassen (Jura 26.11.): ") + 10
+
+
+def test_danke_ohne_konto_nicht_einschalten():
+    """Variante B (Jura 25.11.) nicht erfuellt; die Erklaerung hat dafuer keinen Satz."""
+    from services.schalter_service import SCHALTER
+
+    hinweis = SCHALTER["danke_ohne_konto"].einschalt_hinweis
+    assert hinweis.startswith("Nicht einschalten (Jura 26.11.): ")
+    assert "Variante B" in hinweis

@@ -37,7 +37,8 @@ DSFA_HINWEIS = (
 # steht in der Datenschutzerklaerung und haengt am Schalter. Rechtlich freigegeben sind
 # sie damit nicht; vor der Ausweitung auf Vorhut oder BDK bleibt das Go des Vorstands
 # noetig (Beschluss 25.11.).
-JURA_VORLAEUFIG = "Jura vorläufig ok 26.11. (interner Test), DSE-Absatz drin"
+JURA_26_11 = "Jura vorläufig ok 26.11. (interner Test)"
+JURA_VORLAEUFIG = f"{JURA_26_11}, DSE-Absatz drin"
 GO_VOR_AUSWEITUNG = "vor Vorhut/BDK das Go des Vorstands"
 
 # Gruppen der Admin-Seite "Schalter", in dieser Reihenfolge (Sebastian 25.11.: die
@@ -197,7 +198,7 @@ SPIEL_SCHALTER = (
         ),
         einschalt_hinweis=(
             f"{JURA_VORLAEUFIG} (drei gespeicherte Zahlen, Zählerstand des Echos); "
-            "am besten zusammen mit danke_knopf"
+            "nur zusammen mit danke_knopf, der Absatz nennt beide Summen"
         ),
         # Die Datenschutzerklaerung blendet ihren Absatz danach ein (GET /api/v1/funktionen)
         oeffentlich=True,
@@ -211,7 +212,10 @@ SPIEL_SCHALTER = (
             "Knopf „Danke an die Autorin“ nach dem Kopieren, für Angemeldete; die "
             "Autorin sieht nur die Summe je Beitrag. Bringt keine Punkte."
         ),
-        einschalt_hinweis=JURA_VORLAEUFIG,
+        einschalt_hinweis=(
+            f"{JURA_VORLAEUFIG}; nur zusammen mit wirkungs_echo, der Absatz nennt "
+            "beide Summen"
+        ),
         oeffentlich=True,
     ),
     Schalterart(
@@ -261,7 +265,7 @@ SCHALTER: Dict[str, Schalterart] = {
                 "dazu die Muster-Hinweise für Admins."
             ),
             dsfa_hinweis=True,
-            einschalt_hinweis=f"{JURA_VORLAEUFIG}; {GO_VOR_AUSWEITUNG} (DSFA)",
+            einschalt_hinweis=f"{JURA_VORLAEUFIG}; {GO_VOR_AUSWEITUNG} (mit DSFA)",
             oeffentlich=True,
         ),
         Schalterart(
@@ -274,6 +278,10 @@ SCHALTER: Dict[str, Schalterart] = {
                 "wirkt nur zusammen mit den Punkten, erscheint spätestens nach 15 Minuten."
             ),
             dsfa_hinweis=True,
+            einschalt_hinweis=(
+                "Aus lassen (Jura 26.11.): nicht in der Ampel für den internen Test, "
+                "DSFA offen; die Vertrauenszeile stimmt nur ohne Abzeichen"
+            ),
         ),
         Schalterart(
             name="gepostet",
@@ -419,7 +427,7 @@ SCHALTER: Dict[str, Schalterart] = {
                 "unsichtbar, solange ein Satz noch Platzhalter ist."
             ),
             einschalt_hinweis=(
-                "Jura vorläufig ok 26.11. (interner Test), Wortlaut drin; Name des "
+                f"{JURA_26_11}, Wortlaut drin; Name des "
                 "Verantwortlichen wie im Abschnitt „Verantwortlicher“"
             ),
             oeffentlich=True,
@@ -484,7 +492,7 @@ SCHALTER: Dict[str, Schalterart] = {
                 "nichts; wirkt nur zusammen mit „teams“."
             ),
             einschalt_hinweis=(
-                "Jura vorläufig ok 26.11. (interner Test), Wortlaut drin; nennt die "
+                f"{JURA_26_11}, Wortlaut drin; nennt die "
                 "Team-Summe, also zusammen mit team_fortschritt einschalten"
             ),
             oeffentlich=True,
@@ -529,8 +537,9 @@ TEAM_SCHALTER = (
         ),
         dsfa_hinweis=True,
         einschalt_hinweis=(
-            f"{JURA_VORLAEUFIG} (Punkte-Wortlaut 2026-11-13 deckt Quest-Punkte); "
-            f"{GO_VOR_AUSWEITUNG}"
+            "Aus lassen (Jura 26.11.): Die Erklärung nennt Wochenziel und Quest-Punkte "
+            "nicht; der Punkte-Wortlaut 2026-11-13 deckt nur die Einwilligung. Erst mit "
+            "DSE-Satz oder Jura-Bestätigung, dass keiner nötig ist"
         ),
     ),
 )
@@ -553,7 +562,7 @@ SCHALTER["vertrauenszeile"] = Schalterart(
         "„Datenschutz“. Speichert und zählt nichts."
     ),
     einschalt_hinweis=(
-        "Jura vorläufig ok 26.11. (interner Test), Wortlaut mit Team-Summe und "
+        f"{JURA_26_11}, Wortlaut mit Team-Summe und "
         "Rangliste drin; stimmt nur, solange teams_oeffentlich und "
         "abzeichen_sichtbar aus sind"
     ),
@@ -578,7 +587,7 @@ HINWEIS_SCHALTER = (
             "aufklappbar dahinter. Speichert nichts Neues."
         ),
         einschalt_hinweis=(
-            "Jura vorläufig ok 26.11. (interner Test): Wortlaut „Wie wir Suchen "
+            f"{JURA_26_11}: Wortlaut „Wie wir Suchen "
             "speichern“, weil Suchvorgänge Angemeldeter an der Kennung hängen"
         ),
         oeffentlich=True,
