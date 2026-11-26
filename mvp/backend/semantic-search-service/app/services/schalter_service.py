@@ -537,9 +537,9 @@ TEAM_SCHALTER = (
         ),
         dsfa_hinweis=True,
         einschalt_hinweis=(
-            "Aus lassen (Jura 26.11.): Die Erklärung nennt Wochenziel und Quest-Punkte "
-            "nicht; der Punkte-Wortlaut 2026-11-13 deckt nur die Einwilligung. Erst mit "
-            "DSE-Satz oder Jura-Bestätigung, dass keiner nötig ist"
+            "Aus lassen (Jura 26.11.): DSE-Satz nötig; Juras Entwurf passt nicht zum "
+            "Code (gespeichert werden Thema und Ziel jeder Woche, nicht erfüllte Quests; "
+            "eine Team-Löschung gibt es nicht, die Zeilen bleiben unbefristet)"
         ),
     ),
 )

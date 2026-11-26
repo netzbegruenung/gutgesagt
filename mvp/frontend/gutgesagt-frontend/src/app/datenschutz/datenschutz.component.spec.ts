@@ -315,11 +315,15 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('ohne die genutzten Beiträge (siehe „Punkte“)');
     });
 
-    it('Profiling: nur mit eingeschalteten Punkten, ohne Folgen', () => {
+    it('Profiling: nur mit eingeschalteten Punkten, keine allein automatisierte Entscheidung (Jura 26.11.)', () => {
       const text = abschnitt('Keine automatisierte Entscheidungsfindung');
 
       expect(text).toContain('solange Punkte ausgeschaltet sind');
-      expect(text).toContain('hat keine Folgen für dich');
+      expect(text).toContain(
+        'er wird automatisch berechnet. Deinen Punktestand zeigen wir nur dir. Eine Entscheidung, die allein ' +
+          'automatisiert getroffen wird und dir gegenüber rechtliche oder ähnlich erhebliche Wirkung hat, gibt es nicht.',
+      );
+      expect(text).not.toContain('Saison-Rangliste');
     });
   });
 
@@ -1149,14 +1153,15 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     'An deinen Beiträgen zeigen wir dir, wie oft andere sie verwendet und sich dafür bedankt haben. Hast du ' +
     'einen fremden Beitrag kopiert, kannst du mit „Danke“ der Person danken, die ihn geschrieben hat; sie ' +
     'sieht nur die Summe, nie, wer gedankt hat. Dafür speichern wir je Beitrag nur zwei Summen, ohne ' +
-    'Kennung und ohne Zeitpunkt. Damit dein Danke je Beitrag und Tag nur einmal zählt, nutzen wir den ' +
-    'Tages-Prüfwert vom Kopieren (siehe „Verwendung von Beiträgen“), der mit dem Tageswechsel verfällt. Was ' +
+    'Kennung und ohne Zeitpunkt. Damit dein Danke je Beitrag und Tag nur einmal zählt, nutzen wir einen ' +
+    'eigenen Tages-Prüfwert, gebildet wie beim Kopieren und wie dieser mit dem Tageswechsel gelöscht. Was ' +
     'seit deinem letzten Besuch an Echo dazukam, merken wir uns als weiteren Zählerstand zu deiner Kennung.';
   const GEPOSTET_OHNE_KONTO =
     'Auch ohne Anmeldung kannst du nach dem Kopieren „Ja, gepostet“ tippen. Dann zählen wir für die laufende ' +
     'Kalenderwoche nur eins dazu, ohne Kennung, ohne Prüfwert und ohne etwas in deinem Browser zu ' +
-    'speichern; der Knopf ist danach ausgegraut. Gegen Missbrauch begrenzen wir Meldungen je Anschluss nur ' +
-    'für wenige Sekunden im Arbeitsspeicher. Diese Meldungen weisen wir getrennt von denen Angemeldeter ' +
+    'speichern; der Knopf ist danach ausgegraut. Gegen Missbrauch begrenzen wir, wie viele solcher Meldungen ' +
+    'insgesamt in wenigen Sekunden zählen; eine Adresse verwenden wir dafür nicht. Diese Meldungen weisen wir ' +
+    'getrennt von denen Angemeldeter ' +
     'aus. Zweck: sehen, wie oft Gut gesagt beim Widersprechen hilft. Rechtsgrundlage: Art. 6 Abs. 1 lit. f ' +
     'DSGVO. Dauer: Die Wochensumme hat keinen Personenbezug.';
   const ANTWORTEN =
@@ -1171,13 +1176,13 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     'Abschnitt.';
   const GESTOERT =
     'In der Startphase kannst du uns über „Was hat dich gestört?“ kurz schreiben, was dich gestört hat. Wir ' +
-    'speichern nur deinen Text und den Zeitpunkt, ohne deine Kennung und ohne Kontaktmöglichkeit; schreib ' +
+    'speichern nur deinen Text und den Tag, ohne deine Kennung und ohne Kontaktmöglichkeit; schreib ' +
     'bitte keine Namen oder Daten anderer hinein. Wir nutzen die Rückmeldungen, um Gut gesagt zu ' +
     'verbessern, und löschen alle spätestens am 31. Dezember 2026. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.';
   const NULL_TREFFER =
     'Findest du zu einer Aussage keine Antwort, zeigen wir, wie oft schon danach gesucht wurde, sobald es ' +
-    'mindestens dreimal war. Die Zahl zählen wir aus den Suchvorgängen oben zusammen; wer gesucht hat, ' +
-    'zeigen wir nicht.';
+    'mindestens dreimal war. Die Zahl führen wir an der Aussage mit; wer gesucht hat, zeigen wir nicht ' +
+    '(Einzelheiten im Absatz darunter).';
   const KAMPAGNENWORT =
     'Öffnest du Gut gesagt über einen Link oder QR-Code mit einem Kampagnenwort, etwa von einem Sticker, ' +
     'begrüßen wir dich passend dazu; das geschieht nur in deinem Browser.';
@@ -1266,7 +1271,7 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     const text = abschnittIn(seiteMit('danke_knopf'), 'Rückmeldung zur Nutzung deiner Beiträge');
 
     expect(text).toContain('kannst du mit „Danke“ der Person danken');
-    expect(text).toContain('Tages-Prüfwert vom Kopieren');
+    expect(text).toContain('einen eigenen Tages-Prüfwert, gebildet wie beim Kopieren');
     expect(text).not.toContain('an Echo dazukam');
     expect(text).toContain(
       'nur zwei Zahlen: wie oft deine Beiträge insgesamt genutzt waren und wie viele Einwürfe anderer es im ' +
@@ -1279,7 +1284,7 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
 
     expect(text).toContain('merken wir uns als weiteren Zählerstand zu deiner Kennung.');
     expect(text).not.toContain('kannst du mit „Danke“');
-    expect(text).not.toContain('Tages-Prüfwert vom Kopieren');
+    expect(text).not.toContain('Tages-Prüfwert');
   });
 
   it('danke_ohne_konto allein bringt keinen Satz (Variante B nicht erfüllt, bleibt aus)', () => {
@@ -1287,6 +1292,32 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
 
     expect(ganz).not.toContain('Ohne Anmeldung zählt dein Danke');
     expect(ganz).not.toContain('kannst du mit „Danke“');
+  });
+
+  it('wirkungs_echo: „Ja, gepostet“ nennt die Summe je Beitrag statt „welchen Beitrag … speichern wir nicht“ allein', () => {
+    const an = abschnittIn(seiteMit('wirkungs_echo'), 'Rückmeldung „Ja, gepostet“');
+
+    expect(an).toContain(
+      'Personen dieser Woche. Welchen Beitrag du gepostet hast, speichern wir nicht; an jedem Beitrag zählen wir ' +
+        'nur mit, wie oft er insgesamt als gepostet gemeldet wurde, ohne Kennung (siehe ‚Wirkungs-Echo und Danke‘). ' +
+        'Einen Link',
+    );
+    expect(an).not.toContain('Deine Kennung und welchen Beitrag');
+  });
+
+  it('ohne wirkungs_echo: „Ja, gepostet“ behält den alten Satz', () => {
+    expect(abschnittIn(seiteMit(), 'Rückmeldung „Ja, gepostet“')).toContain(
+      'Deine Kennung und welchen Beitrag du gepostet hast, speichern wir nicht. Einen Link',
+    );
+  });
+
+  it('rangliste: der Punktestand ist für Mitspielende der Rangliste sichtbar (Keine automatisierte Entscheidungsfindung)', () => {
+    const text = abschnittIn(seiteMit('punkte', 'rangliste'), 'Keine automatisierte Entscheidungsfindung');
+
+    expect(text).toContain(
+      'Deinen Punktestand zeigen wir nur dir, außer du spielst in der Saison-Rangliste mit; dann sehen ihn auch die ' +
+        'anderen Mitspielenden. Eine Entscheidung, die allein automatisiert getroffen wird',
+    );
   });
 
   it('gepostet_ohne_konto: der Absatz unter „Rückmeldung „Ja, gepostet““', () => {

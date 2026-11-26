@@ -583,8 +583,8 @@
       </ul>
       <p *ngIf="nullTrefferAnzahl()" data-testid="dse-null-treffer-kurz">
         Findest du zu einer Aussage keine Antwort, zeigen wir, wie oft schon danach gesucht wurde,
-        sobald es mindestens dreimal war. Die Zahl zählen wir aus den Suchvorgängen oben
-        zusammen; wer gesucht hat, zeigen wir nicht.
+        sobald es mindestens dreimal war. Die Zahl führen wir an der Aussage mit; wer gesucht
+        hat, zeigen wir nicht (Einzelheiten im Absatz darunter).
       </p>
       <p *ngIf="nullTrefferAnzahl()">
         Findet deine Suche nichts und gehört sie zu einem Eintrag, den alle sehen können
@@ -713,8 +713,8 @@
         mit „Danke“ der Person danken, die ihn geschrieben hat; sie sieht nur die Summe, nie, wer
         gedankt hat.</ng-container> Dafür speichern wir je Beitrag nur zwei Summen, ohne Kennung und
         ohne Zeitpunkt.<ng-container *ngIf="dankeKnopf()"> Damit dein Danke je Beitrag und Tag nur
-        einmal zählt, nutzen wir den Tages-Prüfwert vom Kopieren (siehe „Verwendung von
-        Beiträgen“), der mit dem Tageswechsel verfällt.</ng-container><ng-container *ngIf="wirkungsEcho()"> Was seit
+        einmal zählt, nutzen wir einen eigenen Tages-Prüfwert, gebildet wie beim Kopieren und wie
+        dieser mit dem Tageswechsel gelöscht.</ng-container><ng-container *ngIf="wirkungsEcho()"> Was seit
         deinem letzten Besuch an Echo dazukam, merken wir uns als weiteren Zählerstand zu deiner
         Kennung.</ng-container>
       </p>
@@ -734,8 +734,11 @@
         Woche ändert nichts. Dafür merken wir uns bis zum Ende der Woche <strong>nur einen
         Prüfwert</strong>, den wir ohne einen Schlüssel, der nur im Arbeitsspeicher liegt und
         jede Woche neu entsteht, nicht auf dich zurückführen können; danach nur die Zahl der
-        Personen dieser Woche. Deine Kennung und welchen Beitrag du gepostet hast, speichern
-        wir nicht. Einen Link zu
+        Personen dieser Woche.<ng-container *ngIf="!wirkungsEcho()"> Deine Kennung und welchen
+        Beitrag du gepostet hast, speichern wir nicht.</ng-container><ng-container *ngIf="wirkungsEcho()">
+        Welchen Beitrag du gepostet hast, speichern wir nicht; an jedem Beitrag zählen wir nur mit,
+        wie oft er insgesamt als gepostet gemeldet wurde, ohne Kennung (siehe ‚Wirkungs-Echo und
+        Danke‘).</ng-container> Einen Link zu
         deinem Post fragen wir nicht ab. Im Dank nennen wir dir die Zahl der Personen dieser
         Woche. Die Frage erscheint nur, wenn du nach Artikel 9 DSGVO eingewilligt hast (siehe
         „Rückschlüsse auf deine politische Haltung“). Widerrufst du sie, erscheint die Frage
@@ -770,7 +773,8 @@
         Auch ohne Anmeldung kannst du nach dem Kopieren „Ja, gepostet“ tippen. Dann zählen wir für
         die laufende Kalenderwoche nur eins dazu, ohne Kennung, ohne Prüfwert und ohne etwas in
         deinem Browser zu speichern; der Knopf ist danach ausgegraut. Gegen Missbrauch begrenzen
-        wir Meldungen je Anschluss nur für wenige Sekunden im Arbeitsspeicher. Diese Meldungen
+        wir, wie viele solcher Meldungen insgesamt in wenigen Sekunden zählen; eine Adresse
+        verwenden wir dafür nicht. Diese Meldungen
         weisen wir getrennt von denen Angemeldeter aus. Zweck: sehen, wie oft Gut gesagt beim
         Widersprechen hilft. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. Dauer: Die Wochensumme hat keinen Personenbezug.
       </p>
@@ -1077,7 +1081,7 @@
            Schalter wirkt ab dem 31.12.2026 nicht mehr, dann fällt auch der Absatz weg -->
       <p *ngIf="feedbackGestoert()" data-testid="dse-feedback-gestoert">
         In der Startphase kannst du uns über „Was hat dich gestört?“ kurz schreiben, was dich
-        gestört hat. Wir speichern nur deinen Text und den Zeitpunkt, ohne deine Kennung und ohne
+        gestört hat. Wir speichern nur deinen Text und den Tag, ohne deine Kennung und ohne
         Kontaktmöglichkeit; schreib bitte keine Namen oder Daten anderer hinein. Wir nutzen die
         Rückmeldungen, um Gut gesagt zu verbessern, und löschen alle spätestens am 31. Dezember
         2026. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.
@@ -1400,8 +1404,11 @@
         ähnlicher Weise erheblich beeinträchtigen. Ein Profiling im Sinne von Artikel 4
         Nummer 4 DSGVO findet nicht statt, solange Punkte ausgeschaltet sind. Sind sie
         eingeschaltet, bewertet dein Punktestand, wie deine Mitwirkung bei anderen wirkt
-        (siehe „Punkte“); er wird automatisch berechnet, aber nur dir gezeigt und hat keine
-        Folgen für dich. Auch ein Muster-Hinweis löst nichts automatisch aus.
+        (siehe „Punkte“); er wird automatisch berechnet. Deinen Punktestand zeigen wir nur
+        dir<ng-container *ngIf="rangliste()">, außer du spielst in der Saison-Rangliste mit; dann
+        sehen ihn auch die anderen Mitspielenden</ng-container>. Eine Entscheidung, die allein
+        automatisiert getroffen wird und dir gegenüber rechtliche oder ähnlich erhebliche Wirkung
+        hat, gibt es nicht. Auch ein Muster-Hinweis löst nichts automatisch aus.
       </p>
     </section>
 
