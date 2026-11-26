@@ -267,7 +267,7 @@ describe('Beitragskarte: Siegel und Stimmen (#427)', () => {
       const e = siegelErklaerung(8, ['passiv', 'unbekannt'], true);
       expect(e.kriterien).toEqual(['Aktiv formuliert']);
       expect(e.stimmen).toBe('Die Stimmen anderer sind eingerechnet. Je mehr Menschen bewerten, desto mehr zählt ihr Urteil.');
-      expect(siegelErklaerung(null, [], false).ueberschrift).toBe('Neu: sammelt gerade erste Stimmen');
+      expect(siegelErklaerung(null, [], false).ueberschrift).toBe('Neu: die Güte kommt mit den ersten Stimmen');
       expect(siegelErklaerung(5, [], false).stimmen).toBe(
         'Die Stimmen anderer zählen, sobald genug zusammenkommen. Dann wiegt ihr Urteil immer mehr.',
       );

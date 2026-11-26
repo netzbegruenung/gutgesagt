@@ -13,8 +13,8 @@ function mal(anzahl: number): string {
 export function wirkungssatz(beitraege: number, genutzt: number, dieseWoche: number | null): string {
   if (genutzt <= 0) {
     return beitraege === 1
-      ? 'Sobald jemand deinen Beitrag kopiert, siehst du es hier.'
-      : 'Sobald jemand einen deiner Beiträge kopiert, siehst du es hier.';
+      ? 'Sobald jemand deinen Beitrag nutzt, siehst du es hier.'
+      : 'Sobald jemand einen deiner Beiträge nutzt, siehst du es hier.';
   }
   const subjekt = beitraege === 1 ? 'Dein Beitrag wurde' : `Deine ${beitraege} Beiträge wurden`;
   let woche = '';

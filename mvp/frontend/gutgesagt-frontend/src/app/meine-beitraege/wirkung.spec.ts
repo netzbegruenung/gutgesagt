@@ -16,8 +16,8 @@ describe('wirkungssatz', () => {
   });
 
   it('sagt ohne Nutzung, was als Naechstes kommt, statt "noch nicht genutzt"', () => {
-    expect(wirkungssatz(1, 0, 0)).toBe('Sobald jemand deinen Beitrag kopiert, siehst du es hier.');
-    expect(wirkungssatz(4, 0, null)).toBe('Sobald jemand einen deiner Beiträge kopiert, siehst du es hier.');
+    expect(wirkungssatz(1, 0, 0)).toBe('Sobald jemand deinen Beitrag nutzt, siehst du es hier.');
+    expect(wirkungssatz(4, 0, null)).toBe('Sobald jemand einen deiner Beiträge nutzt, siehst du es hier.');
     expect(wirkungssatz(1, 0, 0)).not.toContain('noch nicht');
   });
 });

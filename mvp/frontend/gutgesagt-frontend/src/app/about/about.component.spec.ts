@@ -242,7 +242,7 @@ describe('AboutComponent', () => {
       svg.getAttribute('aria-label'),
     );
     expect(beispiele.length).toBe(12);
-    expect(beispiele[0]).toBe('Siegel: neu, sammelt gerade erste Stimmen');
+    expect(beispiele[0]).toBe('Siegel: neu, die Güte kommt mit den ersten Stimmen');
     expect(beispiele[10]).toBe('Siegel: Güte 10 von 10');
     // Glanz als Beispiel (#351); eine Krone gibt es am Siegel nicht mehr
     expect(seite.querySelectorAll('.siegel-beispiele .siegel-glanz').length).toBe(1);

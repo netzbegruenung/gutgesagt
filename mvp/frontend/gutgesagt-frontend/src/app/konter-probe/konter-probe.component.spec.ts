@@ -78,7 +78,7 @@ describe('Konter-Probe: Auflösung im Browser', () => {
 
   it('nennt Nutzung ehrlich als Zahl der Nutzungen', () => {
     expect(nutzungText(14)).toBe('14-mal genutzt');
-    expect(nutzungText(0)).toBe('wartet auf den ersten Einsatz');
+    expect(nutzungText(0)).toBe('wartet auf die erste Nutzung');
   });
 });
 
@@ -171,7 +171,7 @@ describe('KonterProbeComponent', () => {
     fixture.detectChanges();
 
     const zeilen = alle('[data-testid="aufloesung"]');
-    expect(zeilen[2].textContent!.replace(/\s+/g, ' ')).toContain('wartet auf den ersten Einsatz');
+    expect(zeilen[2].textContent!.replace(/\s+/g, ' ')).toContain('wartet auf die erste Nutzung');
     expect(zeilen[2].textContent).not.toContain('noch nicht');
     expect(zeilen[2].querySelector('.balken')!.classList).toContain('balken--leer');
     expect(zeilen[0].querySelector('.balken')!.classList).not.toContain('balken--leer');

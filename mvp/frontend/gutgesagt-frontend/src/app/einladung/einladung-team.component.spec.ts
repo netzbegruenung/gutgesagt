@@ -211,6 +211,15 @@ describe('EinladungComponent mit Team', () => {
       expect(el().querySelector('.team-leise')!.textContent).toContain('Die ersten 2 sind schon dabei.');
     });
 
+    it('nach einem Austritt kein „Anfang“, der „Du wärst Nr. 5.“ widerspräche', () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team({ mitglieder: 0, naechste_nummer: 5 }) });
+
+      expect(el().textContent).toContain('Du wärst Nr. 5.');
+      expect(el().textContent).not.toContain('fängt das Team an');
+      expect(el().querySelector('.team-leise')!.textContent).toContain('Gerade ist niemand dabei.');
+    });
+
     it('legt ohne Wahl kein Konto an und bittet, oben zu wählen', () => {
       starten('Code123');
       pruefen({ einloesbar: true, team: team() });

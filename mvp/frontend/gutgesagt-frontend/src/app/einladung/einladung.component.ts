@@ -176,7 +176,7 @@ export class EinladungComponent implements OnInit {
   }
 
   dabeiSatz(team: TeamBeimPruefen): string {
-    return teamDabeiSatz(team.mitglieder);
+    return teamDabeiSatz(team.mitglieder, team.naechste_nummer);
   }
 
   begruessungSaetze(team: TeamBeimPruefen): readonly string[] {

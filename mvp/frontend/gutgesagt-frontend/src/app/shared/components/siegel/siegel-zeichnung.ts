@@ -83,7 +83,7 @@ export function siegelRand(guete: number | null, dunkel = false): string {
 /** Was Screenreader über das Siegel sagen. */
 export function siegelText(guete: number | null, glanz = false): string {
   const g = normierteGuete(guete);
-  const text = g === null ? 'Siegel: neu, sammelt gerade erste Stimmen' : `Siegel: Güte ${g} von ${HOECHSTE_GUETE}`;
+  const text = g === null ? 'Siegel: neu, die Güte kommt mit den ersten Stimmen' : `Siegel: Güte ${g} von ${HOECHSTE_GUETE}`;
   // Glanz (#351): eigenes Abzeichen, gehört in dieselbe Beschriftung.
   return glanz ? `${text}, mit Glanz` : text;
 }

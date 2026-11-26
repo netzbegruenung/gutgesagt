@@ -74,11 +74,11 @@ export function besteAntwort(probe: KonterProbe): ProbeAntwort {
 }
 
 /**
- * „14-mal genutzt“, ehrlich und ohne Personen; 0 nach Anfang als „wartet auf den ersten
- * Einsatz“ statt „noch nicht genutzt“, dann ohne Balken (Leerzustände 26.11.).
+ * „14-mal genutzt“, ehrlich und ohne Personen; 0 nach Anfang als „wartet auf die erste
+ * Nutzung“ statt „noch nicht genutzt“, dann ohne Balken (Leerzustände 26.11.).
  */
 export function nutzungText(nutzung: number): string {
-  return nutzung > 0 ? `${nutzung}-mal genutzt` : 'wartet auf den ersten Einsatz';
+  return nutzung > 0 ? `${nutzung}-mal genutzt` : 'wartet auf die erste Nutzung';
 }
 
 /**

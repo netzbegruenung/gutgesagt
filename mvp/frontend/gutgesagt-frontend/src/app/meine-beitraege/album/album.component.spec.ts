@@ -145,7 +145,7 @@ describe('AlbumComponent', () => {
       expect(el().querySelector('[data-testid="zahl-genutzt"]')).toBeNull();
       expect(el().querySelector('.zahlen')).toBeNull();
       expect(el().querySelector('[data-testid="naechster-meilenstein"]')).toBeNull();
-      expect(text('.wirkung')).toBe('Sobald jemand einen deiner Beiträge kopiert, siehst du es hier.');
+      expect(text('.wirkung')).toBe('Sobald jemand einen deiner Beiträge nutzt, siehst du es hier.');
     });
 
     it('zeigt ohne Meilensteine mit Nutzung die drei Zahlen wie sonst', () => {

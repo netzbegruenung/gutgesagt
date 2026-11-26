@@ -54,7 +54,7 @@ describe('SiegelComponent', () => {
     zeige(null);
 
     expect(svg().getAttribute('role')).toBe('img');
-    expect(svg().getAttribute('aria-label')).toBe('Siegel: neu, sammelt gerade erste Stimmen');
+    expect(svg().getAttribute('aria-label')).toBe('Siegel: neu, die Güte kommt mit den ersten Stimmen');
     expect(winkel()).toBe(90);
     const [, saettigung] = farbe();
     expect(saettigung).toBeLessThan(15);
@@ -151,7 +151,7 @@ describe('SiegelComponent', () => {
   it('zeigt Güte 0 und darunter als neu, grau und waagrecht', () => {
     for (const guete of [0, -3]) {
       zeige(guete);
-      expect(svg().getAttribute('aria-label')).withContext(`Güte ${guete}`).toBe('Siegel: neu, sammelt gerade erste Stimmen');
+      expect(svg().getAttribute('aria-label')).withContext(`Güte ${guete}`).toBe('Siegel: neu, die Güte kommt mit den ersten Stimmen');
       expect(winkel()).withContext(`Güte ${guete}`).toBe(90);
     }
   });
