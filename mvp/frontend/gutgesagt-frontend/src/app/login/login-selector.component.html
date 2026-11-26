@@ -3,7 +3,8 @@
     <h2 class="anmeldegrund" *ngIf="anmeldegrund">{{ anmeldegrund }}</h2>
 
     <!-- Vertrauenszeile vor dem Anmelden (Jura vorläufig 26.11.), nur mit Schalter vertrauenszeile;
-         auch während die Anmeldewege laden, damit nichts springt -->
+         steht unabhängig von den Anmeldewegen. Bis GET /api/v1/funktionen geantwortet hat, gilt
+         der Schalter als aus; beim allerersten Aufruf kann die Zeile deshalb nachträglich erscheinen -->
     @if (vertrauenszeileAn()) {
         <p class="vertrauenszeile" data-testid="vertrauenszeile">
             {{ vertrauenszeile }}

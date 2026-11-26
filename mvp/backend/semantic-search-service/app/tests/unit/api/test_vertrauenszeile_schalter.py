@@ -69,9 +69,11 @@ def test_obergrenze_von_haus_aus_aus():
     assert Settings.model_fields["vertrauenszeile_aktiv"].default is False
 
 
-def test_admin_seite_zeigt_wartet_auf_recht(werte):
+def test_admin_seite_zeigt_wartet_auf_recht():
     dienst = SchalterService(admin_werte_lesen=lambda: {}, admin_wert_setzen=None)
-    stand = {s.name: s for s in dienst.stand(Settings())}[NAME]
+    stand = {s.name: s for s in dienst.stand(Settings(vertrauenszeile_aktiv=False))}[
+        NAME
+    ]
 
     assert (stand.obergrenze, stand.admin_wert, stand.wirksam) == (False, False, False)
     assert stand.dsfa_hinweis == HINWEIS
@@ -88,10 +90,10 @@ def test_einschalten_ueber_die_obergrenze_geht_nicht(werte):
         dienst.setzen(NAME, True, "admin-1", Settings(vertrauenszeile_aktiv=False))
 
 
-def test_ohne_anmeldung_lesbar_und_von_haus_aus_aus(werte):
+def test_ohne_anmeldung_lesbar_obergrenze_aus_schlaegt_admin_wert(werte):
     werte[NAME] = True
 
-    antwort = _client().get(URL)
+    antwort = _client(vertrauenszeile_aktiv=False).get(URL)
 
     assert antwort.status_code == 200
     assert antwort.json()["funktionen"][NAME] is False

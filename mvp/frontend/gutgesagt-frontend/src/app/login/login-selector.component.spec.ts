@@ -293,6 +293,14 @@ describe('LoginSelectorComponent: Vertrauenszeile', () => {
     expect(rahmen.width).toBeGreaterThanOrEqual(24);
   });
 
+  it('unterstreicht den Link, damit er nicht nur an der Farbe erkennbar ist (WCAG 1.4.1)', () => {
+    vertrauenszeile.set(true);
+    fixture.detectChanges();
+
+    const link = zeile()!.querySelector('a') as HTMLAnchorElement;
+    expect(getComputedStyle(link).textDecorationLine).toBe('underline');
+  });
+
   it('steht über den Anmeldewegen, auch solange sie laden', () => {
     vertrauenszeile.set(true);
     fixture.detectChanges();

@@ -33,6 +33,13 @@
     padding: 0 2px;
     color: var(--akzent-schrift);
     font-weight: 600;
+    /* in beiden Modi unterstrichen, nicht nur durch Farbe erkennbar (WCAG 1.4.1) */
+    text-decoration: underline;
+}
+
+.vertrauenszeile-link:focus-visible {
+    outline: 2px solid var(--akzent-tanne);
+    outline-offset: 2px;
 }
 
 /* Registration Information Styles */
