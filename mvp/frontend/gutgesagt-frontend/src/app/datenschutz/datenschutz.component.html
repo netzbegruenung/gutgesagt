@@ -5,7 +5,21 @@
   </div>
 
   <div class="content-section inhalt-spalte inhalt-spalte--lesen">
-    <section class="legal-section">
+    @if (kurzfassungZeigen()) {
+      <aside class="kurzfassung" aria-labelledby="kurzfassung-titel" data-testid="dse-kurzfassung">
+        <h2 id="kurzfassung-titel">Kurz gesagt</h2>
+        <ul>
+          @for (satz of kurzfassungSaetze(); track satz.anker) {
+            <li>
+              {{ satz.text }}
+              <a [href]="'/datenschutz#' + satz.anker" (click)="springen($event, satz.anker)">{{ satz.linkText }}</a>
+            </li>
+          }
+        </ul>
+      </aside>
+    }
+
+    <section class="legal-section" id="verantwortlicher">
       <h2>Verantwortlicher</h2>
       <p>
         Verantwortlich für die Verarbeitung personenbezogener Daten auf dieser Plattform im
@@ -40,7 +54,7 @@
 
     <mat-divider></mat-divider>
 
-    <section class="legal-section">
+    <section class="legal-section" id="was-diese-erklaerung-abdeckt">
       <h2>Was diese Erklärung abdeckt</h2>
       <p>
         Diese Erklärung beschreibt die Verarbeitungen auf dieser Plattform. Sie beschreibt
@@ -1414,7 +1428,7 @@
 
     <mat-divider></mat-divider>
 
-    <section class="legal-section">
+    <section class="legal-section" id="deine-rechte">
       <h2>Deine Rechte</h2>
       <p>
         Du hast uns gegenüber das Recht auf <strong>Auskunft</strong> über die zu dir
