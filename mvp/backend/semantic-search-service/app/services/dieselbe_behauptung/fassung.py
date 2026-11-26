@@ -4,7 +4,8 @@ Trifft die geänderte Fassung eines Beitrags noch dieselbe Behauptung wie die al
 Stimmen bleiben, solange ein geänderter Beitrag dieselbe Behauptung trifft; ändert sich
 der Sinn, verfallen sie. Die Behauptung eines Kommentars oder einer Hintergrundinfo ist
 ihr Titel (GLOSSARY.md "Titel", CODING_STANDARDS.md): Verglichen werden alter und neuer
-Titel. Eine Änderung nur am Text lässt die Behauptung stehen.
+Titel (gleiche_behauptung). Unter gleichem Titel verfallen sie nur, wenn der Text ein
+ganz anderer ist (gleicher_text, #636).
 
 Entschieden wird mit derselben Funktion wie bei der Prüfung auf dieselbe Aussage
 (stufe.dieselben_finden), mit der alten Fassung als einzigem Kandidaten und deren
@@ -85,3 +86,23 @@ async def gleiche_behauptung(
     if not dieselben and beobachtet is not None and beobachtet.ohne_urteil:
         return None
     return bool(dieselben)
+
+
+async def gleicher_text(
+    alt: str, neu: str, settings: Settings, aehnlichkeit: Aehnlichkeit
+) -> bool:
+    """
+    False, wenn der neue Text unter gleichem Titel ein ganz anderer ist (#636): seine
+    passage/passage-Ähnlichkeit zum alten liegt unter text_verfall_aehnlichkeit_unter.
+    Sonst True, normalisiert gleich immer.
+
+    Bewusst nur dieser Fall: Am Messset (tests/regression/MESSSET.md, Abschnitt
+    "Geänderter Text") trennt weder die Ähnlichkeit noch die NLI-Stufe ein Gegenteil
+    von einer Umformulierung oder einer korrigierten Zahl. Ein Widerspruch im Text,
+    eine Ergänzung oder Kürzung kosten deshalb keine Stimmen: Kleine Korrekturen dürfen
+    nie Stimmen kosten.
+    """
+    normalform = text_normalisiert(neu)
+    if normalform and normalform == text_normalisiert(alt):
+        return True
+    return await aehnlichkeit(alt, neu) >= settings.text_verfall_aehnlichkeit_unter

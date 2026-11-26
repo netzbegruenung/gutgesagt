@@ -1071,3 +1071,57 @@ describe('DatenschutzComponent: Suchen ohne Treffer, Anzahl auf der Ergebnisseit
     expect(text).toContain('Auf die Listen der Suchen ohne Treffer kommt ein Eintrag erst');
   });
 });
+
+/** Halbsatz zum Stimmenverfall bei ganz anderem Text (#636) hinter dem Schalter stimmen_text_verfall. */
+describe('DatenschutzComponent - Stimmenverfall bei ganz anderem Text (#636)', () => {
+  const HALBSATZ = 'oder ersetzt sie oder er den Text durch einen ganz anderen';
+  const schalter = signal(false);
+
+  function bewertungen(): string {
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    return abschnittIn(fixture.nativeElement as HTMLElement, 'Bewertungen');
+  }
+
+  beforeEach(async () => {
+    schalter.set(false);
+    await TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]),
+        {
+          provide: FunktionenService,
+          useValue: { an: (name: string) => (name === 'stimmen_text_verfall' ? schalter : signal(false)) },
+        },
+      ],
+    }).compileComponents();
+  });
+
+  it('Schalter aus: nur der Titel, kein Halbsatz zum Text', () => {
+    const text = bewertungen();
+
+    expect(text).not.toContain(HALBSATZ);
+    expect(text).toContain(
+      'Ändert die Autorin oder der Autor den Titel so, dass er etwas anderes behauptet, löschen wir die Bewertungen dazu.'
+    );
+  });
+
+  it('Schalter an: Halbsatz steht im Satz zum Titel', () => {
+    schalter.set(true);
+    const text = bewertungen();
+
+    expect(text).toContain(`dass er etwas anderes behauptet, ${HALBSATZ}, löschen wir die Bewertungen dazu.`);
+  });
+
+  it('erscheint ohne Neuladen, sobald der Schalter umspringt', () => {
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    const seite = fixture.nativeElement as HTMLElement;
+    expect(abschnittIn(seite, 'Bewertungen')).not.toContain(HALBSATZ);
+
+    schalter.set(true);
+    fixture.detectChanges();
+
+    expect(abschnittIn(seite, 'Bewertungen')).toContain(HALBSATZ);
+  });
+});

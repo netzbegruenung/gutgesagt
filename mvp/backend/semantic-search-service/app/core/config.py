@@ -179,6 +179,15 @@ class Settings(BaseSettings):
     # Derselbe Text mit anderer Zahl liegt darueber und gilt als Dublette,
     # Umformulierungen zum Teil darunter. Die Schwelle trennt das nicht; siehe #387.
     generic_text_similarity_threshold: float = 0.975
+    # Stimmenverfall bei geaendertem Text (#636): Stimmen verfallen, wenn die
+    # passage/passage-Aehnlichkeit von altem und neuem Text darunter liegt
+    # (fassung.gleicher_text). Nutzt nur die Einbettung, kein NLI-Modell; wirkt nur mit
+    # dem Schalter stimmen_text_verfall und wie der Titel-Fall mit dieselbe_aussage_nli = an.
+    # Gemessen am Messset "Geaenderter Text" (tests/regression/MESSSET.md): Korrekturen,
+    # Ergaenzungen, Kuerzungen, Links und Umformulierungen ab 0,915, ganz andere Texte
+    # hoechstens 0,840. Ein ausgetauschter Text zum selben Thema kann darueber liegen
+    # (verwandte Kommentare 0,817-0,899, oben) und behaelt dann die Stimmen.
+    text_verfall_aehnlichkeit_unter: float = Field(default=0.88, ge=0.0, le=1.0)
     # Vorschlaege im Feld "Antwort auf" (#387, frueher Konstante im Frontend):
     # Aussagen ab dieser query/query-Aehnlichkeit. Gemessen fuer EMBEDDING_MODELL
     # (passende Aussagen 0,892-0,940). Widerspricht eine Aussage dem Getippten in einer
@@ -358,6 +367,11 @@ class Settings(BaseSettings):
     # bis der Wortlaut von Jura im Frontend steht (datenschutz/dse-kurzfassung.ts). Ohne
     # Wortlaut bleibt der Kasten auch eingeschaltet unsichtbar.
     dse_kurzfassung_aktiv: bool = False
+    # Stimmenverfall bei ganz anderem Text unter gleichem Titel (#636,
+    # StatementService.gleicher_text): Obergrenze von Haus aus aus, weil geloeschte
+    # Stimmen nicht zurueckkommen; wirkt nur zusammen mit dieselbe_aussage_nli = an.
+    # Erst nach dem endgueltigen Jura-OK zum Halbsatz "Bewertungen" einschalten.
+    stimmen_text_verfall_aktiv: bool = False
     # Teams ueber Einladungen (services/team_service.py): Teamfelder an der Einladung,
     # Beitreten mit eigener Einwilligung, "Meine Teams". Standard aus: Die
     # Mitgliedschaft ist im Zweifel ein Art.-9-Datum; erst mit DSFA-Nachtrag,

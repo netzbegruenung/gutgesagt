@@ -392,7 +392,7 @@ _Avoid_: Trending, Trend, beliebt, Top-Beiträge
 Der Bereich auf der Startseite mit den neuesten Kommentaren und Hintergrundinfos, für alle sichtbar. Frisch heißt wie bei der Kachel unter „Seit deinem letzten Besuch“: in den letzten 7 Tagen ergänzt. Ist mindestens einer der neuesten frisch, zeigt er bis zu fünf (mobil drei); ist keiner frisch, heißt er „Zuletzt ergänzt“ und zeigt die drei zuletzt ergänzten jeden Alters. Leer ist er nie; nur ganz ohne Beiträge steht dort ein Anfang („Hier wächst bald was“), der Weg dazu ist die Kachel „Beitragen“ darunter (Entscheidung 26.11.2026). Neueste heißt nach dem Datum der Karte über alle sichtbaren Beiträge. Gesperrte und gelöschte Beiträge stehen dort nie.
 
 **Stimme**:
-Die Zustimmung oder Ablehnung einer angemeldeten Person zu einem Beitrag. Ein Qualitätssignal, keine Nutzung. Sie gilt der Behauptung im Titel: Ändert die Autorin den Titel so, dass er nach der NLI-Stufe etwas anderes behauptet, verfallen die Stimmen; kleine Korrekturen und Änderungen nur am Text lassen sie stehen.
+Die Zustimmung oder Ablehnung einer angemeldeten Person zu einem Beitrag. Ein Qualitätssignal, keine Nutzung. Sie gilt der Behauptung im Titel: Ändert die Autorin den Titel so, dass er nach der NLI-Stufe etwas anderes behauptet, verfallen die Stimmen, ebenso bei einem ganz anderen Text (nur mit dem Schalter `stimmen_text_verfall`); kleine Korrekturen, Ergänzungen und Umformulierungen lassen sie stehen. Ein geändertes Urteil im Text (Gegenteil, anderer Standpunkt) erkennt die Prüfung nicht.
 _Avoid_: Vote, Like, Daumen
 
 **Siegel**:

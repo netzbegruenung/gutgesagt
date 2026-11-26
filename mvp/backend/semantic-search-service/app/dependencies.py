@@ -608,6 +608,12 @@ def get_beitrag_aendern_service(
             else None
         ),
         stimmen_loeschen=VoteRepository().loeschen_fuer_beitrag,
+        # ... und bei gleichem Titel, wenn der Text ein ganz anderer ist (#636).
+        gleicher_text=(
+            statement_service_instance.gleicher_text
+            if statement_service_instance is not None
+            else None
+        ),
     )
 
 
