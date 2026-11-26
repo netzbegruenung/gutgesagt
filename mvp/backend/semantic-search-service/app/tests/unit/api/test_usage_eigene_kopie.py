@@ -140,6 +140,22 @@ class TestEntdoppelung:
         assert pruefwerte[0] and pruefwerte[0] == pruefwerte[1]
         assert pruefwerte[2] and pruefwerte[2] != pruefwerte[0]
 
+    def test_besucher_bekommt_die_plaetze_des_tagesdeckels(self, client, dienst):
+        """
+        Befund 9: Ohne Anmeldung zaehlen je Beitrag und Tag hoechstens die ersten drei
+        entdoppelt. Die Plaetze haengen nur an Beitrag und Tag, nicht am Anschluss.
+        """
+        zaehlen(client, "anonymous", adresse="198.51.100.5")
+        zaehlen(client, "anonymous", adresse="198.51.100.6")
+        erster, zweiter = [
+            c.kwargs["deckel"] for c in dienst.track_content_usage.call_args_list
+        ]
+        assert len(erster) == 3 and erster == zweiter
+
+    def test_angemeldet_kein_tagesdeckel(self, client, dienst):
+        zaehlen(client, "bo-2")
+        assert dienst.track_content_usage.call_args.kwargs["deckel"] is None
+
     def test_pruefwert_und_tag_gehoeren_zum_selben_tag(self, client, dienst):
         zaehlen(client, "bo-2")
 

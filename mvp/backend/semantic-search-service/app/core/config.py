@@ -452,6 +452,11 @@ class Settings(BaseSettings):
     # Deckel fuers Tun, damit Abstimmen das Schreiben nicht verdraengt.
     punkte_bewertung: int = Field(default=1, ge=0)
     punkte_deckel_bewertungen_je_tag: int = Field(default=3, ge=0)
+    # Nutzung ohne Anmeldung (Gamification-Check 26.11., Befund 9, Entscheidung
+    # Maintainer): je Beitrag und UTC-Tag zaehlen hoechstens so viele entdoppelt, global
+    # und ohne Merkmal der Besuchenden. Die Datenschutzerklaerung nennt die Zahl
+    # ("hoechstens dreimal je Beitrag und Tag"): wer sie aendert, zieht den Satz nach.
+    punkte_nutzung_ohne_anmeldung_je_tag: int = Field(default=3, ge=0)
 
     # Guete eines Beitrags (#427, domain/guete.py): Stimmen anderer zaehlen erst ab
     # so vielen verschiedenen Stimmenden (DSFA, Massnahme M5), ihr Gewicht waechst mit

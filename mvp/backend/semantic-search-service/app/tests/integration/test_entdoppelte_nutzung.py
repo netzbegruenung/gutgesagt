@@ -48,6 +48,21 @@ class TestEntdoppelteNutzung:
         assert repo.get_usage_count(beitrag) == 3
         assert repo.get_nutzung_entdoppelt_batch([beitrag]) == {str(beitrag): 2}
 
+    def test_tagesdeckel_ohne_anmeldung_zaehlt_nur_die_ersten_drei(
+        self, datenbank  # noqa: F811
+    ):
+        """Befund 9: global je Beitrag und Tag, egal von welchem Anschluss."""
+        repo = UsageTrackingRepository(datenbank)
+        beitrag = uuid.uuid4()
+        deckel = ["platz-1", "platz-2", "platz-3"]
+
+        for besucher in range(5):
+            repo.track_usage(beitrag, pruefwert=f"besucher-{besucher}", deckel=deckel)
+        repo.track_usage(beitrag, pruefwert="konto-kim")
+
+        assert repo.get_usage_count(beitrag) == 6
+        assert repo.get_nutzung_entdoppelt_batch([beitrag]) == {str(beitrag): 4}
+
     def test_track_usage_ohne_pruefwert_nicht_entdoppelt(self, datenbank):  # noqa: F811
         repo = UsageTrackingRepository(datenbank)
         beitrag = uuid.uuid4()
