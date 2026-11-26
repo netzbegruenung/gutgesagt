@@ -17,6 +17,7 @@ import { FunktionenService } from '../services/funktionen.service';
 import {
   HINWEISZEILE_KURZ,
   HINWEISZEILE_MEHR,
+  HINWEIS_MEHR_KNOPF,
   SCHMAL,
   SUCHANFRAGEN_ABSCHNITT,
   SUCHHINWEIS,
@@ -163,7 +164,8 @@ describe('SearchComponent', () => {
       anschalten();
       expect(HINWEISZEILE_MEHR).toBe('Nach Prüfung können Suchtexte öffentlich werden.');
       const knopf = fixture.nativeElement.querySelector('.such-hinweis-kurz button') as HTMLButtonElement;
-      expect(knopf.getAttribute('aria-label')).toBe('Was heißt das?');
+      expect(HINWEIS_MEHR_KNOPF).toBe('Was mit Suchtexten passiert');
+      expect(knopf.getAttribute('aria-label')).toBe(HINWEIS_MEHR_KNOPF);
       expect(knopf.getAttribute('aria-expanded')).toBe('false');
       expect(knopf.getAttribute('aria-controls')).toBe(mehr().id);
       expect(mehr().hidden).toBeTrue();
@@ -182,10 +184,14 @@ describe('SearchComponent', () => {
       expect(mehr().hidden).toBeTrue();
     });
 
-    it('gilt auch über den Treffern (compactMode)', () => {
+    it('gilt auch über den Treffern (compactMode), dort ohne Info-Knopf und Satz wie seit E5', () => {
       fixture.componentRef.setInput('compactMode', true);
       anschalten();
       expect(text(kurz()!)).toBe('Ohne Namen gespeichert · Datenschutz');
+      expect(fixture.nativeElement.querySelector('.such-hinweis-kurz button')).toBeNull();
+      expect(mehr()).toBeNull();
+      const feld = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+      expect(feld.getAttribute('aria-describedby')).toBe(kurz()!.id);
     });
 
     it('geht beim Ausschalten ohne Neuladen zurück auf den abgestimmten Wortlaut', () => {

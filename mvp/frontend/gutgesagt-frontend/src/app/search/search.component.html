@@ -47,15 +47,20 @@
     <!-- Leise unter dem Feld, ohne Symbol: Information, keine Warnung (Persona-Test Gerd);
          ueber den Treffern einzeilig (E5) -->
     @if (hinweiszeileKurz()) {
-        <!-- Schalter hinweiszeile_kurz (Designwichtel Nr. 5): eine Zeile; der Satz zur
-             Veroeffentlichung klappt auf und steht immer in aria-describedby -->
+        <!-- Schalter hinweiszeile_kurz (Designwichtel Nr. 5): eine Zeile; auf dem Start klappt der
+             Satz zur Veroeffentlichung auf und steht immer in aria-describedby. Ueber den Treffern
+             ohne den Satz, wie seit E5 -->
         <div class="such-hinweis-kurz">
             <p class="such-hinweis" [id]="hinweisId">{{ hinweiszeile }}<span aria-hidden="true"> · </span><a class="hinweis-ziel" routerLink="/datenschutz" [fragment]="suchanfragenAbschnitt">Datenschutz</a></p>
-            <button type="button" class="hinweis-ziel hinweis-mehr-knopf"
-                    [attr.aria-expanded]="mehrOffen" [attr.aria-controls]="hinweisMehrId"
-                    aria-label="Was heißt das?" (click)="mehrOffen = !mehrOffen"><mat-icon aria-hidden="true">info_outline</mat-icon></button>
+            @if (!compactMode) {
+                <button type="button" class="hinweis-ziel hinweis-mehr-knopf"
+                        [attr.aria-expanded]="mehrOffen" [attr.aria-controls]="hinweisMehrId"
+                        [attr.aria-label]="mehrKnopfName" (click)="mehrOffen = !mehrOffen"><mat-icon aria-hidden="true">info_outline</mat-icon></button>
+            }
         </div>
-        <p class="such-hinweis such-hinweis-mehr" [id]="hinweisMehrId" [hidden]="!mehrOffen">{{ hinweiszeileMehr }}</p>
+        @if (!compactMode) {
+            <p class="such-hinweis such-hinweis-mehr" [id]="hinweisMehrId" [hidden]="!mehrOffen">{{ hinweiszeileMehr }}</p>
+        }
     } @else {
         <p class="such-hinweis" [id]="hinweisId">
             {{ suchhinweis }}
