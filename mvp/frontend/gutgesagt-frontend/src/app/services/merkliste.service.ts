@@ -19,6 +19,8 @@ export interface Gemerkt {
 }
 
 interface MerklisteAntwort {
+  /** false: Schalter aus (Liste leer); der Abruf antwortet dann mit 200 statt 404. */
+  aktiv?: boolean;
   eintraege: Gemerkt[];
 }
 

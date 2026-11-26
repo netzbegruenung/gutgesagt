@@ -3,8 +3,9 @@ Merkliste (#758, GLOSSARY.md "Merkliste"): Beitraege merken und unter "Meine Bei
 wiederfinden. Lesen und Merken nur fuer angemeldete Personen mit Art.-9-Einwilligung
 (Entfernen auch ohne, wie jedes Zuruecknehmen), nur fuers eigene
 Konto; Zaehler fuer andere gibt es nicht. Ohne den Schalter ``merkliste`` antwortet
-jeder Endpunkt 404, vor jeder Datenbankabfrage. Die Person kommt aus ``X-User``, nicht
-aus dem Pfad (#284).
+``GET`` mit 200 und ``aktiv: false`` (die Seite fragt selbst nach, ein 404 je Abruf
+fiele im Gateway auf), Merken und Entfernen mit 404, jeweils vor jeder
+Datenbankabfrage. Die Person kommt aus ``X-User``, nicht aus dem Pfad (#284).
 
 Die Liste nennt nur IDs und Zeitpunkte; die Beitraege laedt das Frontend ueber ihre
 eigene Adresse (GET /api/v1/content/beitrag/{id}), die gesperrte und geloeschte mit 404
@@ -14,7 +15,7 @@ auslaesst.
 import asyncio
 import uuid
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
@@ -52,6 +53,8 @@ class GemerktResponse(BaseModel):
 
 
 class MerklisteResponse(BaseModel):
+    # false: Schalter merkliste aus; dann ist die Liste leer und nichts gefragt
+    aktiv: bool = True
     eintraege: List[GemerktResponse]
 
 
@@ -69,13 +72,30 @@ def _merkliste(
     return get_merkliste_repository()
 
 
+def merkliste_angeboten(
+    current_user: str = Depends(require_user),
+    settings: Settings = Depends(get_settings),
+) -> Optional[MerklisteRepository]:
+    """
+    Fuer den Abruf: ohne Schalter None statt 404, ohne Einwilligung und Datenbank zu
+    fragen; mit Schalter erst die Sperre ohne Einwilligung (``require_art9_einwilligung``,
+    403). Synchron wie die Sperre selbst (Threadpool). tests/unit/api/
+    test_art9_einwilligung_api.py zaehlt diese Abhaengigkeit als Sperre.
+    """
+    if not schalter_wirksam("merkliste", settings):
+        return None
+    require_art9_einwilligung(current_user)
+    return get_merkliste_repository()
+
+
 @router.get("", response_model=MerklisteResponse)
 async def merkliste_lesen(
     current_user: str = Depends(require_user),
-    merkliste: MerklisteRepository = Depends(_merkliste),
-    _einwilligung: None = Depends(require_art9_einwilligung),
+    merkliste: Optional[MerklisteRepository] = Depends(merkliste_angeboten),
 ) -> MerklisteResponse:
-    """Die eigene Merkliste, zuletzt gemerkt zuerst."""
+    """Die eigene Merkliste, zuletzt gemerkt zuerst; ohne Schalter ``aktiv: false``."""
+    if merkliste is None:
+        return MerklisteResponse(aktiv=False, eintraege=[])
     try:
         eintraege = await asyncio.to_thread(merkliste.liste, current_user)
     except Exception as e:

@@ -218,7 +218,7 @@ STELLEN = {
         ("gepostet",),
     ),
     "gepostet_admin": (_admin_aktiv_aus("/api/v1/metrics/gepostet"), ("gepostet",)),
-    "merkliste": (_404("/api/v1/merkliste"), ("merkliste",)),
+    "merkliste": (_feld_aus("/api/v1/merkliste"), ("merkliste",)),
     "abkuerzungen": (_funktion_aus("abkuerzungen"), ("abkuerzungen",)),
     "sharepic": (_funktion_aus("sharepic"), ("sharepic",)),
     # Rangliste je Saison (#793): wirkt nur zusammen mit den Punkten.

@@ -1,7 +1,7 @@
 """
 Merkliste (#758): nur mit Schalter, nur angemeldet, nur mit Art.-9-Einwilligung, nur
-das eigene Konto. Ohne Schalter 404 an jedem Endpunkt, ohne Datenbank. Dazu der
-Schalter selbst in GET /api/v1/funktionen.
+das eigene Konto. Ohne Schalter liefert der Abruf 200 mit ``aktiv: false``, Merken und
+Entfernen 404, alles ohne Datenbank. Dazu der Schalter selbst in GET /api/v1/funktionen.
 """
 
 import uuid
@@ -58,9 +58,10 @@ def test_liste_der_eigenen_person(merkliste):
 
     assert antwort.status_code == 200
     assert antwort.json() == {
+        "aktiv": True,
         "eintraege": [
             {"content_id": str(BEITRAG), "gemerkt_am": "2026-11-22T10:00:00Z"}
-        ]
+        ],
     }
     merkliste.liste.assert_called_once_with("kim-1")
 
@@ -95,10 +96,14 @@ def test_entfernen(merkliste):
     merkliste.entfernen.assert_called_once_with("kim-1", BEITRAG)
 
 
-def test_ohne_schalter_404_ohne_datenbank(merkliste, art9_einwilligung_ohne_datenbank):
+def test_ohne_schalter_unsichtbar_ohne_datenbank(
+    merkliste, art9_einwilligung_ohne_datenbank
+):
     client = _client(an=False)
 
-    assert client.get(URL, headers=KIM).status_code == 404
+    abruf = client.get(URL, headers=KIM)
+    assert abruf.status_code == 200
+    assert abruf.json() == {"aktiv": False, "eintraege": []}
     assert client.put(f"{URL}/{BEITRAG}", headers=KIM).status_code == 404
     assert client.delete(f"{URL}/{BEITRAG}", headers=KIM).status_code == 404
     merkliste.liste.assert_not_called()
@@ -107,14 +112,15 @@ def test_ohne_schalter_404_ohne_datenbank(merkliste, art9_einwilligung_ohne_date
     art9_einwilligung_ohne_datenbank.lesen.assert_not_called()
 
 
-def test_ohne_admin_wert_404(merkliste):
+def test_ohne_admin_wert_aus(merkliste):
     """Obergrenze an, Admin-Wert aus (Standard): die Funktion gibt es nicht."""
     schalter_service_setzen(
         SchalterService(admin_werte_lesen=dict, admin_wert_setzen=Mock())
     )
     try:
         client = _client()
-        assert client.get(URL, headers=KIM).status_code == 404
+        assert client.get(URL, headers=KIM).json()["aktiv"] is False
+        assert client.put(f"{URL}/{BEITRAG}", headers=KIM).status_code == 404
         assert (
             client.get("/api/v1/funktionen").json()["funktionen"]["merkliste"] is False
         )
@@ -136,10 +142,11 @@ def test_besucher_401(merkliste, kopf):
 def test_ohne_einwilligung_403(merkliste, art9_einwilligung_ohne_datenbank):
     art9_einwilligung_ohne_datenbank.lesen.return_value = None
 
-    antwort = _client().put(f"{URL}/{BEITRAG}", headers=KIM)
-
-    assert antwort.status_code == 403
+    client = _client()
+    assert client.put(f"{URL}/{BEITRAG}", headers=KIM).status_code == 403
+    assert client.get(URL, headers=KIM).status_code == 403
     merkliste.merken.assert_not_called()
+    merkliste.liste.assert_not_called()
 
 
 def test_obergrenze_standard_aus_und_hinweis_auf_der_admin_seite():
