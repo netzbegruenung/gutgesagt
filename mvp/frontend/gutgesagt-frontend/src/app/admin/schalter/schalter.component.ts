@@ -34,6 +34,7 @@ const TITEL: Record<string, string> = {
   luecke_zu_gross: '„Lücke zu!“ als großer Moment',
   einwilligung_im_gewinn: 'Einwilligung im passenden Moment',
   naechster_schritt: '„Dein nächster Schritt“',
+  null_treffer_anzahl: '„Schon N-mal gesucht“ ohne Treffer',
   wirkungs_echo: 'Wirkungs-Echo „öffentlich gepostet“',
   danke_knopf: 'Danke-Knopf',
   danke_ohne_konto: 'Danke-Knopf ohne Konto',

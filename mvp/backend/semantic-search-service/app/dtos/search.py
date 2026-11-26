@@ -142,10 +142,11 @@ class SearchResponse(BaseModel):
     post_search_results: List[PostSearchResult] = []
     image_search_results_count: int = 0
     image_search_results: List[ImageSearchResult] = []
-    # Ohne Treffer: so viele Personen haben in den letzten vier Wochen ebenfalls ohne
-    # Treffer danach gesucht, die eigene Suche eingerechnet; erst ab zwei, sonst None
-    # (#362, services/suchen_ohne_treffer_service.py, schon_gesucht).
-    personen_ohne_treffer: Optional[int] = None
+    # Ohne Treffer: so oft wurde in den letzten vier Wochen ohne Treffer danach gesucht
+    # (je Tagespseudonym und Woche, die eigene Suche eingerechnet); erst ab drei und nur
+    # mit dem Schalter null_treffer_anzahl, sonst None (#362,
+    # services/suchen_ohne_treffer_service.py, schon_gesucht).
+    schon_gesucht_anzahl: Optional[int] = None
     # Nur bei Eingaben aus einem bis drei Woertern, die zu einem Thema passen
     # (domain/themen_abgleich.py), hoechstens zwei; None sonst oder wenn das
     # Nachschlagen scheitert. Die Treffer oben bleiben davon unberuehrt.

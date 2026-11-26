@@ -534,6 +534,7 @@ officer has advised.
 | `luecke_zu_gross` | `SEMANTIC_SEARCH_LUECKE_ZU_GROSS_AKTIV` | off | yes | none; while on (or while the browser holds the entry), the privacy policy shows the paragraph on the browser entry `gutgesagt-ton-bei-erfolgen`, DSFA V21 names it (#787) |
 | `einwilligung_im_gewinn` | `SEMANTIC_SEARCH_EINWILLIGUNG_IM_GEWINN_AKTIV` | off | yes | none, wordings stay (#788) |
 | `naechster_schritt` | `SEMANTIC_SEARCH_NAECHSTER_SCHRITT_AKTIV` | off | yes | DSFA addendum Spielgefühl (V10); privacy policy sentences ship with #789 |
+| `null_treffer_anzahl` | `SEMANTIC_SEARCH_NULL_TREFFER_ANZAHL_AKTIV` | off | yes | legal OK, preliminary 26.11.: only from N ≥ 3, wording „N-mal gesucht“, privacy policy paragraph „Suchen ohne Treffer“ (ships with #763, shown while on); final with the legal package 27.11. (#362) |
 | `wirkungs_echo` | `SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV` | off | no | DSFA addendum V31 (#790) |
 | `danke_knopf` | `SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV` | off | yes | DSFA addendum V31 (#791) |
 | `danke_ohne_konto` | `SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV` | off | yes | V31 and visitor marker (#495); works only with `danke_knopf` |

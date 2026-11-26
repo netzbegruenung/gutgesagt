@@ -218,6 +218,7 @@ def test_stand_nach_gruppen_geordnet_jeder_schalter_in_einer_gruppe():
     assert gruppe["gepostet_ohne_konto"] == gruppe["gepostet"] == "Grundfunktionen"
     assert gruppe["team_quests"] == "Teams"
     assert gruppe["naechster_schritt"] == "Spielgefühl"
+    assert gruppe["null_treffer_anzahl"] == "Spielgefühl"
     assert gruppe["rangliste"] == "Punkte & Anerkennung"
 
 

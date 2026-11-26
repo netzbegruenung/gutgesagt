@@ -510,11 +510,12 @@ Empfänger und Ort“.
   je Anschluss), kein Pseudonym (`LK:368-374`).
 - **Frist:** acht Wochen (`DSE:517-518`).
 - **Risiko:** gering; der Zähler „n Personen“ ist für alle Angemeldeten sichtbar (`DSE:497-500`).
-  Seit #362 nennt die Ergebnisseite ohne Treffer die Zahl ab zwei Personen auch Suchenden ohne
-  Anmeldung, die eigene Suche eingerechnet, aber nur zu einer Aussage, die sie ohnehin sehen
-  (mit Antwort oder freigegeben, Vormoderation P6); zu einer verborgenen oder abgelehnten
-  Suchanfrage gibt es keine Zahl. „Person“ heißt Tagespseudonym: Dieselbe Person kann mehrfach
-  zählen.
+  Seit #362 (hinter dem Schalter `null_treffer_anzahl`, Standard aus) nennt die Ergebnisseite
+  ohne Treffer auch Suchenden ohne Anmeldung „Danach wurde in den letzten vier Wochen schon
+  n-mal gesucht“, erst ab drei und die eigene Suche eingerechnet, aber nur zu einer Aussage, die
+  sie ohnehin sehen (mit Antwort oder freigegeben, Vormoderation P6); zu einer verborgenen oder
+  abgelehnten Suchanfrage gibt es keine Zahl. Gezählt wird je Tagespseudonym (Anschluss bzw.
+  Kennung je Tag), nicht je Mensch; deshalb „n-mal“ statt „n Personen“ (Jura vorläufig 26.11.).
 - **Maßnahmen:** Merkliste nur im Speicher bis Mitternacht (`DSE:469-476`); erst ab zwei Personen
   auf der Liste (`DSE:490-491`).
 

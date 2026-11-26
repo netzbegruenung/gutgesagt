@@ -550,14 +550,15 @@
           das Moderationsteam, zusätzlich mit der Zahl der Suchen.
         </li>
       </ul>
-      <p>
+      <p *ngIf="nullTrefferAnzahl()">
         Findet deine Suche nichts und gehört sie zu einem Eintrag, den alle sehen können
         (mit Antwort oder vom Moderationsteam freigegeben), nennt dir die Ergebnisseite auch
-        ohne Anmeldung, wie viele Personen im obigen Sinn in den letzten vier Wochen ohne
-        Treffer danach gesucht haben, deine Suche eingerechnet und erst ab zwei: „Danach haben
-        in den letzten vier Wochen schon n Personen gesucht.“ Dieselbe Person kann dabei
-        mehrfach zählen (siehe oben). Wer gesucht hat, erfährst du nicht; gespeichert wird
-        dafür nichts zusätzlich.
+        ohne Anmeldung, wie oft in den letzten vier Wochen ohne Treffer danach gesucht wurde,
+        deine Suche eingerechnet und erst ab drei: „Danach wurde in den letzten vier Wochen
+        schon n-mal gesucht.“ Gezählt wird wie auf den Listen je Person im obigen Sinn, also
+        je Pseudonym und Tag; die Zahl sagt deshalb nicht, wie viele verschiedene Menschen
+        gesucht haben. Wer gesucht hat, erfährst du nicht; gespeichert wird dafür nichts
+        zusätzlich.
       </p>
       <p>
         Wer gesucht hat, sieht niemand. Legt eine angemeldete Person auf „Hier fehlt eine
@@ -1514,7 +1515,7 @@
     </section>
 
     <div class="update-notice">
-      <p><strong>Stand:</strong> 25. November 2026</p>
+      <p><strong>Stand:</strong> 26. November 2026</p>
     </div>
   </div>
 </div>

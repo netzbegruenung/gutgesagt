@@ -62,8 +62,8 @@
             <ng-template #zumThemaOben>
                 <p class="search-query-info">Direkt zu „{{searchQuery}}“ ist noch nichts drin. Oben stehen Aussagen zum Thema.</p>
             </ng-template>
-            <!-- Nur die Zahl, erst ab zwei Personen, auch fuer Besucher (#362) -->
-            <p class="schon-gesucht" *ngIf="personenOhneTreffer as personen">Danach haben in den letzten vier Wochen schon {{ personen }} Personen gesucht.</p>
+            <!-- Nur die Zahl, erst ab drei, auch fuer Besucher, hinter dem Schalter null_treffer_anzahl (#362, Jura vorlaeufig 26.11.) -->
+            <p class="schon-gesucht" *ngIf="schonGesuchtAnzahl as anzahl">Danach wurde in den letzten vier Wochen schon {{ anzahl }}-mal gesucht.</p>
 
             <app-nicht-dabei [suchtext]="searchQuery" [bekannteAussagen]="bekannteAussagen" [ohneTreffer]="true">
                 <p class="neu-anlegen-satz">Schreib den ersten Kommentar zu dieser Aussage.</p>

@@ -27,8 +27,8 @@ export interface SearchResponse {
     post_search_results?: PostSearchResult[];
     image_search_results_count?: number;
     image_search_results?: ImageSearchResult[];
-    /** Ohne Treffer: so viele Personen (Tagespseudonyme) suchten in vier Wochen ohne Treffer danach, die eigene Suche eingerechnet; erst ab 2 und nur zu einer sichtbaren Aussage (#362). */
-    personen_ohne_treffer?: number | null;
+    /** Ohne Treffer: so oft (je Tagespseudonym und Woche) wurde in vier Wochen ohne Treffer danach gesucht, die eigene Suche eingerechnet; erst ab 3, nur zu einer sichtbaren Aussage und nur mit dem Schalter null_treffer_anzahl (#362). */
+    schon_gesucht_anzahl?: number | null;
     /**
      * "Alles zum Thema" (#754): bei Eingaben aus einem bis drei Woertern, die zu einem
      * Thema passen, hoechstens zwei; sonst null oder fehlend.

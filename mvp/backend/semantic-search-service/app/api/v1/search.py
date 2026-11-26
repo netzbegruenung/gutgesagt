@@ -50,7 +50,11 @@ from services.search_tracking_service import (
     get_search_tracking_service,
     tagespseudonym,
 )
-from services.suchen_ohne_treffer_service import SuchenOhneTrefferService
+from services.suchen_ohne_treffer_service import (
+    NULL_TREFFER_ANZAHL,
+    SuchenOhneTrefferService,
+)
+from services.schalter_service import schalter_wirksam
 from services.embeddings.qdrant_embeddings_manager import einbettungen_geteilt
 from services.search.search_query_statement import (
     SearchQueryStatementRecorder,
@@ -532,23 +536,23 @@ async def search_by_text(
             # Zeitpunkt, den die Tabelle nicht speichert.
             logger.warning(f"Failed to count search without hits: {type(e).__name__}")
 
-        # "Danach haben schon N Personen gesucht" (#362): nur nach einer Suche ohne
-        # Treffer, die gezaehlt wurde, nur die Zahl und erst ab zwei Personen. Nur zu
-        # einer Aussage, die der Aufrufer sehen darf (antwort_id, Vormoderation P6):
-        # Zu einer verborgenen oder abgelehnten Suchanfrage verriete die Zahl, dass
-        # gerade jemand fast dasselbe gesucht hat. Eben angelegt heisst ohnehin eine
-        # Person. Scheitert das Lesen, fehlt nur der Hinweis.
+        # "Danach wurde schon N-mal gesucht" (#362): nur mit dem Schalter
+        # null_treffer_anzahl, nur nach einer Suche ohne Treffer, die gezaehlt wurde, nur
+        # die Zahl und erst ab drei (Jura vorlaeufig 26.11.). Nur zu einer Aussage, die
+        # der Aufrufer sehen darf (antwort_id, Vormoderation P6): Zu einer verborgenen
+        # oder abgelehnten Suchanfrage verriete die Zahl, dass gerade jemand fast
+        # dasselbe gesucht hat. Eben angelegt heisst ohnehin einmal. Scheitert das
+        # Lesen, fehlt nur der Hinweis.
         if (
             total_results == 0
             and gezaehlt
             and antwort_id is not None
             and not statement_was_new
+            and schalter_wirksam(NULL_TREFFER_ANZAHL)
         ):
             try:
-                response.personen_ohne_treffer = (
-                    await suchen_ohne_treffer.schon_gesucht(
-                        statement_id, heute=jetzt.date()
-                    )
+                response.schon_gesucht_anzahl = await suchen_ohne_treffer.schon_gesucht(
+                    statement_id, heute=jetzt.date()
                 )
             except Exception as e:
                 logger.warning(

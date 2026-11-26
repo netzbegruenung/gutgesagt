@@ -344,6 +344,8 @@ class Settings(BaseSettings):
     luecke_zu_gross_aktiv: bool = False
     einwilligung_im_gewinn_aktiv: bool = False
     naechster_schritt_aktiv: bool = False
+    # "Danach wurde schon N-mal gesucht" (#362, Jura vorlaeufig 26.11.)
+    null_treffer_anzahl_aktiv: bool = False
     wirkungs_echo_aktiv: bool = False
     danke_knopf_aktiv: bool = False
     danke_ohne_konto_aktiv: bool = False
