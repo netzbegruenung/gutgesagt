@@ -187,6 +187,7 @@ describe('MeineBeitraegeComponent', () => {
           useValue: {
             an: an.asReadonly(),
             eingewilligt: () => true,
+            einwilligungOffen: () => false,
             bereit: () => an(),
             eintraege: signal([]).asReadonly(),
             laden: () => of([]),

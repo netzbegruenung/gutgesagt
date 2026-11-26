@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Observable, forkJoin, of, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 
@@ -16,6 +16,11 @@ export const MERKLISTE_SCHALTER = 'merkliste';
 export interface Gemerkt {
   content_id: string;
   gemerkt_am: string;
+  /**
+   * false: gesperrt oder gelöscht, der Reiter fragt den Beitrag nicht ab (kein 404 bei
+   * jedem Öffnen); fehlt: unbekannt (Suchindex nicht erreichbar), der Reiter fragt.
+   */
+  sichtbar?: boolean | null;
 }
 
 interface MerklisteAntwort {
@@ -37,11 +42,30 @@ export class MerklisteService {
   // Optional: Ohne HttpClient (Komponenten-Tests ohne Backend) bleibt die Liste leer.
   private readonly http = inject(HttpClient, { optional: true });
   private readonly funktionen = inject(FunktionenService);
-  private readonly einwilligung = toSignal(inject(Art9EinwilligungZustand).zustand$, { initialValue: 'unbekannt' });
+  private readonly zustand$ = inject(Art9EinwilligungZustand).zustand$;
+  private readonly einwilligung = toSignal(this.zustand$, { initialValue: 'unbekannt' });
   private readonly url = `${environment.baseUrl}/api/v1/merkliste`;
   private readonly stand = signal<Gemerkt[]>([]);
   private geladen = false;
   private unterwegs = false;
+  /**
+   * Das stille Laden ist gescheitert (etwa 401 bei abgelaufener Sitzung): bis zum
+   * nächsten Wechsel der Einwilligung nicht wieder still fragen, sonst löste jeder neu
+   * gezeichnete Knopf einen weiteren Abruf aus (fail2ban zählt 401 je IP).
+   */
+  private gescheitert = false;
+  /** Zählt Zurücksetzungen hoch; eine Antwort von davor schreibt nichts mehr. */
+  private runde = 0;
+
+  constructor() {
+    // Widerruf, Abmelden oder andere Person: Das Backend hat die Liste dann gelöscht
+    // oder sie gehört jemand anderem; der Stand von vorher darf nicht stehen bleiben.
+    this.zustand$.pipe(takeUntilDestroyed()).subscribe((zustand) => {
+      if (zustand !== 'eingewilligt') {
+        this.zuruecksetzen();
+      }
+    });
+  }
 
   /** Die Einträge, zuletzt gemerkt zuerst. */
   readonly eintraege: Signal<Gemerkt[]> = this.stand.asReadonly();
@@ -60,6 +84,11 @@ export class MerklisteService {
     return this.einwilligung() === 'eingewilligt';
   }
 
+  /** Ob der Stand der Einwilligung noch nicht feststeht (gleich nach dem Laden der App). */
+  einwilligungOffen(): boolean {
+    return this.einwilligung() === 'unbekannt';
+  }
+
   /** Schalter an und eingewilligt: Merken wird angeboten. */
   bereit(): boolean {
     return this.an() && this.eingewilligt();
@@ -71,7 +100,7 @@ export class MerklisteService {
 
   /** Einmal still laden, sobald es jemand braucht (Karten mit Merken-Knopf). */
   sicherstellen(): void {
-    if (this.geladen || this.unterwegs || !this.bereit()) {
+    if (this.geladen || this.unterwegs || this.gescheitert || !this.bereit()) {
       return;
     }
     this.laden(true).subscribe({ error: () => undefined });
@@ -86,16 +115,27 @@ export class MerklisteService {
       return of([]);
     }
     this.unterwegs = true;
+    const runde = this.runde;
     const optionen = still ? { context: stillerKontext() } : {};
     return this.http.get<MerklisteAntwort>(this.url, optionen).pipe(
       map((antwort) => antwort?.eintraege ?? []),
       tap({
         next: (eintraege) => {
+          if (runde !== this.runde) {
+            return;
+          }
           this.stand.set(eintraege);
           this.geladen = true;
+          this.gescheitert = false;
           this.unterwegs = false;
         },
-        error: () => (this.unterwegs = false),
+        error: () => {
+          if (runde !== this.runde) {
+            return;
+          }
+          this.unterwegs = false;
+          this.gescheitert = still;
+        },
       }),
     );
   }
@@ -144,5 +184,13 @@ export class MerklisteService {
       tap(() => this.stand.update((liste) => liste.filter((e) => !weg.has(e.content_id)))),
       map(() => undefined),
     );
+  }
+
+  private zuruecksetzen(): void {
+    this.runde++;
+    this.stand.set([]);
+    this.geladen = false;
+    this.unterwegs = false;
+    this.gescheitert = false;
   }
 }

@@ -126,4 +126,37 @@ describe('MerklisteService (#758)', () => {
     expect(fehler).toBeTruthy();
     expect(service.istGemerkt('a')).toBeTrue();
   });
+
+  it('vergisst den Stand beim Widerruf und laedt nach erneuter Einwilligung frisch', () => {
+    service.sicherstellen();
+    http.expectOne(URL).flush({ eintraege: [{ content_id: 'a', gemerkt_am: '2026-11-22T10:00:00Z' }] });
+    TestBed.tick();
+
+    zustand.next('fehlt');
+    TestBed.tick();
+    expect(service.eintraege()).toEqual([]);
+    expect(service.istGemerkt('a')).toBeFalse();
+
+    zustand.next('eingewilligt');
+    TestBed.tick();
+    service.sicherstellen();
+    http.expectOne(URL).flush({ eintraege: [] });
+    service.umschalten('a').subscribe();
+    expect(http.expectOne(`${URL}/a`).request.method).toBe('PUT');
+  });
+
+  it('fragt nach gescheitertem stillem Laden nicht bei jedem Knopf erneut', () => {
+    service.sicherstellen();
+    http.expectOne(URL).flush('weg', { status: 401, statusText: 'Unauthorized' });
+
+    service.sicherstellen();
+    service.sicherstellen();
+    http.expectNone(URL);
+
+    zustand.next('fehlt');
+    zustand.next('eingewilligt');
+    TestBed.tick();
+    service.sicherstellen();
+    http.expectOne(URL).flush({ eintraege: [] });
+  });
 });

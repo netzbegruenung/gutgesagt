@@ -48,10 +48,18 @@ class MerklisteRepository:
         """
         Merken oder, wenn schon gemerkt, nach oben holen (``gemerkt_am`` neu).
 
+        Zaehlen und Einfuegen laufen je Kennung hintereinander (Transaktionssperre auf
+        den Hash der Kennung): Parallele Tipps fuehren so nicht ueber MERKLISTE_MAX.
+
         Raises:
         - MerklisteVoll, wenn ein neuer Eintrag ueber MERKLISTE_MAX ginge.
         """
         with self.db.get_session() as session:
+            session.execute(
+                select(
+                    func.pg_advisory_xact_lock(func.hashtext("merkliste:" + user_id))
+                )
+            )
             schon = session.execute(
                 select(MerklisteZeile.content_id).where(
                     MerklisteZeile.user_id == user_id,

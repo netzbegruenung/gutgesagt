@@ -3,7 +3,6 @@ import {
   Component,
   DestroyRef,
   ElementRef,
-  OnInit,
   computed,
   effect,
   inject,
@@ -64,7 +63,10 @@ type Geladen = { id: string; karte: KartenDaten | null; fehler: boolean };
   imports: [CommonModule, MatButtonModule, MatProgressSpinnerModule, BeitragskarteComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <p *ngIf="!merkliste.eingewilligt()" class="hinweis-box gemerkt-einwilligung">
+    <div *ngIf="merkliste.einwilligungOffen()" class="gemerkt-laedt" role="status">
+      <mat-spinner diameter="32"></mat-spinner><span>{{ texte.laedt }}</span>
+    </div>
+    <p *ngIf="!merkliste.einwilligungOffen() && !merkliste.eingewilligt()" class="hinweis-box gemerkt-einwilligung">
       {{ texte.einwilligung }}
       <button mat-button type="button" class="einwilligen-knopf" (click)="einwilligen()">{{ texte.einwilligen }}</button>
     </p>
@@ -104,7 +106,7 @@ type Geladen = { id: string; karte: KartenDaten | null; fehler: boolean };
     `,
   ],
 })
-export class GemerktComponent implements OnInit {
+export class GemerktComponent {
   readonly texte = GEMERKT_TEXTE;
   readonly laedt = signal(true);
   readonly fehler = signal(false);
@@ -144,10 +146,14 @@ export class GemerktComponent implements OnInit {
       }
       vorher = jetzt;
     });
-  }
-
-  ngOnInit(): void {
-    this.laden();
+    // Laden, sobald Schalter und Einwilligung feststehen, auch wenn der Stand der
+    // Einwilligung erst nach dem Öffnen des Reiters kommt (?tab=gemerkt, Neuladen):
+    // sonst bliebe „Noch nichts gemerkt“ stehen, bis jemand von Hand neu lädt.
+    effect(() => {
+      if (this.merkliste.bereit()) {
+        untracked(() => this.laden());
+      }
+    });
   }
 
   laden(): void {
@@ -189,7 +195,11 @@ export class GemerktComponent implements OnInit {
     return karte.id;
   }
 
-  private seiteLaden(eintraege: Gemerkt[]): void {
+  private seiteLaden(seite: Gemerkt[]): void {
+    // Was der Suchindex schon als gesperrt oder gelöscht meldet, nicht abfragen: Das
+    // gäbe bei jedem Öffnen ein 404 je Eintrag (fail2ban im Saal-WLAN).
+    const nichtDa = seite.filter((e) => e.sichtbar === false).map((e) => e.content_id);
+    const eintraege = seite.filter((e) => e.sichtbar !== false);
     from(eintraege)
       .pipe(
         // Hoechstens LADEN_PARALLEL Abrufe zugleich; die Reihenfolge kommt aus der Merkliste
@@ -208,8 +218,12 @@ export class GemerktComponent implements OnInit {
         const karten = new Map(this.geladen());
         ergebnisse.forEach((e) => e.karte && karten.set(e.id, e.karte));
         this.geladen.set(karten);
-        this.weg.update((w) => [...w, ...ergebnisse.filter((e) => !e.karte && !e.fehler).map((e) => e.id)]);
-        this.bis.update((b) => b + eintraege.length);
+        this.weg.update((w) => [
+          ...w,
+          ...nichtDa,
+          ...ergebnisse.filter((e) => !e.karte && !e.fehler).map((e) => e.id),
+        ]);
+        this.bis.update((b) => b + seite.length);
         // Nur 404 heisst „nicht mehr da“; jeder andere Fehler ist ein Ladefehler
         if (ergebnisse.some((e) => e.fehler)) {
           this.fehler.set(true);

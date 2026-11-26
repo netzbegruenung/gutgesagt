@@ -428,9 +428,11 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   `false` until a consent wording, a DSFA section and a privacy policy paragraph name it);
   takes effect only when an admin switches it on too. Then signed-in persons with the Art. 9
   consent save Beiträge (`/api/v1/merkliste`, table `merkliste`); withdrawing the consent
-  deletes the list. Off, `GET` answers 200 with `aktiv: false` and an empty list, saving and
-  removing answer 404 (both without touching the database), and the frontend hides the button
-  and the tab „Gemerkt“.
+  deletes the list. Off, `GET` answers 200 with `aktiv: false` and an empty list, saving
+  answers 404 (both without touching the database), removing stays open so entries from a time
+  „on“ can always be taken back, and the frontend hides the button and the tab „Gemerkt“. On,
+  `GET` marks each entry `sichtbar` (one Qdrant lookup for the list), so the tab does not
+  request blocked or deleted Beiträge (no 404 on every opening).
 - `SEMANTIC_SEARCH_ANTWORTEN_HINWEIS_AKTIV` - upper bound of the Schalter `antworten_hinweis`
   (#760, default `false` until the privacy policy names it; nothing is stored); takes effect
   only when an admin switches it on too.

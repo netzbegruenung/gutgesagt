@@ -30,7 +30,7 @@ export const MERKEN_TEXTE = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button *ngIf="sichtbar()" mat-button type="button" class="merken-knopf"
-            [class.ist-gemerkt]="gemerkt()" [attr.aria-busy]="laeuft() || null" (click)="umschalten()">
+            [class.ist-gemerkt]="gemerkt()" [attr.aria-pressed]="gemerkt()" [attr.aria-busy]="laeuft() || null" (click)="umschalten()">
       <mat-icon aria-hidden="true">{{ gemerkt() ? 'bookmark' : 'bookmark_border' }}</mat-icon>
       <span>{{ gemerkt() ? texte.gemerkt : texte.merken }}</span>
     </button>

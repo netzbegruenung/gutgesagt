@@ -8,6 +8,7 @@ Loeschkommando selbst prueft dort ``spuren``.
 
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import MagicMock
 
 import pytest
@@ -75,6 +76,22 @@ class TestMerkliste:
         # Schon Gemerktes nach oben holen geht weiter
         merkliste.merken(PERSON, a)
         assert len(_ids(merkliste)) == 2
+
+    def test_parallele_tipps_bleiben_unter_der_obergrenze(self, merkliste, monkeypatch):
+        monkeypatch.setattr(merkliste_modul, "MERKLISTE_MAX", 1)
+
+        def tippen(_):
+            try:
+                merkliste.merken(PERSON, uuid.uuid4())
+                return True
+            except MerklisteVoll:
+                return False
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            ergebnisse = list(pool.map(tippen, range(4)))
+
+        assert ergebnisse.count(True) == 1
+        assert len(_ids(merkliste)) == 1
 
     def test_mit_dem_beitrag_weg(self, merkliste):
         a, b = uuid.uuid4(), uuid.uuid4()

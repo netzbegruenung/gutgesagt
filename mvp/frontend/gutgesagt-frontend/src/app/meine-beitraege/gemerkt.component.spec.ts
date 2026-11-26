@@ -13,7 +13,7 @@ describe('GemerktComponent (#758)', () => {
   let eintraege: WritableSignal<Gemerkt[]>;
   let laden: jasmine.Spy;
   let beitragLaden: jasmine.Spy;
-  let eingewilligt: WritableSignal<boolean>;
+  let zustand: WritableSignal<'unbekannt' | 'eingewilligt' | 'fehlt'>;
   let entfernen: jasmine.Spy;
 
   function beitrag(id: string) {
@@ -22,7 +22,7 @@ describe('GemerktComponent (#758)', () => {
 
   beforeEach(async () => {
     eintraege = signal([]);
-    eingewilligt = signal(true);
+    zustand = signal('eingewilligt');
     entfernen = jasmine.createSpy('entfernen').and.callFake((ids: string[]) => {
       eintraege.update((l) => l.filter((e) => !ids.includes(e.content_id)));
       return of(undefined);
@@ -43,7 +43,14 @@ describe('GemerktComponent (#758)', () => {
       providers: [
         {
           provide: MerklisteService,
-          useValue: { eintraege: eintraege.asReadonly(), laden, entfernen, eingewilligt: () => eingewilligt() },
+          useValue: {
+            eintraege: eintraege.asReadonly(),
+            laden,
+            entfernen,
+            eingewilligt: () => zustand() === 'eingewilligt',
+            einwilligungOffen: () => zustand() === 'unbekannt',
+            bereit: () => zustand() === 'eingewilligt',
+          },
         },
         { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate']) },
         { provide: ContentService, useValue: { beitragLaden } },
@@ -88,11 +95,43 @@ describe('GemerktComponent (#758)', () => {
   });
 
   it('ohne Einwilligung ein Hinweis statt eines Ladefehlers', () => {
-    eingewilligt.set(false);
+    zustand.set('fehlt');
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain(GEMERKT_TEXTE.einwilligung);
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+    expect(laden).not.toHaveBeenCalled();
+  });
+
+  it('laedt nach, wenn der Stand der Einwilligung erst nach dem Oeffnen kommt', () => {
+    zustand.set('unbekannt');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(GEMERKT_TEXTE.laedt);
+    expect(fixture.nativeElement.textContent).not.toContain(GEMERKT_TEXTE.einwilligung);
+    expect(laden).not.toHaveBeenCalled();
+
+    zustand.set('eingewilligt');
+    fixture.detectChanges();
+
+    expect(laden).toHaveBeenCalledTimes(1);
+    expect(fixture.componentInstance.karten().map((k) => k.id)).toEqual(['b', 'a']);
+  });
+
+  it('fragt Beitraege, die der Suchindex als nicht sichtbar meldet, gar nicht erst ab', () => {
+    laden.and.callFake(() => {
+      eintraege.set([
+        { content_id: 'a', gemerkt_am: '2026-11-22T10:00:00Z', sichtbar: true },
+        { content_id: 'gesperrt', gemerkt_am: '2026-11-21T10:00:00Z', sichtbar: false },
+      ]);
+      return of(eintraege());
+    });
+    fixture.detectChanges();
+
+    expect(beitragLaden).toHaveBeenCalledTimes(1);
+    expect(beitragLaden).toHaveBeenCalledWith('a');
+    expect(fixture.componentInstance.weg()).toEqual(['gesperrt']);
+    expect(fixture.componentInstance.weitere()).toBeFalse();
   });
 
   it('sagt es, wenn noch nichts gemerkt ist', () => {

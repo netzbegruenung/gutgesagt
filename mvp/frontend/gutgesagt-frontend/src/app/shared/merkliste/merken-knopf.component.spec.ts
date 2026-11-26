@@ -48,6 +48,8 @@ describe('MerkenKnopfComponent (#758)', () => {
   it('zeigt bei eingeschaltetem Schalter „Merken“ mit Symbol und laedt die Liste', () => {
     expect(knopf()?.textContent?.replace(/\s+/g, ' ').trim()).toBe(`bookmark_border${MERKEN_TEXTE.merken}`);
     expect(merkliste.sicherstellen).toHaveBeenCalled();
+    // Umschaltknopf: Screenreader hören „nicht gedrückt“ bzw. „gedrückt“ (WCAG 4.1.2)
+    expect(knopf()?.getAttribute('aria-pressed')).toBe('false');
   });
 
   it('zeigt nichts bei ausgeschaltetem Schalter', () => {
@@ -83,6 +85,7 @@ describe('MerkenKnopfComponent (#758)', () => {
     fixture.detectChanges();
 
     expect(knopf()?.textContent).toContain(MERKEN_TEXTE.gemerkt);
+    expect(knopf()?.getAttribute('aria-pressed')).toBe('true');
     expect(snackBar.open).toHaveBeenCalledWith(MERKEN_TEXTE.gemerktMeldung, 'OK', jasmine.anything());
   });
 

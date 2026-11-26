@@ -4,18 +4,22 @@ wiederfinden. Lesen und Merken nur fuer angemeldete Personen mit Art.-9-Einwilli
 (Entfernen auch ohne, wie jedes Zuruecknehmen), nur fuers eigene
 Konto; Zaehler fuer andere gibt es nicht. Ohne den Schalter ``merkliste`` antwortet
 ``GET`` mit 200 und ``aktiv: false`` (die Seite fragt selbst nach, ein 404 je Abruf
-fiele im Gateway auf), Merken und Entfernen mit 404, jeweils vor jeder
-Datenbankabfrage. Die Person kommt aus ``X-User``, nicht aus dem Pfad (#284).
+fiele im Gateway auf), Merken mit 404, jeweils vor jeder Datenbankabfrage. Die Person kommt aus ``X-User``, nicht aus dem Pfad (#284).
 
-Die Liste nennt nur IDs und Zeitpunkte; die Beitraege laedt das Frontend ueber ihre
-eigene Adresse (GET /api/v1/content/beitrag/{id}), die gesperrte und geloeschte mit 404
-auslaesst.
+Die Liste nennt IDs, Zeitpunkte und je Eintrag ``sichtbar`` (eine Abfrage an den
+Suchindex fuer die ganze Liste, wie der Zustand am Einwurf). Die sichtbaren Beitraege
+laedt das Frontend ueber ihre eigene Adresse (GET /api/v1/content/beitrag/{id});
+gesperrte und geloeschte fragt es gar nicht erst ab, sonst antwortete jedes Oeffnen des
+Reiters mit 404 je Eintrag (fail2ban im Saal-WLAN).
+
+Entfernen geht auch bei ausgeschaltetem Schalter: Zuruecknehmen bleibt immer offen,
+sonst laegen Eintraege aus einer Zeit "an" fest, bis die Person widerruft.
 """
 
 import asyncio
 import uuid
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
@@ -23,6 +27,7 @@ from pydantic import BaseModel
 from core.config import Settings
 from core.fehler import INTERNER_FEHLER
 from core.logging import get_logger, log_pseudonym
+from domain.models.content_status import zustand_am_einwurf
 from dependencies import (
     get_beitrag_laden,
     get_settings,
@@ -34,6 +39,9 @@ from repositories.merkliste_repository import (
     MerklisteRepository,
     MerklisteVoll,
     get_merkliste_repository,
+)
+from repositories.implementations.qdrant.moderation_repository import (
+    get_moderation_repository,
 )
 from services.beitrag_laden import BeitragLader, BeitragUnlesbar
 from services.schalter_service import schalter_wirksam
@@ -50,6 +58,9 @@ MERKLISTE_VOLL = (
 class GemerktResponse(BaseModel):
     content_id: uuid.UUID
     gemerkt_am: datetime
+    # false: gesperrt oder geloescht, das Frontend fragt ihn nicht ab; None: Suchindex
+    # nicht erreichbar, das Frontend versucht es wie vorher
+    sichtbar: Optional[bool] = None
 
 
 class MerklisteResponse(BaseModel):
@@ -88,6 +99,30 @@ def merkliste_angeboten(
     return get_merkliste_repository()
 
 
+async def _sichtbarkeit(ids: List[uuid.UUID]) -> Dict[uuid.UUID, bool]:
+    """
+    Ob die Beitraege zu diesen IDs fuer Leser da sind, mit einer Abfrage an den
+    Suchindex. Antwortet der nicht, ein leeres Dict: Die Liste laedt trotzdem.
+    """
+    if not ids:
+        return {}
+    try:
+        gespeichert = await get_moderation_repository().zustaende_laden(
+            [str(i) for i in ids]
+        )
+    except Exception as e:
+        logger.error(
+            f"Zustand der gemerkten Beitraege nicht lesbar: {type(e).__name__}",
+            exc_info=True,
+        )
+        return {}
+    return {
+        i: zustand_am_einwurf(gespeichert.get(str(i)), str(i) in gespeichert)
+        == "sichtbar"
+        for i in ids
+    }
+
+
 @router.get("", response_model=MerklisteResponse)
 async def merkliste_lesen(
     current_user: str = Depends(require_user),
@@ -104,9 +139,14 @@ async def merkliste_lesen(
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail=INTERNER_FEHLER)
+    sichtbar = await _sichtbarkeit([e.content_id for e in eintraege])
     return MerklisteResponse(
         eintraege=[
-            GemerktResponse(content_id=e.content_id, gemerkt_am=e.gemerkt_am)
+            GemerktResponse(
+                content_id=e.content_id,
+                gemerkt_am=e.gemerkt_am,
+                sichtbar=sichtbar.get(e.content_id),
+            )
             for e in eintraege
         ]
     )
@@ -147,13 +187,14 @@ async def merken(
 async def entfernen(
     content_id: uuid.UUID,
     current_user: str = Depends(require_user),
-    merkliste: MerklisteRepository = Depends(_merkliste),
 ) -> Response:
     """
     Einen Eintrag entfernen; war er nicht gemerkt, ebenso 204. Ohne Art.-9-Einwilligung
-    offen wie jedes Zuruecknehmen (test_art9_einwilligung_api.py).
+    offen wie jedes Zuruecknehmen (test_art9_einwilligung_api.py), und ohne Schalter
+    ebenso: Wer in einer Zeit "an" gemerkt hat, kann das immer selbst zuruecknehmen.
     """
     try:
+        merkliste = get_merkliste_repository()
         await asyncio.to_thread(merkliste.entfernen, current_user, content_id)
     except Exception as e:
         logger.error(
