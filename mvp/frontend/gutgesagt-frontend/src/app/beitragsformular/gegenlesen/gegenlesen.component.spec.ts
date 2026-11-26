@@ -210,7 +210,7 @@ describe('GegenlesenComponent', () => {
     tick(GEGENLESEN_VERZOEGERUNG_MS);
     http.expectNone(PFAD);
 
-    expect(siegelText()).toBe('Siegel: neu, noch keine Güte');
+    expect(siegelText()).toBe('Siegel: neu, die Güte kommt mit den ersten Stimmen');
     expect(element().querySelectorAll('.gegenlesen-anmerkung').length).toBe(0);
   }));
 

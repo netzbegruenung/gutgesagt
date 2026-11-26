@@ -327,6 +327,11 @@ class Settings(BaseSettings):
     # nichts uebertragen oder gespeichert wird; Standard aus ist der Admin-Wert
     # (services/schalter_service.py, ohne Eintrag aus).
     sharepic_aktiv: bool = True
+    # Zuwachs zur Bestandszahl (domain/bestandszahl.py): /getMetrics nennt dazu die neuen
+    # Kommentare der letzten 7 Tage bzw. den Tag des letzten. Obergrenze an, weil nur
+    # oeffentliche Inhalte beim Aufruf gezaehlt werden und nichts gespeichert wird;
+    # wirksam erst mit dem Admin-Wert (Feature-Toggle fuer Neues, Sebastian 26.11.).
+    bestandszahl_zuwachs_aktiv: bool = True
     # Stimmenverfall bei ganz anderem Text unter gleichem Titel (#636,
     # StatementService.gleicher_text): Obergrenze von Haus aus aus, weil geloeschte
     # Stimmen nicht zurueckkommen; wirkt nur zusammen mit dieselbe_aussage_nli = an.

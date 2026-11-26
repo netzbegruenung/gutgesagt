@@ -17,6 +17,7 @@ import { SeitLetztemBesuchComponent } from '../seit-letztem-besuch/seit-letztem-
 import { NaechsterSchrittComponent } from '../naechster-schritt/naechster-schritt.component';
 import { GartenHinweisComponent } from '../garten/garten-hinweis.component';
 import { SaisonZielComponent } from '../saison-ziel/saison-ziel.component';
+import { HeroUnterzeileComponent } from './hero-unterzeile.component';
 import { KonterProbeEinstiegComponent } from '../konter-probe/konter-probe-einstieg.component';
 import { SUCHFELD_FOKUS_FRAGMENT, SUCHFELD_ID } from '../naechster-schritt/naechster-schritt';
 
@@ -44,6 +45,7 @@ export const AUTOFOKUS_MEDIEN = '(min-width: 960px) and (hover: hover) and (poin
     NaechsterSchrittComponent,
     GartenHinweisComponent,
     SaisonZielComponent,
+    HeroUnterzeileComponent,
     KonterProbeEinstiegComponent,
   ],
   templateUrl: './search-view.component.html',

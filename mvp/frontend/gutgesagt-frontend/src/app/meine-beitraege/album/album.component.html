@@ -121,7 +121,7 @@
             <span class="abschnitt-name">{{ abschnitt.thema.name }}</span>
             <mat-icon class="abschnitt-pfeil" aria-hidden="true">expand_more</mat-icon>
             <span class="abschnitt-stand">{{ stand(abschnitt) }}</span>
-            <span class="abschnitt-balken balken" aria-hidden="true"><i [style.width.%]="prozent(abschnitt)"></i></span>
+            <span class="abschnitt-balken balken" aria-hidden="true" *ngIf="abschnitt.genutzt"><i [style.width.%]="prozent(abschnitt)"></i></span>
         </button>
     </h2>
     <div class="abschnitt-inhalt" [id]="'album-' + abschnitt.thema.schluessel" [hidden]="!offen(abschnitt, i)">

@@ -216,6 +216,8 @@ export class KopiertErfolgComponent implements OnChanges, AfterViewChecked, OnDe
   @Input() sichtbar = false;
   /** Die Nutzung, wie die Karte sie gerade zeigt; null = unbekannt. */
   @Input() nutzung: number | null = null;
+  /** Am eigenen Beitrag: Die eigene Kopie zählt nicht, also kein „zum ersten Mal“. */
+  @Input() eigen = false;
   /** Eine Antwort zur selben Aussage in anderem Stil; null = kein Hinweis. */
   @Input() andereTonlage: AndereTonlage | null = null;
   /** Aus mit Schalter `kopiert_erfolg` aus: dann nur „Kopiert – …“ ohne Pflänzchen, Nutzung und Tonlage. */
@@ -305,7 +307,7 @@ export class KopiertErfolgComponent implements OnChanges, AfterViewChecked, OnDe
   }
 
   get nutzungText(): string | null {
-    return nutzungSatz(this.nutzung);
+    return nutzungSatz(this.nutzung, this.eigen);
   }
 
   get tonlage(): { frage: string; link: string } | null {

@@ -343,7 +343,8 @@ gleich, aber nicht erkannt (24): C01, C05, C08, C09, C10, C11, C12, C13, WI02, W
 Ändert sich der Text eines Kommentars oder einer Hintergrundinfo, sollen Stimmen verfallen,
 wenn der Text etwas anderes sagt, aber nie bei kleinen Korrekturen. Gemessen am 22.11.2026
 an 39 Paaren (`text_fassung_paare.py`, alte und neue Fassung von acht Beispieltexten,
-rund 30 bis 850 Zeichen; die Labels hat ein Agent gesetzt, abgenommen sind sie noch nicht):
+rund 30 bis 850 Zeichen; Labels abgenommen vom Maintainer am 26.11.2026 im Review von #764:
+korrigierte Zahl und Kürzung auf einen Satz behalten die Stimmen):
 27 *bleibt* (Tippfehler, Satzzeichen, klein geschrieben, Ergänzung bis zum Vierfachen,
 Kürzung bis auf einen Satz, angehängter Link, Umformulierung, korrigierte Zahl), 12 *verfällt*
 (5 Gegenteil, 2 anderer Standpunkt, 5 ganz anderer Text).

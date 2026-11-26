@@ -78,7 +78,7 @@ describe('Konter-Probe: Auflösung im Browser', () => {
 
   it('nennt Nutzung ehrlich als Zahl der Nutzungen', () => {
     expect(nutzungText(14)).toBe('14-mal genutzt');
-    expect(nutzungText(0)).toBe('noch nicht genutzt');
+    expect(nutzungText(0)).toBe('wartet auf die erste Nutzung');
   });
 });
 
@@ -161,6 +161,20 @@ describe('KonterProbeComponent', () => {
     expect(window.localStorage.setItem).not.toHaveBeenCalled();
     expect(window.sessionStorage.setItem).not.toHaveBeenCalled();
     expect(service.proben).toHaveBeenCalledTimes(1);
+  });
+
+  it('zeigt eine Antwort mit 0 als Anfang und ohne leeren Balken (Leerzustände 26.11.)', () => {
+    const ohneNutzung = antwort();
+    ohneNutzung.antworten[2] = roh('k-3', 'brueckenbauend', 0);
+    erstellen(of([ausAntwort(ohneNutzung)!]));
+    alle('[data-testid="tipp"]')[1].click();
+    fixture.detectChanges();
+
+    const zeilen = alle('[data-testid="aufloesung"]');
+    expect(zeilen[2].textContent!.replace(/\s+/g, ' ')).toContain('wartet auf die erste Nutzung');
+    expect(zeilen[2].textContent).not.toContain('noch nicht');
+    expect(zeilen[2].querySelector('.balken')!.classList).toContain('balken--leer');
+    expect(zeilen[0].querySelector('.balken')!.classList).not.toContain('balken--leer');
   });
 
   it('wertet daneben ohne Tadel aus', () => {

@@ -23,6 +23,31 @@ export function teamBegruessungTitel(team: string, nummer: number): string {
 }
 
 /**
+ * Wie viele schon dabei sind, unter der Begrüßung (Leerzustände 26.11.): bei 0 bis 3 nach
+ * Anfang statt „Noch ist niemand dabei.“, ab 4 die Zahl wie bisher. Steht nicht im
+ * Wortlaut der Einwilligung.
+ *
+ * Die Nummern werden nach einem Austritt nicht neu vergeben (`naechste_nummer` zählt
+ * weiter). „Anfang“ und „die ersten“ stehen deshalb nur, solange niemand ausgetreten ist,
+ * also die nächste Nummer genau auf die Mitglieder folgt; sonst die Zahl ohne Wertung,
+ * damit der Satz nicht „Du wärst Nr. 5.“ darüber widerspricht.
+ */
+export function teamDabeiSatz(mitglieder: number, naechsteNummer: number): string {
+  const anzahl = Number.isFinite(mitglieder) ? Math.max(0, Math.floor(mitglieder)) : 0;
+  const vonAnfang = naechsteNummer === anzahl + 1;
+  if (anzahl === 0) {
+    return vonAnfang ? 'Mit dir fängt das Team an.' : 'Gerade ist niemand dabei.';
+  }
+  if (anzahl === 1) {
+    return vonAnfang ? 'Die erste Person ist schon dabei.' : '1 Person ist schon dabei.';
+  }
+  if (anzahl <= 3 && vonAnfang) {
+    return `Die ersten ${anzahl} sind schon dabei.`;
+  }
+  return `Schon ${anzahl} dabei.`;
+}
+
+/**
  * Was vor der Frage steht (juristische Vorprüfung 24.11.2026): was gespeichert wird,
  * wer es sieht und wie man widerruft. Erst danach die beiden gleichwertigen Knöpfe.
  */

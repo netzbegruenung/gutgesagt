@@ -6,11 +6,20 @@
 
 // GetMetrics
 
+/** Zuwachs zur Bestandszahl (Schalter bestandszahl_zuwachs); fehlt bei älterem Server. */
+export interface ZuwachsDto {
+    /** Neue Kommentare der letzten 7 Tage, genau, nur ab 3 */
+    neu_7_tage: number | null;
+    /** Tag (JJJJ-MM-TT, deutsche Zeit) des neuesten Kommentars, nur unter 3 neuen */
+    zuletzt_ergaenzt: string | null;
+}
+
 export interface GetMetricsResponse {
     content_count: number;
     statement_count: number;
     commentary_count: number;
     reference_count: number;
+    zuwachs?: ZuwachsDto | null;
 }
 
 

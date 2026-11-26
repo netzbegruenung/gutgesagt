@@ -127,7 +127,7 @@ describe('Album (album.ts)', () => {
       expect(liste.map((a) => a.thema.schluessel)).toEqual(['wohnen', 'klima']);
       expect(liste[0].eintraege.map((e) => e.karte.id)).toEqual(['w2', 'w1']);
       expect(abschnittStand(liste[0])).toBe('2 von 2 genutzt');
-      expect(abschnittStand(liste[1])).toBe('2 Beiträge · noch keiner genutzt');
+      expect(abschnittStand(liste[1])).toBe('2 Beiträge');
     });
   });
 

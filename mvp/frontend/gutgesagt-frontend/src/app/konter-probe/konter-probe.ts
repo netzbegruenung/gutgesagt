@@ -73,9 +73,12 @@ export function besteAntwort(probe: KonterProbe): ProbeAntwort {
   return probe.antworten.reduce((beste, a) => (a.nutzung > beste.nutzung ? a : beste));
 }
 
-/** „14-mal genutzt“, ehrlich und ohne Personen; 0 als „noch nicht genutzt“. */
+/**
+ * „14-mal genutzt“, ehrlich und ohne Personen; 0 nach Anfang als „wartet auf die erste
+ * Nutzung“ statt „noch nicht genutzt“, dann ohne Balken (Leerzustände 26.11.).
+ */
 export function nutzungText(nutzung: number): string {
-  return nutzung > 0 ? `${nutzung}-mal genutzt` : 'noch nicht genutzt';
+  return nutzung > 0 ? `${nutzung}-mal genutzt` : 'wartet auf die erste Nutzung';
 }
 
 /**

@@ -296,6 +296,15 @@ SCHALTER: Dict[str, Schalterart] = {
             oeffentlich=True,
         ),
         Schalterart(
+            name="bestandszahl_zuwachs",
+            feld="bestandszahl_zuwachs_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_BESTANDSZAHL_ZUWACHS_AKTIV",
+            erklaerung=(
+                "Zuwachs in der Unterzeile der Startseite: neue Antworten der letzten "
+                "7 Tage, unter 3 nur der Tag der letzten; zählt nur öffentliche Inhalte."
+            ),
+        ),
+        Schalterart(
             name="stimmen_text_verfall",
             feld="stimmen_text_verfall_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_STIMMEN_TEXT_VERFALL_AKTIV",

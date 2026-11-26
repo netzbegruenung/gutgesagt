@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500">
+<!-- Linkvorschau (og:image) fuer Messenger und soziale Netzwerke, 1200 x 500 (2,4:1). Flacher als das uebliche
+     1200 x 630, damit die Karte im Chat nicht so hoch wird; WhatsApp zeigt grosse Vorschauen bis 4:1 (Meta,
+     WhatsApp Business Platform, Link previews), Telegram gross mit twitter:card summary_large_image.
+     Satz und Optik hat Sebastian am 26.11.2026 aus fuenf Varianten gewaehlt: "Darauf gibt's eine gute Antwort."
+     gross in Tannengruen auf App-Gelb, Logo rechts. Der Satz passt ueber jede geteilte Seite: Bei /beitrag/<id>
+     und /result setzt nginx nur Titel und Beschreibung ein, das Bild bleibt, und der Titel darunter ist dann die
+     Antwort. Absender Netzbegruenung, keine Personen, keine Anzeigenamen. linkvorschau-v1.png ist aus dieser
+     Zeichnung gerendert (Chromium, Schriften aus ../fonts/). Logo: logo-v2.svg (Hand "Thumbs up" aus Fluent
+     Emoji, Copyright (c) Microsoft Corporation, MIT-Lizenz, siehe FLUENT-EMOJI-LIZENZ.txt). Schriften: GrueneType
+     und PT Sans wie in der App (src/styles.css). Farben wie das Teilen-Bild (sharepic.ts): #f6ff7c, #005437,
+     #1f1f1f, alle Paare ueber 4,5:1. -->
+<style>
+@font-face{font-family:GT;src:url(../fonts/GrueneTypeNeue-Regular.woff2)}
+@font-face{font-family:PTB;src:url(../fonts/PTS75F.ttf)}
+.gt{font-family:GT;fill:#005437}
+.f{font-family:PTB;fill:#005437;font-size:36px}
+</style>
+<rect width="1200" height="500" fill="#f6ff7c"/>
+<text class="gt" x="80" y="190" font-size="112">Darauf gibt’s</text>
+<text class="gt" x="80" y="310" font-size="112">eine gute Antwort.</text>
+<text class="f" x="84" y="410">Gut gesagt · Netzbegrünung</text>
+<image href="logo-v2.svg" x="910" y="110" width="230" height="230"/>
+</svg>

@@ -678,6 +678,26 @@ describe('BeitragskarteComponent', () => {
       ]);
     });
 
+    it('laesst Fassungen mit 0 weg', () => {
+      const beitrag = meinBeitrag();
+      beitrag.usage_count = 3;
+      beitrag.nutzung_letzte_7_tage = 1;
+      beitrag.nutzung_je_fassung = { kurz: { nutzung: 3, letzte_7_tage: 1 }, mittel: { nutzung: 0, letzte_7_tage: 0 } };
+      zeigen(ausBeitrag(beitrag));
+
+      expect(zeilen('[aria-hidden="true"]')).toEqual(['Kurz 3× +1']);
+    });
+
+    it('zeigt ganz ohne Nutzung keine Leiste statt dreimal 0×', () => {
+      const beitrag = meinBeitrag();
+      beitrag.usage_count = 0;
+      beitrag.nutzung_letzte_7_tage = 0;
+      beitrag.nutzung_je_fassung = { kurz: { nutzung: 0, letzte_7_tage: 0 }, mittel: { nutzung: 0, letzte_7_tage: 0 } };
+      zeigen(ausBeitrag(beitrag));
+
+      expect(element('.nutzung-je-fassung')).toBeNull();
+    });
+
     it('zeigt ausserhalb von Meine Beitraege keine Nutzung je Fassung', () => {
       zeigen(ausSuchergebnis(paket('commentary_result', { short_text: 'Kurzfassung' })));
 

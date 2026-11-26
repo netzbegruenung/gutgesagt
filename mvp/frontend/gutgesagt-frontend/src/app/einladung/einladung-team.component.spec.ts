@@ -195,12 +195,29 @@ describe('EinladungComponent mit Team', () => {
       expect(el().querySelector('[role="status"]')?.textContent).toContain('Einladung ins Team BDK 26 Berlin gefunden');
     });
 
-    it('nennt die erste Person ehrlich, wenn noch niemand dabei ist', () => {
+    it('klingt nach Anfang, wenn noch niemand dabei ist', () => {
       starten('Code123');
       pruefen({ einloesbar: true, team: team({ mitglieder: 0, naechste_nummer: 1 }) });
 
-      expect(el().textContent).toContain('Noch ist niemand dabei.');
+      expect(el().textContent).toContain('Mit dir fängt das Team an.');
+      expect(el().textContent).not.toContain('niemand');
       expect(el().textContent).toContain('Du wärst Nr. 1.');
+    });
+
+    it('nennt bei 2 die ersten beiden', () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team({ mitglieder: 2, naechste_nummer: 3 }) });
+
+      expect(el().querySelector('.team-leise')!.textContent).toContain('Die ersten 2 sind schon dabei.');
+    });
+
+    it('nach einem Austritt kein „Anfang“, der „Du wärst Nr. 5.“ widerspräche', () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team({ mitglieder: 0, naechste_nummer: 5 }) });
+
+      expect(el().textContent).toContain('Du wärst Nr. 5.');
+      expect(el().textContent).not.toContain('fängt das Team an');
+      expect(el().querySelector('.team-leise')!.textContent).toContain('Gerade ist niemand dabei.');
     });
 
     it('legt ohne Wahl kein Konto an und bittet, oben zu wählen', () => {

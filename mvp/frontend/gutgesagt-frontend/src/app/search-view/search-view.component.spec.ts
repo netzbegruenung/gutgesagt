@@ -142,11 +142,14 @@ describe('SearchViewComponent', () => {
     expect(suche.autofokus).toBe(window.matchMedia('(min-width: 960px) and (hover: hover) and (pointer: fine)').matches);
   });
 
-  it('zeigt keine Statistik-Kacheln und fragt keine Metriken ab', () => {
+  it('zeigt keine Statistik-Kacheln; Metriken nur für die Bestandszahl der Unterzeile', () => {
     const http = TestBed.inject(HttpTestingController);
 
     expect(fixture.nativeElement.querySelector('.metric-card')).toBeNull();
-    expect(http.match((anfrage) => anfrage.url.includes('metrics')).length).toBe(0);
+    const anfragen = http.match((anfrage) => anfrage.url.includes('metrics'));
+    expect(anfragen.map((anfrage) => anfrage.request.url)).toEqual([jasmine.stringMatching(/\/api\/v1\/metrics\/getMetrics$/)]);
+    // Die Unterzeile traegt die Schrift der Startseite (Klasse hero-subtitle)
+    expect(fixture.nativeElement.querySelector('.start-hero app-hero-unterzeile.hero-subtitle')).toBeTruthy();
   });
 });
 

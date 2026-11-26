@@ -6,6 +6,7 @@ from typing import (
     Dict,
     List,
     Sequence,
+    Tuple,
     TypeVar,
     Generic,
     Optional,
@@ -192,6 +193,19 @@ class IBaseContentRepository(ABC, Generic[TContentDbEntry, TContentSearchResult]
         Sichtbare Eintraege dieser Typen, die seit ``seit`` angelegt wurden und nicht
         von ``user_id`` stammen ("Seit deinem letzten Besuch", neue Beitraege der
         Community). Nicht abstrakt: Nur das Qdrant-Repository braucht es.
+        """
+        raise NotImplementedError
+
+    async def angelegt_seit(
+        self,
+        seit: datetime.datetime,
+        content_types: Sequence[str],
+        zeitpunkte_bis: int,
+    ) -> Tuple[int, List[datetime.datetime]]:
+        """
+        Zahl der sichtbaren Eintraege dieser Typen seit ``seit`` und, wenn es hoechstens
+        ``zeitpunkte_bis`` sind, ihre Anlagezeitpunkte (Zuwachs zur Bestandszahl). Nicht
+        abstrakt: Nur das Qdrant-Repository braucht es.
         """
         raise NotImplementedError
 

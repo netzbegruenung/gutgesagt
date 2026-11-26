@@ -9,8 +9,9 @@ eines Kommentars oder einer Hintergrundinfo unter gleichem Titel, von Hand entsc
 Das Label ist das menschliche Urteil, nicht das der Regel: Die Regel
 (fassung.gleicher_text) erkennt nur das Phaenomen "fremd"; "gegenteil" und
 "anderer_aspekt" sind bekannte Luecken (MESSSET.md, Abschnitt "Geaenderter Text").
-Erstellt von einem Agenten am 22.11.2026; die Labels sind noch nicht von einem Menschen
-abgenommen.
+Erstellt von einem Agenten am 22.11.2026; Labels abgenommen vom Maintainer am 26.11.2026
+(Review von #764): Eine korrigierte Zahl (B14, B16-B19) und die Kuerzung bis auf einen Satz
+behalten die Stimmen; nur ein Text, der etwas ganz anderes sagt, verliert sie.
 """
 
 from typing import NamedTuple
