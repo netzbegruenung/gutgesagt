@@ -11,6 +11,8 @@
  * Rechtstexte ändern sich nur nach juristischer Prüfung (CODING_STANDARDS.md).
  */
 
+import { TeamArt } from './teams/teams';
+
 /** Name der eigenen Sammlung, in „Meine Beiträge“ und in der Datenschutzerklärung. */
 export const MEINE_TEAMS_TITEL = 'Meine Teams';
 
@@ -66,6 +68,24 @@ export function teamBegruessungSaetze(team: string): readonly string[] {
  */
 export function teamGruppeSatz(gruppe: string): string {
   return `Dieses Team ist mit Zustimmung von ${gruppe} nach ihr benannt. Verantwortlich für Gut gesagt ist allein die Netzbegrünung; ${gruppe} bekommt keine Daten über dich.`;
+}
+
+/**
+ * Vertrauenssatz beim Teambeitritt (Schalter `teamlink_vertrauenssatz`, vorläufige
+ * juristische Einschätzung vom 26.11.2026, Punkt d), wortgleich. Eingeschaltet wird erst,
+ * wenn Jura geprüft hat, was Mitglieder voneinander sehen.
+ */
+export const TEAM_VERTRAUENSSATZ = 'Beitreten heißt nur: Du zählst zu diesem Team.';
+
+/** Zweiter Satz, nur bei einem Team nach Gruppe: Ein Team nach Anlass ist nach keiner Gruppe benannt. */
+export const TEAM_VERTRAUENSSATZ_GRUPPE = 'Die Gruppe, nach der es benannt ist, bekommt keine Daten über dich.';
+
+/**
+ * Der Vertrauenssatz zur Teamart: bei „gruppe“ beide Sätze, sonst (Anlass, Ort, Saison,
+ * auch ohne Art von einem älteren Server) nur der erste.
+ */
+export function teamVertrauenssatz(art: TeamArt | undefined): string {
+  return art === 'gruppe' ? `${TEAM_VERTRAUENSSATZ} ${TEAM_VERTRAUENSSATZ_GRUPPE}` : TEAM_VERTRAUENSSATZ;
 }
 
 /** Verweis unter den Knöpfen auf den Abschnitt der Datenschutzerklärung. */

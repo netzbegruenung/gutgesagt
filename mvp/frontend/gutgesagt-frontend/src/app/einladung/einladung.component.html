@@ -77,6 +77,8 @@
       <p id="team-erklaerung">
         <ng-container *ngFor="let satz of begruessungSaetze(team); let letzter = last">{{ satz }}{{ letzter ? '' : ' ' }}</ng-container>
       </p>
+      <!-- Vertrauenssatz (Schalter teamlink_vertrauenssatz): nach den Sätzen, vor Hinweis, Häkchen und Knöpfen -->
+      <p *ngIf="vertrauenssatz(team) as satz" id="team-vertrauen" class="team-vertrauen" data-testid="team-vertrauen">{{ satz }}</p>
       <p *ngIf="!angemeldet" class="team-hinweis" data-testid="team-schon-konto">
         Hast du schon ein Konto? Dann <a href="/login" (click)="anmeldenUmBeizutreten()">melde dich zuerst an</a>.
         Nur so kommt dein vorhandenes Konto ins Team; über das Formular unten entsteht dann kein Team.
@@ -91,7 +93,7 @@
         </p>
       </ng-container>
       <div class="team-knoepfe" role="group" aria-labelledby="team-gruss"
-           [attr.aria-describedby]="gruppeSatz(team) ? 'team-gruppe team-erklaerung' : 'team-erklaerung'">
+           [attr.aria-describedby]="knoepfeBeschreibung(team)">
         <button mat-stroked-button type="button" class="team-knopf" data-testid="team-ja"
                 [class.gewaehlt]="teamWahl === 'ja'" [attr.aria-pressed]="angemeldet ? null : teamWahl === 'ja'"
                 [disabled]="stand === 'tritt_bei' || stand === 'sendet'" (click)="wahl('ja')">

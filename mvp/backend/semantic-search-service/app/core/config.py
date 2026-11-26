@@ -338,6 +338,10 @@ class Settings(BaseSettings):
     # Obergrenze, bewusst nicht an abzeichen_sichtbar_aktiv gekoppelt: Auf Prod bleibt
     # sie aus, bis die Datenschutzbeauftragte geraten hat. Wirkt nur mit teams_aktiv.
     teams_oeffentlich_aktiv: bool = False
+    # Vertrauenssatz beim Teambeitritt (Begruessung eines Teamlinks): nur ein Text, speichert
+    # nichts. Von Haus aus aus, bis Jura teams.py geprueft hat (was Mitglieder voneinander
+    # sehen). Wirkt nur mit teams_aktiv.
+    teamlink_vertrauenssatz_aktiv: bool = False
     # Spielgefuehl zur BDK (#782 bis #793, services/schalter_service.py SPIEL_SCHALTER):
     # je Baustein eine Obergrenze, von Haus aus aus; Einschalt-Bedingungen je Schalter in
     # docs/ARCHITECTURE.md. danke_ohne_konto wirkt nur mit danke_knopf, rangliste nur mit

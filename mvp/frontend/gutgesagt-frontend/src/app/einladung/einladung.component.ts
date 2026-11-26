@@ -1,4 +1,4 @@
-import { Component, ElementRef, Injector, OnInit, ViewChild, afterNextRender, inject } from '@angular/core';
+import { Component, ElementRef, Injector, OnInit, Signal, ViewChild, afterNextRender, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
@@ -21,7 +21,7 @@ import {
 import { ROUTES } from '../shared/constants/app.constants';
 import { sitzungPruefen } from '../auth/sitzung';
 import { FunktionenService } from '../services/funktionen.service';
-import { teamBegruessungSaetze, teamBegruessungTitel, teamDabeiSatz, teamGruppeSatz } from '../shared/team-texte';
+import { teamBegruessungSaetze, teamBegruessungTitel, teamDabeiSatz, teamGruppeSatz, teamVertrauenssatz } from '../shared/team-texte';
 import { teamMerkerAblegen, teamMerkerLesen, teamMerkerLoeschen, teamMerkerNehmen } from './team-merker';
 import { ERSTER_SPRUCH } from './erster-spruch';
 import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
@@ -187,6 +187,26 @@ export class EinladungComponent implements OnInit {
   gruppeSatz(team: TeamBeimPruefen): string | null {
     return team.art === 'gruppe' ? teamGruppeSatz(team.name) : null;
   }
+
+  /**
+   * Vertrauenssatz beim Teambeitritt, nur mit wirksamem Schalter teamlink_vertrauenssatz,
+   * sonst null. Bei einem Team nach Gruppe mit dem Satz, dass die Gruppe keine Daten
+   * bekommt; ein Team nach Anlass, Ort oder Saison ist nach keiner Gruppe benannt.
+   */
+  vertrauenssatz(team: TeamBeimPruefen): string | null {
+    return this.vertrauenssatzAn?.() ? teamVertrauenssatz(team.art) : null;
+  }
+
+  /** Aria-Beschreibung der beiden Knöpfe: die Sätze, die gerade über ihnen stehen. */
+  knoepfeBeschreibung(team: TeamBeimPruefen): string {
+    return [
+      this.gruppeSatz(team) ? 'team-gruppe' : null,
+      'team-erklaerung',
+      this.vertrauenssatz(team) ? 'team-vertrauen' : null,
+    ]
+      .filter(Boolean)
+      .join(' ');
+  }
   /** Der eingefuegte Link, solange die Seite ohne Code aufgerufen wurde. */
   link = '';
   linkFalsch = false;
@@ -200,6 +220,11 @@ export class EinladungComponent implements OnInit {
 
   /** Das Team der Einladung aus /pruefen; null ohne Team oder bei Schalter aus. */
   team: TeamBeimPruefen | null = null;
+  /**
+   * Schalter teamlink_vertrauenssatz; erst gefragt, wenn eine Einladung ein Team trägt,
+   * damit Einladungen ohne Team keinen Abruf mehr auslösen. Bis zur Antwort aus.
+   */
+  private vertrauenssatzAn: Signal<boolean> | null = null;
   angemeldet = false;
   /** Antwort auf die Frage im Kasten; null: noch nicht gewählt (nichts vorausgewählt). */
   teamWahl: 'ja' | 'nein' | null = null;
@@ -310,6 +335,11 @@ export class EinladungComponent implements OnInit {
         return;
       }
       this.team = antwort.team;
+      if (this.team) {
+        // Signal aus dem geteilten Stand: Ein Umschalten auf der Admin-Seite kommt ohne Neuladen
+        // an, spätestens mit dem nächsten Abruf nach FUNKTIONEN_NACHLADEN_MS (5 Minuten).
+        this.vertrauenssatzAn = this.funktionen.an('teamlink_vertrauenssatz');
+      }
       if (!angemeldet) {
         this.stand = 'formular';
       } else if (this.team) {

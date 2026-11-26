@@ -28,6 +28,7 @@ const TITEL: Record<string, string> = {
   team_quests: 'Team-Quests',
   teams: 'Teams über Einladungen',
   teams_oeffentlich: 'Teams am Anzeigenamen',
+  teamlink_vertrauenssatz: 'Vertrauenssatz beim Teambeitritt',
   // Spielgefühl zur BDK (#782 bis #793)
   saison_ziel: 'Saison und Gemeinschaftsziel',
   gartenansicht: 'Gartenansicht',
@@ -46,6 +47,7 @@ const TITEL: Record<string, string> = {
 const VORAUSSETZUNG: Record<string, [string, string]> = {
   abzeichen_sichtbar: ['punkte', 'Punkte'],
   teams_oeffentlich: ['teams', 'Teams'],
+  teamlink_vertrauenssatz: ['teams', 'Teams'],
   // Kette wie im Backend (schalter_service._wirksam): teams → team_fortschritt → team_quests
   team_fortschritt: ['teams', 'Teams'],
   team_quests: ['team_fortschritt', 'Team-Fortschritt'],
