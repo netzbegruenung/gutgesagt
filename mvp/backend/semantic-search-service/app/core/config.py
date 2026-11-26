@@ -338,6 +338,12 @@ class Settings(BaseSettings):
     # Datenschutzerklaerung nennt bisher nur zwei 7-Tage-Zahlen: Standard aus wie bei
     # gepostet_aktiv, bis der Satz dort steht.
     antworten_hinweis_aktiv: bool = False
+    # Seitenaufrufe und Besucher je Tag (#761, services/aufrufe_service.py): das
+    # Tagespseudonym (#446) an einer Zeile je Besucher und Tag, am Tagesende zu zwei
+    # Zahlen verdichtet. Standard aus: eine weitere Verarbeitung mit dem Pseudonym, die
+    # erst mit Satz in Datenschutzerklaerung und DSFA und nach der Antwort auf die
+    # DSB-Frage 2 (#495) eingeschaltet wird.
+    aufrufe_zaehlen_aktiv: bool = False
     # Teilen als Bild (#756): Die Karte malt im Browser ein Bild (Sharepic) und gibt es
     # ans Teilen-Menue des Geraets; der Server sieht davon nichts. Obergrenze an, weil
     # nichts uebertragen oder gespeichert wird; Standard aus ist der Admin-Wert

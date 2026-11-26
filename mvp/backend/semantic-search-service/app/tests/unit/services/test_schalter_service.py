@@ -187,6 +187,17 @@ def test_antworten_hinweis_obergrenze_aus_admin_wert_aus():
     assert stand.dsfa_hinweis is None
 
 
+def test_aufrufe_zaehlen_obergrenze_aus_und_dsfa_hinweis():
+    """#761: heikel, deshalb Obergrenze aus, mit der offenen Rechtsbedingung als Hinweis."""
+    dienst, _, _ = _dienst({"aufrufe_zaehlen": True})
+    stand = {s.name: s for s in dienst.stand(Settings())}["aufrufe_zaehlen"]
+
+    assert (stand.obergrenze, stand.admin_wert, stand.wirksam) == (False, True, False)
+    assert "§ 25 TDDDG" in stand.dsfa_hinweis and "V-Messung" in stand.dsfa_hinweis
+    assert stand.wartet_auf_recht is True
+    assert dienst.wirksam("aufrufe_zaehlen", Settings(aufrufe_zaehlen_aktiv=True))
+
+
 def test_sharepic_standard_aus_ohne_admin_wert():
     """Obergrenze standardmaessig an, ohne Admin-Wert trotzdem aus (#756)."""
     dienst, _, _ = _dienst()

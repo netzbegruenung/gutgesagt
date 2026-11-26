@@ -23,6 +23,7 @@ const TITEL: Record<string, string> = {
   merkliste: 'Merkliste',
   abkuerzungen: 'App-Abkürzungen',
   antworten_hinweis: 'Neue Antworten auf eigene Aussagen',
+  aufrufe_zaehlen: 'Aufrufe und Besucher pro Tag',
   sharepic: 'Teilen als Bild',
   bestandszahl_zuwachs: 'Zuwachs neben der Bestandszahl',
   vertrauenszeile: 'Vertrauenszeile vor dem Anmelden',

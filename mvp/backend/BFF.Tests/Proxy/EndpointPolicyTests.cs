@@ -54,6 +54,7 @@ public class EndpointPolicyTests
     [InlineData("/api/v1/content/beitraege")]    // Segmentgrenze
     [InlineData("/api/v1/usage/users/me/punkte")]  // nur /punkte/status ist offen (B20)
     [InlineData("/api/v1/usage/punkte/statusx")]   // Segmentgrenze
+    [InlineData("/api/v1/aufrufe")]                 // Tageszahlen nur fuer Admins (#761)
     [InlineData("/api/v1/funktionenx")]            // Segmentgrenze (#756)
     [InlineData("/api/v1/konter-probenx")]         // Segmentgrenze (#786)
     [InlineData("/api/v1/moderation/schalter")]    // Admin-Seite der Schalter (#708)

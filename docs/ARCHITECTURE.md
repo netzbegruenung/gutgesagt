@@ -549,6 +549,16 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   contact 422, while the switch is off 409, never 404). Switch on only with the privacy policy
   paragraph (legal package 27.11.). From 31.12.2026 (UTC) the switch is no longer effective and
   the feedback cleanup deletes all entries of the category (`domain/feedback_gestoert.py`).
+- `SEMANTIC_SEARCH_AUFRUFE_ZAEHLEN_AKTIV` - upper bound of the Schalter `aufrufe_zaehlen`
+  (#761, default `false`, own switch-on hint: DPO answer on § 25 TDDDG and the DSFA line); takes
+  effect only when an admin switches it on too. Then `middleware/aufrufe_zaehlen.py` counts, after
+  a successful response, requests the app makes anyway (`GET /api/v1/content/recent`,
+  `GET /api/v1/content/beitrag/{id}`, `POST /api/v1/search/searchByText`,
+  `GET /api/v1/search/thema/{key}`); the browser sends no extra request. The same page of the
+  same visitor within 5 minutes counts once (in-memory check value until midnight). The service
+  counts per day pseudonym of the visitor (`aufrufe_heute`, Anschluss with its own prefix, no IP,
+  no cookie) and an hourly task condenses past days into `aufrufe_tage` (views, visitors).
+  Admins read them via `GET /api/v1/aufrufe` (Kennzahlen).
 - `DOCKER_CONTAINER` - set to `true` inside containers to enforce strict path validation
 
 #### Schalter für das Spielgefühl (#782 to #793)

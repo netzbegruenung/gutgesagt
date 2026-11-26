@@ -313,6 +313,23 @@ SCHALTER: Dict[str, Schalterart] = {
             oeffentlich=True,
         ),
         Schalterart(
+            name="aufrufe_zaehlen",
+            gruppe=GRUNDFUNKTIONEN,
+            feld="aufrufe_zaehlen_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_AUFRUFE_ZAEHLEN_AKTIV",
+            erklaerung=(
+                "Zählt Aufrufe und Besucher je Tag am Server aus den Abrufen von "
+                "Startseite, Suche, Thema und Beitrag, ohne eigene Anfrage aus dem "
+                "Browser und ohne Cookie; die IP-Adresse wird nicht gespeichert. "
+                "Zeigt sie unter Kennzahlen."
+            ),
+            dsfa_hinweis=True,
+            einschalt_hinweis=(
+                "Einschalten erst nach DSB-Antwort (§ 25 TDDDG) und DSFA-Zeile "
+                "V-Messung"
+            ),
+        ),
+        Schalterart(
             name="abkuerzungen",
             feld="abkuerzungen_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_ABKUERZUNGEN_AKTIV",
