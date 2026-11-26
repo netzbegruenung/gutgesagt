@@ -96,9 +96,9 @@
   }
 
   &.copy-success {
-    @include animations.copy-success-animation;
     background-color: var(--primaer) !important;
     color: white !important;
+    @include animations.copy-success-animation;
   }
 }
 

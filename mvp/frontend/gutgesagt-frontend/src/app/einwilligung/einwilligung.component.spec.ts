@@ -640,6 +640,15 @@ describe('EinwilligungComponent', () => {
       expect(zeile()).toBeNull();
     });
 
+    it('Stufe „Aus“: nur „Ändern“, nicht „ausschalten“', () => {
+      spielgefuehl = spielgefuehlStand('aus');
+      starten();
+      standLiefern(stand({ eingewilligt: true, wortlaut: WORTLAUT.kennung }));
+
+      expect(zeile()!.textContent).toContain('Spielgefühl: Aus.');
+      expect(zeile()!.textContent).not.toContain('ausschalten');
+    });
+
     it('Stufe gerade nicht angeboten: nur der Weg, kein leerer Name', () => {
       spielgefuehl = spielgefuehlStand('rangliste', false);
       starten();

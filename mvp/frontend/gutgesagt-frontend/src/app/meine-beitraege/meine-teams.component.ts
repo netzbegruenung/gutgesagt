@@ -17,6 +17,7 @@ import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/sl
 import { RouterLink } from '@angular/router';
 import { Subject } from 'rxjs';
 import { filter } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { MeinTeam, MeineTeams, TeamsService } from '../services/teams.service';
 import { AUS_NACHLADEN_MS, NACHLADEN_MS, nachladeStrom, ohneRechte } from '../shared/selbst-nachladen';
@@ -150,7 +151,7 @@ export class MeineTeamsComponent implements OnInit {
         this.laeuft = true;
         this.fehler = null;
         this.cdr.markForCheck();
-        this.teamsService.verlassen(team.id).subscribe({
+        this.teamsService.verlassen(team.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: () => {
             this.laeuft = false;
             if (this.stand) {
@@ -160,7 +161,15 @@ export class MeineTeamsComponent implements OnInit {
             this.cdr.markForCheck();
             // Der Knopf, der den Fokus hatte, ist mit dem Eintrag verschwunden; sonst fiele
             // der Fokus auf <body>. Fehlt die ganze Karte (letztes Team, Schalter aus), bleibt er.
-            afterNextRender(() => this.titelElement?.nativeElement.focus(), { injector: this.injector });
+            // Nur wenn der Fokus verloren ist: Hat die Person ihn inzwischen woanders hin gesetzt, bleibt er dort.
+            afterNextRender(
+              () => {
+                if (!document.activeElement || document.activeElement === document.body) {
+                  this.titelElement?.nativeElement.focus();
+                }
+              },
+              { injector: this.injector },
+            );
             this.anstoss$.next();
           },
           error: (fehler: { status?: number }) => {

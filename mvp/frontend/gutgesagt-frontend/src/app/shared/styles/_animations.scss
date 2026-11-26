@@ -149,7 +149,10 @@
 // Trending badge animation
 .trending-badge {
   @include badge-enter-animation;
-  animation-delay: 0.1s;
+
+  @media (prefers-reduced-motion: no-preference) {
+    animation-delay: 0.1s;
+  }
 }
 
 // Statement expansion animations

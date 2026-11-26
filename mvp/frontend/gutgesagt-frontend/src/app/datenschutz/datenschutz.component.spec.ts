@@ -1457,6 +1457,25 @@ describe('DatenschutzComponent: Anker hinter einem Schalter', () => {
     expect(springen.calls.mostRecent().object).toBe(fixture.nativeElement.querySelector('#spielgefuehl'));
   });
 
+  it('wirft nichts, wenn die Seite vor der Antwort verlassen wird (Review, NG0911)', async () => {
+    const antwort = new Subject<boolean | null>();
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { snapshot: { fragment: 'spielgefuehl' } } },
+        { provide: FunktionenService, useValue: { an: () => signal(false), stand$: () => antwort.asObservable() } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.destroy();
+
+    expect(() => antwort.next(true)).not.toThrow();
+    expect(antwort.observed).toBeFalse();
+  });
+
   it('fragt nichts nach, wenn der Anker schon beim ersten Zeichnen steht', async () => {
     const stand$ = jasmine.createSpy('stand$').and.returnValue(new Subject<boolean | null>());
     TestBed.configureTestingModule({

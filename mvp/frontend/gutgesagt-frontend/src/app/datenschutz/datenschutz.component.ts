@@ -1,4 +1,5 @@
-import { Component, Injector, afterNextRender, computed, inject } from '@angular/core';
+import { Component, DestroyRef, Injector, afterNextRender, computed, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
@@ -63,6 +64,7 @@ export class DatenschutzComponent {
    * Schalter da sind.
    */
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
     const anker = inject(ActivatedRoute).snapshot.fragment;
@@ -76,11 +78,23 @@ export class DatenschutzComponent {
         }
         this.funktionen
           .stand$('spielgefuehl_buehne')
-          .pipe(take(1))
+          .pipe(take(1), takeUntilDestroyed(this.destroyRef))
           .subscribe(() =>
-            afterNextRender(() => document.getElementById(anker)?.scrollIntoView({ block: 'start' }), {
-              injector: this.injector,
-            }),
+            afterNextRender(
+              () => {
+                const ziel = document.getElementById(anker);
+                if (!ziel) {
+                  return;
+                }
+                // Wie springen(): Fokus mit, damit Tab dort weitergeht (WCAG 2.4.3).
+                ziel.scrollIntoView({ block: 'start' });
+                if (!ziel.hasAttribute('tabindex')) {
+                  ziel.setAttribute('tabindex', '-1');
+                }
+                ziel.focus({ preventScroll: true });
+              },
+              { injector: this.injector },
+            ),
           );
       },
       { injector: this.injector },
