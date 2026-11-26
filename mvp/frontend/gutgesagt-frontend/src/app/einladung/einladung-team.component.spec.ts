@@ -231,6 +231,18 @@ describe('EinladungComponent mit Team', () => {
       expect(vertrauen()).toBeNull();
     });
 
+    it('Einladung mit Team: fragt /funktionen genau einmal', () => {
+      starten('Code123');
+      const anfrage = http.expectOne(`${URL}/pruefen`);
+      anfrage.flush({ einloesbar: true, team: team({ art: 'anlass' }) });
+      http.expectOne(SITZUNG).flush({ isAuthenticated: false });
+      http.expectOne(FUNKTIONEN).flush({ funktionen: { teams: true, teamlink_vertrauenssatz: true } });
+      fixture.detectChanges();
+
+      http.expectNone(FUNKTIONEN);
+      expect(vertrauen()!.textContent!.trim()).toBe(ERSTER);
+    });
+
     it('nach dem Ergebnis steht der Satz nicht mehr', () => {
       vertrauenssatzAn = true;
       starten('Code123');

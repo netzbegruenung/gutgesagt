@@ -332,7 +332,8 @@ export class EinladungComponent implements OnInit {
       }
       this.team = antwort.team;
       if (this.team) {
-        // Bei jedem Prüfen neu: So kommt ein Umschalten auf der Admin-Seite ohne Neuladen an.
+        // Signal aus dem geteilten Stand: Ein Umschalten auf der Admin-Seite kommt ohne Neuladen
+        // an, spätestens mit dem nächsten Abruf nach FUNKTIONEN_NACHLADEN_MS (5 Minuten).
         this.vertrauenssatzAn = this.funktionen.an('teamlink_vertrauenssatz');
       }
       if (!angemeldet) {
