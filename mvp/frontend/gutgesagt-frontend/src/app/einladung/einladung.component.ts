@@ -51,7 +51,7 @@ type Stand =
   | 'schon_konto'
   | 'kein_team';
 /** Warum Einloesen scheiterte, nach dem Status der Antwort (api/v1/einladungen.py). */
-type Fehler = 'adresse' | 'name' | 'wortlaut' | 'zu_oft' | 'nicht_eingerichtet' | 'unbekannt';
+type Fehler = 'adresse' | 'name' | 'wortlaut' | 'nicht_eingerichtet' | 'vielleicht_gesendet' | 'unbekannt';
 /** Warum Beitreten scheiterte, nach dem Status der Antwort von /beitreten. */
 type BeitrittFehler = 'zu_oft' | 'abgemeldet' | 'unbekannt';
 
@@ -66,10 +66,23 @@ interface Beitritt {
 /** Ziel nach dem Anmelden, wenn ein Team mitgetragen wird; der Code steht im Merker, nicht hier. */
 export const EINLADUNG_PFAD = '/einladung';
 
-const FEHLER_NACH_STATUS: Record<number, Fehler> = {
-  429: 'zu_oft',
-  503: 'nicht_eingerichtet',
-};
+/**
+ * 503 mit dieser Begründung (api/v1/einladungen.py): Einlösen ist nicht eingerichtet. Ein 503
+ * ohne sie kommt vom Gateway, etwa beim Deploy, und ist vorübergehend.
+ */
+function nichtEingerichtet(fehler: unknown): boolean {
+  const e = fehler as HttpErrorResponse | null;
+  return e?.status === 503 && e.error?.detail === 'Registration not configured';
+}
+
+/**
+ * Fehler, nach denen offen ist, ob der Server schon gearbeitet hat (Einlösung gezählt, Konto
+ * angelegt, Mail verschickt): kein Netz, 500, 502, 504. Nach 429 und 503 hat er nichts getan.
+ */
+function mehrdeutig(fehler: unknown): boolean {
+  const status = (fehler as { status?: unknown } | null)?.status;
+  return status === 0 || status === 500 || status === 502 || status === 504;
+}
 
 /** Was der Screenreader beim Wechsel des Stands ansagt; die sichtbaren Texte stehen im Template. */
 const ANSAGE: Record<Stand, string> = {
@@ -114,8 +127,12 @@ function wortlautBeimBeitretenVeraltet(e: HttpErrorResponse): boolean {
   return e.status === 422 && (felder.includes('einwilligung_kennung') || felder.includes('oeffentlich_kennung'));
 }
 
-/** Hinweis, solange die Seite nach 429, Netz- oder Serverfehler selbst noch einmal fragt. */
+/** Hinweis, solange die Seite nach 429 oder Serverfehler selbst noch einmal fragt. */
 export const VIEL_LOS = 'Gerade ist viel los – wir versuchen es gleich noch einmal …';
+/** Derselbe Hinweis ohne Netz (Status 0): Dann liegt es nicht am Andrang. */
+export const VERBINDUNG_HAKT = 'Die Verbindung hakt gerade – wir versuchen es gleich noch einmal …';
+/** Ab so vielen Neuversuchen beim Prüfen sagt die Seite dazu, dass sie dranbleibt. */
+export const PRUEFEN_LANGE_AB = 5;
 
 /**
  * So oft sendet Einlösen nach Netz- oder Serverfehlern selbst noch einmal (etwa 30 s), bevor
@@ -124,18 +141,23 @@ export const VIEL_LOS = 'Gerade ist viel los – wir versuchen es gleich noch ei
 export const EINLOESEN_NEUVERSUCHE = 4;
 
 /**
- * Ob Einlösen nach diesem Fehler noch einmal gesendet wird. 503 mit „Registration not
- * configured“ (api/v1/einladungen.py) ist kein Engpass, sondern fehlende Einrichtung.
+ * Für ein Einlösen: ob nach diesem Fehler noch einmal gesendet wird. Nach 429 immer; nach
+ * anderen vorübergehenden Fehlern höchstens EINLOESEN_NEUVERSUCHE-mal, eigens gezählt, damit
+ * viele 429 im vollen Saal einem späteren 502 nicht die Neuversuche nehmen. Nie nach 503
+ * „nicht eingerichtet“.
  */
-export function einloesenNochmal(fehler: unknown, versuch: number): boolean {
-  const e = fehler as HttpErrorResponse | null;
-  if (e?.status === 429) {
-    return true;
-  }
-  if (e?.status === 503 && e.error?.detail === 'Registration not configured') {
-    return false;
-  }
-  return voruebergehend(fehler) && versuch <= EINLOESEN_NEUVERSUCHE;
+export function einloesenNeuversuch(): (fehler: unknown) => boolean {
+  let andere = 0;
+  return (fehler) => {
+    if ((fehler as { status?: unknown } | null)?.status === 429) {
+      return true;
+    }
+    if (nichtEingerichtet(fehler) || !voruebergehend(fehler)) {
+      return false;
+    }
+    andere += 1;
+    return andere <= EINLOESEN_NEUVERSUCHE;
+  };
 }
 
 /** Zeichen eines Codes: secrets.token_urlsafe im Backend, hoechstens CODE_MAX (api/v1/einladungen.py). */
@@ -250,7 +272,10 @@ export class EinladungComponent implements OnInit {
    * fragt gleich selbst noch einmal. Code, Team und Eingaben bleiben dabei stehen.
    */
   vielLos = false;
-  readonly vielLosText = VIEL_LOS;
+  /** Status des Fehlers, nach dem gerade gewartet wird; 0 heißt: kein Netz. */
+  private vielLosStatus: number | null = null;
+  /** Neuversuche der laufenden Prüfung, für „wir bleiben dran“. */
+  private pruefenVersuche = 0;
   /** Die laufende Prüfung; eine neue (anderer Link, neuer Wortlaut) ersetzt sie samt Neuversuchen. */
   private pruefung: Subscription | null = null;
 
@@ -347,12 +372,18 @@ export class EinladungComponent implements OnInit {
     this.nochmalGefragt = false;
     this.wortlautNeu = false;
     this.vielLos = false;
+    this.pruefenVersuche = 0;
     this.pruefung?.unsubscribe();
     this.pruefung = forkJoin({
       antwort: this.einladungService.pruefen(code).pipe(
         // Im vollen Saal reisst das Limit je Anschluss: nicht still ohne Team weiter, sondern
         // mit Hinweis warten und selbst noch einmal fragen, bis die Antwort da ist.
-        mitNeuversuch({ beimWarten: () => (this.vielLos = true) }),
+        mitNeuversuch({
+          beimWarten: (fehler, versuch) => {
+            this.warten(fehler);
+            this.pruefenVersuche = versuch;
+          },
+        }),
         // Andere Fehler (etwa 422 bei einem kaputten Code): das Formular, Einloesen prueft erneut.
         catchError(() => of<PruefenAntwort | null>(null)),
       ),
@@ -541,10 +572,19 @@ export class EinladungComponent implements OnInit {
     const ja = !!team && this.teamWahl === 'ja';
     const teamAntwort = team ? this.teamAntwort(team, ja) : undefined;
     this.vielLos = false;
+    // Ein früherer Versuch kam vielleicht doch an: Dann zählt ein Neuversuch die Einlösung noch
+    // einmal und bekommt bei der letzten erlaubten 410, obwohl das Konto angelegt ist.
+    let unsicher = false;
     this.einladungService
       .einloesen(this.code, email, this.vorname.trim(), this.nachname.trim(), teamAntwort)
       .pipe(
-        mitNeuversuch({ nochmal: einloesenNochmal, beimWarten: () => (this.vielLos = true) }),
+        mitNeuversuch({
+          nochmal: einloesenNeuversuch(),
+          beimWarten: (fehler) => {
+            unsicher ||= mehrdeutig(fehler);
+            this.warten(fehler);
+          },
+        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
@@ -560,11 +600,17 @@ export class EinladungComponent implements OnInit {
         },
         error: (e: HttpErrorResponse) => {
           this.vielLos = false;
+          if (e.status === 410 && unsicher) {
+            this.fehler = 'vielleicht_gesendet';
+            this.stand = 'fehler';
+            return;
+          }
           if (e.status === 410) {
             this.stand = 'ungueltig';
             return;
           }
-          this.fehler = e.status === 422 ? fehlerBei422(e) : (FEHLER_NACH_STATUS[e.status] ?? 'unbekannt');
+          this.fehler =
+            e.status === 422 ? fehlerBei422(e) : nichtEingerichtet(e) ? 'nicht_eingerichtet' : 'unbekannt';
           if (this.fehler === 'wortlaut') {
             this.wortlautNeuHolen();
             return;
@@ -572,6 +618,22 @@ export class EinladungComponent implements OnInit {
           this.stand = 'fehler';
         },
       });
+  }
+
+  /** Vor einem Neuversuch: den Hinweis zeigen, je nach Fehler. */
+  private warten(fehler: unknown) {
+    const status = (fehler as { status?: unknown } | null)?.status;
+    this.vielLosStatus = typeof status === 'number' ? status : null;
+    this.vielLos = true;
+  }
+
+  get vielLosText(): string {
+    return this.vielLosStatus === 0 ? VERBINDUNG_HAKT : VIEL_LOS;
+  }
+
+  /** Die Prüfung hängt schon länger: dazusagen, dass die Seite dranbleibt. */
+  get pruefenLange(): boolean {
+    return this.pruefenVersuche >= PRUEFEN_LANGE_AB;
   }
 
   /** Neuen Wortlaut holen und noch einmal fragen, ohne dass jemand die Seite neu laden muss. */
@@ -582,7 +644,7 @@ export class EinladungComponent implements OnInit {
 
   get ansage(): string {
     if (this.vielLos && (this.stand === 'pruefe' || this.stand === 'sendet')) {
-      return VIEL_LOS;
+      return this.vielLosText;
     }
     if (this.stand === 'formular' && this.team && !this.angemeldet) {
       return `Einladung ins Team ${this.team.name} gefunden.`;

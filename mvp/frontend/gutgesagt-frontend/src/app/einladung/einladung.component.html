@@ -28,6 +28,7 @@
       <!-- Angesagt über die Live-Region oben (ansage); hier nur sichtbar. -->
       <p *ngIf="vielLos" class="viel-los" data-testid="viel-los">
         {{ vielLosText }} Lass die Seite einfach offen, dein Link bleibt erhalten.
+        <ng-container *ngIf="pruefenLange"> Klappt noch nicht – wir bleiben dran.</ng-container>
       </p>
     </ng-container>
 
@@ -90,7 +91,7 @@
         Nur so kommt dein vorhandenes Konto ins Team; über das Formular unten entsteht dann kein Team.
       </p>
       <ng-container *ngIf="team.oeffentlich_text">
-        <mat-checkbox name="teamOeffentlich" [(ngModel)]="teamOeffentlich" [disabled]="stand === 'tritt_bei'"
+        <mat-checkbox name="teamOeffentlich" [(ngModel)]="teamOeffentlich" [disabled]="stand === 'tritt_bei' || stand === 'sendet'"
                       aria-describedby="team-oeffentlich-text" data-testid="team-oeffentlich">
           Team öffentlich am Namen zeigen
         </mat-checkbox>
@@ -188,13 +189,13 @@
       <div class="namen">
         <mat-form-field appearance="outline">
           <mat-label>Vorname</mat-label>
-          <input matInput name="vorname" autocomplete="given-name" [maxlength]="nameMax"
+          <input matInput name="vorname" [disabled]="stand === 'sendet'" autocomplete="given-name" [maxlength]="nameMax"
                  aria-describedby="name-hinweis" [attr.aria-invalid]="stand === 'fehler' && fehler === 'name'"
                  [(ngModel)]="vorname" required />
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Nachname</mat-label>
-          <input matInput name="nachname" autocomplete="family-name" [maxlength]="nameMax"
+          <input matInput name="nachname" [disabled]="stand === 'sendet'" autocomplete="family-name" [maxlength]="nameMax"
                  aria-describedby="name-hinweis" [attr.aria-invalid]="stand === 'fehler' && fehler === 'name'"
                  [(ngModel)]="nachname" required />
         </mat-form-field>
@@ -204,7 +205,7 @@
       </p>
       <mat-form-field appearance="outline" class="email">
         <mat-label>Mail-Adresse</mat-label>
-        <input matInput type="email" name="email" autocomplete="email" [(ngModel)]="email" required />
+        <input matInput type="email" name="email" [disabled]="stand === 'sendet'" autocomplete="email" [(ngModel)]="email" required />
       </mat-form-field>
       <ng-container *ngIf="stand === 'fehler'" [ngSwitch]="fehler">
         <p *ngSwitchCase="'adresse'" class="warnung" role="alert">
@@ -213,8 +214,9 @@
         <p *ngSwitchCase="'name'" class="warnung" role="alert">
           Bitte prüf deinen Namen: Zeichen wie ! / ( ) &#64; &lt; &gt; gehen darin nicht.
         </p>
-        <p *ngSwitchCase="'zu_oft'" class="warnung" role="alert">
-          Von hier kamen gerade sehr viele Versuche. Bitte versuch es in einer Viertelstunde noch einmal.
+        <p *ngSwitchCase="'vielleicht_gesendet'" class="warnung" role="alert" data-testid="vielleicht-gesendet">
+          Vielleicht hat es schon geklappt: Schau in dein Postfach. Kommt keine Mail, frag die Person,
+          von der du den Link hast, nach einem neuen.
         </p>
         <p *ngSwitchCase="'nicht_eingerichtet'" class="warnung" role="alert">
           Konten lassen sich gerade noch nicht anlegen. Frag die Person, von der du den Link hast.

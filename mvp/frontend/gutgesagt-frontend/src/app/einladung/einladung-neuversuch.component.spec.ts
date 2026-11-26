@@ -3,7 +3,7 @@ import { HttpHeaders, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ActivatedRoute, provideRouter } from '@angular/router';
-import { EINLOESEN_NEUVERSUCHE, EinladungComponent, VIEL_LOS } from './einladung.component';
+import { EINLOESEN_NEUVERSUCHE, EinladungComponent, PRUEFEN_LANGE_AB, VERBINDUNG_HAKT, VIEL_LOS } from './einladung.component';
 import { environment } from '../../environments/environment';
 import { TeamBeimPruefen } from '../shared/einladung/team-einladung';
 import { NEUVERSUCH_START_MS } from '../shared/neuversuch';
@@ -109,9 +109,13 @@ describe('EinladungComponent im vollen Saal (Neuversuch)', () => {
       starten();
       http.expectOne(SITZUNG).flush({ isAuthenticated: false });
       pruefenAnfrage().error(new ProgressEvent('error'), { status: 0, statusText: '' });
+      fixture.detectChanges();
+      expect(hinweis()?.textContent).toContain(VERBINDUNG_HAKT);
 
       tick(NEUVERSUCH_START_MS);
       pruefenAnfrage().flush('weg', { status: 502, statusText: 'Bad Gateway' });
+      fixture.detectChanges();
+      expect(hinweis()?.textContent).toContain(VIEL_LOS);
       // Zweiter Neuversuch erst nach der doppelten Zeit
       tick(NEUVERSUCH_START_MS * 2 - 1);
       http.expectNone(`${URL}/pruefen`);
@@ -123,6 +127,22 @@ describe('EinladungComponent im vollen Saal (Neuversuch)', () => {
       tick(NEUVERSUCH_START_MS * 4);
       mitTeamAntworten();
       expect(el().querySelector('[data-testid="team-kasten"]')).not.toBeNull();
+    }));
+
+    it(`sagt nach ${PRUEFEN_LANGE_AB} Neuversuchen dazu, dass die Seite dranbleibt`, fakeAsync(() => {
+      starten();
+      http.expectOne(SITZUNG).flush({ isAuthenticated: false });
+      pruefenAnfrage().flush('weg', { status: 500, statusText: 'Server Error' });
+      for (let i = 1; i < PRUEFEN_LANGE_AB; i++) {
+        tick(60_000);
+        pruefenAnfrage().flush('weg', { status: 500, statusText: 'Server Error' });
+      }
+      fixture.detectChanges();
+      expect(hinweis()?.textContent).toContain('wir bleiben dran');
+
+      tick(60_000);
+      mitTeamAntworten();
+      expect(hinweis()).toBeNull();
     }));
 
     it('wartet so lange, wie Retry-After verlangt', fakeAsync(() => {
@@ -214,6 +234,12 @@ describe('EinladungComponent im vollen Saal (Neuversuch)', () => {
       expect(el().textContent).not.toContain('Viertelstunde');
       expect(el().querySelector('[data-testid="team-kasten"]')).not.toBeNull();
       expect(el().querySelector<HTMLButtonElement>('[data-testid="team-ja"]')!.disabled).toBeTrue();
+      // Wer jetzt noch tippt, ändert nichts mehr am Antrag: Die Felder sind gesperrt.
+      tick();
+      fixture.detectChanges();
+      for (const feld of ['vorname', 'nachname', 'email']) {
+        expect(el().querySelector<HTMLInputElement>(`input[name="${feld}"]`)!.disabled).withContext(feld).toBeTrue();
+      }
 
       // 429 ohne Grenze: auch nach vielen Runden noch ein Neuversuch
       for (let i = 1; i <= 8; i++) {
@@ -246,6 +272,46 @@ describe('EinladungComponent im vollen Saal (Neuversuch)', () => {
       expect(hinweis()).toBeNull();
       tick(60_000);
       http.expectNone(`${URL}/einloesen`);
+    }));
+
+    it('viele 429 nehmen einem späteren Serverfehler nicht die Neuversuche', fakeAsync(() => {
+      mitTeamImFormular();
+      http.expectOne(`${URL}/einloesen`).flush('zu viele', ZU_VIELE);
+      for (let i = 0; i < 6; i++) {
+        tick(60_000);
+        http.expectOne(`${URL}/einloesen`).flush('zu viele', ZU_VIELE);
+      }
+      tick(60_000);
+      http.expectOne(`${URL}/einloesen`).flush('weg', { status: 502, statusText: 'Bad Gateway' });
+      tick(60_000);
+      http.expectOne(`${URL}/einloesen`).flush({ success: true }, { status: 202, statusText: 'Accepted' });
+      fixture.detectChanges();
+
+      expect(el().textContent).toContain('Postfach');
+    }));
+
+    it('410 nach einem unklaren Fehler: vielleicht hat es geklappt, nicht „gilt nicht“', fakeAsync(() => {
+      mitTeamImFormular();
+      http.expectOne(`${URL}/einloesen`).flush('weg', { status: 504, statusText: 'Gateway Timeout' });
+      tick(NEUVERSUCH_START_MS);
+      http.expectOne(`${URL}/einloesen`).flush('weg', { status: 410, statusText: 'Gone' });
+      fixture.detectChanges();
+
+      expect(el().querySelector('[data-testid="vielleicht-gesendet"]')?.textContent).toContain('Postfach');
+      expect(el().textContent).not.toContain('gilt nicht');
+    }));
+
+    it('ein 503 vom Gateway heißt nach den Neuversuchen nicht „nicht eingerichtet“', fakeAsync(() => {
+      mitTeamImFormular();
+      http.expectOne(`${URL}/einloesen`).flush('weg', { status: 503, statusText: 'Service Unavailable' });
+      for (let i = 1; i <= EINLOESEN_NEUVERSUCHE; i++) {
+        tick(60_000);
+        http.expectOne(`${URL}/einloesen`).flush('weg', { status: 503, statusText: 'Service Unavailable' });
+      }
+      fixture.detectChanges();
+
+      expect(el().textContent).toContain('hat nicht geklappt');
+      expect(el().textContent).not.toContain('noch nicht anlegen');
     }));
   });
 });
