@@ -5,12 +5,16 @@ einmal und uebernimmt die Backend-Images (docs/CI.md, "Releases without a second
 Ohne Beleg laeuft alles wie bisher.
 """
 
+import json
 import pathlib
+import re
 import subprocess
 
 import pytest
+import yaml
 
 import main_images
+import programme
 from main_images import dockerfile, entscheiden, pruefen
 
 WURZEL = pathlib.Path(__file__).resolve().parents[2]
@@ -238,14 +242,18 @@ class TestBefehle:
         assert main_images.main(["bauen"]) == 2
 
 
-def protokoll(tmp_path, schritt, ereignis, marke):
+def protokoll(tmp_path, schritt, ereignis, marke, inhalt=SHA):
     if marke:
         (tmp_path / ".ci").mkdir(exist_ok=True)
-        (tmp_path / ".ci" / "main-schon-gruen").write_text(f"{SHA}\n")
+        (tmp_path / ".ci" / "main-schon-gruen").write_text(f"{inhalt}\n")
     return subprocess.run(
         ["sh", str(PROTOKOLL), schritt, "sh", "-c", "echo gelaufen; exit 3"],
         cwd=tmp_path,
-        env={"CI_PIPELINE_EVENT": ereignis, "PATH": "/usr/bin:/bin"},
+        env={
+            "CI_PIPELINE_EVENT": ereignis,
+            "CI_COMMIT_SHA": SHA,
+            "PATH": "/usr/bin:/bin",
+        },
         capture_output=True,
         text=True,
     )
@@ -272,3 +280,146 @@ class TestProtokoll:
     def test_marke_zaehlt_nur_bei_tags(self, tmp_path, ereignis):
         # Eine Datei aus dem Checkout darf in keinem anderen Lauf Tests abschalten
         assert protokoll(tmp_path, "unit", ereignis, marke=True).returncode == 3
+
+    @pytest.mark.parametrize("inhalt", [VORFAHR, "", "ja"])
+    def test_marke_mit_anderem_inhalt_zaehlt_nicht(self, tmp_path, inhalt):
+        # Eine Marke aus dem Checkout kann den Hash ihres eigenen Commits nicht enthalten
+        assert protokoll(tmp_path, "unit", "tag", True, inhalt).returncode == 3
+
+    def test_ausnahmen_sind_die_schritte_nur_fuer_tags(self):
+        ci = yaml.safe_load((WURZEL / ".woodpecker" / "ci.yaml").read_text())
+        nur_tag = {
+            s["name"] for s in ci["steps"] if s.get("when") == [{"event": "tag"}]
+        }
+        ausnahmen = re.search(
+            r"^\s+([\w-]+(?: \| [\w-]+)*)\) ;;$", PROTOKOLL.read_text(), re.M
+        )
+        assert set(ausnahmen.group(1).split(" | ")) == nur_tag
+
+
+class Antwort:
+    """Antworten der Registry je URL-Ende, wie _abruf sie liefert."""
+
+    def __init__(self, antworten):
+        self.antworten = antworten
+
+    def __call__(self, url, token=None, accept=None):
+        if "/v2/token?" in url:
+            return json.dumps({"token": "anonym"}).encode(), {}
+        for ende, (inhalt, kopf) in self.antworten.items():
+            if url.endswith(ende):
+                return json.dumps(inhalt).encode(), kopf
+        raise AssertionError(url)
+
+
+AMD64 = "sha256:" + "a6" * 32
+KONFIG = "sha256:" + "c0" * 32
+KONFIG_INHALT = {"config": {"Labels": {main_images.LABEL: SHA}}}
+
+
+class TestMainImage:
+    def test_index_mit_attestation(self, monkeypatch):
+        index = {
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "manifests": [
+                {
+                    "digest": "sha256:" + "ff" * 32,
+                    "platform": {"os": "unknown", "architecture": "unknown"},
+                },
+                {"digest": AMD64, "platform": {"os": "linux", "architecture": "amd64"}},
+            ],
+        }
+        monkeypatch.setattr(
+            main_images,
+            "_abruf",
+            Antwort(
+                {
+                    "/manifests/main": (index, {"Docker-Content-Digest": DIGEST}),
+                    f"/manifests/{AMD64}": ({"config": {"digest": KONFIG}}, {}),
+                    f"/blobs/{KONFIG}": (KONFIG_INHALT, {}),
+                }
+            ),
+        )
+        assert main_images.main_image("gutgesagt-bff") == (DIGEST, SHA)
+
+    def test_einfaches_manifest(self, monkeypatch):
+        monkeypatch.setattr(
+            main_images,
+            "_abruf",
+            Antwort(
+                {
+                    "/manifests/main": (
+                        {"config": {"digest": KONFIG}},
+                        {"Docker-Content-Digest": DIGEST},
+                    ),
+                    f"/blobs/{KONFIG}": (KONFIG_INHALT, {}),
+                }
+            ),
+        )
+        assert main_images.main_image("gutgesagt-bff") == (DIGEST, SHA)
+
+    def test_ohne_digest_bricht_ab(self, monkeypatch):
+        monkeypatch.setattr(
+            main_images,
+            "_abruf",
+            Antwort({"/manifests/main": ({"config": {"digest": KONFIG}}, {})}),
+        )
+        with pytest.raises(ValueError, match="Digest"):
+            main_images.main_image("gutgesagt-bff")
+
+    def test_ohne_amd64_bricht_ab(self, monkeypatch):
+        index = {
+            "manifests": [
+                {"digest": AMD64, "platform": {"os": "linux", "architecture": "arm64"}}
+            ]
+        }
+        monkeypatch.setattr(
+            main_images,
+            "_abruf",
+            Antwort({"/manifests/main": (index, {"Docker-Content-Digest": DIGEST})}),
+        )
+        with pytest.raises(ValueError, match="amd64"):
+            main_images.main_image("gutgesagt-bff")
+
+
+@pytest.fixture
+def git_baum(tmp_path, monkeypatch):
+    programme.noetig("git")
+    monkeypatch.chdir(tmp_path)
+    umgebung = {
+        "GIT_AUTHOR_NAME": "t",
+        "GIT_AUTHOR_EMAIL": "t@example.org",
+        "GIT_COMMITTER_NAME": "t",
+        "GIT_COMMITTER_EMAIL": "t@example.org",
+    }
+    for name, wert in umgebung.items():
+        monkeypatch.setenv(name, wert)
+    subprocess.run(["git", "init", "-q"], check=True)
+    commits = []
+    for zeit in (1_700_000_000, 1_700_000_100):
+        monkeypatch.setenv("GIT_COMMITTER_DATE", f"{zeit} +0000")
+        subprocess.run(["git", "commit", "-q", "--allow-empty", "-m", "x"], check=True)
+        commits.append(
+            subprocess.run(
+                ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+            ).stdout.strip()
+        )
+    return commits
+
+
+class TestGit:
+    def test_vorfahr(self, git_baum):
+        alt, neu = git_baum
+        assert main_images.ist_vorfahr(alt, neu)
+        assert not main_images.ist_vorfahr(neu, alt)
+        assert not main_images.ist_vorfahr(neu, neu)
+
+    def test_unbekannter_oder_kaputter_commit(self, git_baum):
+        _, neu = git_baum
+        assert not main_images.ist_vorfahr(SPAETER, neu)
+        assert not main_images.ist_vorfahr("--help", neu)
+        assert not main_images.ist_vorfahr(None, neu)
+
+    def test_commit_zeit(self, git_baum):
+        assert main_images.commit_zeit(git_baum[1]) == 1_700_000_100
+        assert main_images.commit_zeit(SPAETER) is None

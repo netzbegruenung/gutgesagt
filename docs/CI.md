@@ -473,7 +473,10 @@ built the same commit. Now (Woodpecker 3.20.1):
   `auto_labels`). An image `:main` carrying the tagged commit therefore proves that this commit
   passed `ci` on `main`, integration tests included. The registry is readable without login
   (anonymous pull token), so no secret is needed; the repository is internal, so the Forgejo
-  status API would need one.
+  status API would need one. The proof is only as strong as the registry secret: whoever can
+  push `:main` with a forged label can skip the tests of a tag and slip that image into the
+  release. The same person can already overwrite `:X.Y.Z` directly (see the known limit in
+  [Setup by a person](#setup-by-a-person)), so this adds no new power.
 - **Skipping the tests.** On tags, `tag-vorpruefung` (`scripts/main_images.py pruefen`) reads
   the four `:main` images. If one carries the commit, it writes `.ci/main-schon-gruen`, and
   `scripts/ci-protokoll.sh` ends every following command green at once, except
@@ -482,22 +485,32 @@ built the same commit. Now (Woodpecker 3.20.1):
   cannot leave out a step depending on an earlier one at runtime: `when` is evaluated when the
   pipeline is created, and there is no skip exit code (`pipeline/runtime/step.go` only knows
   success and failure). So the steps still start, which takes a minute or two. The check
-  deletes a marker from the checkout first, and the marker counts only on tags.
-- **Waiting for `main`.** A tag set right after the merge finds `:main` still on the
-  previous commit while `ci` and `build` of the merge run (about 30 min). While every
-  `:main` that does not carry the commit carries an ancestor of it, the check waits, every
-  30 s, at most 30 min and at most until 40 min after the commit; then the full run would still
-  fit into the pipeline's time limit. A later commit on `:main` (a merge after the tag commit),
-  a tag next to `main`, an unreadable registry or a red `main` mean: no proof, everything runs
-  as before. Any error in the check also runs everything; it never turns red.
+  deletes a marker from the checkout first, and the marker counts only on tags and only if it
+  holds the commit of the run (a file in the checkout cannot hold the hash of its own commit).
+- **Waiting for `main`.** `ci` and `build` of a merge take about 22 and 8 min (status times
+  of v0.9.12 and v0.9.13, 26.11.), so a tag set right after the merge finds `:main` still on
+  the previous commit. While every `:main` that does not carry the commit carries an ancestor
+  of it, the check waits, every 30 s, at most 25 min and at most until 40 min after the commit.
+  With the full run after it (about 22 min) the tag run stays under 60 min, Woodpecker's
+  default time limit per workflow (the repository's setting is not visible to the bot). So
+  set the tag once `ci/woodpecker/push/ci` of the merge is green; then the wait is the 8 min of
+  `build` at most. A later commit on `:main` (a merge after the tag commit), an unreadable
+  registry or a missing label mean: no proof, everything runs at once. A red `main` and a tag on
+  a commit next to `main` that branches off the current `:main` cannot be told apart from a
+  `build` still running: they wait the full time, then everything runs. Meanwhile the services
+  `qdrant` and `postgres` of the tag run sit idle on the runner, and the waiting step holds an
+  agent slot; `build` of `main` was queued before it and is not blocked by it. Any error in the
+  check also runs everything; it never turns red.
 - **Taking over the images.** `release.yaml` builds the frontend as before (the footer shows
   the tag, `APP_VERSION`). For BFF, semantic search and postgres-app, `image-quelle`
   (`scripts/main_images.py quelle`) writes `.release/<name>.Dockerfile`: only
   `FROM <image>@<digest of :main>` when `:main` carries the commit, otherwise a copy of the
   real Dockerfile. The plugin builds from that file with the same context. A `FROM`-only
-  build only checks that the layers exist and pushes a new config and manifest (tried locally
-  with buildx 0.36 against a registry: HEAD requests for the layers, no layer download or
-  upload, 3 s). The release image has the same layers as the tested `:main`, but its own
+  build is expected to check only that the layers exist and push a new config and manifest:
+  tried locally on 26.11. with buildx 0.36 and the `docker-container` driver, which the plugin
+  also uses (`docker buildx create` without `--driver`, `plugin/docker.go`), against a
+  registry: HEAD requests for the layers, no layer download or upload, 3 s. The log of the
+  first release shows whether the plugin's BuildKit does the same. The release image has the same layers as the tested `:main`, but its own
   digest (new labels, attestation); Renovate and Salt keep reading `:<version>@sha256:…`.
   A plugin step cannot be skipped at runtime either, hence the generated Dockerfile instead of a
   registry copy with crane.
@@ -505,9 +518,10 @@ built the same commit. Now (Woodpecker 3.20.1):
   fallback when `main` moved on, but filled the package disk on 14.11.2026. Without it a tag
   on an older commit builds as before.
 - **Duration:** a tag on a commit whose `build` has finished: about 2 min for `ci` and 3 to
-  4 min for `release` (the frontend build). Set right after the merge: until `build` of the
-  merge is done, then the same. Without proof: as before, plus the waiting time when the tag
-  commit's `main` run is red or still queued.
+  4 min for `release` (the frontend build; v0.9.12 needed 18 min for `ci` and 3 min for
+  `release`). Set while `build` of the merge runs: until it is done, then the same. Without
+  proof: as before, plus up to 25 min of waiting when the tag commit's `main` run is red or
+  still queued.
 - **Undo:** revert the pull request; `ci.yaml` then tests every tag again and
   `release.yaml` builds all four images.
 

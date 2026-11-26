@@ -12,7 +12,10 @@ schritt=$1
 shift
 mkdir -p .ci
 rm -f ".ci/$schritt.status"
-if [ "${CI_PIPELINE_EVENT:-}" = tag ] && [ -f .ci/main-schon-gruen ]; then
+# Nur mit dem Commit dieses Laufs als Inhalt: eine Datei im Checkout kann den Hash ihres
+# eigenen Commits nicht enthalten.
+if [ "${CI_PIPELINE_EVENT:-}" = tag ] && [ -n "${CI_COMMIT_SHA:-}" ] &&
+  [ "$(cat .ci/main-schon-gruen 2>/dev/null)" = "$CI_COMMIT_SHA" ]; then
   case $schritt in
     tag-vorpruefung | release-platzhalter) ;;
     *)

@@ -51,10 +51,11 @@ MARKE = pathlib.Path(".ci/main-schon-gruen")
 RELEASE_ORDNER = pathlib.Path(".release")
 LABEL = "org.opencontainers.image.revision"
 
-# Nach dem Merge braucht main rund 22 min fuer ci und 8 min fuer build (26.11.). Laenger
-# wartet pruefen nicht: danach liefe der volle Testlauf noch im Zeitlimit der Pipeline.
+# Nach dem Merge braucht main rund 22 min fuer ci und 8 min fuer build (Statuszeiten von
+# v0.9.12 und v0.9.13, 26.11.). Hoechstens 25 min Warten: mit dem vollen Lauf danach (rund
+# 22 min) bleibt der Tag-Lauf unter Woodpeckers Standard-Zeitlimit von 60 min.
 WARTEN_NACH_COMMIT = 40 * 60
-WARTEN_HOECHSTENS = 30 * 60
+WARTEN_HOECHSTENS = 25 * 60
 TAKT = 30
 
 _INDEX = (
@@ -103,7 +104,7 @@ def main_image(image):
             if m.get("platform", {}).get("os") == "linux"
             and m.get("platform", {}).get("architecture") == "amd64"
         ]
-        if not amd64:
+        if not amd64 or not _DIGEST.fullmatch(amd64[0]):
             raise ValueError(f"{image}:main ohne linux/amd64")
         manifest = json.loads(
             _abruf(f"{basis}/manifests/{amd64[0]}", token, _MANIFEST)[0]
@@ -177,8 +178,13 @@ def pruefen(sha, lesen, ist_vorfahr, jetzt, schlafen, zeit_des_commits):
 
 
 def befehl_pruefen():
-    # Nur diese Pruefung legt die Marke an; eine aus dem Checkout zaehlt nicht
-    MARKE.unlink(missing_ok=True)
+    # Nur diese Pruefung legt die Marke an; eine aus dem Checkout zaehlt nicht (zaehlt ohnehin
+    # nur mit dem Commit des Laufs als Inhalt, scripts/ci-protokoll.sh)
+    try:
+        MARKE.unlink(missing_ok=True)
+    except OSError as fehler:
+        print(f"Marke nicht entfernbar ({fehler}): alle Schritte laufen.")
+        return 0
     sha = os.environ.get("CI_COMMIT_SHA", "")
     if os.environ.get("CI_PIPELINE_EVENT") != "tag" or not _SHA.fullmatch(sha):
         print("Kein Tag: alle Schritte laufen.")
@@ -191,8 +197,12 @@ def befehl_pruefen():
         print(f"Pruefung gescheitert ({fehler}): alle Schritte laufen.")
         return 0
     if gruen:
-        MARKE.parent.mkdir(exist_ok=True)
-        MARKE.write_text(f"{sha}\n", encoding="utf-8")
+        try:
+            MARKE.parent.mkdir(exist_ok=True)
+            MARKE.write_text(f"{sha}\n", encoding="utf-8")
+        except OSError as fehler:
+            print(f"Marke nicht schreibbar ({fehler}): alle Schritte laufen.")
+            return 0
         print(
             f"{sha[:12]} hat ci auf main bestanden (build.yaml hat gebaut): Tests entfallen."
         )
