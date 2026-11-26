@@ -57,6 +57,9 @@ MUSTER_FRIST_TAGE = 56
 ANZAHL = 50
 """So viele Hinweise zeigt das Admin-Dashboard hoechstens."""
 
+VORRAT_FAKTOR = 3
+"""Mit Einwilligungsfilter so viel mal ANZAHL lesen, dann kuerzen."""
+
 LOESCH_TAKT_SEKUNDEN = 24 * 60 * 60
 
 
@@ -95,11 +98,14 @@ class MusterHinweiseService:
         haben; die anderen bleiben bis zu ihrer Frist in der Tabelle, werden aber nicht
         gezeigt.
         """
-        hinweise = self._repository.hinweise(ANZAHL)
-        if eingewilligte is None or not hinweise:
+        if eingewilligte is None:
+            return self._repository.hinweise(ANZAHL)
+        # Mehr holen als gezeigt, damit nach dem Filter moeglichst ANZAHL bleiben.
+        hinweise = self._repository.hinweise(ANZAHL * VORRAT_FAKTOR)
+        if not hinweise:
             return hinweise
         mit = eingewilligte({k for h in hinweise for k in (h.konto_a, h.konto_b)})
-        return [h for h in hinweise if h.konto_a in mit and h.konto_b in mit]
+        return [h for h in hinweise if h.konto_a in mit and h.konto_b in mit][:ANZAHL]
 
     def vergessen(self, user_id: str) -> None:
         """Beim Widerruf: alle Hinweise loeschen, die ``user_id`` nennen."""

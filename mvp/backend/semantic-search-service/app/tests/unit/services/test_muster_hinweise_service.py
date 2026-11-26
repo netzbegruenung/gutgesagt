@@ -95,6 +95,18 @@ def test_hinweise_nur_wenn_beide_eingewilligt_haben():
     assert gefragt == [{"bo-2", "kim-1", "ali-3", "eda-4"}]
 
 
+def test_hinweise_mit_filter_lesen_vorrat_und_kuerzen():
+    repository = Mock()
+    repository.hinweise.return_value = [
+        _hinweis(f"a-{i:03}", f"b-{i:03}") for i in range(150)
+    ]
+
+    hinweise = MusterHinweiseService(repository).hinweise(lambda ks: set(ks))
+
+    repository.hinweise.assert_called_once_with(150)
+    assert len(hinweise) == 50
+
+
 def test_hinweise_ohne_eintraege_fragen_keine_einwilligung():
     repository = Mock()
     repository.hinweise.return_value = []

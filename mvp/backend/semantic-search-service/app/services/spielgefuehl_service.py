@@ -326,11 +326,11 @@ def zuruecknehmen(
     user_id: str,
     repository: Optional[SpielgefuehlRepository] = None,
     bis: Stufe = Stufe.FUER_MICH,
-) -> None:
+) -> bool:
     """
     Eine hoehere Stufe als ``bis`` als ``bis`` festhalten, auch bei ausgeschaltetem
     Schalter; nie hochstufen. Wer darunter steht oder nie geantwortet hat, bekommt
-    keine Zeile. Synchron.
+    keine Zeile. Liefert, ob herabgestuft wurde. Synchron.
 
     - Widerruf der Art.-9-Einwilligung (api/v1/art9_einwilligung.py) und Nein zur
       bisherigen Rangliste (api/v1/rangliste.py): ``rangliste`` als ``fuer_mich``, wie
@@ -345,6 +345,8 @@ def zuruecknehmen(
     antwort: Optional[SpielgefuehlAntwort] = repository.lesen(user_id)
     if antwort is not None and _RANG[antwort.stufe] > _RANG[bis]:
         repository.antworten(user_id, bis, False, antwort.wortlaut)
+        return True
+    return False
 
 
 _service: Optional[SpielgefuehlService] = None

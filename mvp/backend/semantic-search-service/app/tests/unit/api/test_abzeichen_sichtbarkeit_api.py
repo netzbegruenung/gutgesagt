@@ -101,6 +101,26 @@ def test_ohne_schalter_nein_immer_speicherbar(dienst, monkeypatch, an, punkte):
     dienst.antworten.assert_not_called()
 
 
+def test_im_spielgefuehl_modell_nein_speicherbar(dienst, monkeypatch):
+    repository = MagicMock()
+    monkeypatch.setattr(
+        "repositories.abzeichen_sichtbarkeit_repository._repository", repository
+    )
+    app = FastAPI()
+    app.include_router(usage_router, prefix="/api/v1/usage")
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        punkte_aktiv=True, abzeichen_sichtbar_aktiv=True, spielgefuehl_buehne_aktiv=True
+    )
+
+    antwort = TestClient(app).put(
+        URL, json={"zeigen": False, "wortlaut": "2026-11-09"}, headers=KIM
+    )
+
+    assert antwort.status_code == 204
+    repository.antworten.assert_called_once_with("kim-1", False, "2026-11-09")
+    dienst.antworten.assert_not_called()
+
+
 def test_ohne_schalter_nein_unbekannter_wortlaut_422(dienst, monkeypatch):
     repository = MagicMock()
     monkeypatch.setattr(

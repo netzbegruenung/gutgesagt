@@ -395,7 +395,10 @@ def nein(
         raise UnbekannterWortlaut(wortlaut)
     repository = repository or get_rangliste_einwilligung_repository()
     repository.antworten(user_id, False, False, wortlaut)
-    spielgefuehl_service.zuruecknehmen(user_id)
+    if spielgefuehl_service.zuruecknehmen(user_id):
+        # Raus aus der Rangliste: ihre Abzeichen sofort aus dem Speicher, nicht erst
+        # im naechsten Takt.
+        spielgefuehl_service._abzeichen_vergessen(user_id)
 
 
 _service: Optional[RanglisteService] = None

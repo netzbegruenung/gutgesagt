@@ -105,6 +105,18 @@ def test_ohne_schalter_kein_heraufstufen(dienst, buehne, punkte, stufe):
     dienst.antworten.assert_not_called()
 
 
+def test_ohne_schalter_lesefehler_500(dienst):
+    dienst.herabstufung.side_effect = RuntimeError("geheim")
+
+    antwort = TestClient(_client(buehne=False).app, raise_server_exceptions=False).put(
+        URL, json={"stufe": "fuer_mich", "wortlaut": AKTUELLER_WORTLAUT}, headers=KIM
+    )
+
+    assert antwort.status_code == 500
+    assert "geheim" not in antwort.text
+    dienst.antworten.assert_not_called()
+
+
 def test_mit_schalter_ohne_pruefung_der_herabstufung(dienst):
     _client().put(
         URL, json={"stufe": "fuer_mich", "wortlaut": AKTUELLER_WORTLAUT}, headers=KIM

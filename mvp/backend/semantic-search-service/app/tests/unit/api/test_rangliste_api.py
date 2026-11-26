@@ -177,6 +177,30 @@ def test_nein_immer_speicherbar(
     dienst.antworten.assert_not_called()
 
 
+def test_nein_nimmt_die_abzeichen_nach_herabstufen_sofort(
+    dienst, spielgefuehl_ohne_datenbank, monkeypatch
+):
+    from domain.spielgefuehl import AKTUELLER_WORTLAUT as SPIELGEFUEHL_WORTLAUT
+    from domain.spielgefuehl import Stufe
+    from repositories.spielgefuehl_repository import SpielgefuehlAntwort
+
+    vergessen = Mock()
+    monkeypatch.setattr("services.spielgefuehl_service._abzeichen_vergessen", vergessen)
+    body = {"teilnehmen": False, "wortlaut": AKTUELLER_WORTLAUT}
+
+    _client().put(f"{URL}/einwilligung", json=body, headers=KIM)
+    vergessen.assert_not_called()
+
+    spielgefuehl_ohne_datenbank.lesen.return_value = SpielgefuehlAntwort(
+        Stufe.RANGLISTE,
+        False,
+        SPIELGEFUEHL_WORTLAUT,
+        datetime(2026, 12, 1, tzinfo=timezone.utc),
+    )
+    _client().put(f"{URL}/einwilligung", json=body, headers=KIM)
+    vergessen.assert_called_once_with("kim-1")
+
+
 def test_nein_unbekannter_wortlaut_422(dienst, rangliste_ohne_datenbank):
     antwort = _client(rangliste=False).put(
         f"{URL}/einwilligung",
