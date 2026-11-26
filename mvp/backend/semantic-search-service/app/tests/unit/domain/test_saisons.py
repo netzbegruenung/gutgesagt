@@ -52,6 +52,15 @@ class TestEingabe:
         with pytest.raises(SaisonUngueltig):
             eingabe_pruefen(name, MO, MO, 5)
 
+    @pytest.mark.parametrize("name", ["<b>W</b>", "A & B", 'Der "Winter"', "W\\27"])
+    def test_zeichen_wie_am_teamlink_verboten(self, name):
+        # Sonst liesse sich die Saison anlegen, aber kein Team in ihr (UX-Review 26.11.)
+        with pytest.raises(SaisonUngueltig):
+            eingabe_pruefen(name, MO, MO, 5)
+
+    def test_schraegstrich_geht(self):
+        assert eingabe_pruefen("Winter 26/27", MO, MO, 5).name == "Winter 26/27"
+
     def test_ende_vor_beginn(self):
         with pytest.raises(SaisonUngueltig):
             eingabe_pruefen("Winter", MO, MO - timedelta(days=1), 5)

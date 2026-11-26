@@ -224,6 +224,25 @@ class TestAdmin:
         assert antwort.status_code == 201
         assert einladung_repo.anlegen.call_args.kwargs["team_saison"] == "Winter 26/27"
 
+    def test_saison_mit_schraegstrich_geht_wie_bei_den_saisons(
+        self, einladung_repo, team_repo
+    ):
+        # Als Saison anlegbar, am Teamlink frueher 422 (UX-Review 26.11.): jetzt gleich
+        antwort = _client(einladung_repo, team_repo).post(
+            "/api/v1/einladungen",
+            headers=ADMIN,
+            json={
+                "notiz": "BDK",
+                "erlaubte_einloesungen": 30,
+                "gueltig_bis": (heute_utc() + timedelta(days=14)).isoformat(),
+                "team_name": "BDK-Stand",
+                "team_motiv": "vogel",
+                "team_saison": "Winter 26/27",
+            },
+        )
+        assert antwort.status_code == 201
+        assert einladung_repo.anlegen.call_args.kwargs["team_saison"] == "Winter 26/27"
+
     def test_anlegen_team_nach_gruppe_mit_datum(self, einladung_repo, team_repo):
         tag = (heute_utc() - timedelta(days=3)).isoformat()
         antwort = _client(einladung_repo, team_repo).post(
@@ -284,6 +303,9 @@ class TestAdmin:
             {"team_name": "<b>Vorhut</b>", "team_motiv": "vogel"},
             {"team_motiv": "vogel"},
             {"team_name": "Vorhut", "team_motiv": "vogel", "team_saison": "x" * 21},
+            # Der Teamname bleibt ohne Schraegstrich, die Saison ohne Markup
+            {"team_name": "BDK/Stand", "team_motiv": "vogel"},
+            {"team_name": "Vorhut", "team_motiv": "vogel", "team_saison": "<b>W</b>"},
             # Team nach Gruppe ohne Datum der Zustimmung
             {"team_name": "Netzfeuerwehr", "team_motiv": "vogel", "team_art": "gruppe"},
             # Datum in der Zukunft
