@@ -17,10 +17,10 @@
     [retryAction]="retryLoad">
   </app-error-message>
 
-  <!-- Nur ganz ohne Beiträge: ein Anfang, kein Misserfolg (26.11.) -->
+  <!-- Nur ganz ohne Beiträge: ein Anfang, kein Misserfolg (26.11.). Kein eigener Link: Der Weg
+       ist die Kachel „Beitragen“ direkt darunter, die Besuchern auch „mit Konto“ sagt (#644). -->
   <div *ngIf="!loading && !error && stand === 'anfang'" class="empty-state anfang">
-    <p>Hier wächst bald was. Dein Beitrag kann der erste sein.</p>
-    <a [routerLink]="beitragen">Fang an</a>
+    <p>Hier wächst bald was. Fang an, dein Beitrag kann der erste sein.</p>
   </div>
 </div>
 

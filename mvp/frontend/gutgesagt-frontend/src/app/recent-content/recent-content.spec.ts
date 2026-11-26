@@ -4,8 +4,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { of } from 'rxjs';
-import { provideRouter } from '@angular/router';
+import { of, throwError } from 'rxjs';
 import {
   FRISCH_TAGE,
   MOBIL_ANZAHL,
@@ -72,7 +71,6 @@ describe('RecentContentComponent', () => {
     await TestBed.configureTestingModule({
       imports: [RecentContentComponent, HttpClientTestingModule],
       providers: [
-        provideRouter([]),
         { provide: ContentService, useValue: contentService },
         { provide: LoggingService, useValue: loggingServiceSpy },
         { provide: BreakpointObserver, useValue: { observe: () => of({ matches: mobil, breakpoints: {} }) } },
@@ -189,16 +187,14 @@ describe('RecentContentComponent', () => {
       expect(alle('app-beitragskarte').length).toBe(3);
     });
 
-    it('zeigt ganz ohne Beitraege einen Anfang mit Weg zum Beitragen', () => {
+    it('zeigt ganz ohne Beitraege einen Anfang statt eines Misserfolgs', () => {
       erstellen([]);
 
       expect(component.stand).toBe('anfang');
       expect(titel()).toBe('Frisch aus der Community');
       expect(text()).toContain('Hier wächst bald was');
       expect(text()).not.toContain('Noch keine');
-      const link = fixture.nativeElement.querySelector('.empty-state a') as HTMLAnchorElement;
-      expect(link.textContent?.trim()).toBe('Fang an');
-      expect(link.getAttribute('href')).toBe('/contribute');
+      expect(text()).toContain('Fang an');
       expect(alle('app-beitragskarte').length).toBe(0);
     });
 
@@ -211,6 +207,19 @@ describe('RecentContentComponent', () => {
       component.loading = false;
       component.error = 'kaputt';
       fixture.detectChanges();
+      expect(alle('.empty-state').length).toBe(0);
+    });
+
+    it('zeigt bei einem Fehler nach dem Nachladen wieder den alten Titel', () => {
+      erstellen(eintraege(3, vorTagen(30)));
+      expect(titel()).toBe('Zuletzt ergänzt');
+
+      contentService.getRecentContent.and.returnValue(throwError(() => new Error('weg')));
+      TestBed.inject(ContentRefreshService).triggerRefresh();
+      fixture.detectChanges();
+
+      expect(component.error).toBeTruthy();
+      expect(titel()).toBe('Frisch aus der Community');
       expect(alle('.empty-state').length).toBe(0);
     });
 
@@ -244,6 +253,12 @@ describe('istFrisch', () => {
   it('gilt bis einschliesslich sieben Tage', () => {
     expect(istFrisch('2026-11-19T12:00:00Z', jetzt)).toBeTrue();
     expect(istFrisch('2026-11-19T11:59:59Z', jetzt)).toBeFalse();
+  });
+
+  it('liest auch Zeitstempel ohne Zeitzone, wie sie /recent fuer aeltere Beitraege liefert', () => {
+    // Ohne Offset liest der Browser Ortszeit; an der Grenze macht das hoechstens die Zeitverschiebung aus.
+    expect(istFrisch('2026-11-25T08:00:00', jetzt)).toBeTrue();
+    expect(istFrisch('2026-11-01T08:00:00', jetzt)).toBeFalse();
   });
 
   it('gilt ohne oder mit unlesbarem Datum nicht', () => {

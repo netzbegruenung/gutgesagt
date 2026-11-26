@@ -739,74 +739,84 @@ class QdrantBaseRepository(
             return False
 
     async def get_recent(self, limit: int = 10) -> List[TContentDbEntry]:
-        """Async implementation of get_recent. For MVP, fetches a reasonable batch and sorts."""
-        try:
-            from qdrant_client.models import (
-                Filter,
-                FieldCondition,
-                MatchValue,
+        """
+        Die neuesten sichtbaren Beitraege nach created ("Frisch aus der Community").
+
+        Qdrant scrollt ohne order_by in ID-Reihenfolge, und order_by braeuchte einen
+        Payload-Index auf created. Deshalb zuerst von allen sichtbaren Punkten nur
+        created lesen, im Speicher sortieren und dann nur die neuesten vollstaendig
+        holen. Bis 26.11.2026 las die Methode nur die ersten limit*10 Punkte in
+        ID-Reihenfolge; ab rund 50 Beitraegen je Typ fehlten so die neuesten.
+
+        Fehler von Qdrant gehen weiter: Die Startseite zeigt dann ihre Fehlermeldung
+        mit "Erneut versuchen" statt eines leeren Bereichs, der wie "noch nichts da"
+        aussieht.
+        """
+        client = self._shared_manager.async_client
+        sammlung = self._shared_manager.collection_name
+        search_filter = self._sichtbar_filter()
+
+        zeiten = []
+        current_offset = None
+        while True:
+            seite, naechster_offset = await client.scroll(
+                collection_name=sammlung,
+                scroll_filter=search_filter,
+                limit=256,
+                offset=current_offset,
+                with_payload=["created"],
+                with_vectors=False,
             )
+            for point in seite:
+                # created ist ISO-Text, als Text chronologisch sortierbar; null oder
+                # kein Text sortiert ans Ende statt die Sortierung zu sprengen.
+                created = (point.payload or {}).get("created")
+                zeiten.append((created if isinstance(created, str) else "", point.id))
+            if (
+                not seite
+                or naechster_offset is None
+                or naechster_offset == current_offset
+            ):
+                break
+            current_offset = naechster_offset
 
-            # Build filter for content_type if needed
-            search_filter = self._sichtbar_filter()
+        zeiten.sort(key=lambda zeit_id: zeit_id[0], reverse=True)
+        neueste_ids = [punkt_id for _, punkt_id in zeiten[:limit]]
+        if not neueste_ids:
+            return []
 
-            # For MVP: Fetch a reasonable batch (10x requested limit) and sort in memory
-            # This is acceptable for small datasets. For production with large datasets,
-            # consider adding a 'created' payload index with ordering support.
-            batch_size = min(limit * 10, 1000)  # Cap at 1000 to avoid memory issues
-            all_results = []
-            current_offset = None
-            fetched = 0
+        punkte = await client.retrieve(
+            collection_name=sammlung,
+            ids=neueste_ids,
+            with_payload=True,
+            with_vectors=False,
+        )
+        nach_id = {str(point.id): point for point in punkte}
 
-            while fetched < batch_size:
-                result = await self._shared_manager.async_client.scroll(
-                    collection_name=self._shared_manager.collection_name,
-                    scroll_filter=search_filter,
-                    limit=min(100, batch_size - fetched),
-                    offset=current_offset,
-                    with_payload=True,
-                    with_vectors=False,
+        ergebnis = []
+        for punkt_id in neueste_ids:
+            point = nach_id.get(str(punkt_id))
+            if point is None:
+                # Zwischen beiden Abrufen geloescht: faellt einfach heraus.
+                continue
+            payload = dict(point.payload or {})
+            payload["id"] = str(point.id)
+            try:
+                ergebnis.append(
+                    self.content_db_entry_model_class.model_validate(payload)
+                )
+            except ValidationError as fehler:
+                logger.warning(
+                    f"get_recent: Punkt {point.id} uebersprungen, "
+                    f"Payload ungueltig ({fehler.error_count()} Fehler)"
                 )
 
-                if not result[0]:
-                    break
-
-                for point in result[0]:
-                    payload = point.payload or {}
-                    payload["id"] = str(point.id)
-                    all_results.append(payload)
-                    fetched += 1
-
-                current_offset = result[1]
-                if current_offset is None:
-                    break
-
-            # Sort by created date (newest first)
-            all_results.sort(key=lambda x: x.get("created", ""), reverse=True)
-
-            # Take only the requested limit
-            recent_results = all_results[:limit]
-
-            content_desc = (
-                f"all content types"
-                if self.content_type is None
-                else f"content_type: {self.content_type}"
-            )
-            logger.info(
-                f"Recent content results for {self.repository_name} ({content_desc}): "
-                f"found {len(recent_results)} items (fetched {len(all_results)} to sort)"
-            )
-
-            return [
-                self.content_db_entry_model_class.model_validate(res)
-                for res in recent_results
-            ]
-
-        except Exception as e:
-            logger.error(
-                f"Failed to get recent items: {type(e).__name__}", exc_info=True
-            )
-            return []
+        logger.info(
+            f"Recent content results for {self.repository_name} "
+            f"(content_type: {self.content_type or 'alle'}): "
+            f"{len(ergebnis)} von {len(zeiten)} sichtbaren"
+        )
+        return ergebnis
 
     async def update_status(
         self,

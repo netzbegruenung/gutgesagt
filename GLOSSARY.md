@@ -381,7 +381,7 @@ Ein Beitrag, der in den letzten sieben Tagen (nicht der Kalenderwoche) mehrfach 
 _Avoid_: Trending, Trend, beliebt, Top-Beiträge
 
 **Frisch aus der Community**:
-Der Bereich auf der Startseite mit den neuesten Kommentaren und Hintergrundinfos, für alle sichtbar. Frisch heißt wie bei der Kachel unter „Seit deinem letzten Besuch“: in den letzten 7 Tagen ergänzt. Ist mindestens einer der neuesten frisch, zeigt er bis zu fünf (mobil drei); ist keiner frisch, heißt er „Zuletzt ergänzt“ und zeigt die drei zuletzt ergänzten jeden Alters. Leer ist er nie; nur ganz ohne Beiträge steht dort ein Anfang mit dem Weg zum Beitragen (Entscheidung 26.11.2026). Gesperrte und gelöschte Beiträge stehen dort nie.
+Der Bereich auf der Startseite mit den neuesten Kommentaren und Hintergrundinfos, für alle sichtbar. Frisch heißt wie bei der Kachel unter „Seit deinem letzten Besuch“: in den letzten 7 Tagen ergänzt. Ist mindestens einer der neuesten frisch, zeigt er bis zu fünf (mobil drei); ist keiner frisch, heißt er „Zuletzt ergänzt“ und zeigt die drei zuletzt ergänzten jeden Alters. Leer ist er nie; nur ganz ohne Beiträge steht dort ein Anfang („Hier wächst bald was“), der Weg dazu ist die Kachel „Beitragen“ darunter (Entscheidung 26.11.2026). Neueste heißt nach dem Datum der Karte über alle sichtbaren Beiträge. Gesperrte und gelöschte Beiträge stehen dort nie.
 
 **Stimme**:
 Die Zustimmung oder Ablehnung einer angemeldeten Person zu einem Beitrag. Ein Qualitätssignal, keine Nutzung. Sie gilt der Behauptung im Titel: Ändert die Autorin den Titel so, dass er nach der NLI-Stufe etwas anderes behauptet, verfallen die Stimmen; kleine Korrekturen und Änderungen nur am Text lassen sie stehen.

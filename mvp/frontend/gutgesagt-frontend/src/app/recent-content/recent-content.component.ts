@@ -1,6 +1,5 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { ContentService, RecentContentResponse } from '../services/content.service';
 import { LoggingService } from '../services/logging.service';
@@ -12,7 +11,6 @@ import { KartenlisteComponent } from '../beitragskarte/kartenliste.component';
 import { KartenDaten, ausSuchergebnis } from '../beitragskarte/karten-daten';
 import { LoadingSpinnerComponent } from '../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorMessageComponent } from '../shared/components/error-message/error-message.component';
-import { ROUTES } from '../shared/constants/app.constants';
 
 /** So viele Beitraege zeigt der Teaser auf der Startseite. */
 export const TEASER_ANZAHL = 5;
@@ -63,7 +61,6 @@ export function istFrisch(erstellt: string | undefined, jetzt: number = Date.now
     CommonModule,
     ResultCarouselComponent,
     KartenlisteComponent,
-    RouterLink,
     LoadingSpinnerComponent,
     ErrorMessageComponent
   ],
@@ -77,7 +74,6 @@ export class RecentContentComponent implements OnInit, OnDestroy {
   error = '';
   /** Bis 599 px eine Liste, darueber das Karussell. */
   istMobil = false;
-  readonly beitragen = ROUTES.CONTRIBUTE;
   private destroy$ = new Subject<void>();
 
   get titel(): string {
@@ -129,11 +125,11 @@ export class RecentContentComponent implements OnInit, OnDestroy {
 
     this.contentService.getRecentContent(TEASER_ANZAHL).subscribe({
       next: (response: RecentContentResponse) => {
-        const eintraege = response.results.filter((item) => TEASER_TYPEN.includes(item.result_type));
+        const beitraege = response.results.filter((item) => TEASER_TYPEN.includes(item.result_type));
         // Nichts frisch: die zuletzt ergaenzten statt eines leeren Bereichs
         this.stand =
-          eintraege.length === 0 ? 'anfang' : eintraege.some((item) => istFrisch(item.created)) ? 'frisch' : 'zuletzt';
-        this.karten = (this.stand === 'zuletzt' ? eintraege.slice(0, ZULETZT_ANZAHL) : eintraege)
+          beitraege.length === 0 ? 'anfang' : beitraege.some((item) => istFrisch(item.created)) ? 'frisch' : 'zuletzt';
+        this.karten = (this.stand === 'zuletzt' ? beitraege.slice(0, ZULETZT_ANZAHL) : beitraege)
           .map((item) =>
             ausSuchergebnis({
               score: 1.0,
@@ -151,6 +147,8 @@ export class RecentContentComponent implements OnInit, OnDestroy {
       error: (error) => {
         this.logger.error('Failed to load recent content', error);
         this.error = 'Die neuesten Beiträge konnten gerade nicht geladen werden.';
+        // Ueber der Fehlermeldung immer derselbe Titel, auch nach einem Nachladen
+        this.stand = 'frisch';
         this.loading = false;
         this.cdr.detectChanges();
       }
