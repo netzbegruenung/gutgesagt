@@ -324,15 +324,19 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
 
 - **Zweck:** zählen, wie viele Menschen die App an einem Tag öffnen, auch ohne Suche (#761).
 - **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f; für das Tagespseudonym der Besucher **offen** mit
-  § 25 TDDDG wie T5 (DSFA V7, `docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md` Frage 2).
-- **Betroffene:** alle, die die App öffnen, angemeldet oder nicht.
+  § 25 TDDDG wie T5 (DSFA V7, `docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md` Frage 2). Gezählt wird am
+  Server aus Abrufen, die die App ohnehin macht; der Browser schickt keine eigene Zähl-Anfrage.
+- **Betroffene:** alle, die die Startseite, eine Suche, ein Thema oder einen Beitrag abrufen,
+  angemeldet oder nicht.
 - **Daten:** je Besucher und laufendem Tag ein Tagespseudonym aus Anschluss und Tag (eigener
-  Raum, nicht verknüpfbar mit dem an Suchereignissen) und die Zahl der Seitenwechsel; keine
-  IP-Adresse, keine Kennung, kein Pfad, nichts im Browser. Danach je Tag zwei Zahlen.
+  Raum, nicht verknüpfbar mit dem an Suchereignissen) und die Zahl der Aufrufe; keine
+  IP-Adresse, keine Kennung, kein Pfad, nichts im Browser. Im Arbeitsspeicher bis Mitternacht
+  ein Prüfwert aus Pseudonym und Seite (Wiederholsperre). Danach je Tag zwei Zahlen.
 - **Empfänger:** Admins (Kennzahlen).
 - **Fristen:** LK „Fristen“ (Pseudonyme bis zum Ende ihres Tages).
-- **TOM:** Schalter `aufrufe_zaehlen`, Obergrenze Standard aus, mit DSFA-Hinweis;
-  höchstens 500 Aufrufe je Besucher und Tag; Admin-Seiten zählen nicht.
+- **TOM:** Schalter `aufrufe_zaehlen`, Obergrenze Standard aus, mit Einschalt-Hinweis;
+  dieselbe Seite binnen 5 Minuten zählt einmal; höchstens 500 Aufrufe je Besucher und Tag;
+  Rate-Limit je Anschluss.
 
 ## Offen
 

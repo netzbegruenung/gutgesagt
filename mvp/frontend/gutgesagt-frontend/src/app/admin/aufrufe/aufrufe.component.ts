@@ -39,7 +39,8 @@ const ZAHL = new Intl.NumberFormat('de-DE');
           Aufrufe und Besucher pro Tag
         </mat-card-title>
         <mat-card-subtitle>
-          Auch wer nur liest. Gezählt ohne IP-Adresse und ohne Cookie: Ein Besucher ist ein Anschluss an einem Tag
+          Auch wer nur liest: gezählt am Server aus Startseite, Suche, Thema und Beitrag, dieselbe Seite binnen fünf
+          Minuten einmal. Ohne IP-Adresse und ohne Cookie: Ein Besucher ist ein Anschluss an einem Tag
           (Tagespseudonym), am Tagesende bleiben nur die zwei Zahlen. Tage nach UTC.
         </mat-card-subtitle>
       </mat-card-header>

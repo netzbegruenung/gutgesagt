@@ -376,6 +376,12 @@ from middleware.tagesdeckel import TagesdeckelMiddleware
 
 app.add_middleware(TagesdeckelMiddleware)
 
+# Aufrufe zaehlen (#761, middleware/aufrufe_zaehlen.py): aus Abrufen, die die App ohnehin
+# macht, nach der Antwort; ohne wirksamen Schalter tut die Middleware nichts.
+from middleware.aufrufe_zaehlen import AufrufeZaehlenMiddleware
+
+app.add_middleware(AufrufeZaehlenMiddleware)
+
 app.include_router(commentary_router, prefix="/api/v1/commentary", tags=["commentary"])
 app.include_router(content_router, prefix="/api/v1/content", tags=["content"])
 app.include_router(

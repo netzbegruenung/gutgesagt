@@ -502,31 +502,6 @@ Empfänger und Ort“.
   die Bilanz bleibt so möglich. Vorschlag: Schlüssel der Angemeldeten wie bei Besuchern nur im Speicher
   (Abschnitt 9, Punkt 3).
 
-#### V7a Seitenaufrufe und Besucher je Tag (gebaut, ausgeschaltet; #761)
-
-- **Zweck:** wie V7, aber für alle, die die App öffnen, nicht nur für die, die suchen.
-- **Rechtsgrundlage und § 25 TDDDG:** dasselbe Besuchermerkmal (Anschluss) und derselbe
-  Tagesschlüssel im Speicher wie V7, kein neues Merkmal, kein Cookie. Anders als bei V7 löst
-  aber das Frontend eine eigene Anfrage aus, die nur dem Zählen dient (`POST
-  /api/v1/aufrufe/zaehlen` je Seitenwechsel, ohne Pfad); die EDSA-Leitlinien 2/2023 nennen
-  solche Zähl-Anfragen ausdrücklich. Ob § 25 Abs. 1 TDDDG greift und ob Abs. 2 Nr. 2 trägt,
-  ist deshalb eine eigene Frage (`docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md`, Frage 2, Zusatz).
-- **Daten:** je Besucher und Tag ein Pseudonym mit eigenem Präfix (`aufruf|`, also nicht mit
-  dem an Suchereignissen verknüpfbar) und eine Zahl (`aufrufe_heute`); Angemeldete ebenso über
-  den Anschluss, nicht über die Kennung.
-- **Frist:** Pseudonyme bis zum Ende ihres UTC-Tages, dann zu `aufrufe_tage` verdichtet
-  (`ss/services/aufrufe_service.py`, stündlich, auch bei ausgeschaltetem Schalter).
-- **Risiko:** gering, wie V7 für Besucher. Neu ist der Umfang: Das Pseudonym entsteht bei
-  jedem Besuch, nicht nur bei einer Suche. Die Zähl-Anfrage steht nicht im Zugriffsprotokoll
-  des Frontend-nginx (`nginx.protokoll.conf`, wie die Suche, V16); der vorgelagerte Webserver
-  braucht dieselbe Ausnahme. „Heute bisher“ zeigt Admins den laufenden Tag minütlich; bei sehr
-  kleinen Zahlen ließe sich ein einzelner Besuch zeitlich bemerken, ohne Personenbezug.
-  Aufblähen begrenzen 500 Aufrufe je Besucher und Tag und ein Rate-Limit je Anschluss; wer
-  viele Anschlüsse hat (IPv6-Präfixe), kann die Besucherzahl trotzdem erhöhen.
-- **Maßnahmen:** Schalter `aufrufe_zaehlen` (Obergrenze aus, DSFA-Hinweis an der Admin-Seite);
-  vor dem Einschalten Satz in der Datenschutzerklärung und Antwort auf Frage 2 an die
-  Datenschutzbeauftragte.
-
 #### V8 Suchen ohne Treffer
 
 - **Zweck:** erkennen, wo Antworten fehlen (`DSE:513-514`).

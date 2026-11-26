@@ -22,10 +22,7 @@ Schlüssel ein Pseudonym. Schlüssel und Adresse liegen dafür nur im Arbeitsspe
 wird für das Pseudonym nichts gespeichert oder ausgelesen. Den User-Agent nimmt der Server seit
 der Vorprüfung zu #495 nicht mehr auf (Entscheidung Maintainer, 11.11.2026). Das Pseudonym selbst
 wird gespeichert: an Suchereignissen nur bis zum Ende ihres Tages (danach bleiben Tageszähler ohne
-Pseudonym; vorher 90 Tage) und an anonymen Meldungen, bis sie abgeschlossen sind. Gebaut, aber
-ausgeschaltet (#761): dasselbe Merkmal mit eigenem Präfix für Seitenaufrufe, an einer Zeile je
-Besucher und Tag, ebenfalls am Tagesende zu Zahlen verdichtet; eingeschaltet wird es erst mit
-der Antwort auf diese Frage. Unabhängig
+Pseudonym; vorher 90 Tage) und an anonymen Meldungen, bis sie abgeschlossen sind. Unabhängig
 davon halten die Zugriffsprotokolle des vorgelagerten Webservers Adresse, User-Agent und Uhrzeit
 jeder Anfrage außer der Suche fest (Datenschutzerklärung, „Protokolldateien“).
 
@@ -36,14 +33,6 @@ Geräteklasse der Nutzungsereignisse liest der Server den User-Agent weiter und 
 zu einer von vier Klassen (Datenschutzerklärung, „Verwendung von Beiträgen“); das ist nicht Teil
 des Pseudonyms. Zu klären bleibt, ob das Bilden des Pseudonyms aus der IP-Adresse allein § 25
 TDDDG berührt.
-
-**Zusatz (#761, gebaut, ausgeschaltet):** Für die Seitenaufrufe schickt das Frontend je
-Seitenwechsel eine eigene, leere Anfrage an den Server, die nur dem Zählen dient; die Person hat
-davon keinen eigenen Nutzen. Bei der Suche entsteht das Pseudonym dagegen an einer Anfrage, die
-ohnehin nötig ist. Die EDSA-Leitlinien 2/2023 nennen solche vom Skript ausgelösten
-Zähl-Anfragen (Pixel, Tracking-Links) ausdrücklich. Zweite Frage daher: Fällt diese Zähl-Anfrage
-unter § 25 Abs. 1 TDDDG, und wenn ja, greift Abs. 2 Nr. 2 (unbedingt erforderlich) oder braucht
-sie eine Einwilligung? Bis zur Antwort bleibt der Schalter `aufrufe_zaehlen` aus.
 
 **Empfehlung:** Ja: § 25 TDDDG ist nach der DSK-Auslegung nicht berührt, und Art. 6 Abs. 1
 lit. f trägt, weil sich Pseudonyme verschiedener Tage auch mit Datenbank und Konfiguration nicht

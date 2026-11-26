@@ -63,10 +63,6 @@ public static class EndpointPolicy
         // Besucher. Nur dieser Pfad, nur lesend; /searchStatements und Anlegen bleiben
         // hinter dem Gate.
         "/api/v1/statement/aehnliche",
-        // Seitenaufrufe zaehlen (#761): eine leere Anfrage je Seitenwechsel, auch von
-        // Besuchern. Nur dieser Pfad; die Tageszahlen unter /api/v1/aufrufe sind
-        // admin-only und bleiben hinter dem Gate.
-        "/api/v1/aufrufe/zaehlen",
         // Nur dieser eine Metrics-Endpunkt, nicht das ganze Praefix: /getMetrics
         // liefert Bestandszaehler fuer die Startseite, die uebrigen sechs sind
         // Kennzahlen fuer Admins und im Backend admin-only. Der frueher hier stehende

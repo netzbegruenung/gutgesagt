@@ -32,7 +32,6 @@ public class EndpointPolicyTests
     [InlineData("/api/v1/einladungen/einloesen")]
     [InlineData("/api/v1/varianten/0b8f6c1e-3d2a-4f5b-9c7e-1a2b3c4d5e6f")]  // "N Varianten" (#356)
     [InlineData("/api/v1/statement/aehnliche")]  // "Nicht dabei?" auch fuer Besucher (#642)
-    [InlineData("/api/v1/aufrufe/zaehlen")]      // Seitenaufrufe zaehlen (#761)
     public void IsAnonymousAllowed_TrueForPublicPaths(string path)
     {
         Assert.True(EndpointPolicy.IsAnonymousAllowed(path));
@@ -55,7 +54,6 @@ public class EndpointPolicyTests
     [InlineData("/api/v1/usage/users/me/punkte")]  // nur /punkte/status ist offen (B20)
     [InlineData("/api/v1/usage/punkte/statusx")]   // Segmentgrenze
     [InlineData("/api/v1/aufrufe")]                 // Tageszahlen nur fuer Admins (#761)
-    [InlineData("/api/v1/aufrufe/zaehlenx")]        // Segmentgrenze
     [InlineData("/api/v1/funktionenx")]            // Segmentgrenze (#756)
     [InlineData("/api/v1/konter-probenx")]         // Segmentgrenze (#786)
     [InlineData("/api/v1/moderation/schalter")]    // Admin-Seite der Schalter (#708)

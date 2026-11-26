@@ -469,7 +469,7 @@ Ein Wert, der dasselbe Konto oder denselben Besucher an einem Tag wiedererkennba
 _Avoid_: Nutzer-ID, Actor-Hash, Hash, anonyme ID
 
 **Aufruf**:
-Ein Seitenwechsel in der App, gezählt je Tag zusammen mit den Besuchern dieses Tages (verschiedene Tagespseudonyme mit eigenem Präfix, also Anschlüsse). Gezählt wird ohne Pfad und ohne Kennung, Admin-Seiten nicht; am Tagesende bleiben nur die zwei Zahlen. Hinter dem Schalter `aufrufe_zaehlen` (#761).
+Ein Abruf einer Seite der App, gezählt je Tag zusammen mit den Besuchern dieses Tages (verschiedene Tagespseudonyme mit eigenem Präfix, also Anschlüsse). Gezählt wird am Server aus Abrufen, die die App ohnehin macht: Startseite (neueste Beiträge), Suche, Thema und Beitrag; Seiten ohne eigenen Abruf (etwa Impressum) zählen nicht. Dieselbe Seite desselben Besuchers binnen fünf Minuten zählt einmal. Kein Pfad, keine Kennung, keine eigene Anfrage aus dem Browser; am Tagesende bleiben nur die zwei Zahlen. Hinter dem Schalter `aufrufe_zaehlen` (#761).
 _Avoid_: Pageview, Hit, Impression
 
 **Besuchermerkmal**:

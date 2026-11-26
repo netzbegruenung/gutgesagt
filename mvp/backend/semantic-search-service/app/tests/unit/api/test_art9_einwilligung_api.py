@@ -700,8 +700,6 @@ OFFEN = {
     ("PUT", "/api/v1/moderation/saisons/{saison_id}"),
     # Herkunft pruefen anstossen (Admin, #759): keine Daten von Nutzenden
     ("POST", "/api/v1/herkunft-pruefen/lauf"),
-    # Seitenaufruf zaehlen (#761): nur ein Zaehler je Tagespseudonym, keine Inhalte
-    ("POST", "/api/v1/aufrufe/zaehlen"),
     ("POST", "/api/v1/sperren/{sperre_id}/widerspruch"),
     # Einladungen (vor dem Konto) und Admin-Endpunkte
     ("POST", "/api/v1/einladungen"),

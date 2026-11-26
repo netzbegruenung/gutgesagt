@@ -142,9 +142,10 @@ team_beitreten_rate_limiter = RateLimiter(
     max_requests=settings.team_beitreten_rate_limit_anfragen, window_minutes=15
 )
 
-# Seitenaufrufe zaehlen (#761), ohne Anmeldung: 120 je Anschluss in 10 Minuten. Ein
-# Seitenwechsel ist eine Meldung; hinter einem gemeinsamen Anschluss (Buero, Parteitag)
-# klicken viele. Darueber wird still nicht gezaehlt, es entsteht keine Schreiblast.
+# Aufrufe zaehlen (#761, middleware/aufrufe_zaehlen.py): 120 gezaehlte Aufrufe je
+# Anschluss in 10 Minuten; hinter einem gemeinsamen Anschluss (Buero, Parteitag) lesen
+# viele. Darueber wird still nicht gezaehlt, es entsteht keine Schreiblast; die Antwort
+# auf den Abruf selbst bleibt unberuehrt.
 aufrufe_rate_limiter = RateLimiter(max_requests=120, window_minutes=10)
 
 # Gegenlesen beim Schreiben (#358): 300 je Person in 10 Minuten. Das Formular fragt

@@ -1,8 +1,8 @@
 """
-Seitenaufrufe und Besucher je Tag (#761): Zaehlen ohne Anmeldung, nur mit Schalter;
-gespeichert wird nur das Tagespseudonym, nie die Adresse. Admins sehen Tageszahlen.
-Ohne Datenbank: das Repository ist ersetzt; gegen PostgreSQL pruefen
-tests/integration/test_aufrufe_repository.py.
+Seitenaufrufe und Besucher je Tag (#761): Gezaehlt wird am Server aus Abrufen, die die
+App ohnehin macht, nur mit Schalter; gespeichert wird nur das Tagespseudonym, nie die
+Adresse. Admins sehen Tageszahlen. Ohne Datenbank: das Repository ist ersetzt; gegen
+PostgreSQL pruefen tests/integration/test_aufrufe_repository.py.
 """
 
 import asyncio
@@ -14,10 +14,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import api.v1.aufrufe as modul
+import middleware.aufrufe_zaehlen as mw
 from core.config import Settings
 from dependencies import get_settings
 from repositories.aufrufe_repository import AufrufTag
 from services import aufrufe_service
+from services.aufrufe_service import Wiederholsperre, seite_von
 from services.schalter_service import SchalterService, schalter_service_setzen
 from utils.besucher_pseudonym import besucher_tagespseudonym
 
@@ -49,6 +51,18 @@ def repo():
     return r
 
 
+@pytest.fixture(autouse=True)
+def ohne_rate_limit(monkeypatch):
+    limiter = Mock()
+
+    async def frei(schluessel):
+        return False
+
+    limiter.is_rate_limited = frei
+    monkeypatch.setattr(mw, "aufrufe_rate_limiter", limiter)
+    return limiter
+
+
 def _client(repo, obergrenze=True):
     app = FastAPI()
     app.include_router(modul.router, prefix=URL)
@@ -59,45 +73,211 @@ def _client(repo, obergrenze=True):
     return TestClient(app)
 
 
-class TestZaehlen:
-    def test_an_zaehlt_mit_pseudonym_ohne_adresse(self, werte, repo, monkeypatch):
-        monkeypatch.setattr(aufrufe_service, "heute_utc", lambda: HEUTE)
-        antwort = _client(repo).post(f"{URL}/zaehlen", headers=ADRESSE)
+class Uhr:
+    def __init__(self):
+        self.jetzt = 1000.0
 
-        assert antwort.status_code == 204
+    def __call__(self):
+        return self.jetzt
+
+
+def _seiten_app(repo, obergrenze=True, sperre=None):
+    """Eine App mit den gezaehlten Routen, wie die echten ohne Inhalt."""
+    app = FastAPI()
+
+    @app.get("/api/v1/content/recent")
+    def recent():
+        return {"results": []}
+
+    @app.get("/api/v1/content/beitrag/{beitrag_id}")
+    def beitrag(beitrag_id: str):
+        if beitrag_id == "fehlt":
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=404)
+        return {"id": beitrag_id}
+
+    @app.post("/api/v1/search/searchByText")
+    def suche():
+        return {"treffer": []}
+
+    @app.get("/api/v1/search/thema/{schluessel}")
+    def thema(schluessel: str):
+        return {"aussagen": []}
+
+    @app.get("/api/v1/metrics/getMetrics")
+    def anderes():
+        return {}
+
+    app.add_middleware(
+        mw.AufrufeZaehlenMiddleware,
+        einstellungen=lambda: Settings(aufrufe_zaehlen_aktiv=obergrenze),
+        repository=lambda: repo,
+        sperre=sperre or Wiederholsperre(uhr=Uhr()),
+        heute=lambda: HEUTE,
+    )
+    return app
+
+
+def _abrufen(app, *abrufe):
+    """Abrufe ausfuehren und die Zaehl-Aufgaben danach abwarten."""
+
+    async def abwarten():
+        await asyncio.gather(*list(mw.AUSSTEHEND))
+
+    with TestClient(app) as client:
+        antworten = [
+            client.request(methode, pfad, headers=ADRESSE) for methode, pfad in abrufe
+        ]
+        client.portal.call(abwarten)
+    return antworten
+
+
+class TestSeiten:
+    @pytest.mark.parametrize(
+        "methode, pfad, seite",
+        [
+            ("GET", "/api/v1/content/recent", "start"),
+            ("GET", "/api/v1/content/beitrag/b-1", "beitrag|b-1"),
+            ("POST", "/api/v1/search/searchByText", "suche"),
+            ("GET", "/api/v1/search/thema/klima", "thema|klima"),
+        ],
+    )
+    def test_gezaehlte_abrufe(self, methode, pfad, seite):
+        assert seite_von(methode, pfad) == seite
+
+    @pytest.mark.parametrize(
+        "methode, pfad",
+        [
+            ("POST", "/api/v1/content/recent"),
+            ("GET", "/api/v1/search/searchByText"),
+            ("GET", "/api/v1/metrics/getMetrics"),
+            ("GET", "/api/v1/aufrufe"),
+            ("GET", "/api/v1/content/beitrag/b-1/weiter"),
+            ("DELETE", "/api/v1/content/b-1"),
+        ],
+    )
+    def test_andere_abrufe_zaehlen_nicht(self, methode, pfad):
+        assert seite_von(methode, pfad) is None
+
+
+class TestWiederholsperre:
+    def test_dieselbe_seite_binnen_der_sperre_einmal(self):
+        uhr = Uhr()
+        sperre = Wiederholsperre(sekunden=300, uhr=uhr)
+
+        assert sperre.neu("203.0.113.7", "start", HEUTE) is True
+        uhr.jetzt += 30
+        assert sperre.neu("203.0.113.7", "start", HEUTE) is False
+
+    def test_nachladen_verlaengert_die_sperre(self):
+        uhr = Uhr()
+        sperre = Wiederholsperre(sekunden=300, uhr=uhr)
+        sperre.neu("203.0.113.7", "start", HEUTE)
+        for _ in range(20):
+            uhr.jetzt += 30
+            assert sperre.neu("203.0.113.7", "start", HEUTE) is False
+
+    def test_nach_der_sperre_wieder(self):
+        uhr = Uhr()
+        sperre = Wiederholsperre(sekunden=300, uhr=uhr)
+        sperre.neu("203.0.113.7", "start", HEUTE)
+        uhr.jetzt += 301
+        assert sperre.neu("203.0.113.7", "start", HEUTE) is True
+
+    def test_andere_seite_anderer_besucher_neuer_tag_zaehlen(self):
+        sperre = Wiederholsperre(uhr=Uhr())
+        sperre.neu("203.0.113.7", "beitrag|b-1", HEUTE)
+
+        assert sperre.neu("203.0.113.7", "beitrag|b-2", HEUTE) is True
+        assert sperre.neu("203.0.113.8", "beitrag|b-1", HEUTE) is True
+        assert sperre.neu("203.0.113.7", "beitrag|b-1", date(2026, 11, 23)) is True
+
+    def test_haelt_keine_adresse_und_keine_seite(self):
+        sperre = Wiederholsperre(uhr=Uhr())
+        sperre.neu("203.0.113.7", "beitrag|b-1", HEUTE)
+
+        schluessel = " ".join(sperre._zuletzt)
+        assert "203.0.113" not in schluessel and "b-1" not in schluessel
+
+    def test_voll_zaehlt_nichts_neues(self):
+        uhr = Uhr()
+        sperre = Wiederholsperre(sekunden=300, hoechstens=2, uhr=uhr)
+        sperre.neu("a", "start", HEUTE)
+        sperre.neu("b", "start", HEUTE)
+
+        assert sperre.neu("c", "start", HEUTE) is False
+        uhr.jetzt += 301
+        assert sperre.neu("c", "start", HEUTE) is True
+
+
+class TestZaehlenAusAbrufen:
+    def test_an_zaehlt_mit_pseudonym_ohne_adresse(self, werte, repo):
+        (antwort,) = _abrufen(_seiten_app(repo), ("GET", "/api/v1/content/recent"))
+
+        assert antwort.status_code == 200
         tag, pseudonym = repo.zaehlen.call_args.args
         assert tag == HEUTE
         assert len(pseudonym) == 64 and "203.0.113" not in pseudonym
         assert pseudonym == aufrufe_service.aufruf_pseudonym("203.0.113.7", HEUTE)
 
-    def test_ohne_anmeldung_und_ohne_inhalt(self, werte, repo):
-        assert _client(repo).post(f"{URL}/zaehlen").status_code == 204
+    def test_jede_seite_zaehlt_wiederholung_nicht(self, werte, repo):
+        _abrufen(
+            _seiten_app(repo),
+            ("GET", "/api/v1/content/recent"),
+            ("GET", "/api/v1/content/recent"),
+            ("POST", "/api/v1/search/searchByText"),
+            ("GET", "/api/v1/content/beitrag/b-1"),
+            ("GET", "/api/v1/content/beitrag/b-2"),
+            ("GET", "/api/v1/search/thema/klima"),
+        )
+        assert repo.zaehlen.call_count == 5
+
+    def test_andere_abrufe_und_fehler_zaehlen_nicht(self, werte, repo):
+        antworten = _abrufen(
+            _seiten_app(repo),
+            ("GET", "/api/v1/metrics/getMetrics"),
+            ("GET", "/api/v1/content/beitrag/fehlt"),
+        )
+        assert [a.status_code for a in antworten] == [200, 404]
+        repo.zaehlen.assert_not_called()
 
     @pytest.mark.parametrize(
         "obergrenze, admin_wert", [(True, False), (False, True), (False, False)]
     )
-    def test_aus_404_nichts_gespeichert(self, werte, repo, obergrenze, admin_wert):
+    def test_schalter_aus_nichts_gezaehlt_antwort_gleich(
+        self, werte, repo, obergrenze, admin_wert
+    ):
         werte["aufrufe_zaehlen"] = admin_wert
-        antwort = _client(repo, obergrenze).post(f"{URL}/zaehlen", headers=ADRESSE)
+        (antwort,) = _abrufen(
+            _seiten_app(repo, obergrenze), ("GET", "/api/v1/content/recent")
+        )
 
-        assert antwort.status_code == 404
+        assert antwort.status_code == 200 and antwort.json() == {"results": []}
         assert repo.method_calls == []
 
-    def test_ueber_dem_rate_limit_still_nicht_gezaehlt(self, werte, repo, monkeypatch):
-        limiter = Mock()
-
+    def test_ueber_dem_rate_limit_still_nicht_gezaehlt(
+        self, werte, repo, ohne_rate_limit
+    ):
         async def begrenzt(schluessel):
             return True
 
-        limiter.is_rate_limited = begrenzt
-        monkeypatch.setattr(modul, "aufrufe_rate_limiter", limiter)
+        ohne_rate_limit.is_rate_limited = begrenzt
+        (antwort,) = _abrufen(_seiten_app(repo), ("GET", "/api/v1/content/recent"))
 
-        assert _client(repo).post(f"{URL}/zaehlen", headers=ADRESSE).status_code == 204
+        assert antwort.status_code == 200
         repo.zaehlen.assert_not_called()
 
-    def test_fehler_beim_speichern_kostet_nur_den_aufruf(self, werte, repo):
-        repo.zaehlen.side_effect = RuntimeError("weg")
-        assert _client(repo).post(f"{URL}/zaehlen", headers=ADRESSE).status_code == 204
+    def test_fehler_beim_speichern_kostet_nur_den_aufruf(self, werte, repo, caplog):
+        repo.zaehlen.side_effect = RuntimeError("geheim")
+        (antwort,) = _abrufen(_seiten_app(repo), ("GET", "/api/v1/content/recent"))
+
+        assert antwort.status_code == 200
+        assert "geheim" not in caplog.text
+
+    def test_keine_eigene_zaehl_route_mehr(self, werte, repo):
+        """Variante B: Der Browser schickt nichts Zusaetzliches; die alte Route ist weg."""
+        assert _client(repo).post(f"{URL}/zaehlen").status_code in (404, 405)
 
 
 class TestTageszahlen:

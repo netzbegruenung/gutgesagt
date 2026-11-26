@@ -129,19 +129,6 @@ def test_keine_zeile_je_aufruf_der_ergebnisseite(konfiguration):
 
 
 @pytest.mark.usefixtures("docker_noetig")
-def test_keine_zeile_je_gezaehltem_seitenaufruf():
-    """#761: Je Seitenwechsel eine Zaehl-Anfrage; ihre Zeile waere eine Zeitspur."""
-    with _nginx("nginx.docker.conf") as (basis, name):
-        _anfrage(f"{basis}/api/v1/aufrufe/zaehlen", methode="POST")
-        _anfrage(f"{basis}/api/v1/metrics/getMetrics")
-
-        zugriffe = _zugriffe(name)
-
-    assert any("/api/v1/metrics/getMetrics" in zeile for zeile in zugriffe), zugriffe
-    assert not [zeile for zeile in zugriffe if "/aufrufe/zaehlen" in zeile]
-
-
-@pytest.mark.usefixtures("docker_noetig")
 def test_keine_zeile_je_suche():
     with _nginx("nginx.docker.conf") as (basis, name):
         _anfrage(f"{basis}{SUCHE}", methode="POST")
