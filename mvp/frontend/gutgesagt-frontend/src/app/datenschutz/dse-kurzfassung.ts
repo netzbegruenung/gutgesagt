@@ -1,3 +1,5 @@
+import { InjectionToken } from '@angular/core';
+
 /**
  * Kasten „Kurz gesagt“ oben in der Datenschutzerklärung (Schalter dse_kurzfassung).
  *
@@ -28,10 +30,14 @@ export const KURZFASSUNG_ANKER = {
 } as const;
 
 // Wortlaut Jura: die drei Texte unten ersetzen, Anker nur ändern, wenn Jura einen anderen
-// Absatz als Entsprechung nennt.
+// Absatz als Entsprechung nennt (dann die id dort setzen; der Ankertest prüft sie).
+// Keine eckigen Klammern im Wortlaut: kurzfassungFertig hält jeden Text mit […] für einen
+// Platzhalter und lässt den Kasten dann still weg, auch bei eingeschaltetem Schalter.
 export const KURZFASSUNG_SAETZE: readonly KurzfassungSatz[] = [
   {
-    // Wer verantwortlich ist: die Netzbegrünung
+    // Wer verantwortlich ist. Den Namen nicht fest schreiben, sondern aus LEGAL_ENTITY.NAME
+    // einsetzen (Organisation-neutral), etwa `… ${LEGAL_ENTITY.NAME} …`; der Rest des
+    // Satzes ist Wortlaut Jura.
     text: `${KURZFASSUNG_PLATZHALTER} Wer verantwortlich ist`,
     anker: KURZFASSUNG_ANKER.verantwortlich,
     linkText: 'Mehr dazu',
@@ -49,6 +55,12 @@ export const KURZFASSUNG_SAETZE: readonly KurzfassungSatz[] = [
     linkText: 'Mehr dazu',
   },
 ];
+
+/** Sätze des Kastens; Standard KURZFASSUNG_SAETZE, in Tests per Provider ersetzbar. */
+export const KURZFASSUNG = new InjectionToken<readonly KurzfassungSatz[]>('KURZFASSUNG', {
+  providedIn: 'root',
+  factory: () => KURZFASSUNG_SAETZE,
+});
 
 /**
  * Ob die Sätze gezeigt werden dürfen: genau drei, keiner leer, keiner mit Platzhalter und

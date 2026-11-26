@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { FunktionenService } from '../services/funktionen.service';
 import { DatenschutzComponent } from './datenschutz.component';
 import {
+  KURZFASSUNG,
   KURZFASSUNG_ANKER,
   KURZFASSUNG_PLATZHALTER,
   KURZFASSUNG_SAETZE,
@@ -30,12 +31,13 @@ describe('Kurzfassung der Datenschutzerklärung (dse_kurzfassung)', () => {
     };
     TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
-      providers: [provideRouter([]), { provide: FunktionenService, useValue: funktionen }],
+      providers: [
+        provideRouter([]),
+        { provide: FunktionenService, useValue: funktionen },
+        ...(saetze ? [{ provide: KURZFASSUNG, useValue: saetze }] : []),
+      ],
     });
     const fixture = TestBed.createComponent(DatenschutzComponent);
-    if (saetze) {
-      fixture.componentInstance.kurzfassungSaetze.set(saetze);
-    }
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
@@ -100,6 +102,8 @@ describe('Kurzfassung der Datenschutzerklärung (dse_kurzfassung)', () => {
       expect(scrollen).toHaveBeenCalledWith({ block: 'start' });
       expect(klick.defaultPrevented).toBeTrue();
       expect(location.hash).toBe(`#${KURZFASSUNG_ANKER.loeschen}`);
+      // Fokus auf dem Absatz, damit Tab dort weitergeht (WCAG 2.4.3)
+      expect(document.activeElement).toBe(ziel);
     } finally {
       history.replaceState(history.state, '', vorher);
       element.remove();
@@ -110,9 +114,9 @@ describe('Kurzfassung der Datenschutzerklärung (dse_kurzfassung)', () => {
     const element = seite(false);
 
     for (const satz of KURZFASSUNG_SAETZE) {
-      expect(element.querySelector(`section#${satz.anker}`))
-        .withContext(satz.anker)
-        .not.toBeNull();
+      const absatz = element.querySelector(`section#${satz.anker}`);
+      expect(absatz).withContext(satz.anker).not.toBeNull();
+      expect(absatz?.getAttribute('tabindex')).withContext(satz.anker).toBe('-1');
     }
   });
 

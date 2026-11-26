@@ -34,5 +34,14 @@
     color: var(--akzent-schrift);
     text-decoration: var(--link-unterstrich);
     white-space: nowrap;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
+}
+
+// Fokusziel der Sprunglinks (springen): kein Rahmen um den ganzen Absatz, wie #hauptinhalt
+.legal-section[tabindex='-1']:focus {
+  outline: none;
 }
