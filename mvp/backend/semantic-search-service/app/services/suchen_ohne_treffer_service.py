@@ -298,7 +298,8 @@ class SuchenOhneTrefferService:
         """
         Fuer die Seite ohne Treffer (#362): wie oft im Zeitraum der Liste
         (WOCHEN_STANDARD) ohne Treffer nach dieser Aussage gesucht wurde, gezaehlt wie
-        die Listen je Tagespseudonym und Woche, die eben gezaehlte Suche eingerechnet;
+        die Listen je Tagespseudonym und Tag, ueber die Wochen summiert, die eben
+        gezaehlte Suche eingerechnet;
         None unter ANZEIGE_AB. Nur eine Zahl, gelesen aus den Zaehlern, die erfassen
         ohnehin schreibt: kein Text, nichts zusaetzlich gespeichert. Auch Besucher sehen
         sie (Entscheidung des Maintainers vom 28.10.2026 in #362), aber nur zu einer

@@ -211,7 +211,7 @@ class TestRepository:
         }
 
     def test_personen_summiert_ab_der_woche_nur_fuer_die_aussage(self, neue_datenbank):
-        """Die Zahl fuer "Danach haben schon N Personen gesucht" (#362)."""
+        """Die Zahl fuer "Danach wurde schon N-mal gesucht" (#362)."""
         repository = _repository(neue_datenbank)
         repository.zaehlen(AUSSAGE, date(2026, 10, 12), neue_person=True)
         repository.zaehlen(AUSSAGE, VORIGE_WOCHE, neue_person=True)

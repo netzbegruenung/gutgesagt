@@ -143,7 +143,8 @@ class SearchResponse(BaseModel):
     image_search_results_count: int = 0
     image_search_results: List[ImageSearchResult] = []
     # Ohne Treffer: so oft wurde in den letzten vier Wochen ohne Treffer danach gesucht
-    # (je Tagespseudonym und Woche, die eigene Suche eingerechnet); erst ab drei und nur
+    # (je Tagespseudonym und Tag, ueber die Wochen summiert, die eigene Suche
+    # eingerechnet); erst ab drei und nur
     # mit dem Schalter null_treffer_anzahl, sonst None (#362,
     # services/suchen_ohne_treffer_service.py, schon_gesucht).
     schon_gesucht_anzahl: Optional[int] = None
