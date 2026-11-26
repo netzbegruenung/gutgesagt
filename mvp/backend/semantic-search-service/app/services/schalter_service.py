@@ -319,6 +319,22 @@ SCHALTER: Dict[str, Schalterart] = {
             oeffentlich=True,
         ),
         Schalterart(
+            name="dse_kurzfassung",
+            feld="dse_kurzfassung_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_DSE_KURZFASSUNG_AKTIV",
+            erklaerung=(
+                "Kasten „Kurz gesagt“ oben in der Datenschutzerklärung: drei Sätze "
+                "(wer verantwortlich ist, was gespeichert wird, wie man löscht und "
+                "widerruft), je mit Sprunglink auf den Absatz im Volltext. Bleibt "
+                "unsichtbar, solange ein Satz noch Platzhalter ist."
+            ),
+            einschalt_hinweis=(
+                "Wortlaut von Jura (Paket 27.11.) eintragen; jeder Satz muss einem "
+                "Absatz im Volltext entsprechen"
+            ),
+            oeffentlich=True,
+        ),
+        Schalterart(
             name="teams",
             gruppe=TEAMS,
             rechtlich_freigegeben=True,

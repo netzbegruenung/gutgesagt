@@ -434,6 +434,11 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   7 days; `null` while off) and `GET /api/v1/usage/users/me/aussagen` lists one's own Aussagen
   with their answers (404 while off; only opened by a click on its tab, which shows only
   while on), `services/antworten_hinweis.py`.
+- `SEMANTIC_SEARCH_DSE_KURZFASSUNG_AKTIV` - upper bound of the Schalter `dse_kurzfassung`
+  (default `false`, public via `GET /api/v1/funktionen`): box "Kurz gesagt" at the top of the
+  privacy policy with three sentences, each linking to its paragraph in the full text
+  (`datenschutz/dse-kurzfassung.ts`). The wording comes from the legal review; while any
+  sentence still carries the placeholder, the box stays hidden even when switched on.
 - `SEMANTIC_SEARCH_TEAMS_AKTIV` - upper bound of the Schalter `teams` (Teams over
   invitations, GLOSSARY.md "Team", "Teamlink", "Mitgliedschaft", "Saison"; default `false`: a
   Mitgliedschaft may reveal political leaning and place, so it needs its own consent, the DSFA

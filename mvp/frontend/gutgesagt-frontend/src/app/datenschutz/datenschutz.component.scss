@@ -1,1 +1,47 @@
 @use '../shared/styles/legal-pages.scss' as *;
+
+// Kasten „Kurz gesagt“ (Schalter dse_kurzfassung): hervorgehoben wie .info-box, ohne die
+// Abschnittsrhythmik zu stören
+.kurzfassung {
+  background-color: var(--primaer-tint);
+  border-left: 4px solid var(--linie-tanne);
+  border-radius: 4px;
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+
+  h2 {
+    color: var(--akzent-schrift);
+    font-size: 1.3rem;
+    font-weight: 500;
+    margin: 0 0 var(--spacing-sm);
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 1.25rem;
+  }
+
+  li {
+    line-height: 1.6;
+    margin-bottom: var(--spacing-sm);
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  a {
+    color: var(--akzent-schrift);
+    text-decoration: var(--link-unterstrich);
+    white-space: nowrap;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// Fokusziel der Sprunglinks (springen): kein Rahmen um den ganzen Absatz, wie #hauptinhalt
+.legal-section[tabindex='-1']:focus {
+  outline: none;
+}

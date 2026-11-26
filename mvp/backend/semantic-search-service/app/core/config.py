@@ -323,6 +323,10 @@ class Settings(BaseSettings):
     # oeffentliche Inhalte beim Aufruf gezaehlt werden und nichts gespeichert wird;
     # wirksam erst mit dem Admin-Wert (Feature-Toggle fuer Neues, Sebastian 26.11.).
     bestandszahl_zuwachs_aktiv: bool = True
+    # Kurzfassung "Kurz gesagt" oben in der Datenschutzerklaerung (Jura b): Standard aus,
+    # bis der Wortlaut von Jura im Frontend steht (datenschutz/dse-kurzfassung.ts). Ohne
+    # Wortlaut bleibt der Kasten auch eingeschaltet unsichtbar.
+    dse_kurzfassung_aktiv: bool = False
     # Teams ueber Einladungen (services/team_service.py): Teamfelder an der Einladung,
     # Beitreten mit eigener Einwilligung, "Meine Teams". Standard aus: Die
     # Mitgliedschaft ist im Zweifel ein Art.-9-Datum; erst mit DSFA-Nachtrag,
