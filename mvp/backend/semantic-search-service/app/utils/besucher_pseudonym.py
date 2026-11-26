@@ -36,8 +36,8 @@ innerhalb der Anfrage. Laenger lebt nur, was daraus mit dem Tagesschluessel
 berechnet ist: das Pseudonym an Suchereignissen des laufenden Tages (am Tagesende
 verdichtet zu Zaehlern, services/loeschfristen_service.py), mit eigenem Praefix an den
 Seitenaufrufen des laufenden Tages (``aufrufe_heute``, #761, ebenso verdichtet,
-services/aufrufe_service.py) und an offenen anonymen Meldungen, bei Suchen ohne Treffer ein Pruefwert aus Pseudonym und Aussage, im
-Speicher bis Mitternacht.
+services/aufrufe_service.py) und an offenen anonymen Meldungen, bei Suchen ohne
+Treffer ein Pruefwert aus Pseudonym und Aussage, im Speicher bis Mitternacht.
 """
 
 import hashlib

@@ -1,5 +1,6 @@
 """
-Seitenaufrufe und Besucher je Tag, ohne IP und ohne Cookie (#761, GLOSSARY.md "Aufruf").
+Seitenaufrufe und Besucher je Tag, ohne Cookie und ohne die IP-Adresse zu speichern
+(#761, GLOSSARY.md "Aufruf").
 
 Heute zaehlen die Kennzahlen nur, wer sucht; wer nur liest, fehlt. Gezaehlt wird am
 Server, aus Abrufen, die die App ohnehin macht (middleware/aufrufe_zaehlen.py): die

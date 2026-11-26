@@ -271,8 +271,9 @@ SCHALTER: Dict[str, Schalterart] = {
             umgebungsvariable="SEMANTIC_SEARCH_AUFRUFE_ZAEHLEN_AKTIV",
             erklaerung=(
                 "Zählt Aufrufe und Besucher je Tag am Server aus den Abrufen von "
-                "Startseite, Suche und Beitrag, ohne eigene Anfrage aus dem Browser, "
-                "ohne IP und ohne Cookie, und zeigt sie unter Kennzahlen."
+                "Startseite, Suche, Thema und Beitrag, ohne eigene Anfrage aus dem "
+                "Browser und ohne Cookie; die IP-Adresse wird nicht gespeichert. "
+                "Zeigt sie unter Kennzahlen."
             ),
             dsfa_hinweis=True,
             einschalt_hinweis=(

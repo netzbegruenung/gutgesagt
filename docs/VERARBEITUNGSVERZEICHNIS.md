@@ -320,6 +320,7 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   `mvp/scripts/manual/team_umbenennen.sql`); die Gruppe bekommt nie Namen, Listen oder
   eigene Zahlen und steuert nichts; keine Namen, die eine weitere besondere Kategorie erkennen
   lassen (Hinweis im Admin-Formular, GLOSSARY „Team“). Keine Nummer am Namen.
+
 ### T14 Seitenaufrufe und Besucher je Tag (gebaut, ausgeschaltet)
 
 - **Zweck:** zählen, wie viele Menschen die App an einem Tag öffnen, auch ohne Suche (#761).

@@ -34,18 +34,18 @@ const ZAHL = new Intl.NumberFormat('de-DE');
   template: `
     <mat-card *ngIf="stand?.aktiv" class="aufrufe" data-testid="aufrufe">
       <mat-card-header>
-        <mat-card-title>
+        <mat-card-title id="aufrufe-titel">
           <mat-icon aria-hidden="true">visibility</mat-icon>
           Aufrufe und Besucher pro Tag
         </mat-card-title>
         <mat-card-subtitle>
           Auch wer nur liest: gezählt am Server aus Startseite, Suche, Thema und Beitrag, dieselbe Seite binnen fünf
-          Minuten einmal. Ohne IP-Adresse und ohne Cookie: Ein Besucher ist ein Anschluss an einem Tag
+          Minuten einmal. Kein Cookie, die IP-Adresse wird nicht gespeichert: Ein Besucher ist ein Anschluss an einem Tag
           (Tagespseudonym), am Tagesende bleiben nur die zwei Zahlen. Tage nach UTC.
         </mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
-        <table>
+        <table aria-labelledby="aufrufe-titel">
           <thead>
             <tr>
               <th scope="col">Tag</th>
@@ -57,10 +57,12 @@ const ZAHL = new Intl.NumberFormat('de-DE');
             <tr *ngFor="let t of zeilen()" [class.heute]="t === stand!.heute" data-testid="aufruf-tag">
               <th scope="row">{{ t === stand!.heute ? 'Heute bisher' : tag(t.tag) }}</th>
               <td class="zahl">{{ zahl(t.aufrufe) }}</td>
-              <td class="besucher">
-                <span class="besucher-zahl">{{ zahl(t.besucher) }}</span>
-                <!-- Nur Schmuck: die Zahl steht daneben -->
-                <span class="balken-spur" aria-hidden="true"><span class="balken" [style.width.%]="anteil(t)"></span></span>
+              <td>
+                <div class="besucher">
+                  <span class="besucher-zahl">{{ zahl(t.besucher) }}</span>
+                  <!-- Nur Schmuck: die Zahl steht daneben -->
+                  <span class="balken-spur" aria-hidden="true"><span class="balken" [style.width.%]="anteil(t)"></span></span>
+                </div>
               </td>
             </tr>
           </tbody>
