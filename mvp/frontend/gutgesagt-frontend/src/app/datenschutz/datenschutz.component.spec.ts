@@ -1247,6 +1247,30 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     expect(text).toContain('Diese Anzeige am Namen ist noch nicht eingeschaltet.');
   });
 
+  it('team_quests: der Absatz unter „Teams“', () => {
+    expect(abschnittIn(seiteMit('team_fortschritt', 'team_quests'), 'Teams')).toContain(
+      'In Teams gibt es gemeinsame Wochenaufgaben (Quests). Am Team speichern wir je Woche nur Thema und Ziel der ' +
+        'Quest, ohne Namen. Ob das Team sie schafft, berechnen wir bei jedem Abruf aus der Mitwirkung der Mitglieder; ' +
+        'die Mitglieder sehen nur die Summe des Teams, und erst ab fünf Mitgliedern. Hast du Punkte eingeschaltet, ' +
+        'bringen dir erfüllte Quests auch Punkte.',
+    );
+  });
+
+  it('ohne team_quests: kein Absatz zu Quests', () => {
+    expect(abschnittIn(seiteMit('team_fortschritt'), 'Teams')).not.toContain('Quests');
+  });
+
+  it('rangliste: im Abschnitt „Punkte“ sehen Mitspielende den Punktestand', () => {
+    expect(abschnittIn(seiteMit('punkte', 'rangliste'), 'Punkte')).toContain(
+      'Deinen Punktestand siehst nur du, außer du spielst in der Rangliste mit; dann sehen ihn auch die anderen ' +
+        'Mitspielenden (siehe unten). Wir speichern ihn nicht,',
+    );
+  });
+
+  it('ohne rangliste: im Abschnitt „Punkte“ der alte Satz', () => {
+    expect(abschnittIn(seiteMit('punkte'), 'Punkte')).toContain('Deinen Punktestand siehst nur du. Wir speichern ihn nicht,');
+  });
+
   it('rangliste: der Absatz von Jura statt des Hinweises, unter „Punkte“', () => {
     const seite = seiteMit('punkte', 'rangliste');
 
@@ -1299,7 +1323,7 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
 
     expect(an).toContain(
       'Personen dieser Woche. Welchen Beitrag du gepostet hast, speichern wir nicht; an jedem Beitrag zählen wir ' +
-        'nur mit, wie oft er insgesamt als gepostet gemeldet wurde, ohne Kennung (siehe ‚Wirkungs-Echo und Danke‘). ' +
+        'nur mit, wie oft er insgesamt als gepostet gemeldet wurde, ohne Kennung (siehe ‚Rückmeldung zur Nutzung deiner Beiträge‘). ' +
         'Einen Link',
     );
     expect(an).not.toContain('Deine Kennung und welchen Beitrag');

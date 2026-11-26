@@ -308,7 +308,6 @@ def test_schalter_der_datenschutzerklaerung_sind_oeffentlich(name):
         "merkliste",
         "aufrufe_zaehlen",
         "k_ankuenfte",
-        "team_quests",
         "abzeichen_sichtbar",
     ],
 )

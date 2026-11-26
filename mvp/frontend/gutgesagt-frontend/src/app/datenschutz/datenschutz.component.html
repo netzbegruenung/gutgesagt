@@ -228,6 +228,14 @@
         abgeschlossene Wochen, erst wenn mindestens fünf Mitglieder eingewilligt haben, gerundet
         und nie mit einzelnen Namen.<ng-container *ngIf="!teamFortschritt()"> Die Team-Summe ist noch nicht eingeschaltet.</ng-container>
       </p>
+      <!-- Team-Quests (Schalter team_quests, wirkt nur mit team_fortschritt), Jura vorläufig 26.11. -->
+      <p *ngIf="teamQuests()" data-testid="dse-team-quests">
+        In Teams gibt es gemeinsame Wochenaufgaben (Quests). Am Team speichern wir je Woche nur
+        Thema und Ziel der Quest, ohne Namen. Ob das Team sie schafft, berechnen wir bei jedem
+        Abruf aus der Mitwirkung der Mitglieder; die Mitglieder sehen nur die Summe des Teams, und
+        erst ab fünf Mitgliedern. Hast du Punkte eingeschaltet, bringen dir erfüllte Quests auch
+        Punkte.
+      </p>
       <p>
         <strong>Zweck:</strong> dir zu zeigen, in welchen Teams du dabei bist, und die Nummer in
         deinem Team zu vergeben und die Summe deines Teams zu bilden.<br>
@@ -737,8 +745,8 @@
         Personen dieser Woche.<ng-container *ngIf="!wirkungsEcho()"> Deine Kennung und welchen
         Beitrag du gepostet hast, speichern wir nicht.</ng-container><ng-container *ngIf="wirkungsEcho()">
         Welchen Beitrag du gepostet hast, speichern wir nicht; an jedem Beitrag zählen wir nur mit,
-        wie oft er insgesamt als gepostet gemeldet wurde, ohne Kennung (siehe ‚Wirkungs-Echo und
-        Danke‘).</ng-container> Einen Link zu
+        wie oft er insgesamt als gepostet gemeldet wurde, ohne Kennung (siehe ‚Rückmeldung zur
+        Nutzung deiner Beiträge‘).</ng-container> Einen Link zu
         deinem Post fragen wir nicht ab. Im Dank nennen wir dir die Zahl der Personen dieser
         Woche. Die Frage erscheint nur, wenn du nach Artikel 9 DSGVO eingewilligt hast (siehe
         „Rückschlüsse auf deine politische Haltung“). Widerrufst du sie, erscheint die Frage
@@ -795,7 +803,8 @@
         Beiträge und ausformulierten Einwürfe, die meisten dafür, dass andere deine Beiträge
         nutzen (gezählt wie oben unter „Verwendung von Beiträgen“: höchstens einmal je
         Person, Beitrag und Tag) und ihnen zustimmen. Deinen Punktestand
-        <strong>siehst nur du</strong>. Wir speichern ihn nicht, sondern berechnen ihn bei
+        <strong>siehst nur du</strong><ng-container *ngIf="rangliste()">, außer du spielst in der
+        Rangliste mit; dann sehen ihn auch die anderen Mitspielenden (siehe unten)</ng-container>. Wir speichern ihn nicht, sondern berechnen ihn bei
         jedem Abruf aus deinen sichtbaren Beiträgen und den Zählern daran. Eigene Kopien und
         Stimmen zählen nicht, ebenso wenig Kopien und Stimmen der Startkonten; ein Startkonto
         sammelt selbst keine Punkte.

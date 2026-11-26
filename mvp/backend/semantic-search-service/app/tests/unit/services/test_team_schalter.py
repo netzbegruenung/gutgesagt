@@ -1,7 +1,7 @@
 """
 Schalter fuer Team-Fortschritt (#784) und Team-Quests (#792): eigene Obergrenzen, von
-Haus aus aus; team_fortschritt ist oeffentlich (die Datenschutzerklaerung haengt einen Satz
-daran), team_quests nicht; team_fortschritt wirkt nur mit teams, team_quests nur mit
+Haus aus aus; beide oeffentlich (die Datenschutzerklaerung haengt Saetze daran);
+team_fortschritt wirkt nur mit teams, team_quests nur mit
 team_fortschritt.
 """
 
@@ -38,7 +38,7 @@ def test_eigene_obergrenze_von_haus_aus_aus(name, variable):
     assert getattr(Settings(), art.feld) is False
     assert art.dsfa_hinweis
     # Nur der wirksame Wert, kein Personenbezug: die Datenschutzerklaerung braucht ihn
-    assert (name in oeffentliche_schalter()) is (name == "team_fortschritt")
+    assert name in oeffentliche_schalter()
     assert _dienst(ALLE_AN).wirksam(name, Settings(teams_aktiv=True)) is False
 
 
@@ -97,8 +97,9 @@ def test_einschalt_hinweise_teams():
     assert stand["team_fortschritt"].dsfa_hinweis.startswith("Jura vorläufig ok 26.11.")
     assert "Go des Vorstands" in stand["team_fortschritt"].dsfa_hinweis
     assert "ab 5 Mitgliedern" in stand["team_fortschritt"].dsfa_hinweis
-    # Kein DSE-Satz zu Team-Quests: aus lassen
-    assert stand["team_quests"].dsfa_hinweis.startswith("Aus lassen")
+    # DSE-Absatz zu Team-Quests (Jura-Nachtrag 26.11.): an nur mit team_fortschritt
+    assert stand["team_quests"].dsfa_hinweis.startswith("Jura vorläufig ok 26.11.")
+    assert "nur mit team_fortschritt" in stand["team_quests"].dsfa_hinweis
     for name in ("team_fortschritt", "team_quests"):
         assert stand[name].wartet_auf_recht is True
     assert DSFA_HINWEIS not in stand["team_fortschritt"].dsfa_hinweis

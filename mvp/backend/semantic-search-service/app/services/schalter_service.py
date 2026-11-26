@@ -537,10 +537,10 @@ TEAM_SCHALTER = (
         ),
         dsfa_hinweis=True,
         einschalt_hinweis=(
-            "Aus lassen (Jura 26.11.): DSE-Satz nötig; Juras Entwurf passt nicht zum "
-            "Code (gespeichert werden Thema und Ziel jeder Woche, nicht erfüllte Quests; "
-            "eine Team-Löschung gibt es nicht, die Zeilen bleiben unbefristet)"
+            f"{JURA_VORLAEUFIG}; an nur mit team_fortschritt; {GO_VOR_AUSWEITUNG}"
         ),
+        # Die Datenschutzerklaerung blendet ihren Absatz danach ein
+        oeffentlich=True,
     ),
 )
 SCHALTER.update({s.name: s for s in TEAM_SCHALTER})

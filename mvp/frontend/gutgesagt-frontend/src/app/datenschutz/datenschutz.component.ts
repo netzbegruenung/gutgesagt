@@ -83,6 +83,8 @@ export class DatenschutzComponent {
   readonly rangliste = this.funktionen.an('rangliste');
   /** Team-Summe (#784): der Satz „noch nicht eingeschaltet“ entfällt. */
   readonly teamFortschritt = this.funktionen.an('team_fortschritt');
+  /** Team-Quests (#792): Absatz unter „Teams“; wirkt nur mit team_fortschritt. */
+  readonly teamQuests = this.funktionen.an('team_quests');
   /** Wirkungs-Echo (#790): dritte gespeicherte Zahl und der Zählerstand des Echos. */
   readonly wirkungsEcho = this.funktionen.an('wirkungs_echo');
   /** Danke-Knopf (#791): die Sätze zum Danke und zum Tages-Prüfwert. */
