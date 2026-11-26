@@ -468,6 +468,11 @@ class EinladungZeile(Base):
     team_name = Column(String(40), nullable=True)
     team_motiv = Column(String(32), nullable=True)
     team_saison = Column(String(20), nullable=True)
+    # Die Saison per ID (Befund 6, postgres-app/migrations/2026-11-27-teamlink-saison-id.sql);
+    # leer bei Links ohne passende Saison. team_saison bleibt die Kopie ihres Namens.
+    # Ohne Fremdschluessel, wie team_saison: Einladungen gab es vor den Saisons; beim
+    # Loeschen einer Saison leert repositories/saison_repository.py die ID.
+    team_saison_id = Column(SQLUUID(as_uuid=True), nullable=True)
     # Teamart ("anlass" oder "gruppe", domain/teams.py; leer heisst "anlass") und bei
     # "gruppe" der Tag, an dem die schriftliche Zustimmung der Gruppenleitung vorlag:
     # nur ein Nachweis fuer Admins, kein Name. Spalten aus
@@ -1248,7 +1253,9 @@ class SaisonZeile(Base):
 
     Teamlinks und Mitgliedschaften tragen den Namen als Kopie (Spalte saison), keinen
     Fremdschluessel: Teams gab es vor den Saisons, und vergangene Teams bleiben, auch
-    wenn es zu ihrem Saisonnamen keine Zeile hier gibt.
+    wenn es zu ihrem Saisonnamen keine Zeile hier gibt. Teamlinks tragen dazu die ID
+    (einladungen.team_saison_id, Befund 6); benennt ein Admin eine geplante Saison um,
+    zieht repositories/saison_repository.py alle Kopien des Namens nach.
     """
 
     __tablename__ = "saisons"

@@ -36,6 +36,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 from core.config import Settings
 from core.logging import get_logger, log_pseudonym
+from domain.saisons import Saison
 from domain.teams import (
     EINWILLIGUNG_KENNUNG,
     EINWILLIGUNG_GELTEND,
@@ -64,6 +65,7 @@ __all__ = [
     "TeamService",
     "TeamsAus",
     "OeffentlichAus",
+    "SaisonUnbekannt",
 ]
 
 
@@ -85,6 +87,17 @@ class Team:
     # Teams (Name und Saison). Das Datum ist nur ein Nachweis fuer Admins.
     art: str = field(default=TEAM_ART_ANLASS, compare=False)
     zustimmung_am: Optional[date] = field(default=None, compare=False)
+    # Die Saison per ID, wenn es sie in der Saison-Tabelle gibt (Befund 6); der Name in
+    # ``saison`` ist ihre Kopie und bleibt die Identitaet des Teams.
+    saison_id: Optional[uuid.UUID] = field(default=None, compare=False)
+
+
+class SaisonUnbekannt(Exception):
+    """Ein Teamlink nennt eine Saison, die es nicht gibt, obwohl es Saisons gibt."""
+
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.name = name
 
 
 @dataclass(frozen=True)
@@ -108,6 +121,7 @@ class TeamService:
         saison: Callable[[], str] = aktuelle_saison,
         uhr: Callable[[], datetime] = _jetzt,
         vorschlag: Optional[Callable[[], str]] = None,
+        saisons: Optional[Callable[[], List[Saison]]] = None,
     ):
         self._repository = repository
         self._settings = settings
@@ -116,6 +130,10 @@ class TeamService:
         # Ohne Angabe: mit eigener Saison (Tests) dieselbe, sonst die Saison-Tabelle
         self._vorschlag = vorschlag or (
             saison_vorschlag if saison is aktuelle_saison else saison
+        )
+        # Ohne Angabe: mit eigener Saison (Tests) keine Saison-Tabelle, sonst die echte
+        self._saisons = saisons or (
+            _alle_saisons if saison is aktuelle_saison else (lambda: [])
         )
 
     # --- Schalter --------------------------------------------------------------
@@ -135,6 +153,35 @@ class TeamService:
         aktuelle (services/einstellungen_service.py ``saison_vorschlag``).
         """
         return self._vorschlag()
+
+    def team_festlegen(
+        self,
+        name: str,
+        motiv: Optional[str],
+        saison: Optional[str],
+        art: str = TEAM_ART_ANLASS,
+        zustimmung_am: Optional[date] = None,
+    ) -> Team:
+        """
+        Das Team eines Teamlinks mit seiner Saison (Befund 6): ohne Angabe der
+        Vorschlag. Gibt es die Saison in der Saison-Tabelle, traegt das Team ihre ID;
+        gibt es Saisons, aber diese nicht, wirft SaisonUnbekannt, damit kein Team mit
+        einem Namen entsteht, der nie zur aktuellen Saison wird. Ohne jede Saison gilt
+        der Name wie bisher.
+        """
+        saison = saison or self.saison_vorschlag()
+        alle = self._saisons()
+        treffer = next((s for s in alle if s.name == saison), None)
+        if treffer is None and alle:
+            raise SaisonUnbekannt(saison)
+        return Team(
+            name,
+            motiv,
+            saison,
+            art=art,
+            zustimmung_am=zustimmung_am,
+            saison_id=treffer.id if treffer else None,
+        )
 
     # --- Einladung -------------------------------------------------------------
 
@@ -268,6 +315,12 @@ class TeamService:
 
 
 _service: Optional[TeamService] = None
+
+
+def _alle_saisons() -> List[Saison]:
+    from services.saison_service import get_saison_service
+
+    return get_saison_service().alle()
 
 
 def get_team_service() -> TeamService:

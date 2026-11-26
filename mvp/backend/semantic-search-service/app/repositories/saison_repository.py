@@ -21,7 +21,14 @@ from domain.saisons import (
     ueberschneidung,
 )
 from infrastructure.database.connection import AppDatabase, get_app_database
-from infrastructure.database.models import SaisonZeile
+from infrastructure.database.models import (
+    EinladungZeile,
+    SaisonZeile,
+    TeamMitgliedschaftZeile,
+    TeamNummerZeile,
+    TeamQuestZeile,
+    TeamWocheZeile,
+)
 
 # Lesen bleibt moeglich, ein zweiter Schreiber wartet bis zum Ende der Transaktion.
 _SPERREN = text("LOCK TABLE saisons IN SHARE ROW EXCLUSIVE MODE")
@@ -106,9 +113,12 @@ class SaisonRepository:
             zeile = session.get(SaisonZeile, saison_id)
             if zeile is None:
                 raise SaisonNichtGefunden(saison_id)
-            pruefen(_saison(zeile))
+            alt = _saison(zeile)
+            pruefen(alt)
             self._ohne_ueberschneidung(session, eingabe, ausser=saison_id)
             self._ohne_namensdoppel(session, eingabe.name, ausser=saison_id)
+            if eingabe.name != alt.name:
+                _namen_nachziehen(session, saison_id, alt.name, eingabe.name)
             session.execute(
                 update(SaisonZeile)
                 .where(SaisonZeile.id == saison_id)
@@ -131,6 +141,12 @@ class SaisonRepository:
             if zeile is None:
                 raise SaisonNichtGefunden(saison_id)
             pruefen(_saison(zeile))
+            # Teamlinks behalten den Namen, verlieren nur die ID (Befund 6)
+            session.execute(
+                update(EinladungZeile)
+                .where(EinladungZeile.team_saison_id == saison_id)
+                .values(team_saison_id=None)
+            )
             session.execute(delete(SaisonZeile).where(SaisonZeile.id == saison_id))
 
     def _ohne_ueberschneidung(
@@ -165,3 +181,24 @@ def get_saison_repository() -> SaisonRepository:
     if _repository is None:
         _repository = SaisonRepository()
     return _repository
+
+
+def _namen_nachziehen(session, saison_id: uuid.UUID, alt: str, neu: str) -> None:
+    """
+    Eine umbenannte Saison (nur solange sie geplant ist, domain/saisons.py) nimmt ihre
+    Teams mit (Befund 6): Teamlinks mit ihrer ID und alle Kopien des alten Namens an
+    Mitgliedschaften, Nummern, Wochenzaehlern und Quests. In derselben Transaktion wie
+    die Umbenennung, damit nie zwei Namen fuer eine Saison gelten.
+    """
+    session.execute(
+        update(EinladungZeile)
+        .where(EinladungZeile.team_saison_id == saison_id)
+        .values(team_saison=neu)
+    )
+    for tabelle in (
+        TeamMitgliedschaftZeile,
+        TeamNummerZeile,
+        TeamWocheZeile,
+        TeamQuestZeile,
+    ):
+        session.execute(update(tabelle).where(tabelle.saison == alt).values(saison=neu))

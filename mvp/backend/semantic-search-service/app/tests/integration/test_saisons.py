@@ -14,9 +14,14 @@ from core.config import Settings
 from domain.saisons import SaisonGesperrt, SaisonUeberschneidung, SaisonUngueltig
 from infrastructure.database.models import (
     Base,
+    EinladungZeile,
     GepostetPruefwert,
     GepostetWoche,
     SaisonZeile,
+    TeamMitgliedschaftZeile,
+    TeamNummerZeile,
+    TeamQuestZeile,
+    TeamWocheZeile,
 )
 from repositories.gepostet_repository import GepostetRepository
 from repositories.saison_repository import SaisonRepository
@@ -27,7 +32,17 @@ pytestmark = pytest.mark.integration
 
 # Montag
 MO = date(2026, 11, 30)
-TABELLEN = [SaisonZeile.__table__, GepostetPruefwert.__table__, GepostetWoche.__table__]
+TABELLEN = [
+    SaisonZeile.__table__,
+    GepostetPruefwert.__table__,
+    GepostetWoche.__table__,
+    # Umbenennen zieht die Teams mit (Befund 6)
+    EinladungZeile.__table__,
+    TeamMitgliedschaftZeile.__table__,
+    TeamNummerZeile.__table__,
+    TeamWocheZeile.__table__,
+    TeamQuestZeile.__table__,
+]
 
 
 @pytest.fixture
@@ -147,6 +162,65 @@ def test_aendern_und_loeschen_je_zustand(db):
 
     [saison] = service.alle()
     assert (saison.ende, saison.ziel) == (heute, 2000)
+
+
+def test_umbenennen_zieht_teamlinks_und_teams_mit(db):
+    """
+    Befund 6: Eine geplante Saison umbenennen nimmt Teamlinks (per ID) und alle
+    Kopien ihres Namens mit; andere Saisons bleiben unberuehrt.
+    """
+    service = _service(db)
+    geplant = service.anlegen(
+        "Winter 26", MO + timedelta(weeks=1), MO + timedelta(weeks=8), 5, heute=MO
+    )
+    with db.engine.begin() as c:
+        c.execute(
+            text(
+                "INSERT INTO einladungen (id, code, notiz, erlaubte_einloesungen, "
+                "einloesungen, gueltig_bis, abgeschaltet, angelegt_am, team_name, "
+                "team_saison, team_saison_id) VALUES (gen_random_uuid(), 'c1', '', 5, 0, "
+                ":t, false, :t, 'BDK', 'Winter 26', :id)"
+            ),
+            {"t": MO, "id": geplant.id},
+        )
+        for saison in ("Winter 26", "Sommer 26"):
+            c.execute(
+                text(
+                    "INSERT INTO team_mitgliedschaften (id, konto_kennung, team_name, "
+                    "saison, nummer, eingetreten_am, einwilligung_kennung, "
+                    "einwilligung_zeitpunkt) VALUES (gen_random_uuid(), 'k', 'BDK', "
+                    ":s, 1, :t, 'team', now())"
+                ),
+                {"s": saison, "t": MO},
+            )
+            c.execute(
+                text(
+                    "INSERT INTO team_nummern (team_name, saison, letzte_nummer) "
+                    "VALUES ('BDK', :s, 1)"
+                ),
+                {"s": saison},
+            )
+
+    service.aendern(
+        geplant.id,
+        "Winter 26/27",
+        geplant.beginn,
+        geplant.ende,
+        5,
+        heute=MO,
+    )
+
+    with db.engine.begin() as c:
+        assert c.execute(text("SELECT team_saison FROM einladungen")).scalar() == (
+            "Winter 26/27"
+        )
+        assert sorted(
+            c.execute(text("SELECT saison FROM team_mitgliedschaften")).scalars()
+        ) == ["Sommer 26", "Winter 26/27"]
+        assert sorted(c.execute(text("SELECT saison FROM team_nummern")).scalars()) == [
+            "Sommer 26",
+            "Winter 26/27",
+        ]
 
 
 def test_balken_aus_den_wochenzahlen(db):
