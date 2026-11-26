@@ -31,6 +31,10 @@ describe('zuwachsText', () => {
     expect(zuwachsText({ neu_7_tage: null, zuletzt_ergaenzt: '2026-11-25' }, JETZT)).toBe('zuletzt ergänzt gestern');
     expect(zuwachsText({ neu_7_tage: null, zuletzt_ergaenzt: '2026-11-24' }, JETZT)).toBe('zuletzt ergänzt am 24.11.');
     expect(zuwachsText({ neu_7_tage: null, zuletzt_ergaenzt: '2026-11-19' }, JETZT)).toBe('zuletzt ergänzt am 19.11.');
+    // ohne führende Null
+    expect(zuwachsText({ neu_7_tage: null, zuletzt_ergaenzt: '2026-09-04' }, new Date('2026-09-08T09:00:00Z'))).toBe(
+      'zuletzt ergänzt am 4.9.',
+    );
     expect(zuwachsText({ neu_7_tage: 0, zuletzt_ergaenzt: null }, JETZT)).toBeNull();
   });
 
@@ -72,8 +76,11 @@ describe('HeroUnterzeileComponent', () => {
     http.verify();
   });
 
+  /** Sichtbarer Text, ohne den Linkzweck nur für Screenreader */
   function text(): string {
-    return (fixture.nativeElement as HTMLElement).textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    const kopie = (fixture.nativeElement as HTMLElement).cloneNode(true) as HTMLElement;
+    kopie.querySelectorAll('.visually-hidden').forEach((e) => e.remove());
+    return kopie.textContent?.replace(/\s+/g, ' ').trim() ?? '';
   }
 
   function zuwachsLink(): HTMLAnchorElement | null {
@@ -105,6 +112,8 @@ describe('HeroUnterzeileComponent', () => {
     const link = zuwachsLink()!;
     expect(link.getAttribute('href')).toBe('/search#recent-content');
     expect(link.querySelector('[aria-hidden="true"]')!.textContent!.trim()).toBe('🌱');
+    // Linkzweck für Screenreader (WCAG 2.4.4)
+    expect(link.querySelector('.visually-hidden')!.textContent).toContain('Frisch aus der Community');
     expect(text()).not.toMatch(/Menschen|Personen|Konten|Nutzer|genutzt/);
   });
 
@@ -128,6 +137,7 @@ describe('HeroUnterzeileComponent', () => {
   it('Umbruch nur nach dem Gedankenstrich: beide Teile brechen selbst nicht um', () => {
     laden({ ...BESTAND, zuwachs: { neu_7_tage: 12, zuletzt_ergaenzt: null } });
     const teile = Array.from(fixture.nativeElement.querySelectorAll('.teil')) as HTMLElement[];
+    teile.forEach((t) => t.querySelectorAll('.visually-hidden').forEach((e) => e.remove()));
     expect(teile.map((t) => t.textContent!.replace(/\s+/g, ' ').trim())).toEqual([
       '800 Antworten auf 250 Sprüche –',
       '12 neu in 7 Tagen 🌱',

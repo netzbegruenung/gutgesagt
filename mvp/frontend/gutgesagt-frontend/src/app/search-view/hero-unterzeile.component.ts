@@ -70,7 +70,7 @@ export function zuwachsText(zuwachs: ZuwachsDto | null | undefined, jetzt: Date)
     return 'zuletzt ergänzt gestern';
   }
   const [, monat, tagImMonat] = zuwachs.zuletzt_ergaenzt!.split('-');
-  return `zuletzt ergänzt am ${tagImMonat}.${monat}.`;
+  return `zuletzt ergänzt am ${+tagImMonat}.${+monat}.`;
 }
 
 export interface Unterzeile {
@@ -110,7 +110,8 @@ export interface Unterzeile {
           [routerLink]="startseite"
           [fragment]="anker"
           (click)="springen($event)"
-          >{{ z.zuwachs }}<span aria-hidden="true"> 🌱</span></a
+          >{{ z.zuwachs }}<span class="visually-hidden">, zu „Frisch aus der Community“</span
+          ><span aria-hidden="true"> 🌱</span></a
         >
       } @else {
         <span class="teil">{{ ohneZuwachs }}</span>
@@ -178,7 +179,8 @@ export class HeroUnterzeileComponent implements OnInit {
       return;
     }
     ereignis.preventDefault();
-    ziel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const ruhig = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    ziel.scrollIntoView({ behavior: ruhig ? 'auto' : 'smooth', block: 'start' });
     ziel.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
   }
 

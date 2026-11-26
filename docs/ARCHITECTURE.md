@@ -416,6 +416,7 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   (0.92), direct raw score above 0.82 to below `…_INHALTSTOR_DIREKT_BIS` (0.90). spaCy model
   of Gegenlesen; open without nouns or before the model is loaded. Measured in
   `tests/regression/SUCHTESTSET.md`, section Inhaltstor.
+- `SEMANTIC_SEARCH_BESTANDSZAHL_ZUWACHS_AKTIV` - upper bound of the Schalter `bestandszahl_zuwachs` (growth next to the Bestandszahl in `/getMetrics`), default `true`
 - `SEMANTIC_SEARCH_HERKUNFT_PRUEFEN_AKTIV` - upper bound of the Schalter `herkunft_pruefen`
   (#759, default `true`: no personal data); takes effect only when an admin switches it on.
   Then the service fetches the links of all visible Herkünfte once a night between 02:00 and

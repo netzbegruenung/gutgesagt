@@ -375,7 +375,6 @@ class TestAutorenzuordnungOhneSuchanfragen:
             [
                 MagicMock(payload={"created": "2026-11-24T23:30:00+00:00"}),
                 MagicMock(payload={"created": "2026-11-22T08:00:00"}),
-                MagicMock(payload={"created": "kaputt"}),
             ],
             None,
         )
@@ -395,6 +394,45 @@ class TestAutorenzuordnungOhneSuchanfragen:
         assert any(b.key == "status" for b in zaehlung.must_not)
         assert client.scroll.call_args.kwargs["scroll_filter"] == zaehlung
         assert client.scroll.call_args.kwargs["with_payload"] == ["created"]
+        assert client.scroll.call_args.kwargs["limit"] == 3
+
+    @pytest.mark.asyncio
+    async def test_angelegt_seit_ohne_zeitpunkte_wenn_dazwischen_einer_dazukam(
+        self, repository_mit_client
+    ):
+        import datetime as dt
+
+        repository, client = repository_mit_client
+        client.count.return_value = MagicMock(count=2)
+        client.scroll.return_value = (
+            [
+                MagicMock(payload={"created": "2026-11-2%dT10:00:00+00:00" % i})
+                for i in range(3)
+            ],
+            None,
+        )
+
+        anzahl, zeitpunkte = await repository.angelegt_seit(
+            dt.datetime(2026, 11, 19, tzinfo=dt.timezone.utc), ("commentary",), 2
+        )
+
+        assert (anzahl, zeitpunkte) == (3, [])
+
+    @pytest.mark.asyncio
+    async def test_angelegt_seit_ueberspringt_unlesbare_zeitpunkte(
+        self, repository_mit_client
+    ):
+        import datetime as dt
+
+        repository, client = repository_mit_client
+        client.count.return_value = MagicMock(count=1)
+        client.scroll.return_value = ([MagicMock(payload={"created": "kaputt"})], None)
+
+        anzahl, zeitpunkte = await repository.angelegt_seit(
+            dt.datetime(2026, 11, 19, tzinfo=dt.timezone.utc), ("commentary",), 2
+        )
+
+        assert (anzahl, zeitpunkte) == (1, [])
 
     @pytest.mark.asyncio
     async def test_angelegt_seit_ohne_zeitpunkte_bei_vielen(

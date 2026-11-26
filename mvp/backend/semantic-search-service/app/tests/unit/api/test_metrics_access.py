@@ -269,7 +269,13 @@ class TestGetMetricsZuwachs:
         body = self._abruf(client, angelegt_seit)
 
         assert body["zuwachs"] == {"neu_7_tage": 12, "zuletzt_ergaenzt": None}
+        from datetime import datetime, timedelta, timezone
+
         seit, typen, bis = angelegt_seit.await_args.args
+        # rollierend 7 Tage bis jetzt
+        assert abs(seit - (datetime.now(timezone.utc) - timedelta(days=7))) < timedelta(
+            minutes=1
+        )
         assert typen == ("commentary",)
         # Zeitpunkte nur fuer weniger als drei
         assert bis == 2

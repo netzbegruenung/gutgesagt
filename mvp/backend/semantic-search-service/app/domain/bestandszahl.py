@@ -7,7 +7,9 @@ dazukam.
 Nur Zaehlung und Tag oeffentlicher Inhalte beim Aufruf, nichts wird gespeichert. Der Tag
 ist tagesgenau in deutscher Zeit und ohne Uhrzeit: Eine Uhrzeit liesse bei wenigen Aktiven
 auf Personen schliessen (juristische Pruefung 26.11.2026). Unter drei neuen nennt die
-Antwort deshalb auch keine Zahl, nur den Tag.
+Antwort deshalb auch keine Zahl, nur den Tag. Grenze dieser Begruendung: Dieselbe Antwort
+nennt schon vor diesem Feld den genauen Bestand (commentary_count, 60 s gecacht); wer sie
+minuetlich abfragt, sieht also, wann ein Kommentar dazukam. Das Feld fuegt dem nichts hinzu.
 """
 
 from dataclasses import dataclass

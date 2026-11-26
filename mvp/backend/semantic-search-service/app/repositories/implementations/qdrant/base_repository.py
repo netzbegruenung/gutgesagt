@@ -752,13 +752,17 @@ class QdrantBaseRepository(
         ).count
         if anzahl <= 0 or anzahl > zeitpunkte_bis:
             return anzahl, []
+        # Einer mehr als gezaehlt: Kam dazwischen einer dazu, fehlt sonst womoeglich
+        # gerade der neueste (scroll sortiert nach ID); dann lieber keine Zeitpunkte.
         punkte, _ = await self._shared_manager.async_client.scroll(
             collection_name=self._shared_manager.collection_name,
             scroll_filter=filter_,
-            limit=zeitpunkte_bis,
+            limit=zeitpunkte_bis + 1,
             with_payload=["created"],
             with_vectors=False,
         )
+        if len(punkte) > anzahl:
+            return len(punkte), []
         zeitpunkte = []
         for punkt in punkte:
             roh = (punkt.payload or {}).get("created")
