@@ -24,6 +24,7 @@ import { KOPIERT } from '../../shared/vorlagen-luecke';
 import { AndereTonlage, KOPIERT_ERFOLG, KOPIERT_ERFOLG_ZEICHEN, nutzungSatz, tonlagenHinweis } from './kopiert-erfolg';
 import {
   GEPOSTET_FRAGE,
+  GEPOSTET_FRAGE_OHNE_KONTO,
   GEPOSTET_GEMELDET,
   GEPOSTET_RUECKKEHR,
   GEPOSTET_RUECKKEHR_OHNE_KONTO,
@@ -253,7 +254,7 @@ export class KopiertErfolgComponent implements OnChanges, AfterViewChecked, OnDe
   /** Die Frage, nach der Rückkehr einmalig der Hinweis, was das Tippen bringt. */
   get frageText(): string {
     if (!this.rueckkehrGezeigt) {
-      return GEPOSTET_FRAGE;
+      return this.ohneKonto ? GEPOSTET_FRAGE_OHNE_KONTO : GEPOSTET_FRAGE;
     }
     return this.ohneKonto ? GEPOSTET_RUECKKEHR_OHNE_KONTO : GEPOSTET_RUECKKEHR;
   }

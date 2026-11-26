@@ -1,8 +1,9 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, Injector, afterNextRender, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
+import { take } from 'rxjs/operators';
 import { DSE_SPIELGEFUEHL, DSE_SPIELGEFUEHL_TITEL } from './dse-spielgefuehl';
 import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
@@ -54,6 +55,38 @@ export class DatenschutzComponent {
     ziel.focus({ preventScroll: true });
     history.replaceState(history.state, '', `${location.pathname}${location.search}#${anker}`);
   }
+  /**
+   * Anker hinter einem Schalter (etwa #spielgefuehl, #rangliste): Beim Aufruf mit Fragment
+   * steht der Absatz oft noch nicht, weil GET /api/v1/funktionen erst antworten muss; der
+   * Router scrollt dann ins Leere und die Person landet oben in der langen Erklärung.
+   * Fehlt das Ziel beim ersten Zeichnen, springt die Seite einmal dorthin, sobald die
+   * Schalter da sind.
+   */
+  private readonly injector = inject(Injector);
+
+  constructor() {
+    const anker = inject(ActivatedRoute).snapshot.fragment;
+    if (!anker) {
+      return;
+    }
+    afterNextRender(
+      () => {
+        if (document.getElementById(anker)) {
+          return;
+        }
+        this.funktionen
+          .stand$('spielgefuehl_buehne')
+          .pipe(take(1))
+          .subscribe(() =>
+            afterNextRender(() => document.getElementById(anker)?.scrollIntoView({ block: 'start' }), {
+              injector: this.injector,
+            }),
+          );
+      },
+      { injector: this.injector },
+    );
+  }
+
   /** Merker der Meilensteine im Browser; der Absatz dazu steht erst, wenn er an ist (§ 25 TDDDG). */
   readonly meilensteinMerker = inject(MEILENSTEIN_MERKER);
   /**

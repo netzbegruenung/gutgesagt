@@ -175,6 +175,23 @@ describe('MeineTeamsComponent', () => {
     http.expectOne(`${URL}/meine`).flush(stand({ teams: [stand().teams[1]] }));
   });
 
+  it('setzt den Fokus nach „Team verlassen“ auf die Überschrift, nicht auf <body> (WCAG 2.4.3)', async () => {
+    document.body.appendChild(fixture.nativeElement);
+    laden(stand());
+    dialog.open.and.returnValue({ afterClosed: () => of(true) } as never);
+    const knopf = el().querySelector('[data-testid="verlassen"]') as HTMLButtonElement;
+    knopf.focus();
+
+    knopf.click();
+    http.expectOne(`${URL}/meine/m1`).flush(null, { status: 204, statusText: 'No Content' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(el().querySelector('#meine-teams-titel'));
+    http.expectOne(`${URL}/meine`).flush(stand({ teams: [stand().teams[1]] }));
+    fixture.nativeElement.remove();
+  });
+
   it('verlässt kein Team, wenn die Rückfrage abgebrochen wird', () => {
     laden(stand());
     dialog.open.and.returnValue({ afterClosed: () => of(false) } as never);

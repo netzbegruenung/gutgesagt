@@ -7,6 +7,16 @@
   margin: 0 0 4px;
 }
 
+/* Fokusziel nach „Team verlassen“ (tabindex="-1"): ohne Ring bei Maus, mit bei Tastatur. */
+.meine-teams h2:focus {
+  outline: none;
+}
+
+.meine-teams h2:focus-visible {
+  outline: 2px solid var(--akzent-tanne);
+  outline-offset: 2px;
+}
+
 .meine-teams-zahl {
   font-size: 14px;
   font-weight: 400;

@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  ElementRef,
+  Injector,
+  OnInit,
+  ViewChild,
+  afterNextRender,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -81,6 +92,9 @@ export class MeineTeamsComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  /** Ziel des Fokus, nachdem ein Team verlassen ist: Knopf und Eintrag sind dann weg (WCAG 2.4.3). */
+  @ViewChild('titelElement') private titelElement?: ElementRef<HTMLElement>;
   private readonly anstoss$ = new Subject<void>();
   private erstes = true;
 
@@ -144,6 +158,9 @@ export class MeineTeamsComponent implements OnInit {
             }
             this.ansage = `Team ${team.team_name} verlassen. Der Eintrag ist gelöscht.`;
             this.cdr.markForCheck();
+            // Der Knopf, der den Fokus hatte, ist mit dem Eintrag verschwunden; sonst fiele
+            // der Fokus auf <body>. Fehlt die ganze Karte (letztes Team, Schalter aus), bleibt er.
+            afterNextRender(() => this.titelElement?.nativeElement.focus(), { injector: this.injector });
             this.anstoss$.next();
           },
           error: (fehler: { status?: number }) => {
