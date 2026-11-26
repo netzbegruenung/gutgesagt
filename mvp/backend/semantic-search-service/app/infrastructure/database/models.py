@@ -421,6 +421,9 @@ class FeedbackZeile(Base):
     # Von Admins gesetzt, wenn das Feedback erledigt ist (#425); nur ein Merker,
     # ohne Zeitpunkt und ohne wer.
     erledigt = Column(Boolean, nullable=False, default=False, server_default="false")
+    # None: der Knopf "Feedback"; "gestoert": der Knopf "Was hat dich gestört?" der
+    # Startphase, ohne Kontakt und mit eigener Frist (domain/feedback_gestoert.py).
+    kategorie = Column(Text, nullable=True)
 
     __table_args__ = (Index("idx_feedback_eingegangen_am", "eingegangen_am"),)
 

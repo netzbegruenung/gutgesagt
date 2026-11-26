@@ -144,3 +144,75 @@ describe('FeedbackDialogComponent mit Vorbelegung (Warteliste, Designrunde 17.11
     expect(fixture.componentInstance.kannSenden).toBeTrue();
   });
 });
+
+describe('FeedbackDialogComponent als „Was hat dich gestört?“ (Schalter feedback_gestoert)', () => {
+  let fixture: ComponentFixture<FeedbackDialogComponent>;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [FeedbackDialogComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideAnimations(),
+        { provide: MatDialogRef, useValue: jasmine.createSpyObj('MatDialogRef', ['close']) },
+        { provide: MAT_DIALOG_DATA, useValue: { kategorie: 'gestoert' } },
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(FeedbackDialogComponent);
+    http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => http.verify());
+
+  function element(): HTMLElement {
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  async function senden(text: string) {
+    const feld = element().querySelector('textarea[name="text"]') as HTMLTextAreaElement;
+    feld.value = text;
+    feld.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    (element().querySelector('[data-testid="feedback-senden"]') as HTMLButtonElement).click();
+  }
+
+  it('fragt „Was hat dich gestört?“ mit dem Hinweis wörtlich und ohne Kontaktfeld', () => {
+    expect(element().querySelector('h2')?.textContent).toContain('Was hat dich gestört?');
+    expect(element().querySelector('[data-testid="feedback-keine-namen"]')?.textContent?.trim()).toBe(
+      'Bitte keine Namen oder Daten anderer.'
+    );
+    expect(element().querySelector('input[name="kontakt"]')).toBeNull();
+  });
+
+  it('nennt den Löschtag statt der 180 Tage', () => {
+    const text = (element().textContent ?? '').replace(/\s+/g, ' ');
+    expect(text).toContain('Am 31.12.2026 wird alles gelöscht');
+    expect(text).not.toContain('180 Tagen');
+    expect(text).toContain('dein Konto nicht mitgespeichert');
+  });
+
+  it('sendet nur den Text mit der Kategorie, ohne Kontakt', async () => {
+    await senden('Die Suche war langsam');
+
+    const anfrage = http.expectOne(URL);
+    expect(anfrage.request.body).toEqual({ text: 'Die Suche war langsam', kontakt: null, kategorie: 'gestoert' });
+    anfrage.flush({ success: true }, { status: 201, statusText: 'Created' });
+    fixture.detectChanges();
+    expect(element().textContent).toContain('Danke');
+  });
+
+  it('sagt bei 409, dass der Knopf gerade aus ist, und nennt den anderen Weg', async () => {
+    await senden('Noch was');
+
+    http.expectOne(URL).flush('aus', { status: 409, statusText: 'Conflict' });
+    fixture.detectChanges();
+
+    expect(element().textContent).toContain('Dieser Knopf ist gerade aus');
+    expect(element().textContent).toContain('„Feedback“ im Menü „Mehr“');
+  });
+});

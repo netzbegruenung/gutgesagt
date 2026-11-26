@@ -4,19 +4,22 @@ GET /api/v1/feedback und fuer Admins Erledigt-Setzen und Einzelloeschen (#425).
 
 Senden darf jede Person, auch ohne Anmeldung. Gespeichert wird nur, was sie
 eingibt (Freitext, optional Kontakt), und der Tag; keine Kennung, keine Sitzung.
+Die Kategorie "gestoert" (Knopf "Was hat dich gestört?") nur mit wirksamem Schalter
+feedback_gestoert und nie mit Kontakt.
 """
 
 import uuid
 from dataclasses import replace
 from datetime import date
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from api.v1.feedback import router as feedback_router
-from dependencies import get_feedback_service
+from core.config import Settings
+from dependencies import get_feedback_service, get_settings
 from services.feedback_service import FeedbackEintrag
 from utils.rate_limiter import feedback_rate_limiter
 
@@ -187,6 +190,7 @@ class TestListe:
                     "kontakt": "anna@example.org",
                     "eingegangen_am": "2026-10-27",
                     "erledigt": False,
+                    "kategorie": None,
                 }
             ],
         }
@@ -199,3 +203,94 @@ class TestListe:
 
         assert response.status_code == 200
         service.neueste.assert_called_once_with(100, nur_erledigte)
+
+
+class TestGestoert:
+    """Knopf "Was hat dich gestört?" (Schalter feedback_gestoert, Jura 26.11. Punkt g)."""
+
+    @pytest.fixture(autouse=True)
+    def startphase(self):
+        # Fester Tag in der Startphase: sonst kippen die Tests ab dem 31.12.2026 auf 409.
+        with patch(
+            "services.schalter_service.heute_utc", return_value=date(2026, 11, 27)
+        ):
+            yield
+
+    @pytest.fixture
+    def obergrenze(self, client):
+        def setzen(an: bool):
+            client.app.dependency_overrides[get_settings] = lambda: Settings(
+                feedback_gestoert_aktiv=an
+            )
+
+        setzen(True)
+        return setzen
+
+    def test_mit_schalter_speichert_kategorie_ohne_kontakt(
+        self, client, service, obergrenze
+    ):
+        response = client.post(
+            SENDEN, json={"text": "Zu viele Klicks", "kategorie": "gestoert"}
+        )
+
+        assert response.status_code == 201
+        service.senden.assert_called_once_with(
+            "Zu viele Klicks", None, kategorie="gestoert"
+        )
+
+    def test_obergrenze_aus_antwortet_409_nie_404(self, client, service, obergrenze):
+        obergrenze(False)
+
+        response = client.post(SENDEN, json={"text": "Hallo", "kategorie": "gestoert"})
+
+        assert response.status_code == 409
+        service.senden.assert_not_called()
+
+    def test_ab_dem_31_12_nimmt_der_knopf_nichts_mehr_an(
+        self, client, service, obergrenze
+    ):
+        with patch(
+            "services.schalter_service.heute_utc", return_value=date(2026, 12, 31)
+        ):
+            response = client.post(
+                SENDEN, json={"text": "Hallo", "kategorie": "gestoert"}
+            )
+
+        assert response.status_code == 409
+        service.senden.assert_not_called()
+
+    def test_kontakt_ist_bei_gestoert_ungueltig(self, client, service, obergrenze):
+        response = client.post(
+            SENDEN,
+            json={
+                "text": "Hallo",
+                "kontakt": "anna@example.org",
+                "kategorie": "gestoert",
+            },
+        )
+
+        assert response.status_code == 422
+        service.senden.assert_not_called()
+
+    def test_unbekannte_kategorie_ist_ungueltig(self, client, service, obergrenze):
+        response = client.post(SENDEN, json={"text": "Hallo", "kategorie": "lob"})
+
+        assert response.status_code == 422
+
+    def test_feedback_ohne_kategorie_braucht_den_schalter_nicht(
+        self, client, service, obergrenze
+    ):
+        obergrenze(False)
+
+        assert client.post(SENDEN, json={"text": "Hallo"}).status_code == 201
+        service.senden.assert_called_once_with("Hallo", None)
+
+    def test_admin_sieht_die_kategorie(self, client, service):
+        service.neueste.return_value = [
+            replace(EINTRAG, kontakt=None, kategorie="gestoert")
+        ]
+
+        eintrag = client.get(LISTE, headers=ADMIN).json()["eintraege"][0]
+
+        assert eintrag["kategorie"] == "gestoert"
+        assert eintrag["kontakt"] is None

@@ -21,6 +21,8 @@ from typing import Callable, Dict, List, Optional
 
 from core.config import Settings, settings as globale_settings
 from core.logging import get_logger
+from domain.feedback_gestoert import gestoert_offen
+from utils.utc_tag import heute_utc
 
 logger = get_logger(__name__)
 
@@ -305,6 +307,18 @@ SCHALTER: Dict[str, Schalterart] = {
             ),
         ),
         Schalterart(
+            name="feedback_gestoert",
+            feld="feedback_gestoert_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_FEEDBACK_GESTOERT_AKTIV",
+            erklaerung=(
+                "Knopf „Was hat dich gestört?“ auf der Startseite für die Startphase: "
+                "dasselbe Feedback-Formular, nur Freitext ohne Kontakt; alle Einträge "
+                "werden am 31.12.2026 gelöscht, danach wirkt der Schalter nicht mehr."
+            ),
+            einschalt_hinweis="DSE-Absatz (Jura, Paket 27.11.)",
+            oeffentlich=True,
+        ),
+        Schalterart(
             name="teams",
             gruppe=TEAMS,
             rechtlich_freigegeben=True,
@@ -549,6 +563,9 @@ def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool
     if name == "rangliste":
         # Rangliste aus Punkten (ADR 0004): ohne Punkte keine Rangliste
         return an and _wirksam("punkte", einstellungen, werte)
+    if name == "feedback_gestoert":
+        # Nur in der Startphase: ab dem Loeschtag nimmt der Knopf nichts mehr an
+        return an and gestoert_offen(heute_utc())
     return an
 
 

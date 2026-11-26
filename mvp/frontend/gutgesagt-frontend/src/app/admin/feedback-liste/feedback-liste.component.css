@@ -48,3 +48,12 @@ mat-button-toggle-group {
 .aktionen button + button {
   margin-left: 4px;
 }
+
+/* Herkunft „Was hat dich gestört?“ über dem Text (Schalter feedback_gestoert) */
+.kategorie {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-leise);
+  white-space: normal;
+}

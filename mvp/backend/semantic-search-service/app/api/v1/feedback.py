@@ -1,18 +1,22 @@
 """
 Feedback an das Team (#343). Senden darf jede Person, auch ohne Anmeldung; lesen,
 als erledigt markieren und einzeln loeschen (#425) duerfen nur Admins. Was
-gespeichert wird: services/feedback_service.py.
+gespeichert wird: services/feedback_service.py. Die Kategorie "gestoert" (Knopf
+"Was hat dich gestört?") nimmt der Dienst nur an, solange der Schalter
+feedback_gestoert wirkt, und nie mit Kontakt (domain/feedback_gestoert.py).
 """
 
 import uuid
 from datetime import date
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
+from core.config import Settings
 from core.logging import get_logger
-from dependencies import get_feedback_service, require_admin
+from dependencies import get_feedback_service, get_settings, require_admin
+from domain.feedback_gestoert import KATEGORIE_GESTOERT
 from services.feedback_service import (
     AUFBEWAHRUNG_TAGE,
     KONTAKT_MAX,
@@ -21,6 +25,7 @@ from services.feedback_service import (
     FeedbackEintrag,
     FeedbackService,
 )
+from services.schalter_service import schalter_wirksam
 from utils.client_identity import derive_client_key
 from utils.rate_limiter import feedback_rate_limiter
 
@@ -32,6 +37,8 @@ router = APIRouter()
 class FeedbackSendenRequest(BaseModel):
     text: str = Field(..., max_length=TEXT_MAX)
     kontakt: Optional[str] = Field(None, max_length=KONTAKT_MAX)
+    # Nur "gestoert" (Knopf "Was hat dich gestört?"); ohne: der Knopf "Feedback"
+    kategorie: Optional[Literal["gestoert"]] = None
 
     @field_validator("text")
     @classmethod
@@ -48,6 +55,14 @@ class FeedbackSendenRequest(BaseModel):
             return None
         return wert.strip() or None
 
+    @model_validator(mode="after")
+    def _gestoert_ohne_kontakt(self) -> "FeedbackSendenRequest":
+        # Freitext ohne Kennung (Jura 26.11., Punkt g): das Formular fragt keinen
+        # Kontakt; kommt doch einer, wird nichts gespeichert.
+        if self.kategorie == KATEGORIE_GESTOERT and self.kontakt is not None:
+            raise ValueError("Kategorie gestoert nimmt keinen Kontakt an")
+        return self
+
 
 class FeedbackSendenResponse(BaseModel):
     success: bool
@@ -59,6 +74,7 @@ class FeedbackEintragResponse(BaseModel):
     kontakt: Optional[str]
     eingegangen_am: date
     erledigt: bool
+    kategorie: Optional[str] = None
 
     @classmethod
     def aus(cls, e: FeedbackEintrag) -> "FeedbackEintragResponse":
@@ -68,6 +84,7 @@ class FeedbackEintragResponse(BaseModel):
             kontakt=e.kontakt,
             eingegangen_am=e.eingegangen_am,
             erledigt=e.erledigt,
+            kategorie=e.kategorie,
         )
 
 
@@ -85,19 +102,31 @@ async def feedback_senden(
     request: FeedbackSendenRequest,
     http_request: Request,
     service: FeedbackService = Depends(get_feedback_service),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Feedback speichern. Ohne Anmeldung erreichbar (BFF/Proxy/EndpointPolicy.cs);
     das Rate-Limit haengt deshalb an der Adresse, wie bei Meldungen. Der Schluessel
     ist ein prozesslokaler Hash und wird weder gespeichert noch geloggt. X-User
     wird bewusst nicht gelesen: Feedback traegt keine Kennung.
+
+    Die Kategorie "gestoert" bei ausgeschaltetem Schalter (oder nach der Startphase)
+    antwortet 409, nicht 404: Senden ist eine Handlung, und das Formular sagt dann,
+    dass der Knopf gerade aus ist.
     """
+    if request.kategorie == KATEGORIE_GESTOERT and not schalter_wirksam(
+        "feedback_gestoert", settings
+    ):
+        raise HTTPException(status_code=409, detail="Feedback category is off")
     if await feedback_rate_limiter.is_rate_limited(derive_client_key(http_request)):
         raise HTTPException(
             status_code=429, detail="Too much feedback. Please wait a moment."
         )
     try:
-        service.senden(request.text, request.kontakt)
+        if request.kategorie is None:
+            service.senden(request.text, request.kontakt)
+        else:
+            service.senden(request.text, None, kategorie=request.kategorie)
     except Exception as e:
         logger.error(f"Error storing feedback: {type(e).__name__}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to store feedback")

@@ -24,6 +24,7 @@ const TITEL: Record<string, string> = {
   sharepic: 'Teilen als Bild',
   bestandszahl_zuwachs: 'Zuwachs neben der Bestandszahl',
   vertrauenszeile: 'Vertrauenszeile vor dem Anmelden',
+  feedback_gestoert: 'Knopf „Was hat dich gestört?“',
   team_fortschritt: 'Team-Fortschritt',
   team_quests: 'Team-Quests',
   teams: 'Teams über Einladungen',

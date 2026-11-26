@@ -16,6 +16,11 @@ Bereinigungsjob: Die Frist steht im Loeschkonzept ohne Bedingung.
 
 Admins markieren Feedback als erledigt und nehmen das zurueck; das aendert die
 Frist nicht. Vorher loeschen koennen sie es einzeln (#425).
+
+Feedback der Kategorie "gestoert" (Knopf "Was hat dich gestört?", Schalter
+feedback_gestoert) traegt nie einen Kontakt und hat eine eigene Frist: Ab
+GESTOERT_GELOESCHT_AB loescht derselbe Lauf alle Eintraege der Kategorie
+(domain/feedback_gestoert.py).
 """
 
 import asyncio
@@ -25,6 +30,7 @@ from datetime import date, timedelta
 from typing import List, Optional
 
 from core.logging import get_logger
+from domain.feedback_gestoert import KATEGORIE_GESTOERT, gestoert_offen
 from infrastructure.database.models import FeedbackZeile
 from repositories.feedback_repository import FeedbackRepository
 from utils.utc_tag import heute_utc, sekunden_bis_mitternacht
@@ -45,11 +51,18 @@ class FeedbackEintrag:
     kontakt: Optional[str]
     eingegangen_am: date
     erledigt: bool
+    # None: Knopf "Feedback"; "gestoert": Knopf "Was hat dich gestört?"
+    kategorie: Optional[str] = None
 
 
 def _eintrag(zeile: FeedbackZeile) -> FeedbackEintrag:
     return FeedbackEintrag(
-        zeile.id, zeile.text, zeile.kontakt, zeile.eingegangen_am, zeile.erledigt
+        zeile.id,
+        zeile.text,
+        zeile.kontakt,
+        zeile.eingegangen_am,
+        zeile.erledigt,
+        zeile.kategorie,
     )
 
 
@@ -63,9 +76,16 @@ class FeedbackService:
         self._repository = repository
 
     def senden(
-        self, text: str, kontakt: Optional[str], heute: Optional[date] = None
+        self,
+        text: str,
+        kontakt: Optional[str],
+        heute: Optional[date] = None,
+        kategorie: Optional[str] = None,
     ) -> None:
-        self._repository.anlegen(text, kontakt, heute or heute_utc())
+        if kategorie == KATEGORIE_GESTOERT:
+            # Freitext ohne Kennung (Jura 26.11., Punkt g): nie ein Kontakt
+            kontakt = None
+        self._repository.anlegen(text, kontakt, heute or heute_utc(), kategorie)
 
     def neueste(
         self, limit: int = LIMIT_STANDARD, erledigt: Optional[bool] = None
@@ -85,8 +105,15 @@ class FeedbackService:
         return self._repository.loeschen(feedback_id)
 
     def alte_loeschen(self, heute: Optional[date] = None) -> int:
-        """Feedback vor der Aufbewahrungsgrenze loeschen; liefert die Zahl der Zeilen."""
-        return self._repository.loeschen_vor(aufbewahrungsgrenze(heute))
+        """
+        Feedback vor der Aufbewahrungsgrenze loeschen, nach dem Ende der Startphase
+        dazu alles der Kategorie "gestoert"; liefert die Zahl der Zeilen.
+        """
+        heute = heute or heute_utc()
+        geloescht = self._repository.loeschen_vor(aufbewahrungsgrenze(heute))
+        if not gestoert_offen(heute):
+            geloescht += self._repository.loeschen_kategorie(KATEGORIE_GESTOERT)
+        return geloescht
 
 
 async def loeschen_im_takt(
