@@ -713,7 +713,7 @@ Was ein Team in der letzten abgeschlossenen Woche gemeinsam bewirkt hat, unter �
 _Avoid_: Team-Statistik, Team-Score, Teamrangliste
 
 **Wochenzähler**:
-Die Zahlen eines Teams je Saison und Woche, aus denen Team-Fortschritt und Team-Quests rechnen: wie viele Beiträge, Bewertungen und Meldungen „Ja, gepostet“ seine Mitglieder mit Einwilligung `team-2026-11-26` in der Woche hatten, ohne Kennung und ohne Beitrag. Gezählt wird nur für Teams ab 5 solchen Mitgliedern, keine Startkonten, „Ja, gepostet“ nur mit Art.-9-Einwilligung. Entdoppelt wird über einen Wochen-Prüfwert im Arbeitsspeicher (ein Beitrag einmal, eine Stimme je Person und Beitrag einmal, „Ja, gepostet“ je Person einmal je Woche); in der Datenbank steht keiner. Er bleibt bei „Team verlassen“ und bei der Löschung eines Kontos.
+Die Zahlen eines Teams je Saison und Woche, aus denen Team-Fortschritt und Team-Quests rechnen: wie viele Beiträge, Bewertungen und Meldungen „Ja, gepostet“ seine Mitglieder mit Einwilligung `team-2026-11-26` in der Woche hatten, ohne Kennung und ohne Beitrag. Gezählt wird nur für Teams ab 5 solchen Mitgliedern, keine Startkonten, „Ja, gepostet“ nur mit Art.-9-Einwilligung. Entdoppelt wird über einen Wochen-Prüfwert im Arbeitsspeicher (ein Beitrag einmal, eine Stimme je Person und Beitrag einmal, „Ja, gepostet“ je Person einmal je Woche); Stimmen zu eigenen Beiträgen zählen nicht; in der Datenbank steht keiner. Er bleibt bei „Team verlassen“ und bei der Löschung eines Kontos.
 _Avoid_: Team-Summe (umgangssprachlich ok), Zählerstand
 
 **Team-Quest**:

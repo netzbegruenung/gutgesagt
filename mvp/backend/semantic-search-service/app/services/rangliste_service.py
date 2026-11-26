@@ -301,7 +301,13 @@ class RanglisteService:
                 exc_info=True,
             )
             return _FEHLER
-        return stand.gesamt if stand.sammelt else None
+        if not stand.sammelt:
+            return None
+        # Ohne eine Quelle waere die Summe zu niedrig, und der Cache hielte den zu
+        # tiefen Platz CACHE_SEKUNDEN lang: wie ein Fehler behandeln.
+        if not stand.vollstaendig:
+            return _FEHLER
+        return stand.gesamt
 
     async def _vergangene(
         self, saisons: List[Saison], user_id: str, heute: date

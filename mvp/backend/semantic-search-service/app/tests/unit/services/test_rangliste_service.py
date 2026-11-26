@@ -327,6 +327,37 @@ async def test_fehler_wird_beim_naechsten_abruf_erneut_versucht():
 
 
 @pytest.mark.asyncio
+async def test_unvollstaendiger_stand_wird_nicht_gemerkt():
+    """
+    Fehlen einer Person die Quest-Punkte, waere ihre Summe zu niedrig; der Cache hielte
+    den zu tiefen Platz 120 s lang. Sie fehlt lieber bis zum naechsten Abruf.
+    """
+    welt = _zehn()
+    welt.punkte["p10"] = 5
+    welt.dazu("p10")
+    original = welt.saisonpunkte
+    unvollstaendig = [True]
+
+    async def ohne_quests(kennung, zeitraum):
+        stand = await original(kennung, zeitraum)
+        if kennung == "p0" and unvollstaendig[0]:
+            return Punktestand(
+                tun=stand.tun,
+                quests=0,
+                wirkung=stand.wirkung,
+                vollstaendig=False,
+            )
+        return stand
+
+    welt.saisonpunkte = ohne_quests
+    dienst = welt.dienst()
+    assert (await dienst.stand("p3")).rangliste.teilnehmende == 10
+    unvollstaendig[0] = False
+
+    assert (await dienst.stand("p3")).rangliste.teilnehmende == 11
+
+
+@pytest.mark.asyncio
 async def test_fehler_bei_der_fragenden_person_keine_liste():
     """Sehen darf die Liste nur, wer darin steht; 0 Punkte waeren falsch (Review zu #793)."""
     welt = _zehn()

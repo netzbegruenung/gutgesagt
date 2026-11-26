@@ -600,10 +600,10 @@ officer has advised.
 | `einwilligung_im_gewinn` | `SEMANTIC_SEARCH_EINWILLIGUNG_IM_GEWINN_AKTIV` | off | yes | none, wordings stay (#788) |
 | `naechster_schritt` | `SEMANTIC_SEARCH_NAECHSTER_SCHRITT_AKTIV` | off | yes | DSFA addendum Spielgefühl (V10); privacy policy sentences ship with #789 |
 | `null_treffer_anzahl` | `SEMANTIC_SEARCH_NULL_TREFFER_ANZAHL_AKTIV` | off | yes | legal OK, preliminary 26.11.: only from N ≥ 3, wording „N-mal gesucht“, privacy policy paragraph „Suchen ohne Treffer“ (ships with #763, shown while on); final with the legal package 27.11. (#362) |
-| `wirkungs_echo` | `SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV` | off | no | DSFA addendum V31 (#790) |
+| `wirkungs_echo` | `SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV` | off | yes | DSFA addendum V31 (#790) |
 | `danke_knopf` | `SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV` | off | yes | DSFA addendum V31 (#791) |
 | `danke_ohne_konto` | `SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV` | off | yes | V31 and visitor marker (#495); works only with `danke_knopf` |
-| `rangliste` | `SEMANTIC_SEARCH_RANGLISTE_AKTIV` | off | no | legal OK (wording, DSFA V28, privacy policy) and Punkte on (#793); works only with `punkte` |
+| `rangliste` | `SEMANTIC_SEARCH_RANGLISTE_AKTIV` | off | yes | legal OK (wording, DSFA V28, privacy policy) and Punkte on (#793); works only with `punkte` |
 | `saal_spruch` | `SEMANTIC_SEARCH_SAAL_SPRUCH_AKTIV` | off | yes | none: public text only, nothing about the person (see "Saal-Spruch" below) |
 
 #### Saal-Spruch
@@ -710,8 +710,11 @@ within the days of the running season (`PunkteService.punkte(user, zeitraum)`): 
 the cleanup job runs), approvals by the day of their last change, Tun and ratings by their day,
 Team-Quest points by their quest week (its Monday within the season, not the Monday they are
 credited, so a quest of the last season week still counts for that season).
-A season used with the Rangliste should therefore not be longer than that retention, otherwise
-usage from its first days drops out near its end. Season points of all participants are cached
+A season therefore lasts at most that retention (both end days included): creating or
+re-dating a longer one is rejected while the cleanup job runs (`domain/saisons.py`
+`laenge_pruefen`), otherwise usage from its first days would drop out near its end. A season
+whose points miss a source (Team-Quests not readable, `Punktestand.vollstaendig`) is treated
+like an error and not cached, so nobody sits too low for 120 s. Season points of all participants are cached
 in memory once per season for 120 s; one request recomputes (at most 8 people in parallel), the
 others wait for it. Neither points nor places are stored.
 

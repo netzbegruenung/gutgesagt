@@ -37,6 +37,7 @@ from domain.saisons import (
     aenderung_pruefen,
     anlegen_pruefen,
     eingabe_pruefen,
+    laenge_pruefen,
     laufende_saison,
     loeschen_pruefen,
     saison_fuer_teams,
@@ -278,6 +279,7 @@ class SaisonService:
     ) -> Saison:
         eingabe = eingabe_pruefen(name, beginn, ende, ziel)
         anlegen_pruefen(eingabe, heute or heute_utc())
+        laenge_pruefen(eingabe, self._hoechstens_tage())
         saison = self._repository.anlegen(eingabe)
         self._vergessen()
         return saison
@@ -293,11 +295,23 @@ class SaisonService:
     ) -> Saison:
         heute = heute or heute_utc()
         eingabe = eingabe_pruefen(name, beginn, ende, ziel)
-        saison = self._repository.aendern(
-            saison_id, eingabe, lambda alt: aenderung_pruefen(alt, eingabe, heute)
-        )
+
+        def pruefen(alt: Saison) -> None:
+            aenderung_pruefen(alt, eingabe, heute)
+            # Nur wenn sich die Tage aendern: Eine schon laengere Saison behaelt
+            # ihren Namen und ihr Ziel aenderbar.
+            if (alt.beginn, alt.ende) != (eingabe.beginn, eingabe.ende):
+                laenge_pruefen(eingabe, self._hoechstens_tage())
+
+        saison = self._repository.aendern(saison_id, eingabe, pruefen)
         self._vergessen()
         return saison
+
+    def _hoechstens_tage(self) -> Optional[int]:
+        """Laengste Saison: die Frist der Nutzungsereignisse, solange sie bereinigt werden."""
+        if not self._settings.enable_bereinigungsjob:
+            return None
+        return self._settings.usage_retention_days
 
     def loeschen(self, saison_id: uuid.UUID, heute: Optional[date] = None) -> None:
         heute = heute or heute_utc()
