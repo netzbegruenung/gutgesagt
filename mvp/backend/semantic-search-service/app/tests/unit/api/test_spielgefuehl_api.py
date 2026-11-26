@@ -251,3 +251,57 @@ def test_neu_wuerfeln_zu_oft_429(dienst):
     dienst.neu_wuerfeln.side_effect = ZuOftGewuerfelt()
 
     assert _client().post(URL + "/ranglistenname", headers=KIM).status_code == 429
+
+
+@pytest.mark.parametrize(
+    "buehne, punkte", [(False, False), (False, True), (True, False)]
+)
+def test_widerruf_haengt_an_der_gespeicherten_stufe_nicht_am_schalter(
+    spielgefuehl_ohne_datenbank, monkeypatch, buehne, punkte
+):
+    """
+    Mit dem echten Dienst: Ob ein Herabstufen ohne Schalter angenommen wird, entscheidet
+    die gespeicherte Stufe, nicht buehne_aktiv (das wirkt nur zusammen mit punkte).
+    """
+    from datetime import datetime, timezone
+
+    from repositories.spielgefuehl_repository import SpielgefuehlAntwort
+
+    monkeypatch.setattr(
+        "services.spielgefuehl_service._alt_zuruecknehmen", lambda u, s: None
+    )
+    monkeypatch.setattr(
+        "services.spielgefuehl_service._abzeichen_vergessen", lambda u: None
+    )
+    spielgefuehl_service_setzen(None)
+    spielgefuehl_ohne_datenbank.lesen.return_value = SpielgefuehlAntwort(
+        Stufe.RANGLISTE,
+        True,
+        AKTUELLER_WORTLAUT,
+        datetime(2026, 11, 26, tzinfo=timezone.utc),
+        "Kluge Eule 11",
+    )
+    client = _client(buehne, punkte)
+
+    for stufe in ("fuer_mich", "aus"):
+        antwort = client.put(
+            URL, json={"stufe": stufe, "wortlaut": AKTUELLER_WORTLAUT}, headers=KIM
+        )
+        assert antwort.status_code == 204, stufe
+    assert [
+        c.args[1] for c in spielgefuehl_ohne_datenbank.antworten.call_args_list
+    ] == [
+        Stufe.FUER_MICH,
+        Stufe.AUS,
+    ]
+    antwort = client.put(
+        URL,
+        json={
+            "stufe": "rangliste",
+            "mit_anzeigename": True,
+            "wortlaut": AKTUELLER_WORTLAUT,
+        },
+        headers=KIM,
+    )
+    assert antwort.status_code == 409
+    spielgefuehl_service_setzen(None)
