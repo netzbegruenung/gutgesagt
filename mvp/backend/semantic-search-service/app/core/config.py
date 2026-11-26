@@ -353,6 +353,10 @@ class Settings(BaseSettings):
     danke_knopf_aktiv: bool = False
     danke_ohne_konto_aktiv: bool = False
     rangliste_aktiv: bool = False
+    # Vertrauenszeile vor dem Anmelden (services/schalter_service.py, vorlaeufige
+    # juristische Einschaetzung 26.11.): reiner Text, speichert nichts; Obergrenze trotzdem
+    # von Haus aus aus, bis die Einschaetzung endgueltig ist.
+    vertrauenszeile_aktiv: bool = False
     # Saison und Gemeinschaftsziel (#782, domain/saisons.py): Den Balken sehen alle erst,
     # wenn es einmal so viele abgeschlossene Wochen hintereinander mit je mindestens so
     # vielen verschiedenen Menschen gab, die "Ja, gepostet" gemeldet haben; vorher nur

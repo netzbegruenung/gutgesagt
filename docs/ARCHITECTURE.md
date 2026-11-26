@@ -509,6 +509,12 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   authors who gave the second consent (no number); visitors never. While off, the second
   question is not asked, `GET /api/v1/teams/meine` reports `oeffentlich_verfuegbar: false` and
   `autor_teams` stays `null`.
+- `SEMANTIC_SEARCH_VERTRAUENSZEILE_AKTIV` - upper bound of the Schalter `vertrauenszeile`
+  (group Grundfunktionen, public, default `false`): the trust line above the login options on
+  `/login` with the wording of the preliminary legal assessment of 26.11.2026 and a link to the
+  privacy policy (`login/login-selector.component.ts`, `VERTRAUENSZEILE`). Text only, nothing
+  is stored or counted. Condition for switching on, shown on the admin page: the sentence holds
+  only while Rangliste and Team-Fortschritt are off or voluntary; extend it after the board's go.
 - `DOCKER_CONTAINER` - set to `true` inside containers to enforce strict path validation
 
 #### Schalter für das Spielgefühl (#782 to #793)

@@ -373,6 +373,28 @@ TEAM_SCHALTER = (
 SCHALTER.update({s.name: s for s in TEAM_SCHALTER})
 
 
+# Vertrauenszeile vor dem Anmelden (vorlaeufige juristische Einschaetzung 26.11.2026,
+# Punkt a): Grundsatz Sebastian 26.11., Neues hinter einem Schalter, Obergrenze von
+# Haus aus aus. Der Satz stimmt nur, solange nichts ausser den Beitraegen fuer andere
+# sichtbar ist; deshalb steht die Bedingung als Hinweis auf der Admin-Seite.
+SCHALTER["vertrauenszeile"] = Schalterart(
+    name="vertrauenszeile",
+    gruppe=GRUNDFUNKTIONEN,
+    feld="vertrauenszeile_aktiv",
+    umgebungsvariable="SEMANTIC_SEARCH_VERTRAUENSZEILE_AKTIV",
+    erklaerung=(
+        "Zeile über den Anmeldewegen: Was man beiträgt, erscheint unter dem "
+        "Anzeigenamen, wie viel man sonst mitmacht, sehen andere nicht; mit Link "
+        "„Datenschutz“. Speichert und zählt nichts."
+    ),
+    einschalt_hinweis=(
+        "Satz stimmt nur, solange Rangliste/Team-Fortschritt aus oder freiwillig "
+        "sind; mit Vorstands-Go ergänzen."
+    ),
+    oeffentlich=True,
+)
+
+
 class UnbekannterSchalter(KeyError):
     pass
 

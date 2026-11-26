@@ -23,6 +23,7 @@ const TITEL: Record<string, string> = {
   antworten_hinweis: 'Neue Antworten auf eigene Aussagen',
   sharepic: 'Teilen als Bild',
   bestandszahl_zuwachs: 'Zuwachs neben der Bestandszahl',
+  vertrauenszeile: 'Vertrauenszeile vor dem Anmelden',
   team_fortschritt: 'Team-Fortschritt',
   team_quests: 'Team-Quests',
   teams: 'Teams über Einladungen',
