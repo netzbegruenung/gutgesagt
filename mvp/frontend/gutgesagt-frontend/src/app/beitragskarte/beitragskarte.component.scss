@@ -143,6 +143,12 @@ h4.karte-titel {
   gap: 6px;
 }
 
+.karte-pillen {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 // Siegel (#427): sieht nicht nach Knopf aus - kein Rahmen, kein Hintergrund -, ist fuer
 // Tastatur und Screenreader aber einer, weil Antippen die Erklaerung oeffnet.
 .siegel-knopf {
@@ -819,6 +825,12 @@ h4.karte-titel {
 
   .karte-badges {
     gap: var(--spacing-xs);
+  }
+
+  .karte-pillen {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
   }
 
   .badge {

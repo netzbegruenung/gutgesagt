@@ -322,6 +322,8 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
     .zustand { font-weight: 500; color: var(--text-leise); }
     .zustand.wirkt { color: inherit; }
     .obergrenze, .dsfa, .kopplung { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .kopplung { flex-wrap: nowrap; align-items: flex-start; }
+    .kopplung mat-icon { flex-shrink: 0; }
     .obergrenze code { font-size: 0.8125rem; color: var(--text-leise); }
     .obergrenze.aus, .gesperrt { color: var(--text-leise); }
     .dsfa {

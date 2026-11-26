@@ -252,6 +252,7 @@ export class SpielgefuehlComponent implements OnInit {
     }
     this.speichert = true;
     this.fehler = false;
+    this.fehlerText = FEHLER_TEXT;
     this.ansage = '';
     this.service.wuerfeln().subscribe({
       next: ({ ranglistenname }) => {
@@ -276,6 +277,7 @@ export class SpielgefuehlComponent implements OnInit {
     }
     this.speichert = true;
     this.fehler = false;
+    this.fehlerText = FEHLER_TEXT;
     this.ansage = '';
     this.service.waehlen(stufe, mitAnzeigename, stand.aktueller_wortlaut.kennung).subscribe({
       next: () => {

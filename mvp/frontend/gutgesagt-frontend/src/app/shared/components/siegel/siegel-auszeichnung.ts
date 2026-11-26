@@ -6,7 +6,7 @@
  * Was die Person auszeichnet, steht am Namen (Abzeichen), nicht am Siegel (Entscheidung 14.11.).
  */
 
-/** Ab so vielen Nutzungen glänzt das Siegel; „beliebt“ an der Karte kommt schon früher. */
+/** Ab so vielen Nutzungen glänzt das Siegel; „viel genutzt“ an der Karte kommt schon früher. */
 export const GLANZ_AB = 25;
 
 export function hatGlanz(nutzung: number | null | undefined): boolean {

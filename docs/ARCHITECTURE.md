@@ -733,7 +733,9 @@ Meilensteine", badge visibility and Rangliste while the switch is effective (`do
 name, wording id, time, Ranglistenname; newest row counts). The switch is effective only together
 with `punkte` (`schalter_service._wirksam`): without points there is no question, and the admin
 page must not report it as on. While it is effective, `abzeichen_sichtbar` is not effective
-either (no badges at the name). Switch off: the old model, unchanged.
+either (no badges at the name). Switching `punkte` off (emergency stop) therefore also selects
+the old model; everything that depends on points is off then anyway, only the consent budget
+(`einwilligungs_moment`) counts the old answers meanwhile. Switch off: the old model, unchanged.
 Switch on: only the new table counts, old answers stay as proof but are neither read nor carried
 over, so everyone is asked again. Points ⇔ level ≥ `fuer_mich`; Rangliste ⇔ level `rangliste`
 (still only with the switches `punkte` and `rangliste`); badges never at the display name
