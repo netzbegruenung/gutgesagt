@@ -145,7 +145,7 @@ describe('AlbumComponent', () => {
       expect(el().querySelector('[data-testid="zahl-genutzt"]')).toBeNull();
       expect(el().querySelector('.zahlen')).toBeNull();
       expect(el().querySelector('[data-testid="naechster-meilenstein"]')).toBeNull();
-      expect(text('.wirkung')).toBe('Deine 4 Beiträge wurden noch nicht genutzt.');
+      expect(text('.wirkung')).toBe('Sobald jemand einen deiner Beiträge nutzt, siehst du es hier.');
     });
 
     it('zeigt ohne Meilensteine mit Nutzung die drei Zahlen wie sonst', () => {
@@ -274,6 +274,10 @@ describe('AlbumComponent', () => {
       expect(koepfe.map((k) => k.querySelector('.abschnitt-name')!.textContent!.trim())).toEqual(['Klima', 'Wohnen', 'Europa']);
       expect(koepfe.map((k) => k.getAttribute('aria-expanded'))).toEqual(['true', 'false', 'false']);
       expect(koepfe[0].querySelector('.abschnitt-stand')!.textContent!.trim()).toBe('1 von 3 genutzt');
+      expect(koepfe[0].querySelector('.abschnitt-balken')).not.toBeNull();
+      // Ohne Nutzung nur die Zahl der Beiträge, kein leerer Balken (Leerzustände 26.11.)
+      expect(koepfe[1].querySelector('.abschnitt-stand')!.textContent!.trim()).toBe('3 Beiträge');
+      expect(koepfe[1].querySelector('.abschnitt-balken')).toBeNull();
       // Motiv rein dekorativ: der Name steht daneben
       const motiv = koepfe[2].querySelector('.abschnitt-motiv') as HTMLElement;
       expect(motiv.getAttribute('aria-hidden')).toBe('true');

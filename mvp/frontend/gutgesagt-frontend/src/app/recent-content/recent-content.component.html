@@ -1,7 +1,8 @@
 <!-- Recent Content Header -->
 <div class="recent-content-header">
   <!-- tabindex -1: Der Sprung von „Seit deinem letzten Besuch“ setzt den Fokus hierher (WCAG 2.4.3) -->
-  <h2 tabindex="-1">Frisch aus der Community</h2>
+  <!-- Ohne Frisches „Zuletzt ergänzt“ (26.11.); der Anker #recent-content sitzt am Host auf der Startseite -->
+  <h2 tabindex="-1">{{ titel }}</h2>
 
   <!-- Loading Spinner -->
   <app-loading-spinner
@@ -16,9 +17,10 @@
     [retryAction]="retryLoad">
   </app-error-message>
 
-  <!-- Empty State -->
-  <div *ngIf="!loading && !error && karten.length === 0" class="empty-state">
-    <p>Noch keine neuen Beiträge.</p>
+  <!-- Nur ganz ohne Beiträge: ein Anfang, kein Misserfolg (26.11.). Kein eigener Link: Der Weg
+       ist die Kachel „Beitragen“ direkt darunter, die Besuchern auch „mit Konto“ sagt (#644). -->
+  <div *ngIf="!loading && !error && stand === 'anfang'" class="empty-state anfang">
+    <p>Hier wächst bald was. Fang an, dein Beitrag kann der erste sein.</p>
   </div>
 </div>
 

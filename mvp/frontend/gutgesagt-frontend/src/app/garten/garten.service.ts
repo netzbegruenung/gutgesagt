@@ -50,12 +50,24 @@ export class GartenService {
   }
 }
 
-/** „12 Antworten“, „1 Antwort“, „noch keine Antwort“. */
+/** „12 Antworten“, „1 Antwort“; bei 0 nach Anfang: „wartet auf die erste Antwort“ (Leerzustände 26.11.). */
 export function antwortenText(anzahl: number): string {
   if (anzahl <= 0) {
-    return 'noch keine Antwort';
+    return 'wartet auf die erste Antwort';
   }
   return anzahl === 1 ? '1 Antwort' : `${anzahl} Antworten`;
+}
+
+/**
+ * Die Beete in zwei Gruppen, je in der Reihenfolge des Servers: erst die Themen mit
+ * Antworten, dann die ohne (Leerzustände 26.11.). Viele leere Kacheln zwischen den vollen
+ * wirken wie eine Brache; gesammelt unten heißen sie „Hier ist noch Platz“.
+ */
+export function beeteGruppieren(beete: readonly Beet[]): { mitAntworten: Beet[]; nochPlatz: Beet[] } {
+  return {
+    mitAntworten: beete.filter((beet) => beet.antworten > 0),
+    nochPlatz: beete.filter((beet) => !(beet.antworten > 0)),
+  };
 }
 
 /**

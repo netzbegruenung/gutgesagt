@@ -31,6 +31,14 @@
   }
 }
 
+/* Themen ohne Antwort, gesammelt unter den anderen (Leerzustände 26.11.) */
+.beete-platz {
+  margin: var(--spacing-lg, 24px) 0 var(--spacing-sm, 8px);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+
 .beet {
   display: flex;
   flex-direction: column;

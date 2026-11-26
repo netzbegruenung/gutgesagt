@@ -23,6 +23,7 @@ const TITEL: Record<string, string> = {
   antworten_hinweis: 'Neue Antworten auf eigene Aussagen',
   sharepic: 'Teilen als Bild',
   meldeweg_sichtbar: '„Melden“ sichtbar und Meldeweg im Fuß',
+  bestandszahl_zuwachs: 'Zuwachs neben der Bestandszahl',
   team_fortschritt: 'Team-Fortschritt',
   team_quests: 'Team-Quests',
   teams: 'Teams über Einladungen',

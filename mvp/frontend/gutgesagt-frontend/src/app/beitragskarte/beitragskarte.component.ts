@@ -630,21 +630,24 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
    * Nutzung je Fassung in Meine Beitraege (#355), in der Reihenfolge der Reiter. Was
    * vor der Zaehlung je Fassung genutzt wurde, steht als "ohne Fassung" dabei: Welche
    * Fassung damals kopiert wurde, weiss niemand. Ohne Kurz und Lang gibt es nur Mittel,
-   * dann sagt die Zeile nichts, was das Nutzungs-Badge nicht schon sagt.
+   * dann sagt die Zeile nichts, was das Nutzungs-Badge nicht schon sagt. Fassungen mit 0
+   * fehlen, und ganz ohne Nutzung fehlt die Leiste: kein „Kurz 0× · Mittel 0× · Lang 0×“
+   * (Leerzustände 26.11.).
    */
   get nutzungJeFassung(): NutzungsZeile[] | null {
     const je = this.daten.nutzungJeFassung;
     if (!je || !this.hatKurzOderLang) {
       return null;
     }
-    const zeilen = FASSUNGEN.filter((fassung) => je[fassung]).map((fassung) =>
+    const zeilen = FASSUNGEN.filter((fassung) => (je[fassung]?.nutzung ?? 0) > 0).map((fassung) =>
       nutzungsZeile(FASSUNG_LABEL[fassung], je[fassung]!.nutzung, je[fassung]!.letzte_7_tage),
     );
     const summe = (wert: (zeile: NutzungsZeile) => number) => zeilen.reduce((s, zeile) => s + wert(zeile), 0);
     // Der Rest je Spalte; auch Kopien vor der Zaehlung je Fassung koennen noch in die 7 Tage fallen.
     const ohneFassung = (this.nutzung ?? 0) - summe((zeile) => zeile.nutzung);
     const ohneFassungZuwachs = Math.max(0, (this.daten.nutzungLetzte7Tage ?? 0) - summe((zeile) => zeile.zuwachs));
-    return ohneFassung > 0 ? [...zeilen, nutzungsZeile('ohne Fassung', ohneFassung, ohneFassungZuwachs)] : zeilen;
+    const alle = ohneFassung > 0 ? [...zeilen, nutzungsZeile('ohne Fassung', ohneFassung, ohneFassungZuwachs)] : zeilen;
+    return alle.length ? alle : null;
   }
 
   get zeigtQuellen(): boolean {

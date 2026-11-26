@@ -112,7 +112,7 @@ describe('ZuDieserAntwortComponent', () => {
     const guete = { wert: null, erfuellt: [], stimmenZaehlen: false, hilfreich: null, nichtHilfreich: null };
     const el = zeigen(karte({ guete }));
     expect(el.querySelector('.zda-gross')).toBeNull();
-    expect(text(el.querySelector('.zda-guete-kopf'))).toBe('Neu: noch keine Güte');
+    expect(text(el.querySelector('.zda-guete-kopf'))).toBe('Neu: die Güte kommt mit den ersten Stimmen');
   });
 
   it('nennt keine Person, keine Nutzung und keine Herkunft: die stehen auf der Karte', () => {

@@ -323,6 +323,11 @@ class Settings(BaseSettings):
     # schon. Jura vorlaeufig ohne Bedingung (26.11.); Obergrenze trotzdem von Haus aus
     # aus wie alles Neue zur BDK, eingeschaltet wird auf Ansage.
     meldeweg_sichtbar_aktiv: bool = False
+    # Zuwachs zur Bestandszahl (domain/bestandszahl.py): /getMetrics nennt dazu die neuen
+    # Kommentare der letzten 7 Tage bzw. den Tag des letzten. Obergrenze an, weil nur
+    # oeffentliche Inhalte beim Aufruf gezaehlt werden und nichts gespeichert wird;
+    # wirksam erst mit dem Admin-Wert (Feature-Toggle fuer Neues, Sebastian 26.11.).
+    bestandszahl_zuwachs_aktiv: bool = True
     # Teams ueber Einladungen (services/team_service.py): Teamfelder an der Einladung,
     # Beitreten mit eigener Einwilligung, "Meine Teams". Standard aus: Die
     # Mitgliedschaft ist im Zweifel ein Art.-9-Datum; erst mit DSFA-Nachtrag,
