@@ -1039,6 +1039,50 @@ describe('DatenschutzComponent', () => {
   });
 });
 
+/** Spielgefühl in drei Stufen (Schalter spielgefuehl_buehne): ersetzt die Einwilligungsteile. */
+describe('DatenschutzComponent: Spielgefühl', () => {
+  function seiteMit(an: boolean): HTMLElement {
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]),
+        { provide: FunktionenService, useValue: { an: (name: string) => signal(an && name === 'spielgefuehl_buehne') } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('Schalter aus: bisherige Einwilligungen, kein Absatz „Spielgefühl“', () => {
+    const seite = seiteMit(false);
+
+    expect(seite.querySelector('[data-testid="dse-spielgefuehl"]')).toBeNull();
+    expect(abschnittIn(seite, 'Punkte')).toContain('Abzeichen an deinem Namen.');
+    expect(seite.querySelector('[data-testid="dse-rangliste-platzhalter"]')).not.toBeNull();
+    expect(abschnittIn(seite, 'Punkte')).toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
+  });
+
+  it('Schalter an: Absatz „Spielgefühl“ statt Abzeichen am Namen, Rangliste und Einwilligung „Punkte“', () => {
+    const seite = seiteMit(true);
+    const punkte = abschnittIn(seite, 'Punkte');
+
+    expect(seite.querySelector('#spielgefuehl')).not.toBeNull();
+    expect(punkte).toContain('entscheidest du mit einer Frage in drei Stufen');
+    expect(punkte).toContain('also deinem Anzeigenamen oder einem zufällig vergebenen Ranglistennamen');
+    expect(punkte).toContain('Abzeichen zeigen wir nirgends sonst');
+    expect(punkte).toContain('Rechtsgrundlage: siehe „Spielgefühl“ oben');
+    expect(punkte).not.toContain('Abzeichen an deinem Namen.');
+    expect(punkte).toContain('und mit deiner Stufe gilt auch der Schutz gegen Absprachen (unten)');
+    expect(punkte).toContain('deine Abzeichen zeigen wir nur in der Rangliste, wenn du mitspielst');
+    expect(punkte).toContain('Muster-Hinweis');
+    expect(seite.querySelector('[data-testid="dse-rangliste-platzhalter"]')).toBeNull();
+    expect(punkte).not.toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
+    // Die Rechenregeln bleiben
+    expect(punkte).toContain('Paar-Prüfwert');
+  });
+});
+
 /** „Danach wurde schon N-mal gesucht“ (#362, Jura vorläufig 26.11.): Absatz nur mit Schalter. */
 describe('DatenschutzComponent: Suchen ohne Treffer, Anzahl auf der Ergebnisseite', () => {
   function seiteMit(an: boolean): HTMLElement {
@@ -1123,49 +1167,5 @@ describe('DatenschutzComponent - Stimmenverfall bei ganz anderem Text (#636)', (
     fixture.detectChanges();
 
     expect(abschnittIn(seite, 'Bewertungen')).toContain(HALBSATZ);
-  });
-});
-
-/** Spielgefühl in drei Stufen (Schalter spielgefuehl_buehne): ersetzt die Einwilligungsteile. */
-describe('DatenschutzComponent: Spielgefühl', () => {
-  function seiteMit(an: boolean): HTMLElement {
-    TestBed.configureTestingModule({
-      imports: [DatenschutzComponent],
-      providers: [
-        provideRouter([]),
-        { provide: FunktionenService, useValue: { an: (name: string) => signal(an && name === 'spielgefuehl_buehne') } },
-      ],
-    });
-    const fixture = TestBed.createComponent(DatenschutzComponent);
-    fixture.detectChanges();
-    return fixture.nativeElement as HTMLElement;
-  }
-
-  it('Schalter aus: bisherige Einwilligungen, kein Absatz „Spielgefühl“', () => {
-    const seite = seiteMit(false);
-
-    expect(seite.querySelector('[data-testid="dse-spielgefuehl"]')).toBeNull();
-    expect(abschnittIn(seite, 'Punkte')).toContain('Abzeichen an deinem Namen.');
-    expect(seite.querySelector('[data-testid="dse-rangliste-platzhalter"]')).not.toBeNull();
-    expect(abschnittIn(seite, 'Punkte')).toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
-  });
-
-  it('Schalter an: Absatz „Spielgefühl“ statt Abzeichen am Namen, Rangliste und Einwilligung „Punkte“', () => {
-    const seite = seiteMit(true);
-    const punkte = abschnittIn(seite, 'Punkte');
-
-    expect(seite.querySelector('#spielgefuehl')).not.toBeNull();
-    expect(punkte).toContain('entscheidest du mit einer Frage in drei Stufen');
-    expect(punkte).toContain('also deinem Anzeigenamen oder einem zufällig vergebenen Ranglistennamen');
-    expect(punkte).toContain('Abzeichen zeigen wir nirgends sonst');
-    expect(punkte).toContain('Rechtsgrundlage: siehe „Spielgefühl“ oben');
-    expect(punkte).not.toContain('Abzeichen an deinem Namen.');
-    expect(punkte).toContain('und mit deiner Stufe gilt auch der Schutz gegen Absprachen (unten)');
-    expect(punkte).toContain('deine Abzeichen zeigen wir nur in der Rangliste, wenn du mitspielst');
-    expect(punkte).toContain('Muster-Hinweis');
-    expect(seite.querySelector('[data-testid="dse-rangliste-platzhalter"]')).toBeNull();
-    expect(punkte).not.toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
-    // Die Rechenregeln bleiben
-    expect(punkte).toContain('Paar-Prüfwert');
   });
 });
