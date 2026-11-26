@@ -658,6 +658,10 @@ OFFEN = {
     # Einwilligung zur Rangliste (#793): Ein Nein ist Zuruecknehmen, ein Ja wirkt
     # ohne Art.-9-Einwilligung nicht (Voraussetzung je Abruf).
     ("PUT", "/api/v1/rangliste/einwilligung"),
+    # Spielgefuehl: Stufe waehlen und neu wuerfeln; ohne Art.-9-Einwilligung
+    # entsteht nichts (Punkte und Rangliste setzen sie voraus), herabstufen bleibt offen.
+    ("PUT", "/api/v1/usage/users/me/spielgefuehl"),
+    ("POST", "/api/v1/usage/users/me/spielgefuehl/ranglistenname"),
     # Die Einwilligung selbst und "ohne Einwilligung weiter" (B2)
     ("POST", "/api/v1/art9-einwilligung"),
     ("POST", "/api/v1/art9-einwilligung/ohne"),

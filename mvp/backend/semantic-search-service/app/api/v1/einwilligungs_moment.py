@@ -25,6 +25,7 @@ from repositories.einwilligungs_moment_repository import (
     get_einwilligungs_moment_repository,
 )
 from services.schalter_service import schalter_wirksam
+from services.spielgefuehl_service import buehne_aktiv
 
 logger = get_logger(__name__)
 
@@ -61,7 +62,9 @@ async def einwilligungs_moment(
         return EinwilligungsMomentResponse(aktiv=False)
     try:
         moment = await asyncio.to_thread(
-            get_einwilligungs_moment_repository().lesen, current_user
+            get_einwilligungs_moment_repository().lesen,
+            current_user,
+            buehne_aktiv(),
         )
     except Exception as e:
         logger.error(

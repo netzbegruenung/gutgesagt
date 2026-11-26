@@ -40,6 +40,7 @@ from api.v1.seeding import router as seeding_router
 from api.v1.usage import router as usage_router
 from api.v1.naechster_schritt import router as naechster_schritt_router
 from api.v1.einwilligungs_moment import router as einwilligungs_moment_router
+from api.v1.spielgefuehl import router as spielgefuehl_router
 from api.v1.voting import router as voting_router
 from api.v1.moderation import router as moderation_router
 from api.v1.vormoderation import router as vormoderation_router
@@ -259,7 +260,12 @@ async def lifespan(app: FastAPI):
         # erlaubt; ob er rechnet, entscheidet je Lauf der Admin-Wert (#708).
         abzeichen = abzeichen_service_bauen(settings)
         abzeichen_service_setzen(abzeichen)
-        if settings.abzeichen_sichtbar:
+        # Im Spielgefuehl-Modell rechnet er fuer die Rangliste (spielgefuehl_buehne).
+        if settings.abzeichen_sichtbar or (
+            settings.spielgefuehl_buehne_aktiv
+            and settings.punkte_aktiv
+            and settings.rangliste_aktiv
+        ):
             app.state.abzeichen_rechnen = asyncio.create_task(
                 abzeichen_im_takt(abzeichen)
             )
@@ -409,6 +415,7 @@ app.include_router(usage_router, prefix="/api/v1/usage", tags=["usage"])
 # Karte "Dein naechster Schritt" (#789), nur fuer Angemeldete
 app.include_router(naechster_schritt_router, prefix="/api/v1/usage", tags=["usage"])
 app.include_router(einwilligungs_moment_router, prefix="/api/v1/usage", tags=["usage"])
+app.include_router(spielgefuehl_router, prefix="/api/v1/usage", tags=["usage"])
 app.include_router(voting_router, prefix="/api/v1/voting", tags=["voting"])
 app.include_router(moderation_router, prefix="/api/v1/moderation", tags=["moderation"])
 app.include_router(

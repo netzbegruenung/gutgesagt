@@ -13,6 +13,8 @@ export interface RanglistenPlatz {
   punkte: number;
   /** Der eigene Eintrag */
   ich: boolean;
+  /** Nur im Spielgefühl-Modell: erreichte Meilensteine ohne Wegmarken. */
+  abzeichen?: number | null;
 }
 
 export interface Rangliste {
@@ -44,6 +46,11 @@ export interface RanglisteStand {
   vergangene: { name: string; punkte: number }[];
   min_teilnehmende: number;
   aktueller_wortlaut: { kennung: string; text: string };
+  /**
+   * Spielgefühl-Modell (Schalter `spielgefuehl_buehne`): Teilnahme und Name wählt die Person
+   * im Spielgefühl (app-spielgefuehl), hier steht nur die Liste.
+   */
+  buehne?: boolean;
 }
 
 /**

@@ -7,6 +7,7 @@ import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
 import { FunktionenService } from '../services/funktionen.service';
 import { KURZFASSUNG, KurzfassungSatz, kurzfassungFertig } from './dse-kurzfassung';
+import { DSE_SPIELGEFUEHL, DSE_SPIELGEFUEHL_TITEL } from './dse-spielgefuehl';
 
 @Component({
   selector: 'app-datenschutz',
@@ -68,6 +69,13 @@ export class DatenschutzComponent {
    * solange der Schalter stimmen_text_verfall an ist; sonst verfallen Stimmen nur beim Titel.
    */
   readonly textVerfall = inject(FunktionenService).an('stimmen_text_verfall');
+  /**
+   * Spielgefühl in drei Stufen (Schalter spielgefuehl_buehne): der Absatz „Spielgefühl“
+   * ersetzt unter „Punkte“ die Einwilligungsteile zu Punkten, Abzeichen und Rangliste.
+   */
+  readonly spielgefuehlBuehne = this.funktionen.an('spielgefuehl_buehne');
+  readonly spielgefuehlTitel = DSE_SPIELGEFUEHL_TITEL;
+  readonly spielgefuehlText = DSE_SPIELGEFUEHL;
   /**
    * „Ton bei Erfolgen“ (#787) gibt es nur im großen Moment „Lücke zu!“ hinter dem Schalter
    * luecke_zu_gross; der Absatz zu seinem Eintrag im Browser steht, solange der Schalter an ist

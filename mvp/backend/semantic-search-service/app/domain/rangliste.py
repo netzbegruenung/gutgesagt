@@ -126,6 +126,9 @@ class Platz:
     punkte: int
     # Der eigene Eintrag der fragenden Person
     ich: bool
+    # Erreichte Meilensteine ohne Wegmarken; nur im Spielgefuehl-Modell
+    # (domain/spielgefuehl.py), dort erscheinen Abzeichen nur in der Rangliste
+    abzeichen: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -138,7 +141,10 @@ class Rangliste:
 
 
 def rangliste_bilden(
-    punkte: Dict[str, int], namen: Dict[str, str], ich: str
+    punkte: Dict[str, int],
+    namen: Dict[str, str],
+    ich: str,
+    abzeichen: Optional[Dict[str, int]] = None,
 ) -> Optional[Rangliste]:
     """
     Plaetze aus den Saisonpunkten der Teilnehmenden (Kennung -> Punkte) und ihren
@@ -147,6 +153,7 @@ def rangliste_bilden(
     innerhalb gleicher Punkte ordnet der Name, damit die Reihenfolge stabil bleibt.
     Steht ein Name mehrmals in der Liste, bekommt jeder weitere eine Nummer
     („Flinke Amsel 42 (2)“), damit sich niemand mit einem anderen verwechselt.
+    ``abzeichen`` (Kennung -> Zahl) steht, wo vorhanden, am Platz.
     """
     if len(punkte) < MIN_TEILNEHMENDE:
         return None
@@ -169,6 +176,7 @@ def rangliste_bilden(
                 name=name,
                 punkte=punkte[kennung],
                 ich=kennung == ich,
+                abzeichen=(abzeichen or {}).get(kennung),
             )
         )
     oben = plaetze[:PLAETZE]

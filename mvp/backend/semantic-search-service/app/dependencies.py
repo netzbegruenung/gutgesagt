@@ -357,8 +357,22 @@ def abzeichen_service_bauen(settings: Settings) -> "AbzeichenService":
         # Wegmarken zaehlen fuers Abzeichen nicht; ihre Abfragen spart der Takt.
         return await meilensteine.meilensteine(user_id, mit_wegmarken=False)
 
+    from domain.spielgefuehl import in_rangliste
+    from repositories.spielgefuehl_repository import get_spielgefuehl_repository
+    from services.spielgefuehl_service import buehne_aktiv
+
+    def spielt_mit(user_id: str) -> bool:
+        antwort = get_spielgefuehl_repository().lesen(user_id)
+        return antwort is not None and in_rangliste(antwort.wirksame_stufe)
+
     return AbzeichenService(
-        get_abzeichen_sichtbarkeit_repository(), ohne_wegmarken, settings
+        get_abzeichen_sichtbarkeit_repository(),
+        ohne_wegmarken,
+        settings,
+        # Spielgefuehl-Modell: Abzeichen nur in der Rangliste (domain/spielgefuehl.py)
+        buehne_aktiv=lambda: buehne_aktiv(settings),
+        mitspielende=lambda: list(get_spielgefuehl_repository().teilnehmende()),
+        spielt_mit=spielt_mit,
     )
 
 

@@ -57,9 +57,7 @@ from typing import (
 from core.config import Settings
 from core.logging import get_logger
 from domain.punkte import Punktegewichte, Punktestand, Wirkungsdaten, punkte_berechnen
-from repositories.punkte_einwilligung_repository import (
-    get_punkte_einwilligung_repository,
-)
+from services import spielgefuehl_service
 
 logger = get_logger(__name__)
 
@@ -170,7 +168,7 @@ class PunkteService:
         # Ohne Angabe die gespeicherte Einwilligung "Punkte und Meilensteine"; spaet
         # geholt, damit Tests das Repository ersetzen koennen.
         self._eingewilligt = eingewilligt or (
-            lambda user_id: get_punkte_einwilligung_repository().eingewilligt(user_id)
+            lambda user_id: spielgefuehl_service.punkte_eingewilligt(user_id)
         )
         # Team-Quests (#792); ohne Angabe keine Quest-Punkte.
         self._quest_tage = quest_tage

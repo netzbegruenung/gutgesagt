@@ -57,6 +57,7 @@ from domain.punkte_einwilligung import (
 from repositories.punkte_einwilligung_repository import (
     get_punkte_einwilligung_repository,
 )
+from services import spielgefuehl_service
 from services.gepostet_service import GepostetService, get_gepostet_service
 from services.wirkung_service import get_wirkung_service
 from domain.content_registry import BEITRAGSTYPEN_WERTE
@@ -339,7 +340,13 @@ async def _punkte_eingewilligt(kennung: str) -> bool:
     """
     Gilt fuer das Konto die Einwilligung "Punkte und Meilensteine" (#351)? Fuer die
     Muster-Hinweise; im Zweifel nicht erteilt, der Zaehler laeuft trotzdem.
+
+    Mit Schalter spielgefuehl_buehne nie: Der Wortlaut des Spielgefuehls nennt die
+    Muster-Hinweise fuer Admins nicht, also entstehen dann keine
+    (domain/spielgefuehl.py).
     """
+    if spielgefuehl_service.buehne_aktiv():
+        return False
     try:
         return await asyncio.to_thread(
             get_punkte_einwilligung_repository().eingewilligt, kennung
@@ -596,6 +603,8 @@ class PunkteStatusResponse(BaseModel):
 
     aktiv: bool
     abzeichen_sichtbar: bool
+    # Spielgefuehl als eine Einstellung (Schalter spielgefuehl_buehne)
+    spielgefuehl_buehne: bool = False
 
 
 @router.get("/punkte/status", response_model=PunkteStatusResponse)
@@ -608,9 +617,13 @@ async def punkte_status(settings: Settings = Depends(get_settings)):
     punkte, meilensteine und abzeichen-sichtbarkeit nur bei eingeschaltetem Schalter auf,
     statt deren 404 abzuwarten (UX-Review B20, Entscheidung Maintainer 13.11.2026).
     """
+    buehne = spielgefuehl_service.buehne_aktiv(settings)
     return PunkteStatusResponse(
         aktiv=schalter_wirksam("punkte", settings),
-        abzeichen_sichtbar=schalter_wirksam("abzeichen_sichtbar", settings),
+        # Im neuen Modell gibt es keine Abzeichen am Namen (domain/spielgefuehl.py).
+        abzeichen_sichtbar=schalter_wirksam("abzeichen_sichtbar", settings)
+        and not buehne,
+        spielgefuehl_buehne=buehne,
     )
 
 
@@ -696,9 +709,16 @@ async def eigene_meilensteine(
 def _abzeichen_dienst(
     settings: Settings = Depends(get_settings),
 ) -> AbzeichenService:
-    """Ohne beide Schalter 404: Sichtbare Abzeichen gibt es dann nicht (#351)."""
+    """
+    Ohne beide Schalter 404: Sichtbare Abzeichen gibt es dann nicht (#351). Ebenso
+    im neuen Modell (Schalter spielgefuehl_buehne): Abzeichen nur in der Rangliste.
+    """
     dienst = get_abzeichen_service()
-    if not schalter_wirksam("abzeichen_sichtbar", settings) or dienst is None:
+    if (
+        not schalter_wirksam("abzeichen_sichtbar", settings)
+        or dienst is None
+        or spielgefuehl_service.buehne_aktiv(settings)
+    ):
         raise HTTPException(status_code=404, detail="Not found")
     return dienst
 
@@ -708,7 +728,11 @@ def _abzeichen_dienst_oder_aus(
 ) -> Optional[AbzeichenService]:
     """Fuer den Abruf: ohne Schalter None statt 404 (automatisch abgefragt)."""
     dienst = get_abzeichen_service()
-    if not schalter_wirksam("abzeichen_sichtbar", settings) or dienst is None:
+    if (
+        not schalter_wirksam("abzeichen_sichtbar", settings)
+        or dienst is None
+        or spielgefuehl_service.buehne_aktiv(settings)
+    ):
         return None
     return dienst
 
@@ -782,8 +806,13 @@ async def abzeichen_sichtbarkeit_antworten(
 def _punkte_einwilligung_angeboten(
     settings: Settings = Depends(get_settings),
 ) -> None:
-    """Ohne punkte_aktiv 404: Dann gibt es nichts, wozu man einwilligen koennte."""
-    if not schalter_wirksam("punkte", settings):
+    """
+    Ohne punkte_aktiv 404: Dann gibt es nichts, wozu man einwilligen koennte. Ebenso
+    im neuen Modell: Dort waehlt die Person die Stufe des Spielgefuehls.
+    """
+    if not schalter_wirksam("punkte", settings) or spielgefuehl_service.buehne_aktiv(
+        settings
+    ):
         raise HTTPException(status_code=404, detail="Not found")
 
 
@@ -802,7 +831,11 @@ async def punkte_einwilligung(
     wortlaut_aktuell = PunkteEinwilligungWortlaut(
         kennung=PUNKTE_WORTLAUT, text=PUNKTE_WORTLAUTE[PUNKTE_WORTLAUT]
     )
-    if not schalter_wirksam("punkte", settings):
+    # Im neuen Modell (Schalter spielgefuehl_buehne) gibt es diese Einwilligung
+    # nicht mehr: aktiv false, die App fragt stattdessen nach dem Spielgefuehl.
+    if not schalter_wirksam("punkte", settings) or spielgefuehl_service.buehne_aktiv(
+        settings
+    ):
         return PunkteEinwilligungResponse(
             eingewilligt=False, aktueller_wortlaut=wortlaut_aktuell, aktiv=False
         )

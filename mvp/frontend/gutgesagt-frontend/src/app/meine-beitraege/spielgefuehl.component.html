@@ -1,0 +1,74 @@
+<!-- Spielgefuehl in drei Stufen (Schalter spielgefuehl_buehne); ohne Schalter leer -->
+<section *ngIf="stand && (fragen || stand.stufe !== null)" class="spielgefuehl" aria-labelledby="spielgefuehl-titel" data-testid="spielgefuehl">
+    <ng-container *ngIf="fragen; else standAnzeige">
+        <h2 id="spielgefuehl-titel" #titel tabindex="-1">{{ stand.aktueller_wortlaut.ueberschrift }}</h2>
+        <p *ngIf="stand.abzeichen_hinweis" class="spielgefuehl-hinweis" data-testid="abzeichen-hinweis">{{ stand.abzeichen_hinweis }}</p>
+        <p class="spielgefuehl-einleitung">{{ stand.aktueller_wortlaut.einleitung }}</p>
+
+        <!-- Drei gleich grosse, gleich gewichtete Knoepfe, nichts vorbelegt; der Wortlaut je Stufe steht darunter -->
+        <div class="spielgefuehl-stufen" role="group" aria-labelledby="spielgefuehl-titel">
+            <div *ngFor="let s of stufen" class="spielgefuehl-stufe" [attr.data-stufe]="s.stufe">
+                <button mat-stroked-button type="button" class="spielgefuehl-knopf" [attr.data-testid]="'stufe-' + s.stufe"
+                        [attr.aria-describedby]="'spielgefuehl-text-' + s.stufe"
+                        [attr.aria-expanded]="s.stufe === 'rangliste' ? namenswahlOffen : null"
+                        [disabled]="speichert" (click)="stufeWaehlen(s.stufe)">{{ s.titel }}</button>
+                <p class="spielgefuehl-text" [id]="'spielgefuehl-text-' + s.stufe">{{ s.text }}</p>
+
+                <!-- Pflichtwahl des Namens ohne Vorauswahl; Anzeigename zuerst, beide gleich gross -->
+                <fieldset *ngIf="s.stufe === 'rangliste' && namenswahlOffen" class="spielgefuehl-namenswahl" data-testid="namenswahl" [disabled]="speichert">
+                    <legend>{{ stand.aktueller_wortlaut.namenswahl.frage }}</legend>
+                    <label>
+                        <input type="radio" name="spielgefuehl-name-frage" data-testid="wahl-anzeigename"
+                               [checked]="namenswahl === true" (change)="namenswahl = true">
+                        {{ stand.aktueller_wortlaut.namenswahl.anzeigename }}<ng-container *ngIf="stand.anzeigename"> ({{ stand.anzeigename }})</ng-container>
+                    </label>
+                    <label>
+                        <input type="radio" name="spielgefuehl-name-frage" data-testid="wahl-zufallsname"
+                               [checked]="namenswahl === false" (change)="namenswahl = false">
+                        {{ stand.aktueller_wortlaut.namenswahl.zufallsname }}
+                    </label>
+                    <p class="spielgefuehl-tipp">{{ stand.aktueller_wortlaut.namenswahl.tipp }}</p>
+                    <button mat-stroked-button type="button" class="spielgefuehl-knopf" data-testid="mitspielen"
+                            [disabled]="speichert || namenswahl === null" (click)="mitspielen()">Mitspielen</button>
+                </fieldset>
+            </div>
+        </div>
+        <p class="spielgefuehl-fuss">{{ stand.aktueller_wortlaut.fuss }}
+            <a routerLink="/datenschutz" fragment="spielgefuehl" target="_blank" rel="noopener">Zur Datenschutzerklärung</a></p>
+        <p *ngIf="frageOffen"><button mat-button type="button" data-testid="abbrechen" (click)="abbrechen()">Abbrechen</button></p>
+    </ng-container>
+
+    <ng-template #standAnzeige>
+        <h2 id="spielgefuehl-titel" #titel tabindex="-1">Spielgefühl</h2>
+        <p class="spielgefuehl-stand" data-testid="stand">Deine Wahl: <strong>{{ gewaehlt }}</strong></p>
+        <!-- Umstellen an derselben Stelle mit einem Klick; heraufstufen zeigt erst den Wortlaut -->
+        <div class="spielgefuehl-wechsel" role="group" aria-label="Spielgefühl ändern">
+            <button *ngFor="let s of andere" mat-stroked-button type="button" class="spielgefuehl-knopf"
+                    [attr.data-testid]="'wechsel-' + s.stufe" [disabled]="speichert" (click)="wechseln(s.stufe)">{{ s.titel }}</button>
+        </div>
+
+        <ng-container *ngIf="stand.stufe === 'rangliste'">
+            <fieldset class="spielgefuehl-namenswahl" data-testid="name-umstellen" [disabled]="speichert">
+                <legend>{{ stand.aktueller_wortlaut.namenswahl.frage }}</legend>
+                <label>
+                    <input type="radio" name="spielgefuehl-name" data-testid="name-anzeigename"
+                           [checked]="stand.mit_anzeigename === true" (change)="nameUmstellen(true)">
+                    {{ stand.aktueller_wortlaut.namenswahl.anzeigename }}<ng-container *ngIf="stand.anzeigename"> ({{ stand.anzeigename }})</ng-container>
+                </label>
+                <label>
+                    <input type="radio" name="spielgefuehl-name" data-testid="name-zufallsname"
+                           [checked]="stand.mit_anzeigename === false" (change)="nameUmstellen(false)">
+                    {{ stand.aktueller_wortlaut.namenswahl.zufallsname }}<ng-container *ngIf="stand.ranglistenname"> ({{ stand.ranglistenname }})</ng-container>
+                </label>
+                <p class="spielgefuehl-tipp">{{ stand.aktueller_wortlaut.namenswahl.tipp }}</p>
+            </fieldset>
+            <p><button mat-button type="button" data-testid="wuerfeln" [disabled]="speichert" (click)="wuerfeln()">Neuen Namen würfeln</button></p>
+        </ng-container>
+    </ng-template>
+
+    <!-- Immer da, damit Screenreader den neuen Stand nach einer Antwort ansagen -->
+    <div role="status" class="spielgefuehl-status">
+        <p *ngIf="ansage && !fehler" class="visually-hidden" data-testid="ansage">{{ ansage }}</p>
+        <p *ngIf="fehler" class="spielgefuehl-fehler">Das hat nicht geklappt. Bitte versuch es noch einmal.</p>
+    </div>
+</section>

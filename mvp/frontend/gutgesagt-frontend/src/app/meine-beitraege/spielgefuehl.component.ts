@@ -1,0 +1,268 @@
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatButtonModule } from '@angular/material/button';
+import { RouterLink } from '@angular/router';
+import { Subject } from 'rxjs';
+
+import {
+  SpielgefuehlService,
+  SpielgefuehlStand,
+  SpielgefuehlStufe,
+  SpielgefuehlStufenText,
+  stufenRang,
+} from '../services/spielgefuehl.service';
+import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
+import { EinwilligungsMoment } from '../shared/einwilligungs-budget/einwilligungs-budget';
+import { AUS_NACHLADEN_MS, NACHLADEN_MS, nachladeStrom, ohneRechte } from '../shared/selbst-nachladen';
+
+/** Was nach einer Wahl per role="status" angesagt wird. */
+export const ANSAGE_STUFE: Record<SpielgefuehlStufe, string> = {
+  rangliste: 'Du spielst in der Saison-Rangliste mit.',
+  fuer_mich: 'Punkte und Meilensteine sind an, nur für dich.',
+  aus: 'Spielgefühl ist aus.',
+};
+
+/**
+ * Spielgefühl als eine Einstellung in „Meine Beiträge“ (Schalter `spielgefuehl_buehne`,
+ * GLOSSARY.md „Spielgefühl“): eine Frage mit drei gleich großen Knöpfen ohne
+ * Vorauswahl, Gemeinschaft zuerst (In der Saison-Rangliste mitspielen, Nur für mich,
+ * Aus). Der Wortlaut kommt unverändert vom Server.
+ *
+ * - Stufe Rangliste braucht eine Pflichtwahl „In der Rangliste als: mein Anzeigename /
+ *   ein Zufallsname“ ohne Vorauswahl; ohne Wahl ist „Mitspielen“ nicht absendbar
+ *   (Jura 26.11.). Anzeigename zuerst, beide gleich groß, der Datenschutz-Tipp als
+ *   neutraler Hilfetext.
+ * - Ändern an derselben Stelle: Herabstufen und Namenswechsel mit einem Klick, sofort
+ *   wirksam; Heraufstufen öffnet die Frage, damit der Wortlaut vor Augen steht.
+ *   „Neuen Namen würfeln“ nur bei Stufe Rangliste.
+ * - Ohne Antwort im neuen Modell fragt die Seite; mit Schalter `einwilligung_im_gewinn`
+ *   erst nach dem ersten Gewinn und höchstens eine Frage je Besuch
+ *   (shared/einwilligungs-budget, Frage „punkte“).
+ *
+ * Ohne Schalter (`aktiv: false`) zeigt die Komponente nichts; dann gilt das bisherige
+ * Modell mit drei Einwilligungen. Sie lädt selbst nach.
+ */
+@Component({
+  selector: 'app-spielgefuehl',
+  standalone: true,
+  imports: [CommonModule, MatButtonModule, RouterLink],
+  templateUrl: './spielgefuehl.component.html',
+  styleUrls: ['./spielgefuehl.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class SpielgefuehlComponent implements OnInit {
+  stand: SpielgefuehlStand | null = null;
+  /** Heraufstufen aus dem Stand: Frage mit Wortlaut offen. */
+  frageOffen = false;
+  /** Stufe Rangliste gewählt, Namenswahl offen. */
+  namenswahlOffen = false;
+  /** Die Namenswahl in der Frage: null = noch keine (keine Vorauswahl). */
+  namenswahl: boolean | null = null;
+  speichert = false;
+  fehler = false;
+  ansage = '';
+  /** Mit Schalter einwilligung_im_gewinn: Die Frage darf in diesem Besuch stehen. */
+  budgetFrei = false;
+  @ViewChild('titel') titel?: ElementRef<HTMLElement>;
+
+  private readonly service = inject(SpielgefuehlService);
+  private readonly budget = inject(EinwilligungsBudgetService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly anstoss$ = new Subject<void>();
+  private erstes = true;
+  private aus = false;
+  private moment: EinwilligungsMoment | null = null;
+  private momentGeladen = false;
+
+  ngOnInit(): void {
+    const abo = nachladeStrom(() => this.service.laden(!this.erstes), {
+      sofort: true,
+      ms: () => (this.aus ? AUS_NACHLADEN_MS : NACHLADEN_MS),
+      aufhoerenBei: ohneRechte,
+      anstoss$: this.anstoss$,
+    }).subscribe((lauf) => {
+      this.erstes = false;
+      this.aus = lauf.fehler === null && lauf.daten === null;
+      if (lauf.fehler === null) {
+        this.stand = lauf.daten;
+      } else {
+        const status = (lauf.fehler as { status?: number } | null)?.status;
+        if (status === 404 || status === 401 || status === 403) {
+          this.stand = null;
+        }
+      }
+      this.entscheiden();
+      this.cdr.markForCheck();
+    });
+    const momentAbo = this.budget.moment().subscribe((moment) => {
+      this.moment = moment;
+      this.momentGeladen = true;
+      this.entscheiden();
+      this.cdr.markForCheck();
+    });
+    // Ein Lob (Stimme, „Ja, gepostet“): Die Frage kommt nie direkt danach.
+    const gewinnAbo = this.budget.gewinn$.subscribe(() => {
+      this.entscheiden();
+      this.cdr.markForCheck();
+    });
+    this.destroyRef.onDestroy(() => {
+      abo.unsubscribe();
+      momentAbo.unsubscribe();
+      gewinnAbo.unsubscribe();
+    });
+  }
+
+  /** Ohne Schalter einwilligung_im_gewinn fragt die Seite sofort, sonst nach dem Budget. */
+  private entscheiden(): void {
+    if (!this.momentGeladen || !this.stand || this.stand.stufe !== null) {
+      return;
+    }
+    if (!this.moment) {
+      this.budgetFrei = true;
+      return;
+    }
+    const faellig = this.budget.punkteFaellig(this.moment);
+    if (faellig && !this.budgetFrei) {
+      this.budget.gezeigt('punkte');
+    }
+    this.budgetFrei = faellig;
+  }
+
+  /** Die Frage steht: noch keine Antwort (und das Budget erlaubt sie) oder Heraufstufen. */
+  get fragen(): boolean {
+    if (!this.stand) {
+      return false;
+    }
+    return this.frageOffen || (this.stand.stufe === null && this.budgetFrei);
+  }
+
+  /** Die drei Stufen in der Reihenfolge vom Server: Gemeinschaft zuerst. */
+  get stufen(): SpielgefuehlStufenText[] {
+    return this.stand?.aktueller_wortlaut.stufen ?? [];
+  }
+
+  /** Titel der gewählten Stufe. */
+  get gewaehlt(): string {
+    return this.stufen.find((s) => s.stufe === this.stand?.stufe)?.titel ?? '';
+  }
+
+  /** Die anderen Stufen zum Wechseln, in derselben Reihenfolge. */
+  get andere(): SpielgefuehlStufenText[] {
+    return this.stufen.filter((s) => s.stufe !== this.stand?.stufe);
+  }
+
+  /** Ein Knopf der Frage. Rangliste öffnet die Pflichtwahl des Namens. */
+  stufeWaehlen(stufe: SpielgefuehlStufe): void {
+    if (stufe === 'rangliste') {
+      const vorbelegung = this.stand?.aktueller_wortlaut.namenswahl.vorbelegung_anzeigename ?? null;
+      if (vorbelegung !== null) {
+        this.speichern('rangliste', vorbelegung);
+        return;
+      }
+      this.namenswahlOffen = true;
+      return;
+    }
+    this.namenswahlOffen = false;
+    this.speichern(stufe, null);
+  }
+
+  /** Aus dem Stand: herabstufen gilt sofort, heraufstufen zeigt erst den Wortlaut. */
+  wechseln(stufe: SpielgefuehlStufe): void {
+    if (stufenRang(stufe) > stufenRang(this.stand?.stufe ?? null)) {
+      this.frageOffen = true;
+      this.namenswahl = null;
+      this.namenswahlOffen = stufe === 'rangliste' && this.stand?.aktueller_wortlaut.namenswahl.vorbelegung_anzeigename == null;
+      this.cdr.markForCheck();
+      return;
+    }
+    this.speichern(stufe, null);
+  }
+
+  /** „Mitspielen“ nach der Namenswahl; ohne Wahl nicht absendbar. */
+  mitspielen(): void {
+    if (this.namenswahl === null) {
+      return;
+    }
+    this.speichern('rangliste', this.namenswahl);
+  }
+
+  /** Im Stand: Anzeigename oder Zufallsname, ein Klick, sofort wirksam. */
+  nameUmstellen(mitAnzeigename: boolean): void {
+    if (!this.stand || this.stand.mit_anzeigename === mitAnzeigename) {
+      return;
+    }
+    this.speichern('rangliste', mitAnzeigename);
+  }
+
+  /** Abbrechen des Heraufstufens: zurück zum Stand. */
+  abbrechen(): void {
+    this.frageOffen = false;
+    this.namenswahlOffen = false;
+    this.namenswahl = null;
+    this.cdr.markForCheck();
+  }
+
+  wuerfeln(): void {
+    const stand = this.stand;
+    if (!stand || this.speichert) {
+      return;
+    }
+    this.speichert = true;
+    this.fehler = false;
+    this.ansage = '';
+    this.service.wuerfeln().subscribe({
+      next: ({ ranglistenname }) => {
+        this.speichert = false;
+        this.stand = { ...stand, ranglistenname };
+        this.ansage = `Dein neuer Zufallsname: ${ranglistenname}.`;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.speichert = false;
+        this.fehler = true;
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  private speichern(stufe: SpielgefuehlStufe, mitAnzeigename: boolean | null): void {
+    const stand = this.stand;
+    if (!stand || this.speichert) {
+      return;
+    }
+    this.speichert = true;
+    this.fehler = false;
+    this.ansage = '';
+    this.service.waehlen(stufe, mitAnzeigename, stand.aktueller_wortlaut.kennung).subscribe({
+      next: () => {
+        this.speichert = false;
+        this.frageOffen = false;
+        this.namenswahlOffen = false;
+        this.namenswahl = null;
+        const neu: SpielgefuehlStand = {
+          ...stand,
+          stufe,
+          mit_anzeigename: stufe === 'rangliste' ? mitAnzeigename : null,
+          abzeichen_hinweis: null,
+        };
+        this.stand = neu;
+        this.service.melden(neu);
+        this.ansage = stufe === 'rangliste' && stand.stufe === 'rangliste' ? this.namensAnsage(mitAnzeigename) : ANSAGE_STUFE[stufe];
+        this.cdr.detectChanges();
+        this.titel?.nativeElement.focus();
+        // Den Zufallsnamen beim ersten Mitspielen vergibt der Server: frisch holen.
+        this.anstoss$.next();
+      },
+      error: () => {
+        this.speichert = false;
+        this.fehler = true;
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  private namensAnsage(mitAnzeigename: boolean | null): string {
+    return mitAnzeigename ? 'In der Rangliste steht jetzt dein Anzeigename.' : 'In der Rangliste steht jetzt dein Zufallsname.';
+  }
+}

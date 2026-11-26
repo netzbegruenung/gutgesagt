@@ -19,18 +19,31 @@ from sqlalchemy import text
 from infrastructure.database.connection import AppDatabase, get_app_database
 
 # Eine Abfrage, damit die Seite "Meine Beitraege" nur einmal fragt. LEAST uebergeht
-# in PostgreSQL NULL, solange nicht alle Werte NULL sind.
-_ABFRAGE = text(
-    """
+# in PostgreSQL NULL, solange nicht alle Werte NULL sind. Die Fragen dazwischen haengen
+# am Modell: bisher "Punkte und Meilensteine" und Sichtbarkeit, mit Schalter
+# spielgefuehl_buehne nur das Spielgefuehl (domain/spielgefuehl.py). Die bisherigen
+# Antworten zaehlen dann nicht: Alle werden neu gefragt, und das Budget darf die neue
+# Frage nicht wegen alter Antworten zurueckhalten.
+_BISHER = """
+        + (CASE WHEN EXISTS (SELECT 1 FROM punkte_einwilligung WHERE user_id = :u)
+                THEN 1 ELSE 0 END)
+        + (CASE WHEN EXISTS (SELECT 1 FROM abzeichen_sichtbarkeit WHERE user_id = :u)
+                THEN 1 ELSE 0 END)"""
+_BUEHNE = """
+        + (CASE WHEN EXISTS (SELECT 1 FROM spielgefuehl WHERE user_id = :u)
+                THEN 1 ELSE 0 END)"""
+
+
+def _abfrage(buehne: bool):
+    return text(
+        """
     SELECT
         EXISTS (SELECT 1 FROM votes WHERE user_id = :u) AS abgestimmt,
         (CASE WHEN EXISTS (SELECT 1 FROM art9_einwilligungen WHERE user_id = :u)
                 OR EXISTS (SELECT 1 FROM art9_ohne_einwilligung WHERE user_id = :u)
-              THEN 1 ELSE 0 END)
-        + (CASE WHEN EXISTS (SELECT 1 FROM punkte_einwilligung WHERE user_id = :u)
-                THEN 1 ELSE 0 END)
-        + (CASE WHEN EXISTS (SELECT 1 FROM abzeichen_sichtbarkeit WHERE user_id = :u)
-                THEN 1 ELSE 0 END)
+              THEN 1 ELSE 0 END)"""
+        + (_BUEHNE if buehne else _BISHER)
+        + """
         + (CASE WHEN EXISTS (
                     SELECT 1 FROM team_mitgliedschaften WHERE konto_kennung = :u)
                 THEN 1 ELSE 0 END) AS beantwortet,
@@ -41,7 +54,11 @@ _ABFRAGE = text(
                 WHERE user_id = :u)
         ) AS konto_seit
     """
-)
+    )
+
+
+_ABFRAGE = _abfrage(False)
+_ABFRAGE_BUEHNE = _abfrage(True)
 
 
 @dataclass(frozen=True)
@@ -49,7 +66,8 @@ class EinwilligungsMoment:
     # Mindestens eine eigene Stimme steht (eine zurueckgenommene zaehlt nicht mehr).
     abgestimmt: bool
     # Wie viele Einwilligungsfragen die Person schon beantwortet hat: Art. 9, Punkte
-    # und Meilensteine, Sichtbarkeit, Team (nur ein Ja ist gespeichert).
+    # und Meilensteine, Sichtbarkeit (im Spielgefuehl-Modell stattdessen das
+    # Spielgefuehl), Team (nur ein Ja ist gespeichert).
     beantwortet: int
     # Die frueheste Antwort auf Art. 9 oder Nutzungsbedingungen; None ohne beides.
     konto_seit: Optional[datetime]
@@ -60,9 +78,11 @@ class EinwilligungsMomentRepository:
         """``db``: eine AppDatabase; ohne Angabe die globale."""
         self.db = db if db is not None else get_app_database()
 
-    def lesen(self, user_id: str) -> EinwilligungsMoment:
+    def lesen(self, user_id: str, buehne: bool = False) -> EinwilligungsMoment:
+        """``buehne``: Fragen nach dem Spielgefuehl-Modell zaehlen (siehe oben)."""
+        abfrage = _ABFRAGE_BUEHNE if buehne else _ABFRAGE
         with self.db.get_session() as session:
-            zeile = session.execute(_ABFRAGE, {"u": user_id}).one()
+            zeile = session.execute(abfrage, {"u": user_id}).one()
             return EinwilligungsMoment(
                 abgestimmt=bool(zeile.abgestimmt),
                 beantwortet=int(zeile.beantwortet),

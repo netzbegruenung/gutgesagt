@@ -175,3 +175,45 @@ def test_fehler_500_ohne_details(dienst):
 
     assert antwort.status_code == 500
     assert "geheim" not in antwort.text
+
+
+def _client_buehne() -> TestClient:
+    app = FastAPI()
+    app.include_router(router, prefix=URL)
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        punkte_aktiv=True, rangliste_aktiv=True, spielgefuehl_buehne_aktiv=True
+    )
+    return TestClient(app)
+
+
+def test_spielgefuehl_modell_liste_mit_abzeichen_ohne_eigene_frage(dienst):
+    oben = [Platz(i + 1, f"Name {i}", 100 - i, i == 0, i) for i in range(10)]
+    dienst.stand.return_value = _stand(
+        antwort=RanglisteAntwort(
+            True,
+            False,
+            "spielgefuehl-2026-11-26",
+            datetime(2026, 12, 1, tzinfo=timezone.utc),
+        ),
+        rangliste=Rangliste(oben=oben, eigener=None, teilnehmende=10),
+    )
+    client = _client_buehne()
+
+    body = client.get(URL, headers=KIM).json()
+
+    assert body["buehne"] is True
+    assert body["rangliste"]["oben"][3]["abzeichen"] == 3
+    # Teilnahme und Name waehlt die Person im Spielgefuehl, nicht hier.
+    antwort = client.put(
+        URL + "/einwilligung",
+        json={"teilnehmen": True, "wortlaut": AKTUELLER_WORTLAUT},
+        headers=KIM,
+    )
+    assert antwort.status_code == 404
+    dienst.antworten.assert_not_called()
+
+
+def test_bisheriges_modell_ohne_abzeichen(dienst):
+    body = _client().get(URL, headers=KIM).json()
+
+    assert body["buehne"] is False

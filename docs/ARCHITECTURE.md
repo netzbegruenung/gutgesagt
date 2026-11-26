@@ -724,6 +724,29 @@ cannot be computed, the request fails with 500 instead of showing a list without
   current wording; withdrawing the Art. 9 consent or "Punkte und Meilensteine" records an earlier
 yes as no.
 
+#### Spielgefühl as one setting (switch `spielgefuehl_buehne`)
+
+One question in three levels (`aus`, `fuer_mich`, `rangliste`) replaces the consents "Punkte und
+Meilensteine", badge visibility and Rangliste while the switch is effective (`domain/spielgefuehl.py`,
+`services/spielgefuehl_service.py`, table `spielgefuehl`: level, choice of display name or random
+name, wording id, time, Ranglistenname; newest row counts). Switch off: the old model, unchanged.
+Switch on: only the new table counts, old answers stay as proof but are neither read nor carried
+over, so everyone is asked again. Points ⇔ level ≥ `fuer_mich`; Rangliste ⇔ level `rangliste`
+(still only with the switches `punkte` and `rangliste`); badges never at the display name
+(`AbzeichenService.abzeichen` empty), only in the Rangliste (`in_rangliste`, computed in the
+15-minute cycle for participants). No Muster-Hinweise in the new model (its wording does not name
+them). The old endpoints for points consent, badge visibility and `PUT /rangliste/einwilligung`
+answer `aktiv: false` / 404.
+
+- `GET /api/v1/usage/users/me/spielgefuehl`: level (null = not asked yet), name choice,
+  Ranglistenname, wording in button order (community first), one-time badge note; 200 with
+  `aktiv: false` without the switches `spielgefuehl_buehne` and `punkte`.
+- `PUT …/spielgefuehl` `{stufe, mit_anzeigename, wortlaut}`: level `rangliste` needs the name
+  choice (no preset, 422 without); the first time rolls the random name; downgrading takes the
+  badges out of the Rangliste immediately. Withdrawing Art. 9 records a level above `aus` as `aus`.
+- `POST …/spielgefuehl/ranglistenname`: rolls a new random name (only with level `rangliste`, else
+  409), a new proof row.
+
 ## Startup Scripts
 
 ### Local Development

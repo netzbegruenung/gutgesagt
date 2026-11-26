@@ -232,3 +232,81 @@ async def test_im_takt_uebersteht_einen_fehler():
         await abzeichen_im_takt(_Dienst(), takt_sekunden=0)
 
     assert len(aufrufe) == 2
+
+
+def _buehne_service(repo, erreicht, mitspielende, rangliste=True) -> AbzeichenService:
+    async def standard(user_id: str) -> List[Meilenstein]:
+        return [_meilenstein(True)] * erreicht.get(user_id, 0)
+
+    settings = Settings(
+        punkte_aktiv=True,
+        abzeichen_sichtbar_aktiv=True,
+        rangliste_aktiv=rangliste,
+        spielgefuehl_buehne_aktiv=True,
+    )
+    return AbzeichenService(
+        repo,
+        standard,
+        settings,
+        buehne_aktiv=lambda: True,
+        mitspielende=lambda: list(mitspielende),
+        spielt_mit=lambda user_id: user_id in mitspielende,
+    )
+
+
+async def test_spielgefuehl_abzeichen_nur_in_der_rangliste_nie_am_namen():
+    repo = _Repo()
+    # Ein altes Ja zur Sichtbarkeit zaehlt im neuen Modell nicht.
+    repo.antworten_je["bo-2"] = True
+    mitspielende = {"kim-1"}
+    dienst = _buehne_service(repo, {"kim-1": 2, "bo-2": 5}, mitspielende)
+
+    await dienst.alle_aktualisieren()
+
+    assert dienst.abzeichen(["kim-1", "bo-2"]) == {}
+    assert dienst.in_rangliste(["kim-1", "bo-2"]) == {"kim-1": 2}
+
+    # Herabstufen: sofort weg (SpielgefuehlService ruft vergessen).
+    mitspielende.discard("kim-1")
+    dienst.vergessen("kim-1")
+    assert dienst.in_rangliste(["kim-1"]) == {}
+
+
+async def test_spielgefuehl_ohne_schalter_rangliste_keine_abzeichen():
+    dienst = _buehne_service(_Repo(), {"kim-1": 2}, {"kim-1"}, rangliste=False)
+
+    await dienst.alle_aktualisieren()
+
+    assert dienst.in_rangliste(["kim-1"]) == {}
+
+
+async def test_modellwechsel_vergisst_die_alten_zahlen():
+    repo = _Repo()
+    an = {"buehne": False}
+    mitspielende: set = set()
+
+    async def standard(user_id: str) -> List[Meilenstein]:
+        return [_meilenstein(True)] * 4
+
+    settings = Settings(
+        punkte_aktiv=True,
+        abzeichen_sichtbar_aktiv=True,
+        rangliste_aktiv=True,
+        spielgefuehl_buehne_aktiv=True,
+    )
+    dienst = AbzeichenService(
+        repo,
+        standard,
+        settings,
+        buehne_aktiv=lambda: an["buehne"],
+        mitspielende=lambda: list(mitspielende),
+        spielt_mit=lambda user_id: user_id in mitspielende,
+    )
+    await dienst.antworten("kim-1", True, WORTLAUT)
+    assert dienst.abzeichen(["kim-1"]) == {"kim-1": 4}
+
+    an["buehne"] = True
+    assert dienst.abzeichen(["kim-1"]) == {}
+    assert dienst.in_rangliste(["kim-1"]) == {}
+    await dienst.alle_aktualisieren()
+    assert dienst.in_rangliste(["kim-1"]) == {}

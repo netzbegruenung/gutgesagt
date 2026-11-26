@@ -17,6 +17,7 @@ import { MeilensteineComponent } from './meilensteine.component';
 import { MeineTeamsComponent } from './meine-teams.component';
 import { RanglisteComponent } from './rangliste.component';
 import { PunkteComponent } from './punkte.component';
+import { SpielgefuehlComponent } from './spielgefuehl.component';
 import { tabMitTasteWaehlen } from '../shared/tab-tasten';
 import { MatButtonModule } from '@angular/material/button';
 import { ROUTES } from '../shared/constants/app.constants';
@@ -74,6 +75,7 @@ const GEMERKT_TAB = { wert: 'gemerkt' as const, name: 'Gemerkt' };
     MeineTeamsComponent,
     RanglisteComponent,
     PunkteComponent,
+    SpielgefuehlComponent,
     AussagekarteComponent,
     GemerktComponent
   ],

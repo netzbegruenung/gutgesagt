@@ -21,7 +21,7 @@ from domain.art9_einwilligung import (
 from api.v1.nutzungsbedingungen import NbStandResponse, nb_stand
 from services import art9_einwilligung_service
 from services.abzeichen_service import get_abzeichen_service
-from services import rangliste_service
+from services import rangliste_service, spielgefuehl_service
 from services.art9_einwilligung_service import UnbekannterWortlaut, WortlautGiltNicht
 
 logger = get_logger(__name__)
@@ -157,6 +157,15 @@ def widerrufen(user_id: str = Depends(require_user)) -> Response:
         zuruecknehmen_fehlgeschlagen = True
         logger.error(
             f"Einwilligung zur Rangliste von {log_pseudonym(user_id)} nicht zurueckgenommen: {type(e).__name__}",
+            exc_info=True,
+        )
+    # Ebenso das Spielgefuehl: eine Stufe ueber "aus" gilt als "aus".
+    try:
+        spielgefuehl_service.zuruecknehmen(user_id)
+    except Exception as e:
+        zuruecknehmen_fehlgeschlagen = True
+        logger.error(
+            f"Spielgefuehl von {log_pseudonym(user_id)} nicht zurueckgenommen: {type(e).__name__}",
             exc_info=True,
         )
     # Vermerk, Loeschen der Stimmen und Loeschauftrag in einer Transaktion

@@ -34,6 +34,7 @@ from domain.rangliste import (
 )
 from services.rangliste_service import RanglisteService, get_rangliste_service
 from services.schalter_service import schalter_wirksam
+from services.spielgefuehl_service import buehne_aktiv
 
 logger = get_logger(__name__)
 
@@ -50,6 +51,8 @@ class PlatzResponse(BaseModel):
     name: str
     punkte: int
     ich: bool
+    # Nur im Spielgefuehl-Modell: erreichte Meilensteine ohne Wegmarken
+    abzeichen: Optional[int] = None
 
 
 class RanglisteResponse(BaseModel):
@@ -90,6 +93,9 @@ class StandResponse(BaseModel):
     vergangene: List[VergangeneResponse]
     min_teilnehmende: int = MIN_TEILNEHMENDE
     aktueller_wortlaut: WortlautResponse
+    # Spielgefuehl-Modell (Schalter spielgefuehl_buehne): Teilnahme und Name waehlt
+    # die Person dort (/api/v1/usage/users/me/spielgefuehl), nicht hier
+    buehne: bool = False
 
 
 class EinwilligungRequest(BaseModel):
@@ -99,7 +105,8 @@ class EinwilligungRequest(BaseModel):
 
 
 def _dienst(settings: Settings = Depends(get_settings)) -> RanglisteService:
-    if not schalter_wirksam("rangliste", settings):
+    # Im Spielgefuehl-Modell gibt es die eigene Frage zur Rangliste nicht mehr.
+    if not schalter_wirksam("rangliste", settings) or buehne_aktiv(settings):
         raise HTTPException(status_code=404, detail="Not found")
     return get_rangliste_service()
 
@@ -139,7 +146,11 @@ def _aus() -> StandResponse:
 
 def _platz(platz: Platz) -> PlatzResponse:
     return PlatzResponse(
-        platz=platz.platz, name=platz.name, punkte=platz.punkte, ich=platz.ich
+        platz=platz.platz,
+        name=platz.name,
+        punkte=platz.punkte,
+        ich=platz.ich,
+        abzeichen=platz.abzeichen,
     )
 
 
@@ -147,6 +158,7 @@ def _platz(platz: Platz) -> PlatzResponse:
 async def stand(
     current_user: str = Depends(require_user),
     dienst: Optional[RanglisteService] = Depends(_dienst_oder_aus),
+    settings: Settings = Depends(get_settings),
 ) -> StandResponse:
     if dienst is None:
         return _aus()
@@ -187,6 +199,7 @@ async def stand(
             VergangeneResponse(name=v.name, punkte=v.punkte) for v in stand.vergangene
         ],
         aktueller_wortlaut=_wortlaut(),
+        buehne=buehne_aktiv(settings),
     )
 
 

@@ -26,11 +26,27 @@ def _client(punkte: bool, abzeichen: bool) -> TestClient:
 @pytest.mark.parametrize(
     "punkte, abzeichen, erwartet",
     [
-        (False, False, {"aktiv": False, "abzeichen_sichtbar": False}),
-        (True, False, {"aktiv": True, "abzeichen_sichtbar": False}),
+        (
+            False,
+            False,
+            {"aktiv": False, "abzeichen_sichtbar": False, "spielgefuehl_buehne": False},
+        ),
+        (
+            True,
+            False,
+            {"aktiv": True, "abzeichen_sichtbar": False, "spielgefuehl_buehne": False},
+        ),
         # Abzeichen nur zusammen mit den Punkten
-        (False, True, {"aktiv": False, "abzeichen_sichtbar": False}),
-        (True, True, {"aktiv": True, "abzeichen_sichtbar": True}),
+        (
+            False,
+            True,
+            {"aktiv": False, "abzeichen_sichtbar": False, "spielgefuehl_buehne": False},
+        ),
+        (
+            True,
+            True,
+            {"aktiv": True, "abzeichen_sichtbar": True, "spielgefuehl_buehne": False},
+        ),
     ],
 )
 def test_status_folgt_den_schaltern(punkte, abzeichen, erwartet):

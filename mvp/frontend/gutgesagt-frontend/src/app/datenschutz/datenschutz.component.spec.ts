@@ -1125,3 +1125,44 @@ describe('DatenschutzComponent - Stimmenverfall bei ganz anderem Text (#636)', (
     expect(abschnittIn(seite, 'Bewertungen')).toContain(HALBSATZ);
   });
 });
+
+/** Spielgefühl in drei Stufen (Schalter spielgefuehl_buehne): ersetzt die Einwilligungsteile. */
+describe('DatenschutzComponent: Spielgefühl', () => {
+  function seiteMit(an: boolean): HTMLElement {
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]),
+        { provide: FunktionenService, useValue: { an: (name: string) => signal(an && name === 'spielgefuehl_buehne') } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('Schalter aus: bisherige Einwilligungen, kein Absatz „Spielgefühl“', () => {
+    const seite = seiteMit(false);
+
+    expect(seite.querySelector('[data-testid="dse-spielgefuehl"]')).toBeNull();
+    expect(seite.querySelector('[data-testid="dse-abzeichen-am-namen"]')).not.toBeNull();
+    expect(seite.querySelector('[data-testid="dse-rangliste-platzhalter"]')).not.toBeNull();
+    expect(abschnittIn(seite, 'Punkte')).toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
+  });
+
+  it('Schalter an: Absatz „Spielgefühl“ statt Abzeichen am Namen, Rangliste und Einwilligung „Punkte“', () => {
+    const seite = seiteMit(true);
+    const punkte = abschnittIn(seite, 'Punkte');
+
+    expect(seite.querySelector('#spielgefuehl')).not.toBeNull();
+    expect(punkte).toContain('entscheidest du mit einer Frage in drei Stufen');
+    expect(punkte).toContain('also deinem Anzeigenamen oder einem zufällig vergebenen Ranglistennamen');
+    expect(punkte).toContain('Abzeichen zeigen wir nirgends sonst');
+    expect(punkte).toContain('Rechtsgrundlage: siehe „Spielgefühl“ oben');
+    expect(seite.querySelector('[data-testid="dse-abzeichen-am-namen"]')).toBeNull();
+    expect(seite.querySelector('[data-testid="dse-rangliste-platzhalter"]')).toBeNull();
+    expect(punkte).not.toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
+    // Die Rechenregeln bleiben
+    expect(punkte).toContain('Paar-Prüfwert');
+  });
+});

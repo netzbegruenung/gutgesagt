@@ -747,6 +747,11 @@
         was gilt, sobald wir sie einschalten. Bis dahin entsteht nichts von dem, was hier
         steht.
       </p>
+      <!-- Spielgefuehl in drei Stufen (Schalter spielgefuehl_buehne, dse-spielgefuehl.ts): ersetzt
+           die Einwilligungsteile zu Punkten, Abzeichen und Rangliste; die Rechenregeln bleiben. -->
+      <p *ngIf="spielgefuehlBuehne()" id="spielgefuehl" data-testid="dse-spielgefuehl">
+        <strong>{{ spielgefuehlTitel }}</strong> {{ spielgefuehlText }}
+      </p>
       <p>
         Mit Punkten zeigen wir dir, wie deine Mitwirkung wirkt: wenige Punkte für deine
         Beiträge und ausformulierten Einwürfe, die meisten dafür, dass andere deine Beiträge
@@ -807,7 +812,9 @@
       <p>
         <strong>Zweck:</strong> dir die Wirkung deiner Mitwirkung zeigen und die Punkte gegen
         Absprachen schützen.<br>
-        <strong>Rechtsgrundlage:</strong> deine eigene, freiwillige Einwilligung „Punkte und
+        <ng-container *ngIf="spielgefuehlBuehne()"><strong>Rechtsgrundlage:</strong> siehe
+        „Spielgefühl“ oben.<br></ng-container>
+        <ng-container *ngIf="!spielgefuehlBuehne()"><strong>Rechtsgrundlage:</strong> deine eigene, freiwillige Einwilligung „Punkte und
         Meilensteine“ nach Artikel 6 Absatz 1 Buchstabe a und Artikel 9 Absatz 2 Buchstabe a
         DSGVO. Du gibst sie selbst unter „Meine Beiträge“ (Häkchen oder Frage mit zwei
         gleichwertigen Knöpfen) oder mit einem eigenen Häkchen in den
@@ -820,14 +827,14 @@
         nichts mehr berechnet. Deine Antwort speichern wir mit der Kennung des Wortlauts und
         dem Zeitpunkt als Nachweis, bis dein Konto gelöscht wird; ein Widerruf ist ein
         weiterer Eintrag. Kopien, die ein Konto ohne Einwilligung zu seiner Mitwirkung macht,
-        bringen niemandem Punkte (siehe „Verwendung von Beiträgen“).<br>
+        bringen niemandem Punkte (siehe „Verwendung von Beiträgen“).<br></ng-container>
         <strong>Dauer:</strong> Paar-Prüfwerte löschen wir sieben Tage nach der letzten
         Nutzung in ihrer Richtung, Muster-Hinweise acht Wochen nach dem letzten auffälligen
         Tag, jeweils automatisch (täglicher Löschlauf, also spätestens einen Tag danach). Wird
         ein Konto gelöscht, gehen die Muster-Hinweise, die es nennen, mit; seine Paar-Prüfwerte
         laufen nach spätestens sieben Tagen aus.
       </p>
-      <p>
+      <p *ngIf="!spielgefuehlBuehne()" data-testid="dse-abzeichen-am-namen">
         <strong>Abzeichen an deinem Namen.</strong> Auch Abzeichen sind noch nicht eingeschaltet,
         und wir schalten sie getrennt von den Punkten ein; bis dahin sieht sie niemand außer
         dir. Danach gilt: Wenn du es erlaubst, sehen andere
@@ -847,7 +854,7 @@
       <!-- PLATZHALTER Rangliste (#793): Der endgueltige Text kommt nach juristischer Pruefung
            und ersetzt diesen Absatz. Die Rangliste bleibt ausgeschaltet, bis er hier steht
            (Schalter "rangliste"). Sichtbar bis dahin nur der Hinweis, wie bei den Abzeichen. -->
-      <p id="rangliste" data-testid="dse-rangliste-platzhalter">
+      <p *ngIf="!spielgefuehlBuehne()" id="rangliste" data-testid="dse-rangliste-platzhalter">
         <strong>Rangliste.</strong> Eine Rangliste je Saison ist noch nicht eingeschaltet; bis
         dahin erscheint niemand darin, und wir speichern dafür nichts. Bevor wir sie
         einschalten, beschreiben wir hier, was dafür verarbeitet wird, wer sie sieht und wie

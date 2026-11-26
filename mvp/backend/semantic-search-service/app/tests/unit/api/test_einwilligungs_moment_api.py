@@ -66,7 +66,7 @@ def test_liefert_die_fakten_der_person(repo):
         "beantwortet": 2,
         "konto_seit": "2026-11-20T09:00:00Z",
     }
-    repo.lesen.assert_called_once_with("kim-1")
+    repo.lesen.assert_called_once_with("kim-1", False)
 
 
 def test_ohne_konto_beginn(repo):

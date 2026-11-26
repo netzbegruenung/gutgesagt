@@ -64,6 +64,8 @@ DELETE FROM punkte_einwilligung WHERE user_id         = :'uid';
 -- Merkliste (#758): nur fuers eigene Konto, geht ganz
 DELETE FROM merkliste WHERE user_id                   = :'uid';
 DELETE FROM rangliste_einwilligung WHERE user_id      = :'uid';
+-- Spielgefuehl: jede Antwort samt Ranglistennamen
+DELETE FROM spielgefuehl WHERE user_id                = :'uid';
 -- Zustimmung zu den Nutzungsbedingungen in der App
 DELETE FROM nutzungsbedingungen_zustimmungen WHERE user_id = :'uid';
 -- Teams: Mitgliedschaften samt Einwilligungsnachweis und die Einwilligung "Team

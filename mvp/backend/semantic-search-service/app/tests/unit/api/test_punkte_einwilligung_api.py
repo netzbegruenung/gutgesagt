@@ -162,3 +162,26 @@ def test_einwilligen_laesst_die_rangliste_unberuehrt(repo, rangliste_ohne_datenb
     )
 
     rangliste_ohne_datenbank.antworten.assert_not_called()
+
+
+def test_im_spielgefuehl_modell_nicht_mehr_angeboten(repo):
+    """Mit Schalter spielgefuehl_buehne fragt die App nach dem Spielgefuehl, nicht hier."""
+    app = FastAPI()
+    app.include_router(usage_router, prefix="/api/v1/usage")
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        punkte_aktiv=True, spielgefuehl_buehne_aktiv=True
+    )
+    client = TestClient(app)
+    repo.lesen.return_value = PunkteEinwilligung(
+        True, AKTUELLER_WORTLAUT, datetime(2026, 11, 13, tzinfo=timezone.utc)
+    )
+
+    antwort = client.get(URL, headers=KIM)
+
+    assert antwort.json()["aktiv"] is False
+    assert antwort.json()["eingewilligt"] is False
+    repo.lesen.assert_not_called()
+    antwort = client.put(
+        URL, headers=KIM, json={"eingewilligt": True, "wortlaut": AKTUELLER_WORTLAUT}
+    )
+    assert antwort.status_code == 404
