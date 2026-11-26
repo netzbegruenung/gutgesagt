@@ -42,17 +42,19 @@ export class KampagnenwortService {
   private gemeldet = false;
 
   /**
-   * Einmal je geöffneter Seite: die Ankunft melden, wenn ein Wort da ist und der Schalter
-   * nicht sicher aus ist. Gefragt wird der Endpunkt nur dann (docs/ARCHITECTURE.md
-   * „Automatically requested endpoints“); er antwortet auch bei ausgeschaltetem Schalter 200.
-   * Fehler bleiben still: Für die Person ändert sich dadurch nichts.
+   * Einmal je geöffneter Seite: die Ankunft melden, wenn ein Wort da ist und der Server den
+   * Schalter als an meldet. Bei unbekanntem Stand (Server kennt den Schalter nicht, etwa ein
+   * neues Frontend vor dem neuen Suchdienst, oder /funktionen scheitert) wird nicht gefragt:
+   * sonst drohten 401/404 (docs/ARCHITECTURE.md „Automatically requested endpoints“). Eine
+   * verpasste Ankunft ist der kleinere Preis. Fehler bleiben still: Für die Person ändert sich
+   * dadurch nichts.
    */
   ankunftMelden(): void {
     const wort = this.wort;
     if (!wort || this.gemeldet || !this.http) return;
     this.gemeldet = true;
     this.funktionen.stand$('k_ankuenfte').subscribe((an) => {
-      if (an === false) return;
+      if (an !== true) return;
       this.http!
         .post(`${environment.baseUrl}/api/v1/ankunft`, { k: wort }, { context: stillerKontext() })
         .subscribe({ error: () => undefined });

@@ -79,7 +79,7 @@ describe('RundgangService: Begrüßung nach ?k=', () => {
     const band = service.band()!;
     expect(band.titel).toBe('Vom Sticker?');
     expect(band.satz).toBe('Probier’s direkt aus – das Beispiel steht schon drin.');
-    expect(band.satzUmbrechen).toBeTrue();
+    expect(band.begruessung).toBeTrue();
     // Rundgang, Vermerk und Ausblenden wie beim Willkommen
     expect(band.rundgang).toBe(WILLKOMMEN.rundgang);
     expect(band.schluessel).toBe(WILLKOMMEN.schluessel);

@@ -556,12 +556,16 @@ The app reads `?k=<word>` once at start (`shared/kampagnenwort.service.ts`), low
   (`K_BEGRUESSUNG` in `rundgang/rundgang-daten.ts`) instead of "Neu hier?"; same tour, same
   browser entry, same "Ausblenden". Other words change nothing.
 - `k_ankuenfte`: once per page load `POST /api/v1/ankunft` with `{"k": "<word>"}` in the body
-  (unknown fields 422). The service counts only words of `SEMANTIC_SEARCH_K_WOERTER` (default
-  `vorhut,g1,g2,g3,g4,bdk,sticker`, at most 20 characters each) into `ankuenfte_je_tag`
+  (unknown fields 422), only when `/api/v1/funktionen` reports the switch on; an unknown state
+  (older server, failed request) sends nothing, so a mixed rollout cannot produce 401/404. The service counts only words of `SEMANTIC_SEARCH_K_WOERTER` (default
+  `vorhut,g1,g2,g3,g4,bdk,sticker,karte,technik`, at most 20 characters each) into `ankuenfte_je_tag`
   (word, UTC day, count; no identifier, account, address or Beitrag), throttled in memory per
   second for all callers together (`SEMANTIC_SEARCH_ANKUNFT_JE_SEKUNDE`, default 20). The
   endpoint does not read the caller; the frontend nginx writes no access line for it
-  (`nginx.protokoll.conf`), like `/api/v1/ereignis`. Admins see the last 30 days under
+  (`nginx.protokoll.conf`), like `/api/v1/ereignis`. The upstream web server outside this
+  repository may still log the page request `GET /?k=<word>` with address and time; whether it
+  drops the query string is an open question for the legal check (PR #845). Counts are
+  indicative only: reloads count again and anyone can inflate them within the throttle. Admins see the last 30 days under
   Admin → Übersicht (`GET /api/v1/ankuenfte`, `{"aktiv": false, "tage": []}` while off);
   rows are deleted 365 days after their day (`docs/LOESCHKONZEPT.md`).
 

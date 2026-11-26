@@ -56,7 +56,7 @@ def test_kampagnenwort_pruefen(wort, erwartet):
 
 def test_positivliste_von_haus_aus():
     assert Settings().kampagnenwoerter() == frozenset(
-        {"vorhut", "g1", "g2", "g3", "g4", "bdk", "sticker"}
+        {"vorhut", "g1", "g2", "g3", "g4", "bdk", "sticker", "karte", "technik"}
     )
 
 

@@ -21,6 +21,8 @@ const ADMIN = { email: process.env['E2E_ADMIN_EMAIL'] ?? 'admin@example.com', pa
 /** Seiten fuer Besucher; geschuetzte fuehren zur Anmeldung oder zur Vorschau mit Konto. */
 const BESUCHER_SEITEN = [
   '/search',
+  // Mit Kampagnenwort: Begruessung und POST /api/v1/ankunft (Schalter k_begruessung, k_ankuenfte)
+  '/search?k=sticker',
   `/result?searchQuery=${encodeURIComponent('Windräder töten Vögel')}`,
   '/garten',
   '/konter-probe',
@@ -31,6 +33,7 @@ const BESUCHER_SEITEN = [
 /** Seiten fuer Angemeldete: Startseite, Meine Beitraege (Punkte, Rangliste, Teams), Einstellungen. */
 const ANGEMELDET_SEITEN = [
   '/search',
+  '/search?k=sticker',
   `/result?searchQuery=${encodeURIComponent('Windräder töten Vögel')}`,
   '/contributions',
   '/garten',

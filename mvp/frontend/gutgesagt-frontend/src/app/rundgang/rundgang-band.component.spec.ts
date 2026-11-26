@@ -43,23 +43,27 @@ describe('RundgangBandComponent', () => {
     expect(aside.getAttribute('aria-labelledby')).toBe(aside.querySelector('h2')!.id);
   });
 
-  it('zeigt die Begrüßung nach ?k= in derselben Zeile, der lange Satz darf umbrechen', () => {
+  it('zeigt die Begrüßung nach ?k= als zusammenhängenden Satz vor dem Rundgang', () => {
     fixture.componentRef.setInput('ort', 'start');
     band.set(mitBegruessung(WILLKOMMEN, 'sticker'));
     fixture.detectChanges();
     const aside = el().querySelector('aside.zeile')!;
     expect(aside.getAttribute('aria-label')).toBe('Vom Sticker?');
-    expect(aside.querySelector('p')!.textContent!.replace(/\s+/g, ' ').trim()).toBe(
-      'Vom Sticker? Rundgang (1 Min.) · Probier’s direkt aus – das Beispiel steht schon drin.',
+    const absatz = aside.querySelector('p')!;
+    expect(absatz.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+      'Vom Sticker? Probier’s direkt aus – das Beispiel steht schon drin. Rundgang (1 Min.)',
     );
-    expect(aside.querySelector('.zeile-satz')!.classList).toContain('umbrechen');
+    // Der Knopf steht hinter dem Satz, nicht dazwischen; kein Trennpunkt
+    expect(absatz.lastElementChild!.tagName).toBe('BUTTON');
+    expect(aside.querySelector('.zeile-satz')).toBeNull();
   });
 
-  it('lässt den kurzen Satz des Willkommens ohne Umbruch', () => {
+  it('lässt das Willkommen ohne Kampagnenwort wie bisher: Knopf, dann Satz', () => {
     fixture.componentRef.setInput('ort', 'start');
     band.set(WILLKOMMEN);
     fixture.detectChanges();
-    expect(el().querySelector('.zeile-satz')!.classList).not.toContain('umbrechen');
+    expect(el().querySelector('.zeile-satz')).not.toBeNull();
+    expect(el().querySelector('.zeile-gruss')).toBeNull();
   });
 
   it('zeigt das Willkommen als eine schlanke Zeile mit kleinem Wegweiser (Persona-Runde 18.11.)', () => {

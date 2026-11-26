@@ -63,12 +63,12 @@ describe('KampagnenwortService', () => {
     http.expectNone((r) => r.url.endsWith('/api/v1/ankunft'));
   });
 
-  it('fragt bei unbekanntem Stand: der Endpunkt antwortet dann selbst mit 200', () => {
+  it('fragt bei unbekanntem Stand nicht: ein alter Server antwortete sonst 401/404 (#824)', () => {
     const dienst = aufsetzen('?k=bdk', null);
 
     dienst.ankunftMelden();
 
-    http.expectOne((r) => r.url.endsWith('/api/v1/ankunft')).flush({ gezaehlt: false });
+    http.expectNone((r) => r.url.endsWith('/api/v1/ankunft'));
   });
 
   it('ohne ?k= weder Schalter noch Endpunkt', () => {

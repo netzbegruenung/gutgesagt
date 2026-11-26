@@ -164,10 +164,6 @@ p {
     white-space: nowrap;
 }
 
-/* Längerer Satz (Begrüßung nach dem Kampagnenwort): umbrechen statt über den Rand laufen */
-.zeile-satz.umbrechen {
-    white-space: normal;
-}
 
 /* Am Handy passt die Zeile nicht in eine: der Satz steht dann ohne Trennpunkt darunter,
    statt dass eine Zeile mit "·" beginnt */

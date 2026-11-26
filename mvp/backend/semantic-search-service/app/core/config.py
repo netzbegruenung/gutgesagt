@@ -304,7 +304,7 @@ class Settings(BaseSettings):
     # Woerter aus k_woerter (kommagetrennt, klein); andere zaehlen nicht.
     k_begruessung_aktiv: bool = False
     k_ankuenfte_aktiv: bool = False
-    k_woerter: str = "vorhut,g1,g2,g3,g4,bdk,sticker"
+    k_woerter: str = "vorhut,g1,g2,g3,g4,bdk,sticker,karte,technik"
     # Drosselung von POST /api/v1/ankunft: hoechstens so viele Ankuenfte je Sekunde fuer
     # alle zusammen, nur im Arbeitsspeicher, ohne Adresse (wie ereignis_je_sekunde).
     ankunft_je_sekunde: int = Field(default=20, ge=1)

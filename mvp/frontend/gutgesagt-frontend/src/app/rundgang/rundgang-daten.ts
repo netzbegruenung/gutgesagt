@@ -99,10 +99,10 @@ export interface Angebot {
   /** Der Knopf „ja“ öffnet den Installieren-Dialog des Browsers statt eines Rundgangs. */
   installieren?: boolean;
   /**
-   * Der Satz der schlanken Zeile darf umbrechen: Er ist länger als die kurzen Sätze, für die
-   * die Zeile gemessen ist (Begrüßung nach dem Kampagnenwort).
+   * Begrüßung nach dem Kampagnenwort in der schlanken Zeile: Titel und Satz stehen als ein
+   * Satz vorn und dürfen umbrechen, der Knopf zum Rundgang folgt danach.
    */
-  satzUmbrechen?: boolean;
+  begruessung?: boolean;
 }
 
 export const WILLKOMMEN: Angebot = {
@@ -152,7 +152,7 @@ export const K_BEGRUESSUNG: Readonly<Record<string, { titel: string; satz: strin
 /** Das Willkommen mit der Begrüßung zum Kampagnenwort, sonst das Angebot unverändert. */
 export function mitBegruessung(angebot: Angebot, wort: string | null): Angebot {
   const begruessung = wort && angebot.schluessel === WILLKOMMEN.schluessel ? K_BEGRUESSUNG[wort] : undefined;
-  return begruessung ? { ...angebot, ...begruessung, satzUmbrechen: true } : angebot;
+  return begruessung ? { ...angebot, ...begruessung, begruessung: true } : angebot;
 }
 
 export const MITMACHEN_ANGEBOT: Angebot = {

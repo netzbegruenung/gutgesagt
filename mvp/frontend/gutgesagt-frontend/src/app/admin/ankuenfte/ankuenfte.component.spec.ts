@@ -35,6 +35,17 @@ describe('AnkuenfteComponent', () => {
     expect(zellen[1]).toBe('bdk');
     expect(zellen[2]).toBe('12');
     expect(zellen[0]).toContain('4.12.');
+    // WCAG 1.3.1: die Tabelle ist über den Kartentitel benannt
+    const titel = el.querySelector('mat-card-title')!;
+    expect(el.querySelector('table')!.getAttribute('aria-labelledby')).toBe(titel.id);
+  });
+
+  it('nennt die Zahlen Richtwerte, ohne „Personenbezug“ zuzusagen', () => {
+    const text = zeigen({ aktiv: true, tage: [] }).querySelector('mat-card-subtitle')!.textContent!;
+
+    expect(text).toContain('ohne Kennung oder Konto');
+    expect(text).toContain('Richtwerte');
+    expect(text).not.toContain('Personenbezug');
   });
 
   it('sagt ohne Ankünfte, dass noch keine da sind', () => {

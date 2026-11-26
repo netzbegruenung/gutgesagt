@@ -32,6 +32,12 @@ export class AnkuenfteService {
   }
 }
 
+/**
+ * Tageszahlen brauchen keinen Minutentakt: alle 5 Minuten wie die Kennzahlen der Übersicht
+ * (KENNZAHLEN_NACHLADEN_MS in mvp-dashboard; hier eigen, weil die Übersicht diese Karte einbindet).
+ */
+export const ANKUENFTE_NACHLADEN_MS = 5 * 60 * 1000;
+
 const DATUM = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'UTC' });
 
 /**
@@ -46,16 +52,16 @@ const DATUM = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric
   template: `
     <mat-card *ngIf="stand?.aktiv" class="ankuenfte" data-testid="ankuenfte">
       <mat-card-header>
-        <mat-card-title>
+        <mat-card-title id="ankuenfte-titel">
           <mat-icon aria-hidden="true">qr_code_2</mat-icon>
           Ankünfte je Kampagnenwort
         </mat-card-title>
         <mat-card-subtitle>
-          Wie oft die App mit ?k=… geöffnet wurde, je Wort und Tag (UTC), letzte 30 Tage. Ohne Personenbezug.
+          Wie oft die App mit ?k=… geöffnet wurde, je Wort und Tag (UTC), letzte 30 Tage. Nur Zahlen je Wort und Tag, ohne Kennung oder Konto. Richtwerte: Neu laden zählt erneut, und wer will, kann die Zahl aufblähen.
         </mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
-        <table *ngIf="stand!.tage.length; else leer" class="tabelle">
+        <table *ngIf="stand!.tage.length; else leer" class="tabelle" aria-labelledby="ankuenfte-titel">
           <thead>
             <tr><th scope="col">Tag</th><th scope="col">Wort</th><th scope="col" class="zahl">Ankünfte</th></tr>
           </thead>
@@ -92,7 +98,7 @@ export class AnkuenfteComponent implements OnInit {
     const folgen = { next: (daten: AnkuenfteStand) => (this.stand = daten) };
     this.dienst.stand().subscribe({ ...folgen, error: () => undefined });
     selbstNachladen(() => this.dienst.stand(true), this.destroyRef, folgen, {
-      ms: 60_000,
+      ms: ANKUENFTE_NACHLADEN_MS,
       aufhoerenBei: ohneRechte,
     });
   }

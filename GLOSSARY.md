@@ -369,11 +369,11 @@ Ein Klick auf „Ja, gepostet“ nach dem Kopieren ohne Anmeldung (#799). Gezäh
 _Avoid_: anonym gekontert, Besucher-Konter (es zählt keine Person)
 
 **Kampagnenwort**:
-Das Wort hinter `?k=` in einem Link oder QR-Code, mit dem jemand Gut gesagt öffnet, etwa `?k=sticker` am Sticker, `?k=bdk` auf der BDK oder `?k=g1` für eine Gruppe. Die App liest es einmal beim Start und hält es nur im Arbeitsspeicher, nie im Browser-Speicher. Zwei Funktionen hängen daran, je hinter ihrem Schalter (Standard aus): die Begrüßung in der Zeile des Willkommens („Vom Sticker? Probier’s direkt aus – das Beispiel steht schon drin.“, Schalter `k_begruessung`, nur Anzeige) und die Ankünfte (Schalter `k_ankuenfte`). Gezählt werden nur Wörter der Positivliste in der Konfiguration (`SEMANTIC_SEARCH_K_WOERTER`).
+Das Wort hinter `?k=` in einem Link oder QR-Code, mit dem jemand Gut gesagt öffnet, etwa `?k=sticker` am Sticker, `?k=bdk` auf der BDK, `?k=karte` auf der Visitenkarte, `?k=technik` am Technik-Flyer oder `?k=g1` für eine Gruppe. Die App liest es einmal beim Start und hält es nur im Arbeitsspeicher, nie im Browser-Speicher. Zwei Funktionen hängen daran, je hinter ihrem Schalter (Standard aus): die Begrüßung in der Zeile des Willkommens („Vom Sticker? Probier’s direkt aus – das Beispiel steht schon drin.“, Schalter `k_begruessung`, nur Anzeige) und die Ankünfte (Schalter `k_ankuenfte`). Gezählt werden nur Wörter der Positivliste in der Konfiguration (`SEMANTIC_SEARCH_K_WOERTER`).
 _Avoid_: Kampagnen-ID, UTM, Tracking-Parameter (es folgt keiner Person)
 
 **Ankunft**:
-Ein Öffnen der App mit einem Kampagnenwort der Positivliste: einmal je geöffneter Seite +1 auf die Zahl dieses Worts und UTC-Tags (`ankuenfte_je_tag`). Ohne Kennung, Konto, Adresse und Beitrag; nichts verknüpft eine Ankunft mit einer Person oder einem Beitrag (vorläufige Jura-Einschätzung 26.11.2026). Ankünfte sind keine Menschen: Wer neu lädt oder den Link weitergibt, zählt erneut. Admins sehen die Zahlen der letzten 30 Tage in der Übersicht; nach zwölf Monaten werden sie gelöscht. Schalter `k_ankuenfte`.
+Ein Öffnen der App mit einem Kampagnenwort der Positivliste: einmal je geöffneter Seite +1 auf die Zahl dieses Worts und UTC-Tags (`ankuenfte_je_tag`). Ohne Kennung, Konto, Adresse und Beitrag; nichts verknüpft eine Ankunft mit einer Person oder einem Beitrag (vorläufige Jura-Einschätzung 26.11.2026). Ankünfte sind keine Menschen: Wer neu lädt oder den Link weitergibt, zählt erneut, und wer will, kann die Zahl aufblähen; sie sind nur Richtwerte. Admins sehen die Zahlen der letzten 30 Tage in der Übersicht; nach zwölf Monaten werden sie gelöscht. Schalter `k_ankuenfte`.
 _Avoid_: Besucher, Besuch, Conversion (es zählt keine Person)
 
 **Wirkungs-Echo**:
