@@ -13,6 +13,7 @@ import {
   Output,
   SimpleChanges,
   ViewChild,
+  inject,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -54,6 +55,7 @@ import { SiegelErklaerung, siegelErklaerung } from '../shared/components/siegel/
 import { siegelText } from '../shared/components/siegel/siegel-zeichnung';
 import { GLANZ_TEXT, hatGlanz } from '../shared/components/siegel/siegel-auszeichnung';
 import { ContentService } from '../services/content.service';
+import { FunktionenService } from '../services/funktionen.service';
 import { ROUTES } from '../shared/constants/app.constants';
 import { TextStueck, textStuecke } from '../shared/vorlagen-luecke';
 import { istAenderbar } from './aenderbar';
@@ -299,6 +301,23 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
 
   /** Die Aktionsleiste; nur die volle Karte hat eine. */
   @ViewChild(KartenAktionenComponent) private aktionen?: KartenAktionenComponent;
+
+  /**
+   * „Melden“ klein am Ende der Meta-Zeile (Schalter `meldeweg_sichtbar`, Standard aus),
+   * zusätzlich zum Eintrag im ⋮-Menü; in der Zeile, die es schon gibt, damit die Karte
+   * nicht höher wird (Entscheidung 26.11.).
+   */
+  readonly meldewegAn = inject(FunktionenService).an('meldeweg_sichtbar');
+
+  /** Nur an der vollen Karte mit Leiste, nie in der Vorschau und nie im eigenen Album. */
+  get meldenSichtbar(): boolean {
+    return this.meldewegAn() && this.istVoll && !this.vorschau && !this.eigenesAlbum && !!this.daten.id;
+  }
+
+  /** Derselbe Melde-Dialog wie im ⋮-Menü der Leiste. */
+  melden(): void {
+    this.aktionen?.openReportDialog();
+  }
 
   /**
    * Antippen des gelben Platzhalters (P19, Persona-Runde 2): wie "Kopieren", also der

@@ -90,7 +90,8 @@
             <mat-icon>call_split</mat-icon>
             <span>Als Vorlage nehmen</span>
         </button>
-        <button mat-menu-item type="button" (click)="openReportDialog()">
+        <!-- Bleibt auch mit Schalter meldeweg_sichtbar („Melden“ in der Meta-Zeile der Karte): wer den Weg über das Menü kennt, findet ihn weiter -->
+        <button mat-menu-item type="button" class="melden-eintrag" (click)="openReportDialog()">
             <mat-icon>flag</mat-icon>
             <span>Inhalt melden</span>
         </button>

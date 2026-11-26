@@ -360,6 +360,17 @@ SCHALTER: Dict[str, Schalterart] = {
             oeffentlich=True,
         ),
         Schalterart(
+            name="meldeweg_sichtbar",
+            feld="meldeweg_sichtbar_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_MELDEWEG_SICHTBAR_AKTIV",
+            erklaerung=(
+                "„Melden“ klein in der Meta-Zeile jeder Beitragskarte statt nur im "
+                "⋮-Menü, dazu „Melden & Kontakt“ mit der Funktionsadresse im Fuß; "
+                "speichert und zählt nichts Neues."
+            ),
+            oeffentlich=True,
+        ),
+        Schalterart(
             name="bestandszahl_zuwachs",
             feld="bestandszahl_zuwachs_aktiv",
             umgebungsvariable="SEMANTIC_SEARCH_BESTANDSZAHL_ZUWACHS_AKTIV",

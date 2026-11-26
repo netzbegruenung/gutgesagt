@@ -25,6 +25,7 @@ const TITEL: Record<string, string> = {
   antworten_hinweis: 'Neue Antworten auf eigene Aussagen',
   aufrufe_zaehlen: 'Aufrufe und Besucher pro Tag',
   sharepic: 'Teilen als Bild',
+  meldeweg_sichtbar: '„Melden“ sichtbar und Meldeweg im Fuß',
   bestandszahl_zuwachs: 'Zuwachs neben der Bestandszahl',
   vertrauenszeile: 'Vertrauenszeile vor dem Anmelden',
   feedback_gestoert: 'Knopf „Was hat dich gestört?“',

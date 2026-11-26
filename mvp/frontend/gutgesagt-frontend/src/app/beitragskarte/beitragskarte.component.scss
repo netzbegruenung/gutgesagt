@@ -703,6 +703,63 @@ h4.karte-titel {
   color: var(--text-leise);
 }
 
+// Schalter meldeweg_sichtbar: „Melden“ klein am Ende der Meta-Zeile, die Angaben davor
+// linksbuendig. Kein Umbruch zwischen beiden: Lange Angaben (Autorzeile mit Teams) brechen
+// in sich um, „Melden“ bleibt rechts in der ersten Zeile, statt eine eigene Zeile zu kosten.
+.karte-meta--melden {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  column-gap: var(--spacing-sm);
+  text-align: left;
+
+  .karte-meta-text {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+// Tippziel 24 x 24 px (WCAG 2.5.8). Der negative Abstand oben und unten haelt die Zeile so
+// hoch wie ihre Schrift: Unten ragt das Tippziel in den Innenabstand der Meta-Zeile, oben
+// rund 3 px in den unteren Innenabstand der Aktionsleiste (16 px), ohne deren Knoepfe zu
+// ueberlappen.
+.melden-knopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 24px;
+  min-height: 24px;
+  flex: none;
+  // oben 3 px weniger als unten: so steht „Melden“ auf Hoehe der ersten Textzeile
+  margin: -3px 0 -7px auto;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  font: inherit;
+  white-space: nowrap;
+  color: var(--text-leise);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+
+  mat-icon {
+    width: 14px;
+    height: 14px;
+    font-size: 14px;
+  }
+
+  &:hover {
+    background-color: var(--mulde);
+    color: var(--text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--akzent-klee);
+    outline-offset: 1px;
+  }
+}
+
 /* Teams der aktuellen Saison am Anzeigenamen; brechen um, statt die Karte zu verbreitern */
 .autor-teams {
   display: inline-flex;

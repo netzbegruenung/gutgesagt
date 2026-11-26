@@ -62,6 +62,18 @@
     font-weight: 500;
 }
 
+/* Meldeweg (Schalter meldeweg_sichtbar): eine leise Zeile unter den Links */
+.footer .meldeweg {
+    margin: 0;
+    max-width: 60ch;
+    font-size: 14px;
+}
+
+/* Lange Adresse darf bei 360 px umbrechen statt über den Rand zu laufen */
+.footer .melde-mail {
+    overflow-wrap: anywhere;
+}
+
 /* Knopf, aussehend wie die Links daneben */
 .footer .help-button {
     padding: 0;

@@ -448,6 +448,12 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   7 days; `null` while off) and `GET /api/v1/usage/users/me/aussagen` lists one's own Aussagen
   with their answers (404 while off; only opened by a click on its tab, which shows only
   while on), `services/antworten_hinweis.py`.
+- `SEMANTIC_SEARCH_SHAREPIC_AKTIV` - upper bound of the Schalter `sharepic` (#756, default `true`:
+  the card draws the image in the browser and hands it to the device's share menu, nothing is
+  sent or stored); takes effect only when an admin switches it on.
+- `SEMANTIC_SEARCH_MELDEWEG_SICHTBAR_AKTIV` - upper bound of the Schalter `meldeweg_sichtbar`
+  (default `false`): "Melden" in the meta line of every Beitrag card and "Melden & Kontakt" in the
+  footer, display only; details below (section "Schalter für das Spielgefühl").
 - `SEMANTIC_SEARCH_DSE_KURZFASSUNG_AKTIV` - upper bound of the Schalter `dse_kurzfassung`
   (default `false`, public via `GET /api/v1/funktionen`): box "Kurz gesagt" at the top of the
   privacy policy with three sentences, each linking to its paragraph in the full text
@@ -651,6 +657,16 @@ The app reads `?k=<word>` once at start (`shared/kampagnenwort.service.ts`), low
   indicative only: reloads count again and anyone can inflate them within the throttle. Admins see the last 30 days under
   Admin → Übersicht (`GET /api/v1/ankuenfte`, `{"aktiv": false, "tage": []}` while off);
   rows are deleted 365 days after their day (`docs/LOESCHKONZEPT.md`).
+
+`meldeweg_sichtbar` (group Grundfunktionen, upper bound `SEMANTIC_SEARCH_MELDEWEG_SICHTBAR_AKTIV`,
+default off, public, no condition for switching on: preliminary legal assessment 26.11. without
+conditions): "Melden" as a small button at the end of the meta line of every Beitrag card (no extra height), in
+addition to the ⋮ menu entry, and "Melden & Kontakt" in the footer with the reporting route and only the
+function address from the imprint (`LEGAL_ENTITY.KONTAKT_MAIL`), linking to the imprint section
+DSA-Kontaktstelle (Art. 11/12, with reports under Art. 16; `/impressum#melden`). Display only: the
+report dialog and what it stores stay as they are. Because the footer reads the Schalter,
+`GET /api/v1/funktionen` is now also requested on pages without cards (imprint, privacy policy);
+it stays public, always 200 and shared through the 5-minute cache.
 
 #### Saisons and Gemeinschaftsziel (#782)
 

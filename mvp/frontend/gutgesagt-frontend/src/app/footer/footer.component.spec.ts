@@ -1,7 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FooterComponent, buildKennung, buildWerteAusSeite } from './footer.component';
 import { MatDialogModule } from '@angular/material/dialog';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
+import { WritableSignal, signal } from '@angular/core';
+import { FunktionenService } from '../services/funktionen.service';
+import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { of } from 'rxjs';
 import paket from '../../../package.json';
 
@@ -75,6 +78,75 @@ describe('FooterComponent', () => {
     const kennung: HTMLElement = fixture.nativeElement.querySelector('.build-kennung');
 
     expect(kennung.textContent!.trim()).toMatch(new RegExp(`^v${paket.version.replace(/\./g, '\\.')} · \\S+$`));
+  });
+});
+
+/** „Melden & Kontakt“ im Fuß (Schalter meldeweg_sichtbar, Standard aus). */
+describe('FooterComponent - Meldeweg', () => {
+  let fixture: ComponentFixture<FooterComponent>;
+  let meldeweg: WritableSignal<boolean>;
+
+  beforeEach(async () => {
+    meldeweg = signal(false);
+    await TestBed.configureTestingModule({
+      imports: [FooterComponent, MatDialogModule],
+      providers: [
+        provideRouter([]),
+        {
+          provide: FunktionenService,
+          useValue: { an: (name: string) => (name === 'meldeweg_sichtbar' ? meldeweg.asReadonly() : signal(false)) },
+        },
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(FooterComponent);
+    fixture.detectChanges();
+  });
+
+  function linkTexte(): string[] {
+    return Array.from(fixture.nativeElement.querySelectorAll('.footer-links > a, .footer-links > button') as NodeListOf<HTMLElement>)
+      .map((l) => l.textContent!.trim());
+  }
+
+  it('Schalter aus: kein Eintrag und keine Adresse', () => {
+    expect(linkTexte()).not.toContain('Melden & Kontakt');
+    expect(fixture.nativeElement.querySelector('.meldeweg')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain(LEGAL_ENTITY.KONTAKT_MAIL);
+  });
+
+  it('Schalter an: „Melden & Kontakt“ als letzter Link, führt zum Meldeabschnitt im Impressum', () => {
+    meldeweg.set(true);
+    fixture.detectChanges();
+
+    expect(linkTexte().at(-1)).toBe('Melden & Kontakt');
+    const link = fixture.nativeElement.querySelector('.melden-link') as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('/impressum#melden');
+  });
+
+  it('Schalter an: nennt den Meldeweg und nur die Funktionsadresse aus dem Impressum', () => {
+    meldeweg.set(true);
+    fixture.detectChanges();
+
+    const zeile = fixture.nativeElement.querySelector('.meldeweg') as HTMLElement;
+    const text = zeile.textContent!.replace(/\s+/g, ' ').trim();
+    expect(text).toBe(
+      `Fällt dir ein Beitrag auf, der nicht hierher gehört? Melde ihn über „Melden“ an der Karte, auch ohne Konto, oder per E-Mail an ${LEGAL_ENTITY.KONTAKT_MAIL}.`,
+    );
+    const mails = Array.from(zeile.querySelectorAll('a[href^="mailto:"]')).map((a) => a.getAttribute('href'));
+    expect(mails).toEqual([`mailto:${LEGAL_ENTITY.KONTAKT_MAIL}`]);
+    // Keine Personennamen aus den Rechtstexten
+    expect(text).not.toContain(LEGAL_ENTITY.ADRESSZUSATZ.replace('c/o ', ''));
+    for (const name of LEGAL_ENTITY.VORSTAND.split(' und ')) {
+      expect(text).not.toContain(name);
+    }
+    // Die Trägerzeile bleibt die letzte Zeile des Fußes
+    expect(fixture.nativeElement.querySelector('.footer').lastElementChild!.classList).toContain('traeger');
+  });
+
+  it('kommt ohne Neuladen, sobald der Schalter umschaltet', () => {
+    expect(fixture.nativeElement.querySelector('.melden-link')).toBeNull();
+    meldeweg.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.melden-link')).not.toBeNull();
   });
 });
 

@@ -358,6 +358,11 @@ class Settings(BaseSettings):
     # nichts uebertragen oder gespeichert wird; Standard aus ist der Admin-Wert
     # (services/schalter_service.py, ohne Eintrag aus).
     sharepic_aktiv: bool = True
+    # "Melden" sichtbar an jeder Beitragskarte und "Melden & Kontakt" im Fuss
+    # (Schalter meldeweg_sichtbar): nur Anzeige, die Meldefunktion selbst gibt es
+    # schon. Jura vorlaeufig ohne Bedingung (26.11.); Obergrenze trotzdem von Haus aus
+    # aus wie alles Neue zur BDK, eingeschaltet wird auf Ansage.
+    meldeweg_sichtbar_aktiv: bool = False
     # Zuwachs zur Bestandszahl (domain/bestandszahl.py): /getMetrics nennt dazu die neuen
     # Kommentare der letzten 7 Tage bzw. den Tag des letzten. Obergrenze an, weil nur
     # oeffentliche Inhalte beim Aufruf gezaehlt werden und nichts gespeichert wird;
