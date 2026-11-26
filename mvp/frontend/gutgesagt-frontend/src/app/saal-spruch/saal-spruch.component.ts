@@ -31,8 +31,8 @@ export function browserTag(jetzt = new Date()): string {
  * dorthin nur, ob sie heute einen Spruch hat. Eigenes Neues und der Vorschlag gehen ihr
  * vor, nur die allgemeinen Zahlen treten an ihren Tagen zurück. Steht ein Rundgang-Angebot
  * auf der Startseite (Willkommen, Startbildschirm, App installieren), wartet sie, bis es
- * beantwortet ist: Das Angebot ist dann der eine Aufruf; nur neben der schlanken Begrüßung
- * nach dem Kampagnenwort steht sie gleich (UX-Review 26.11.2026). Besucher ohne Konto sehen weder
+ * beantwortet ist: Das Angebot ist dann der eine Aufruf; nur neben dem schlanken Willkommen
+ * steht sie gleich (UX-Review 26.11.2026). Besucher ohne Konto sehen weder
  * Block noch Vorschlag, deshalb wartet die Karte für sie auf nichts davon.
  *
  * Bekannt: Kommt der Spruch erst nach START_WARTEZEIT_MS (zwei Abrufe nacheinander,
@@ -135,13 +135,14 @@ export class SaalSpruchComponent {
   );
   /**
    * Ein Rundgang-Angebot (Willkommen, Startbildschirm, App) steht gerade auf der Startseite.
-   * Ausnahme: die schlanke Begrüßung nach dem Kampagnenwort („Von der BDK?“). Für genau das
-   * Publikum ist die Karte gebaut; sonst sähe es sie beim ersten Besuch nie (UX-Review
-   * 26.11.2026, Befund 8). Die Begrüßung ist eine Zeile, die Karte sagt nichts doppelt.
+   * Ausnahme: das schlanke Willkommen („Neu hier?“, auch als „Von der BDK?“ nach dem
+   * Kampagnenwort). Für genau diese Neuen ist die Karte gebaut; sonst sähen sie sie beim
+   * ersten Besuch nie (UX-Review 26.11.2026, Befund 8). Das Willkommen ist eine Zeile, die
+   * Karte sagt nichts doppelt.
    */
   private readonly rundgangHier = computed(() => {
     const band = this.rundgang.band();
-    return !!band?.imInhalt && !band.begruessung;
+    return !!band?.imInhalt && !band.schlank;
   });
 
   /** Der Spruch, wenn die Karte ihn zeigen darf; sonst null. */

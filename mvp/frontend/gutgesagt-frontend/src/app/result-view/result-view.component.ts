@@ -48,7 +48,7 @@ import {
   gruppieren,
 } from './ergebnis-gruppen';
 import { LadeWiederholung } from '../shared/lade-wiederholung';
-import { NOCHMAL_SUCHEN, SUCHE_HAKT_TITEL } from '../services/suchfehler';
+import { NOCHMAL_SUCHEN, suchFehlerTitel } from '../services/suchfehler';
 import { TESTEINGABE_AUFRUF, TESTEINGABE_BEISPIEL, testeingabeArt, testeingabeText } from '../shared/testeingabe';
 
 /** Wie viele aehnliche Aussagen die Zeile "Erkannt als" unter "Nicht gemeint?" anbietet. */
@@ -231,7 +231,7 @@ export class ResultViewComponent implements OnInit, OnDestroy {
   private readonly wiederholung = new LadeWiederholung(this.destroy$, { streuung: 0.3 });
   /** Die laufende Suchanfrage; eine neue Suche beendet die vorige. */
   private suchAbo: Subscription | null = null;
-  readonly sucheHaktTitel = SUCHE_HAKT_TITEL;
+  readonly sucheFehlerTitel = suchFehlerTitel;
   readonly nochmalSuchen = NOCHMAL_SUCHEN;
 
   isMobile: boolean = false;
@@ -559,8 +559,9 @@ export class ResultViewComponent implements OnInit, OnDestroy {
    * Anonyme endete das mit 401 und einem Sprung auf /login.
    */
   private performSearch(): void {
-    // Ein geplanter Neuversuch und eine laufende Anfrage gelten der vorigen Suche
-    this.wiederholung.abbrechen();
+    // Ein geplanter Neuversuch und eine laufende Anfrage gelten der vorigen Suche; die neue
+    // beginnt wieder beim kurzen Abstand (erfolg() setzt den Zaehler zurueck)
+    this.wiederholung.erfolg();
     this.suchAbo?.unsubscribe();
     // Ergebnisse und Aussage der vorigen Suche gelten nicht mehr - und zwar ab
     // sofort, nicht erst mit loading=true. Wer in diesem Fenster auf "hinzufuegen"

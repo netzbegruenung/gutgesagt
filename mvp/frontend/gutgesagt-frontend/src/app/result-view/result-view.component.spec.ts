@@ -231,6 +231,7 @@ describe('ResultViewComponent: Suchfehler', () => {
     expect(SUCHE_HAKT).toBe('Die Suche hakt gerade, vermutlich ist das Netz voll. Wir versuchen es gleich noch einmal.');
     expect(text).not.toMatch(/Http|failure|503|searchByText/);
     expect(kasten()!.querySelector('button')!.textContent).toContain('Noch einmal suchen');
+    expect(kasten()!.querySelector('h3')!.textContent).toContain('Einen Moment');
 
     // Gestreut: bis zu 30 % frueher oder spaeter als der erste Abstand
     tick(Math.ceil(WIEDERHOLUNG_MS[0] * 1.3));
@@ -269,11 +270,32 @@ describe('ResultViewComponent: Suchfehler', () => {
     http.expectOne(SUCHE).flush({ detail: 'x' }, { status: 422, statusText: 'Unprocessable Entity' });
     fixture.detectChanges();
     expect(kasten()!.textContent).toContain(SUCHE_GESCHEITERT);
+    // Kein „Einen Moment“: gewartet wird hier nicht
+    expect(kasten()!.querySelector('h3')!.textContent).toContain('Das hat nicht geklappt');
     tick(WIEDERHOLUNG_MS[WIEDERHOLUNG_MS.length - 1] * 2);
     http.expectNone(SUCHE);
 
     kasten()!.querySelector('button')!.click();
     http.expectOne(SUCHE).flush({}, { status: 422, statusText: 'Unprocessable Entity' });
+  }));
+
+  it('der Abstand waechst je Fehlschlag, eine neue Suche beginnt wieder beim kurzen', fakeAsync(() => {
+    suchen();
+    http.expectOne(SUCHE).flush({}, { status: 503, statusText: 'Service Unavailable' });
+    tick(Math.ceil(WIEDERHOLUNG_MS[0] * 1.3));
+    http.expectOne(SUCHE).flush({}, { status: 503, statusText: 'Service Unavailable' });
+    // Zweiter Abstand: frueher als WIEDERHOLUNG_MS[1] * 0,7 kein Versuch
+    tick(Math.floor(WIEDERHOLUNG_MS[1] * 0.7) - 1);
+    http.expectNone(SUCHE);
+
+    // Neue Suche: Fehlschlag, dann wieder nach dem ersten, kurzen Abstand
+    fixture.componentInstance.searchQuery = 'heizungsgesetz';
+    suchen();
+    http.expectOne(SUCHE).flush({}, { status: 503, statusText: 'Service Unavailable' });
+    tick(Math.ceil(WIEDERHOLUNG_MS[0] * 1.3));
+    http.expectOne(SUCHE).flush({}, { status: 422, statusText: 'Unprocessable Entity' });
+    tick(WIEDERHOLUNG_MS[WIEDERHOLUNG_MS.length - 1] * 2);
+    http.expectNone(SUCHE);
   }));
 
   it('eine neue Suche verwirft den geplanten Neuversuch der vorigen', fakeAsync(() => {

@@ -210,8 +210,9 @@ export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
         overflow-wrap: anywhere;
       }
       .erfolg-weiter-link {
-        display: inline-block;
-        padding: 10px 0;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
         color: var(--primaer-text);
         text-decoration: underline;
         text-underline-offset: 2px;

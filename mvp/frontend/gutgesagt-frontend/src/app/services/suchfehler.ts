@@ -5,7 +5,7 @@ import { lohntWiederholung } from '../shared/lade-wiederholung';
  * („Http failure response for …: 503“), der wirkt im Saal-WLAN wie kaputt.
  */
 
-/** Überschrift des Fehlerkastens auf der Ergebnisseite. */
+/** Überschrift des Fehlerkastens, nur wenn die Seite es selbst noch einmal versucht. */
 export const SUCHE_HAKT_TITEL = 'Einen Moment';
 
 /**
@@ -19,6 +19,11 @@ export const SUCHE_GESCHEITERT = 'Die Suche hat gerade nicht geklappt. Tipp unte
 
 /** Der Knopf im Fehlerkasten. */
 export const NOCHMAL_SUCHEN = 'Noch einmal suchen';
+
+/** Die Überschrift zum Satz: „Einen Moment“ nur beim Neuversuch, sonst die übliche (leer). */
+export function suchFehlerTitel(text: string | null | undefined): string {
+  return text === SUCHE_HAKT ? SUCHE_HAKT_TITEL : '';
+}
 
 /** Der Satz zum Fehler: vorübergehend oder nicht, wie LadeWiederholung entscheidet. */
 export function suchFehlerText(fehler: unknown): string {
