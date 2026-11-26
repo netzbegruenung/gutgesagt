@@ -1,7 +1,8 @@
 """
 Schalter fuer Team-Fortschritt (#784) und Team-Quests (#792): eigene Obergrenzen, von
-Haus aus aus, nicht oeffentlich; team_fortschritt wirkt nur mit teams, team_quests nur
-mit team_fortschritt.
+Haus aus aus; team_fortschritt ist oeffentlich (die Datenschutzerklaerung haengt einen Satz
+daran), team_quests nicht; team_fortschritt wirkt nur mit teams, team_quests nur mit
+team_fortschritt.
 """
 
 import pytest
@@ -36,7 +37,8 @@ def test_eigene_obergrenze_von_haus_aus_aus(name, variable):
     assert art.umgebungsvariable == variable
     assert getattr(Settings(), art.feld) is False
     assert art.dsfa_hinweis
-    assert name not in oeffentliche_schalter()
+    # Nur der wirksame Wert, kein Personenbezug: die Datenschutzerklaerung braucht ihn
+    assert (name in oeffentliche_schalter()) is (name == "team_fortschritt")
     assert _dienst(ALLE_AN).wirksam(name, Settings(teams_aktiv=True)) is False
 
 
@@ -88,6 +90,13 @@ def test_einschalt_hinweise_teams():
         "Rechtlich freigegeben (25.11.): darf vor dem Beschluss der DSFA eingeschaltet "
         "werden. Die Anzeige am Namen (teams_oeffentlich) bleibt aus."
     )
-    assert stand["teams_oeffentlich"].dsfa_hinweis == DSFA_HINWEIS
-    assert stand["team_fortschritt"].dsfa_hinweis == DSFA_HINWEIS
-    assert stand["team_quests"].dsfa_hinweis == DSFA_HINWEIS
+    # Jura vorlaeufig 26.11.: Team-Summe und Quests duerfen fuer den internen Test an,
+    # die Anzeige am Namen nicht
+    assert stand["teams_oeffentlich"].dsfa_hinweis.startswith("Aus lassen")
+    assert stand["teams_oeffentlich"].wartet_auf_recht is True
+    for name in ("team_fortschritt", "team_quests"):
+        assert stand[name].dsfa_hinweis.startswith("Jura vorläufig ok 26.11.")
+        assert "Go des Vorstands" in stand[name].dsfa_hinweis
+        assert stand[name].wartet_auf_recht is True
+    assert "ab 5 Mitgliedern" in stand["team_fortschritt"].dsfa_hinweis
+    assert DSFA_HINWEIS not in stand["team_fortschritt"].dsfa_hinweis

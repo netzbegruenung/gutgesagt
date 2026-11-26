@@ -33,12 +33,15 @@ export const SUCHHINWEIS = 'Suchtexte speichern wir ohne deinen Namen. Nach Prü
 export const SUCHHINWEIS_KURZ = 'Suchtexte speichern wir ohne deinen Namen.';
 /**
  * Hinter dem Schalter `hinweiszeile_kurz` (Designwichtel Nr. 5): eine Zeile statt zwei,
- * dahinter der Link „Datenschutz“. Zutreffend, weil Suchtexte auch bei Angemeldeten nicht an
- * der Kennung hängen: Die Aussage zur Suche trägt den Systemautor (services/search/
- * search_query_statement.py), das Suchereignis nur ein Tagespseudonym ohne Text. Nie „anonym“:
- * Proxy-Logs halten Suchtexte mit IP befristet (siehe SUCHHINWEIS).
+ * dahinter der Link „Datenschutz“. Wortlaut nach der vorläufigen juristischen Einschätzung vom
+ * 26.11.2026: „Ohne Namen gespeichert“ nur, wenn Suchen auch bei Angemeldeten nicht an der
+ * Kennung hängen. Das tun sie: Die Aussage zur Suche trägt zwar den Systemautor, das
+ * Suchereignis aber bis zum Tagesende ein Tagespseudonym, das bei Angemeldeten aus Kennung und
+ * Datum mit dem festen Server-Schlüssel berechnet wird (services/search_tracking_service.py,
+ * _derive_actor_hash). Deshalb der neutrale
+ * Verweis. Nie „anonym“: Proxy-Logs halten Suchtexte mit IP befristet (siehe SUCHHINWEIS).
  */
-export const HINWEISZEILE_KURZ = 'Ohne Namen gespeichert';
+export const HINWEISZEILE_KURZ = 'Wie wir Suchen speichern';
 /**
  * Der zweite Satz von SUCHHINWEIS bleibt auf dem Start erhalten: aufklappbar hinter dem Info-Knopf
  * HINWEIS_MEHR_KNOPF, und Screenreader lesen ihn mit dem Feld immer vor (aria-describedby auf die
@@ -121,7 +124,7 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.compactMode ? SUCHHINWEIS_KURZ : SUCHHINWEIS;
   }
   readonly suchanfragenAbschnitt = SUCHANFRAGEN_ABSCHNITT;
-  /** Eine Zeile „Ohne Namen gespeichert · Datenschutz“ statt zwei (Schalter, Standard aus). */
+  /** Eine Zeile „Wie wir Suchen speichern · Datenschutz“ statt zwei (Schalter, Standard aus). */
   readonly hinweiszeileKurz = inject(FunktionenService).an('hinweiszeile_kurz');
   readonly hinweiszeile = HINWEISZEILE_KURZ;
   readonly hinweiszeileMehr = HINWEISZEILE_MEHR;

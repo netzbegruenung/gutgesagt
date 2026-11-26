@@ -267,3 +267,46 @@ def test_stimmen_text_verfall_standard_aus_mit_jura_bedingung():
     assert "stimmen_text_verfall" in oeffentliche_schalter()
     stand = {s.name: s for s in dienst.stand(Settings())}
     assert stand["stimmen_text_verfall"].wartet_auf_recht is True
+
+
+# Schalter, an denen die Datenschutzerklaerung einen Absatz oder Satz haengt
+# (datenschutz.component.ts). Grundsatz Jura 26.11.: kein Schalter ohne seinen Absatz.
+# Das Frontend kennt nur, was GET /api/v1/funktionen meldet; ein nicht oeffentlicher
+# Schalter liesse den Absatz auch eingeschaltet weg.
+DSE_SCHALTER = (
+    "dse_kurzfassung",
+    "punkte",
+    "rangliste",
+    "team_fortschritt",
+    "wirkungs_echo",
+    "danke_knopf",
+    "gepostet_ohne_konto",
+    "antworten_hinweis",
+    "naechster_schritt",
+    "meldeweg_sichtbar",
+    "feedback_gestoert",
+    "null_treffer_anzahl",
+    "k_begruessung",
+    "bestandszahl_zuwachs",
+    "stimmen_text_verfall",
+)
+
+
+@pytest.mark.parametrize("name", DSE_SCHALTER)
+def test_schalter_der_datenschutzerklaerung_sind_oeffentlich(name):
+    from services.schalter_service import oeffentliche_schalter
+
+    assert name in oeffentliche_schalter()
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["teams_oeffentlich", "merkliste", "aufrufe_zaehlen", "k_ankuenfte"],
+)
+def test_aus_lassen_laut_jura_26_11(name):
+    """Jura vorlaeufig 26.11.: diese bleiben fuer den internen Test aus, mit Grund."""
+    from services.schalter_service import SCHALTER
+
+    hinweis = SCHALTER[name].einschalt_hinweis
+    assert hinweis.startswith("Aus lassen (Jura 26.11.): ")
+    assert len(hinweis) > len("Aus lassen (Jura 26.11.): ") + 10

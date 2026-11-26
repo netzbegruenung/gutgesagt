@@ -52,7 +52,10 @@ def test_registrierung():
     assert art.umgebungsvariable == "SEMANTIC_SEARCH_FEEDBACK_GESTOERT_AKTIV"
     assert art.feld == "feedback_gestoert_aktiv"
     assert art.gruppe == GRUNDFUNKTIONEN
-    assert art.einschalt_hinweis == "DSE-Absatz (Jura, Paket 27.11.)"
+    assert art.einschalt_hinweis.startswith(
+        "Jura vorläufig ok 26.11. (interner Test), DSE-Absatz drin"
+    )
+    assert "31.12.2026" in art.einschalt_hinweis
     assert art.rechtlich_freigegeben is False
     assert NAME in oeffentliche_schalter()
 
@@ -88,7 +91,10 @@ def test_wirkt_nur_bis_zum_ende_der_startphase(startphase, heute, wirkt):
 def test_admin_seite_zeigt_ihn_als_wartet_auf_recht():
     stand = {s.name: s for s in _dienst({}).stand(AN)}[NAME]
 
-    assert stand.dsfa_hinweis == "DSE-Absatz (Jura, Paket 27.11.)"
+    assert stand.dsfa_hinweis.startswith(
+        "Jura vorläufig ok 26.11. (interner Test), DSE-Absatz drin"
+    )
+    assert "31.12.2026" in stand.dsfa_hinweis
     assert stand.wartet_auf_recht is True
     assert stand.gruppe == GRUNDFUNKTIONEN
 

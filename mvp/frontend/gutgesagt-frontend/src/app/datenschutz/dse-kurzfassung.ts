@@ -1,11 +1,13 @@
 import { InjectionToken } from '@angular/core';
 
+import { LEGAL_ENTITY } from '../shared/legal-entity';
+
 /**
  * Kasten „Kurz gesagt“ oben in der Datenschutzerklärung (Schalter dse_kurzfassung).
  *
- * Wortlaut Jura: Die drei Sätze liefert Jura (Paket 27.11.); hier stehen bis dahin nur
- * Platzhalter. Jeder Satz muss einem Absatz im Volltext entsprechen, auf den sein Sprunglink
- * zeigt (id an diesem Absatz in datenschutz.component.html). Solange ein Satz noch den
+ * Wortlaut Jura: vorläufige Einschätzung vom 26.11.2026 (fünf Sätze, auf drei Punkte mit
+ * Sprunglink und einen Schlusssatz verteilt). Jeder Satz muss einem Absatz im Volltext
+ * entsprechen, auf den sein Sprunglink zeigt (id an diesem Absatz in datenschutz.component.html). Solange ein Satz noch den
  * Platzhalter trägt, bleibt der Kasten auch bei eingeschaltetem Schalter unsichtbar
  * (kurzfassungFertig), damit nie Platzhaltertext in der Erklärung steht.
  */
@@ -29,32 +31,46 @@ export const KURZFASSUNG_ANKER = {
   loeschen: 'deine-rechte',
 } as const;
 
-// Wortlaut Jura: die drei Texte unten ersetzen, Anker nur ändern, wenn Jura einen anderen
-// Absatz als Entsprechung nennt (dann die id dort setzen; der Ankertest prüft sie).
+// Wortlaut Jura (vorläufig 26.11.2026), auf die drei Sprunganker verteilt; der Schlusssatz
+// steht in KURZFASSUNG_SCHLUSS. Anker nur ändern, wenn Jura einen anderen Absatz als
+// Entsprechung nennt (dann die id dort setzen; der Ankertest prüft sie).
 // Keine eckigen Klammern im Wortlaut: kurzfassungFertig hält jeden Text mit […] für einen
 // Platzhalter und lässt den Kasten dann still weg, auch bei eingeschaltetem Schalter.
+/** Der Text mit genau einem Punkt am Ende. */
+function satzEnde(text: string): string {
+  return text.endsWith('.') ? text : `${text}.`;
+}
+
 export const KURZFASSUNG_SAETZE: readonly KurzfassungSatz[] = [
   {
-    // Wer verantwortlich ist. Den Namen nicht fest schreiben, sondern aus LEGAL_ENTITY.NAME
-    // einsetzen (Organisation-neutral), etwa `… ${LEGAL_ENTITY.NAME} …`; der Rest des
-    // Satzes ist Wortlaut Jura.
-    text: `${KURZFASSUNG_PLATZHALTER} Wer verantwortlich ist`,
+    // Wer verantwortlich ist. Bedingung Jura: der Name genau wie im Abschnitt
+    // „Verantwortlicher“, deshalb aus LEGAL_ENTITY.NAME statt „die Netzbegrünung“. Der Name
+    // endet auf „e. V.“; dessen Punkt schließt den Satz, sonst stünden zwei.
+    text: `Verantwortlich für Gut gesagt ist ${satzEnde(LEGAL_ENTITY.NAME)}`,
     anker: KURZFASSUNG_ANKER.verantwortlich,
     linkText: 'Mehr dazu',
   },
   {
     // Was gespeichert wird
-    text: `${KURZFASSUNG_PLATZHALTER} Was gespeichert wird`,
+    text:
+      'Suchen und Lesen geht ohne Konto. Wer mitmacht, gibt uns Beiträge und Bewertungen; was ' +
+      'sich daraus über deine politische Haltung schließen lässt, verarbeiten wir nur mit ' +
+      'deiner ausdrücklichen Einwilligung.',
     anker: KURZFASSUNG_ANKER.gespeichert,
     linkText: 'Mehr dazu',
   },
   {
     // Wie man löscht und widerruft
-    text: `${KURZFASSUNG_PLATZHALTER} Wie du löschst und widerrufst`,
+    text:
+      'Jede Einwilligung kannst du unter „Meine Beiträge“ widerrufen und dein Konto jederzeit ' +
+      'löschen.',
     anker: KURZFASSUNG_ANKER.loeschen,
     linkText: 'Mehr dazu',
   },
 ];
+
+/** Schlusssatz des Kastens, unter den drei Sätzen (Wortlaut Jura). */
+export const KURZFASSUNG_SCHLUSS = 'Alle Einzelheiten stehen unten.';
 
 /** Sätze des Kastens; Standard KURZFASSUNG_SAETZE, in Tests per Provider ersetzbar. */
 export const KURZFASSUNG = new InjectionToken<readonly KurzfassungSatz[]>('KURZFASSUNG', {

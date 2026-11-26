@@ -16,11 +16,13 @@ export const WARTELISTE_TEXT = 'Bitte setzt mich auf die Warteliste für eine Ei
 
 /**
  * Vertrauenszeile über den Anmeldewegen, Wortlaut der vorläufigen juristischen Einschätzung
- * vom 26.11.2026 (Punkt a). Sie stimmt nur, solange Rangliste und Team-Fortschritt aus oder
- * freiwillig sind; nach dem Vorstands-Go wird sie ergänzt. Nur hier ändern.
+ * vom 26.11.2026 für den internen Test: nennt Team-Summe und Rangliste als die zwei Wege, auf
+ * denen andere etwas von deiner Mitwirkung sehen. Dahinter „ · Datenschutz“ als Link. Nur hier
+ * ändern.
  */
 export const VERTRAUENSZEILE =
-  'Was du beiträgst, erscheint unter deinem Anzeigenamen. Ob und wie viel du sonst mitmachst, sehen andere nicht.';
+  'Was du beiträgst, erscheint unter deinem Anzeigenamen. Wie viel du sonst mitmachst, sehen andere nicht, ' +
+  'außer als Teil der Summe deiner Teams und, wenn du sie selbst wählst, in der Rangliste.';
 
 /** Schalter der Vertrauenszeile (services/schalter_service.py), Standard aus. */
 export const VERTRAUENSZEILE_SCHALTER = 'vertrauenszeile';

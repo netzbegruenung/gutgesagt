@@ -1074,7 +1074,9 @@ describe('DatenschutzComponent: Suchen ohne Treffer, Anzahl auf der Ergebnisseit
 
 /** Halbsatz zum Stimmenverfall bei ganz anderem Text (#636) hinter dem Schalter stimmen_text_verfall. */
 describe('DatenschutzComponent - Stimmenverfall bei ganz anderem Text (#636)', () => {
-  const HALBSATZ = 'oder ersetzt sie oder er den Text durch einen ganz anderen';
+  // Wortlaut Jura vorläufig 26.11.2026
+  const HALBSATZ =
+    'sagt der Text einer Aussage unter gleichem Titel später etwas ganz anderes, verfallen die Bewertungen dazu und werden gelöscht';
   const schalter = signal(false);
 
   function bewertungen(): string {
@@ -1110,7 +1112,7 @@ describe('DatenschutzComponent - Stimmenverfall bei ganz anderem Text (#636)', (
     schalter.set(true);
     const text = bewertungen();
 
-    expect(text).toContain(`dass er etwas anderes behauptet, ${HALBSATZ}, löschen wir die Bewertungen dazu.`);
+    expect(text).toContain(`dass er etwas anderes behauptet, löschen wir die Bewertungen dazu; ${HALBSATZ}.`);
   });
 
   it('erscheint ohne Neuladen, sobald der Schalter umspringt', () => {
@@ -1123,5 +1125,195 @@ describe('DatenschutzComponent - Stimmenverfall bei ganz anderem Text (#636)', (
     fixture.detectChanges();
 
     expect(abschnittIn(seite, 'Bewertungen')).toContain(HALBSATZ);
+  });
+});
+
+/**
+ * Absätze an Schaltern (vorläufige juristische Einschätzung 26.11.2026, interner Test):
+ * Grundsatz „kein Schalter ohne seinen Absatz“. Jeder Absatz steht wortgleich, sobald sein
+ * Schalter wirkt, und fehlt sonst; „noch nicht eingeschaltet“ entfällt mit dem Schalter.
+ */
+describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.2026)', () => {
+  const RANGLISTE =
+    'Rangliste. Wenn du Punkten zugestimmt hast, kannst du zusätzlich ausdrücklich einwilligen, in der ' +
+    'Rangliste der laufenden Saison zu erscheinen, mit Ranglistenname, Platz und deinen Punkten der Saison. ' +
+    'Den Ranglistennamen würfeln wir beim ersten Ja zufällig; deinen Anzeigenamen zeigen wir dort nur, wenn ' +
+    'du ihn selbst wählst. Sehen kann die Rangliste nur, wer selbst darin steht, und erst ab zehn ' +
+    'Teilnehmenden: die ersten zehn und dein eigener Platz. Jede Antwort auf diese Frage speichern wir mit ' +
+    'Zeitpunkt, Kennung des Wortlauts, deiner Namenswahl und deinem Ranglistennamen als Nachweis; Plätze ' +
+    'und Punkte speichern wir nicht, wir berechnen sie bei jedem Abruf. Widerrufst du unter „Meine ' +
+    'Beiträge“, stehst du ab dem nächsten Abruf nicht mehr darin. Zweck: dir zeigen, wo du in der Saison ' +
+    'stehst. Rechtsgrundlage: deine ausdrückliche Einwilligung (Art. 6 Abs. 1 lit. a, Art. 9 Abs. 2 lit. a ' +
+    'DSGVO). Dauer: die Antworten bis zur Löschung deines Kontos.';
+  const ECHO_DANKE =
+    'An deinen Beiträgen zeigen wir dir, wie oft andere sie verwendet und sich dafür bedankt haben. Hast du ' +
+    'einen fremden Beitrag kopiert, kannst du mit „Danke“ der Person danken, die ihn geschrieben hat; sie ' +
+    'sieht nur die Summe, nie, wer gedankt hat. Dafür speichern wir je Beitrag nur zwei Summen, ohne ' +
+    'Kennung und ohne Zeitpunkt. Damit dein Danke je Beitrag und Tag nur einmal zählt, nutzen wir den ' +
+    'Tages-Prüfwert vom Kopieren (siehe „Verwendung von Beiträgen“), der mit dem Tageswechsel verfällt. Was ' +
+    'seit deinem letzten Besuch an Echo dazukam, merken wir uns als weiteren Zählerstand zu deiner Kennung.';
+  const GEPOSTET_OHNE_KONTO =
+    'Auch ohne Anmeldung kannst du nach dem Kopieren „Ja, gepostet“ tippen. Dann zählen wir für die laufende ' +
+    'Kalenderwoche nur eins dazu, ohne Kennung, ohne Prüfwert und ohne etwas in deinem Browser zu ' +
+    'speichern; der Knopf ist danach ausgegraut. Gegen Missbrauch begrenzen wir Meldungen je Anschluss nur ' +
+    'für wenige Sekunden im Arbeitsspeicher. Diese Meldungen weisen wir getrennt von denen Angemeldeter ' +
+    'aus. Zweck: sehen, wie oft Gut gesagt beim Widersprechen hilft. Rechtsgrundlage: Art. 6 Abs. 1 lit. f ' +
+    'DSGVO. Dauer: Die Wochensumme hat keinen Personenbezug.';
+  const ANTWORTEN =
+    'Hat jemand auf eine deiner Aussagen geantwortet, zeigen wir dir auf der Startseite, wie viele Antworten ' +
+    'anderer in den letzten sieben Tagen dazugekommen sind, und im Reiter „Meine Aussagen“ deine Aussagen ' +
+    'mit ihren Antworten. Dafür lesen wir beim Aufruf deine Aussagen, die Antworten daran und den Tag, an ' +
+    'dem sie als Antwort verknüpft wurden. Ob eine Antwort von dir ist, zeigen wir dir; wer sie sonst ' +
+    'geschrieben hat, nennen wir dort nicht. Auch das speichern wir nicht.';
+  const MELDEN =
+    'An jedem Beitrag kannst du über „Melden“ auf rechtswidrige oder regelwidrige Inhalte hinweisen; im Fuß ' +
+    'jeder Seite findest du dazu „Melden & Kontakt“. Was wir mit einer Meldung speichern, steht in diesem ' +
+    'Abschnitt.';
+  const GESTOERT =
+    'In der Startphase kannst du uns über „Was hat dich gestört?“ kurz schreiben, was dich gestört hat. Wir ' +
+    'speichern nur deinen Text und den Zeitpunkt, ohne deine Kennung und ohne Kontaktmöglichkeit; schreib ' +
+    'bitte keine Namen oder Daten anderer hinein. Wir nutzen die Rückmeldungen, um Gut gesagt zu ' +
+    'verbessern, und löschen alle spätestens am 31. Dezember 2026. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.';
+  const NULL_TREFFER =
+    'Findest du zu einer Aussage keine Antwort, zeigen wir, wie oft schon danach gesucht wurde, sobald es ' +
+    'mindestens dreimal war. Die Zahl zählen wir aus den Suchvorgängen oben zusammen; wer gesucht hat, ' +
+    'zeigen wir nicht.';
+  const KAMPAGNENWORT =
+    'Öffnest du Gut gesagt über einen Link oder QR-Code mit einem Kampagnenwort, etwa von einem Sticker, ' +
+    'begrüßen wir dich passend dazu; das geschieht nur in deinem Browser.';
+  const BESTANDSZAHL =
+    'Wie viele Antworten es gibt und wie viele in den letzten sieben Tagen dazukamen, berechnen wir beim ' +
+    'Aufruf aus den öffentlichen Beiträgen; dafür speichern wir nichts.';
+
+  function seiteMit(...namen: string[]): HTMLElement {
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]),
+        { provide: FunktionenService, useValue: { an: (name: string) => signal(namen.includes(name)) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('alle Schalter aus: keiner der neuen Absätze, die Vorbehalte stehen', () => {
+    const seite = seiteMit();
+    const ganz = normalisiert(seite.textContent);
+
+    for (const text of [
+      RANGLISTE,
+      ECHO_DANKE,
+      GEPOSTET_OHNE_KONTO,
+      ANTWORTEN,
+      MELDEN,
+      GESTOERT,
+      NULL_TREFFER,
+      KAMPAGNENWORT,
+      BESTANDSZAHL,
+    ]) {
+      expect(ganz).not.toContain(text.slice(0, 60));
+    }
+    expect(ganz).toContain('Punkte sind noch nicht eingeschaltet.');
+    expect(ganz).toContain('Die Team-Summe ist noch nicht eingeschaltet.');
+    expect(ganz).toContain('Eine Rangliste je Saison ist noch nicht eingeschaltet');
+    expect(ganz).toContain('Einzige Ausnahme, sobald Punkte eingeschaltet sind:');
+    expect(ganz).toContain('Auch Abzeichen sind noch nicht eingeschaltet');
+    expect(ganz).toContain('nur zwei Zahlen');
+    expect(seite.querySelectorAll('#rangliste').length).toBe(1);
+  });
+
+  it('punkte: der Vorbehalt entfällt, die Muster-Hinweise gelten ohne „sobald“', () => {
+    const ganz = normalisiert(seiteMit('punkte').textContent);
+
+    expect(ganz).not.toContain('Punkte sind noch nicht eingeschaltet');
+    expect(ganz).toContain('Einzige Ausnahme: Nutzen sich zwei Konten gegenseitig');
+    expect(ganz).not.toContain('sobald Punkte eingeschaltet sind');
+    // Abzeichen haben einen eigenen Schalter und bleiben aus
+    expect(ganz).toContain('Abzeichen an deinem Namen. Abzeichen sind noch nicht eingeschaltet');
+  });
+
+  it('team_fortschritt: „Die Team-Summe ist noch nicht eingeschaltet“ entfällt, die Anzeige am Namen bleibt aus', () => {
+    const text = abschnittIn(seiteMit('team_fortschritt'), 'Teams');
+
+    expect(text).not.toContain('Die Team-Summe ist noch nicht eingeschaltet');
+    expect(text).toContain('erst wenn mindestens fünf Mitglieder eingewilligt haben, gerundet und nie mit einzelnen Namen.');
+    expect(text).toContain('Diese Anzeige am Namen ist noch nicht eingeschaltet.');
+  });
+
+  it('rangliste: der Absatz von Jura statt des Hinweises, unter „Punkte“', () => {
+    const seite = seiteMit('punkte', 'rangliste');
+
+    expect(abschnittIn(seite, 'Punkte')).toContain(RANGLISTE);
+    expect(abschnittIn(seite, 'Punkte')).not.toContain('Eine Rangliste je Saison ist noch nicht eingeschaltet');
+    expect(seite.querySelectorAll('#rangliste').length).toBe(1);
+  });
+
+  it('wirkungs_echo und danke_knopf: der ganze Absatz und „nur drei Zahlen“ mit der dritten', () => {
+    const text = abschnittIn(seiteMit('wirkungs_echo', 'danke_knopf'), 'Rückmeldung zur Nutzung deiner Beiträge');
+
+    expect(text).toContain(ECHO_DANKE);
+    expect(text).toContain(
+      'speichern wir zu deiner Kennung nur drei Zahlen: wie oft deine Beiträge insgesamt genutzt waren, wie viele ' +
+        'Einwürfe anderer es im Fangkorb gab, als du zuletzt da warst, und wie viel Echo deine Beiträge beim letzten ' +
+        'Besuch hatten. Mit der zweiten',
+    );
+    expect(text).not.toContain('nur zwei Zahlen');
+  });
+
+  it('nur danke_knopf: die Sätze zum Danke, kein Zählerstand des Echos, zwei Zahlen', () => {
+    const text = abschnittIn(seiteMit('danke_knopf'), 'Rückmeldung zur Nutzung deiner Beiträge');
+
+    expect(text).toContain('kannst du mit „Danke“ der Person danken');
+    expect(text).toContain('Tages-Prüfwert vom Kopieren');
+    expect(text).not.toContain('an Echo dazukam');
+    expect(text).toContain(
+      'nur zwei Zahlen: wie oft deine Beiträge insgesamt genutzt waren und wie viele Einwürfe anderer es im ' +
+        'Fangkorb gab, als du zuletzt da warst.',
+    );
+  });
+
+  it('nur wirkungs_echo: Zählerstand des Echos, keine Sätze zum Danke-Knopf', () => {
+    const text = abschnittIn(seiteMit('wirkungs_echo'), 'Rückmeldung zur Nutzung deiner Beiträge');
+
+    expect(text).toContain('merken wir uns als weiteren Zählerstand zu deiner Kennung.');
+    expect(text).not.toContain('kannst du mit „Danke“');
+    expect(text).not.toContain('Tages-Prüfwert vom Kopieren');
+  });
+
+  it('danke_ohne_konto allein bringt keinen Satz (Variante B nicht erfüllt, bleibt aus)', () => {
+    const ganz = normalisiert(seiteMit('danke_ohne_konto').textContent);
+
+    expect(ganz).not.toContain('Ohne Anmeldung zählt dein Danke');
+    expect(ganz).not.toContain('kannst du mit „Danke“');
+  });
+
+  it('gepostet_ohne_konto: der Absatz unter „Rückmeldung „Ja, gepostet““', () => {
+    expect(abschnittIn(seiteMit('gepostet_ohne_konto'), 'Rückmeldung „Ja, gepostet“')).toContain(GEPOSTET_OHNE_KONTO);
+  });
+
+  it('antworten_hinweis: der Satz vom 25.11. unter „Rückmeldung zur Nutzung“', () => {
+    expect(abschnittIn(seiteMit('antworten_hinweis'), 'Rückmeldung zur Nutzung deiner Beiträge')).toContain(ANTWORTEN);
+  });
+
+  it('meldeweg_sichtbar: der Satz im Abschnitt „Meldungen von Beiträgen“', () => {
+    expect(abschnittIn(seiteMit('meldeweg_sichtbar'), 'Meldungen von Beiträgen')).toContain(MELDEN);
+  });
+
+  it('feedback_gestoert: der Absatz unter „Feedback“', () => {
+    expect(abschnittIn(seiteMit('feedback_gestoert'), 'Feedback')).toContain(GESTOERT);
+  });
+
+  it('null_treffer_anzahl: der kurze Absatz unter „Suchen ohne Treffer“', () => {
+    expect(abschnittIn(seiteMit('null_treffer_anzahl'), 'Suchen ohne Treffer')).toContain(NULL_TREFFER);
+  });
+
+  it('k_begruessung: nur der Begrüßungssatz unter „Messung der Nutzung“', () => {
+    expect(abschnittIn(seiteMit('k_begruessung'), 'Messung der Nutzung')).toContain(KAMPAGNENWORT);
+  });
+
+  it('bestandszahl_zuwachs: eigener Unterabschnitt „Startseite“', () => {
+    expect(abschnittIn(seiteMit('bestandszahl_zuwachs'), 'Startseite')).toBe(BESTANDSZAHL);
   });
 });

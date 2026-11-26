@@ -67,8 +67,8 @@ class TestSchalter:
     def test_einschalt_hinweis_und_oeffentlich(self):
         stand = {s.name: s for s in _schalter({}).stand(Settings())}
 
-        assert stand["gepostet_ohne_konto"].dsfa_hinweis.endswith(
-            "DSE-Absatz und DSFA-Nachtrag (Jura) nötig"
+        assert stand["gepostet_ohne_konto"].dsfa_hinweis == (
+            "Jura vorläufig ok 26.11. (interner Test), DSE-Absatz drin (Variante B)"
         )
         # Besucher haben keinen eigenen Abruf, der mit 404 antworten koennte, bevor
         # sie kopieren: das Frontend fragt GET /api/v1/funktionen.

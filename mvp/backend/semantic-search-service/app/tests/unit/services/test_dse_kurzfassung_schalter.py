@@ -47,6 +47,7 @@ def test_ohne_admin_wert_aus():
 
 def test_hinweis_nennt_wortlaut_von_jura_und_wartet_auf_recht():
     stand = {s.name: s for s in _dienst({}).stand(Settings())}["dse_kurzfassung"]
-    assert "Wortlaut von Jura" in stand.dsfa_hinweis
-    assert "Absatz im Volltext" in stand.dsfa_hinweis
+    assert stand.dsfa_hinweis.startswith("Jura vorläufig ok 26.11.")
+    assert "Wortlaut drin" in stand.dsfa_hinweis
+    assert "Abschnitt „Verantwortlicher“" in stand.dsfa_hinweis
     assert stand.wartet_auf_recht is True

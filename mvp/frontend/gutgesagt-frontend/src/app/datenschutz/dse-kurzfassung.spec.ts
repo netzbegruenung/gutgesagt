@@ -3,12 +3,14 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { FunktionenService } from '../services/funktionen.service';
+import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { DatenschutzComponent } from './datenschutz.component';
 import {
   KURZFASSUNG,
   KURZFASSUNG_ANKER,
   KURZFASSUNG_PLATZHALTER,
   KURZFASSUNG_SAETZE,
+  KURZFASSUNG_SCHLUSS,
   KurzfassungSatz,
   kurzfassungFertig,
 } from './dse-kurzfassung';
@@ -67,6 +69,27 @@ describe('Kurzfassung der Datenschutzerklärung (dse_kurzfassung)', () => {
 
     expect(element.textContent).not.toContain(KURZFASSUNG_PLATZHALTER);
     expect(kasten(element) !== null).toBe(kurzfassungFertig(KURZFASSUNG_SAETZE));
+  });
+
+  it('Wortlaut Jura (vorläufig 26.11.2026): fünf Sätze, der Name wie im Abschnitt „Verantwortlicher“', () => {
+    expect(kurzfassungFertig(KURZFASSUNG_SAETZE)).toBeTrue();
+    const ganz = [...KURZFASSUNG_SAETZE.map((satz) => satz.text), KURZFASSUNG_SCHLUSS].join(' ');
+    expect(ganz).toBe(
+      // Der Name endet auf „e. V.“: ein Punkt, nicht zwei
+      `Verantwortlich für Gut gesagt ist ${LEGAL_ENTITY.NAME.replace(/\.$/, '')}. Suchen und Lesen geht ohne Konto. ` +
+        'Wer mitmacht, gibt uns Beiträge und Bewertungen; was sich daraus über deine politische ' +
+        'Haltung schließen lässt, verarbeiten wir nur mit deiner ausdrücklichen Einwilligung. ' +
+        'Jede Einwilligung kannst du unter „Meine Beiträge“ widerrufen und dein Konto jederzeit ' +
+        'löschen. Alle Einzelheiten stehen unten.',
+    );
+
+    const element = seite(true);
+    const verantwortlich = element.querySelector('#verantwortlicher .contact-info strong')!;
+    expect(verantwortlich.textContent!.trim()).toBe(LEGAL_ENTITY.NAME);
+    const box = kasten(element)!;
+    expect(box.querySelectorAll('li')[0].textContent).toContain(verantwortlich.textContent!.trim());
+    expect(box.textContent).toContain(KURZFASSUNG_SCHLUSS);
+    expect(box.textContent).not.toContain('..');
   });
 
   it('Schalter an mit fertigen Sätzen: Kasten oben mit drei Sätzen und je einem Sprunglink', () => {
