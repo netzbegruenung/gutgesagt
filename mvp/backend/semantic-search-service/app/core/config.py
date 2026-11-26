@@ -181,8 +181,8 @@ class Settings(BaseSettings):
     generic_text_similarity_threshold: float = 0.975
     # Stimmenverfall bei geaendertem Text (#636): Stimmen verfallen, wenn die
     # passage/passage-Aehnlichkeit von altem und neuem Text darunter liegt
-    # (fassung.gleicher_text). Nutzt nur die Einbettung, kein NLI-Modell; wirkt aber wie
-    # der Titel-Fall nur mit dieselbe_aussage_nli = an (ein Schalter fuer den Verfall).
+    # (fassung.gleicher_text). Nutzt nur die Einbettung, kein NLI-Modell; wirkt nur mit
+    # dem Schalter stimmen_text_verfall und wie der Titel-Fall mit dieselbe_aussage_nli = an.
     # Gemessen am Messset "Geaenderter Text" (tests/regression/MESSSET.md): Korrekturen,
     # Ergaenzungen, Kuerzungen, Links und Umformulierungen ab 0,915, ganz andere Texte
     # hoechstens 0,840. Ein ausgetauschter Text zum selben Thema kann darueber liegen
@@ -327,6 +327,11 @@ class Settings(BaseSettings):
     # nichts uebertragen oder gespeichert wird; Standard aus ist der Admin-Wert
     # (services/schalter_service.py, ohne Eintrag aus).
     sharepic_aktiv: bool = True
+    # Stimmenverfall bei ganz anderem Text unter gleichem Titel (#636,
+    # StatementService.gleicher_text): Obergrenze von Haus aus aus, weil geloeschte
+    # Stimmen nicht zurueckkommen; wirkt nur zusammen mit dieselbe_aussage_nli = an.
+    # Erst nach dem endgueltigen Jura-OK zum Halbsatz "Bewertungen" einschalten.
+    stimmen_text_verfall_aktiv: bool = False
     # Teams ueber Einladungen (services/team_service.py): Teamfelder an der Einladung,
     # Beitreten mit eigener Einwilligung, "Meine Teams". Standard aus: Die
     # Mitgliedschaft ist im Zweifel ein Art.-9-Datum; erst mit DSFA-Nachtrag,

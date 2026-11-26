@@ -32,6 +32,11 @@ export class DatenschutzComponent {
    */
   readonly naechsterSchritt = inject(FunktionenService).an('naechster_schritt');
   /**
+   * Stimmenverfall bei ganz anderem Text (#636): der Halbsatz unter „Bewertungen“ steht nur,
+   * solange der Schalter stimmen_text_verfall an ist; sonst verfallen Stimmen nur beim Titel.
+   */
+  readonly textVerfall = inject(FunktionenService).an('stimmen_text_verfall');
+  /**
    * „Ton bei Erfolgen“ (#787) gibt es nur im großen Moment „Lücke zu!“ hinter dem Schalter
    * luecke_zu_gross; der Absatz zu seinem Eintrag im Browser steht, solange der Schalter an ist
    * oder der Browser den Eintrag noch hat (Schalter später wieder aus).

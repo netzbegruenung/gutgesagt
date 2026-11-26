@@ -368,7 +368,11 @@ Kürzung bis auf einen Satz, angehängter Link, Umformulierung, korrigierte Zahl
 - **Grenzen:** Gegenteil und anderer Standpunkt behalten ihre Stimmen (V01–V07). Ein
   ausgetauschter Text zum selben Thema kann über der Schwelle liegen (verwandte Kommentare der
   Dubletten-Paare oben: 0,817–0,899). Eine Übersetzung ins Englische lag bei 0,876 und verlöre
-  die Stimmen (nicht im Messset). Kurz- und Langfassung des Kommentars werden nicht verglichen.
+  die Stimmen (nicht im Messset). Das Einbettungsmodell sieht nur rund die ersten 512 Token: Wird
+  ein langer Text erst dahinter ausgetauscht, behält er die Stimmen (die sichere Richtung). Kurz-
+  und Langfassung des Kommentars werden nicht verglichen.
+- **Schalter:** Der Verfall wirkt nur mit `stimmen_text_verfall` (Obergrenze
+  `SEMANTIC_SEARCH_STIMMEN_TEXT_VERFALL_AKTIV`, Standard aus) und `dieselbe_aussage_nli = an`.
 
 ```bash
 cd mvp/backend/semantic-search-service/app

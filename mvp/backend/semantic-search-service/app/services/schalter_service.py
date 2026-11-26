@@ -296,6 +296,21 @@ SCHALTER: Dict[str, Schalterart] = {
             oeffentlich=True,
         ),
         Schalterart(
+            name="stimmen_text_verfall",
+            feld="stimmen_text_verfall_aktiv",
+            umgebungsvariable="SEMANTIC_SEARCH_STIMMEN_TEXT_VERFALL_AKTIV",
+            erklaerung=(
+                "Stimmen verfallen auch, wenn die Autorin oder der Autor den Text durch "
+                "einen ganz anderen ersetzt (#636). Gelöschte Stimmen kommen nicht "
+                "zurück; wirkt nur, wenn die Prüfung auf dieselbe Aussage an ist."
+            ),
+            einschalt_hinweis=(
+                "Vor dem Einschalten auf Prod: endgültiges Jura-OK zum Halbsatz "
+                "„Bewertungen“ der Datenschutzerklärung (vorläufig freigegeben 26.11.)"
+            ),
+            oeffentlich=True,
+        ),
+        Schalterart(
             name="teams",
             gruppe=TEAMS,
             rechtlich_freigegeben=True,

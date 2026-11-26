@@ -19,6 +19,7 @@ from services.content.beitrag_aendern_service import (
 from services.content.statement_service import StatementService
 from services.dieselbe_behauptung import fassung
 from services.dieselbe_behauptung.regel import Richtung, Urteil
+from services.schalter_service import SchalterService, schalter_service_setzen
 from tests.unit.services.test_beitrag_aendern_service import (
     AUTOR,
     BEITRAG_ID,
@@ -352,8 +353,15 @@ class TestGleicherText:
 
 @pytest.mark.asyncio
 class TestGleicherTextImStatementService:
-    def _dienst(self, test_settings, repository_factory, modus, wert=0.5):
-        settings = test_settings.model_copy(update={"dieselbe_aussage_nli": modus})
+    def _dienst(
+        self, test_settings, repository_factory, modus, wert=0.5, obergrenze=True
+    ):
+        settings = test_settings.model_copy(
+            update={
+                "dieselbe_aussage_nli": modus,
+                "stimmen_text_verfall_aktiv": obergrenze,
+            }
+        )
         dienst = StatementService(
             settings, repository_factory=repository_factory, nli=Nli(DIESELBE)
         )
@@ -381,6 +389,68 @@ class TestGleicherTextImStatementService:
         dienst = self._dienst(test_settings, repository_factory, "an")
         dienst._aehnlichkeit = AsyncMock(side_effect=RuntimeError())
         assert await dienst.gleicher_text("alt", "neu") is None
+
+    async def test_schalter_obergrenze_aus_entscheidet_niemand(
+        self, test_settings, repository_factory
+    ):
+        """Standard: Obergrenze aus, keine Einbettung, die Stimmen bleiben."""
+        dienst = self._dienst(test_settings, repository_factory, "an", obergrenze=False)
+        assert await dienst.gleicher_text("alt", "neu") is None
+        dienst._aehnlichkeit.assert_not_awaited()
+
+    async def test_schalter_admin_wert_aus_entscheidet_niemand(
+        self, test_settings, repository_factory
+    ):
+        werte = {"stimmen_text_verfall": False}
+        schalter_service_setzen(
+            SchalterService(
+                admin_werte_lesen=lambda: dict(werte),
+                admin_wert_setzen=lambda name, an, admin: None,
+            )
+        )
+        try:
+            dienst = self._dienst(test_settings, repository_factory, "an")
+            assert await dienst.gleicher_text("alt", "neu") is None
+            dienst._aehnlichkeit.assert_not_awaited()
+            werte["stimmen_text_verfall"] = True
+            schalter_service_setzen(
+                SchalterService(
+                    admin_werte_lesen=lambda: dict(werte),
+                    admin_wert_setzen=lambda name, an, admin: None,
+                )
+            )
+            assert await dienst.gleicher_text("alt", "neu") is False
+        finally:
+            schalter_service_setzen(None)
+
+
+class TestVerdrahtung:
+    def test_dependencies_uebergibt_gleicher_text(self, monkeypatch):
+        """get_beitrag_aendern_service reicht StatementService.gleicher_text durch."""
+        import dependencies
+
+        dienst = Mock(spec=StatementService)
+        monkeypatch.setattr(dependencies, "statement_service_instance", dienst)
+        monkeypatch.setattr(dependencies, "get_reference_service", Mock())
+        monkeypatch.setattr(dependencies, "get_content_report_repository", Mock())
+        monkeypatch.setattr("repositories.vote_repository.VoteRepository", Mock())
+
+        aendern = dependencies.get_beitrag_aendern_service(Mock())
+
+        assert aendern.gleicher_text is dienst.gleicher_text
+        assert aendern.gleiche_behauptung is dienst.gleiche_behauptung
+
+    def test_ohne_statement_service_entscheidet_niemand(self, monkeypatch):
+        import dependencies
+
+        monkeypatch.setattr(dependencies, "statement_service_instance", None)
+        monkeypatch.setattr(dependencies, "get_reference_service", Mock())
+        monkeypatch.setattr(dependencies, "get_content_report_repository", Mock())
+        monkeypatch.setattr("repositories.vote_repository.VoteRepository", Mock())
+
+        aendern = dependencies.get_beitrag_aendern_service(Mock())
+
+        assert aendern.gleicher_text is None
 
 
 def _mit_text_pruefung(test_settings, speicher, gleicher_text, stimmen_loeschen):

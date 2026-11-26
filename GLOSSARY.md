@@ -381,7 +381,7 @@ Ein Beitrag, der in den letzten sieben Tagen (nicht der Kalenderwoche) mehrfach 
 _Avoid_: Trending, Trend, beliebt, Top-Beiträge
 
 **Stimme**:
-Die Zustimmung oder Ablehnung einer angemeldeten Person zu einem Beitrag. Ein Qualitätssignal, keine Nutzung. Sie gilt der Behauptung im Titel: Ändert die Autorin den Titel so, dass er nach der NLI-Stufe etwas anderes behauptet, verfallen die Stimmen, ebenso bei einem ganz anderen Text; kleine Korrekturen, Ergänzungen und Umformulierungen lassen sie stehen.
+Die Zustimmung oder Ablehnung einer angemeldeten Person zu einem Beitrag. Ein Qualitätssignal, keine Nutzung. Sie gilt der Behauptung im Titel: Ändert die Autorin den Titel so, dass er nach der NLI-Stufe etwas anderes behauptet, verfallen die Stimmen, ebenso bei einem ganz anderen Text (nur mit dem Schalter `stimmen_text_verfall`); kleine Korrekturen, Ergänzungen und Umformulierungen lassen sie stehen. Ein geändertes Urteil im Text (Gegenteil, anderer Standpunkt) erkennt die Prüfung nicht.
 _Avoid_: Vote, Like, Daumen
 
 **Siegel**:

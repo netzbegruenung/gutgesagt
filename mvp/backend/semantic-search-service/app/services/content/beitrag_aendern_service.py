@@ -8,8 +8,9 @@ Geschrieben werden nur die geaenderten Felder; Nutzung, Verknuepfungen mit Aussa
 und Einwuerfen bleiben. Stimmen bleiben, solange der Titel - die Behauptung des
 Beitrags - dieselbe Behauptung trifft; erkennt die NLI-Stufe das nicht, verfallen sie
 (#427, StatementService.gleiche_behauptung). Sie verfallen auch, wenn der Text ein
-ganz anderer ist (#636, StatementService.gleicher_text). Ohne Entscheidung (Stufe
-nicht an, kein Modell, keine Antwort) bleiben sie. Der Vektor wird aus dem neuen Text
+ganz anderer ist (#636, StatementService.gleicher_text, nur mit dem Schalter
+stimmen_text_verfall, Standard aus). Ohne Entscheidung (Stufe nicht an, Schalter aus,
+kein Modell, keine Antwort) bleiben sie. Der Vektor wird aus dem neuen Text
 berechnet, damit die Suche ihn findet, und edit_history haelt fest, wer wann geaendert
 hat (ohne den alten Wortlaut).
 """

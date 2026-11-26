@@ -25,6 +25,7 @@ from services.content.base_content_service import (
 from services.dieselbe_behauptung.nli_modell import NliModell, NliPruefer, nli_modell
 from services.dieselbe_behauptung.schatten import Schattenprotokoll
 from services.dieselbe_behauptung import fassung, regel, stufe
+from services.schalter_service import schalter_wirksam
 from repositories.interfaces.statement_repository import (
     IStatementRepository,
 )
@@ -471,11 +472,14 @@ class StatementService(
     async def gleicher_text(self, alt: str, neu: str) -> Optional[bool]:
         """
         Ob ein geaenderter Text unter gleichem Titel noch derselbe ist (#636,
-        fassung.gleicher_text): False nur bei einem ganz anderen Text. Wie beim Titel
-        nur mit dieselbe_aussage_nli = an, damit ein Schalter ueber den Stimmenverfall
-        entscheidet; sonst oder bei einem Fehler None, und die Stimmen bleiben.
+        fassung.gleicher_text): False nur bei einem ganz anderen Text. Nur mit dem
+        Schalter stimmen_text_verfall (Standard aus) und wie beim Titel mit
+        dieselbe_aussage_nli = an; sonst oder bei einem Fehler None, und die Stimmen
+        bleiben.
         """
-        if self.settings.dieselbe_aussage_nli != "an":
+        if self.settings.dieselbe_aussage_nli != "an" or not schalter_wirksam(
+            "stimmen_text_verfall", self.settings
+        ):
             return None
         try:
             return await fassung.gleicher_text(

@@ -432,6 +432,13 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   7 days; `null` while off) and `GET /api/v1/usage/users/me/aussagen` lists one's own Aussagen
   with their answers (404 while off; only opened by a click on its tab, which shows only
   while on), `services/antworten_hinweis.py`.
+- `SEMANTIC_SEARCH_STIMMEN_TEXT_VERFALL_AKTIV` - upper bound of the Schalter
+  `stimmen_text_verfall` (#636, default `false`: deleted Stimmen do not come back; switch on
+  only after the final legal OK on the privacy policy half-sentence "Bewertungen"); takes effect
+  only when an admin switches it on too and `dieselbe_aussage_nli` is `an`. Then editing a
+  Beitrag also deletes its Stimmen when the new text is an entirely different one
+  (`StatementService.gleicher_text`). Public in `GET /api/v1/funktionen`, so that the privacy
+  policy shows its half-sentence only while on; no endpoint of its own.
 - `SEMANTIC_SEARCH_TEAMS_AKTIV` - upper bound of the Schalter `teams` (Teams over
   invitations, GLOSSARY.md "Team", "Teamlink", "Mitgliedschaft", "Saison"; default `false`: a
   Mitgliedschaft may reveal political leaning and place, so it needs its own consent, the DSFA

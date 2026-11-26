@@ -231,3 +231,26 @@ def test_wartet_auf_recht_nur_mit_hinweis_und_ohne_freigabe():
     assert stand["teams"].dsfa_hinweis
     assert stand["teams"].wartet_auf_recht is False
     assert stand["sharepic"].wartet_auf_recht is False
+
+
+def test_stimmen_text_verfall_standard_aus_mit_jura_bedingung():
+    """#636: Obergrenze und Admin-Wert von Haus aus aus; Einschalten erst nach Jura-OK."""
+    from services.schalter_service import SCHALTER, oeffentliche_schalter
+
+    dienst, _, _ = _dienst()
+    assert Settings().stimmen_text_verfall_aktiv is False
+    assert dienst.wirksam("stimmen_text_verfall", Settings()) is False
+    # Admin-Wert allein reicht nicht, die Obergrenze ist aus
+    dienst, _, _ = _dienst({"stimmen_text_verfall": True})
+    assert dienst.wirksam("stimmen_text_verfall", Settings()) is False
+    an = Settings(stimmen_text_verfall_aktiv=True)
+    assert dienst.wirksam("stimmen_text_verfall", an) is True
+
+    art = SCHALTER["stimmen_text_verfall"]
+    assert art.umgebungsvariable == "SEMANTIC_SEARCH_STIMMEN_TEXT_VERFALL_AKTIV"
+    assert art.gruppe == "Grundfunktionen"
+    assert "Jura" in art.einschalt_hinweis
+    # Die Datenschutzerklaerung blendet ihren Halbsatz danach ein
+    assert "stimmen_text_verfall" in oeffentliche_schalter()
+    stand = {s.name: s for s in dienst.stand(Settings())}
+    assert stand["stimmen_text_verfall"].wartet_auf_recht is True

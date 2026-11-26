@@ -418,8 +418,9 @@ Empfänger und Ort“.
 - **Frist:** solange der Beitrag besteht, oder bis zur Rücknahme bzw. Kontolöschung (`LK:160`,
   `DSE:670-673`). Trifft ein geänderter Titel nach der NLI-Stufe eine andere Behauptung, werden
   die Stimmen zum Beitrag gelöscht (#427, `ss/services/content/beitrag_aendern_service.py`),
-  ebenso bei einem ganz anderen Text (#636); ein Gegenteil im Text erkennt die Prüfung nicht (`tests/regression/MESSSET.md`, „Geänderter Text“). Ohne
-  Entscheidung der Stufe (nicht `an`, kein Modell, keine Antwort) bleiben sie.
+  ebenso bei einem ganz anderen Text (#636, nur mit dem Schalter `stimmen_text_verfall`, Standard
+  aus); ein Gegenteil im Text erkennt die Prüfung nicht (`tests/regression/MESSSET.md`, „Geänderter Text“). Ohne
+  Entscheidung der Stufe (nicht `an`, Schalter aus, kein Modell, keine Antwort) bleiben sie.
 - **Risiko:** Eine Stimme zu einem politischen Text ist eine Meinungsäußerung. Bei kleinen Zählern
   oder aus einer Änderung der Güte ließe sich eine einzelne Stimme erraten, besonders wer die
   Seite vor und nach einer Stimme vergleicht (R8).
