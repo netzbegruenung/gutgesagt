@@ -384,6 +384,11 @@ nicht.
   (`services/feedback_service.py`, `loeschen_im_takt`, `AUFBEWAHRUNG_TAGE`). Er hängt
   nicht am abschaltbaren Bereinigungsjob. Die Frist gilt für offenes wie für
   erledigtes Feedback; „erledigt“ ändert an ihr nichts.
+- **Frist „Was hat dich gestört?“:** Feedback mit der Kategorie `gestoert` (Knopf der
+  Startphase, Schalter `feedback_gestoert`) trägt nie einen Kontakt. Ab dem 31.12.2026
+  (UTC) löscht derselbe Task alle Zeilen dieser Kategorie, gleich wie alt
+  (`domain/feedback_gestoert.py`, `GESTOERT_GELOESCHT_AB`); ab demselben Tag wirkt der
+  Schalter nicht mehr, und der Dienst nimmt keine neuen an.
 - **Einzeln:** Ein Admin löscht ein einzelnes Feedback samt Kontakt in der
   Feedback-Karte des Admin-Dashboards („Löschen“, mit Rückfrage), etwa wenn es
   beantwortet ist und nicht bis zur Frist bleiben soll (#425). Nur Admins

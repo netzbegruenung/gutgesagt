@@ -333,6 +333,10 @@ class Settings(BaseSettings):
     # Obergrenze, bewusst nicht an abzeichen_sichtbar_aktiv gekoppelt: Auf Prod bleibt
     # sie aus, bis die Datenschutzbeauftragte geraten hat. Wirkt nur mit teams_aktiv.
     teams_oeffentlich_aktiv: bool = False
+    # Knopf "Was hat dich gestört?" fuer die Startphase (domain/feedback_gestoert.py):
+    # Feedback ohne Kontakt, geloescht bis 31.12.2026. Standard aus; einschalten erst
+    # mit dem Absatz der Datenschutzerklaerung (Jura-Paket 27.11.).
+    feedback_gestoert_aktiv: bool = False
     # Spielgefuehl zur BDK (#782 bis #793, services/schalter_service.py SPIEL_SCHALTER):
     # je Baustein eine Obergrenze, von Haus aus aus; Einschalt-Bedingungen je Schalter in
     # docs/ARCHITECTURE.md. danke_ohne_konto wirkt nur mit danke_knopf, rangliste nur mit

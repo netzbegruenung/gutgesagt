@@ -96,7 +96,7 @@ visit at most one card that points the person somewhere new (review Spielgefühl
 | 3 | „Seit deinem letzten Besuch“ | signed in | not on the very first visit (`erster_besuch` from `POST /users/me/besuch`); next to a suggestion of card 4 only with news about the person's own Beiträge (`EIGENES_NEUES`: answers, uses, Wirkungs-Echo, ausformulierte Einwürfe) |
 | 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion and card 3 shows no own news |
 | 5 | Saison goal | everyone, Schalter `saison_ziel` | from the threshold (#782) |
-| 6 | Oft genutzt, Konter-Probe, Frisch aus der Community, Mitmachen tiles, Garten, About | everyone | as each card decides |
+| 6 | Oft genutzt, Konter-Probe, Frisch aus der Community, Mitmachen tiles, „Was hat dich gestört?“ (Schalter `feedback_gestoert`), Garten, About | everyone | as each card decides |
 
 Cards 3 and 4 are never shown together: own news wins (it is what the person caused), otherwise
 the single suggestion wins and the general numbers (new Einwürfe of others, Aussagen waiting,
@@ -507,6 +507,13 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   authors who gave the second consent (no number); visitors never. While off, the second
   question is not asked, `GET /api/v1/teams/meine` reports `oeffentlich_verfuegbar: false` and
   `autor_teams` stays `null`.
+- `SEMANTIC_SEARCH_FEEDBACK_GESTOERT_AKTIV` - upper bound of the Schalter `feedback_gestoert`
+  (default `false`, group Grundfunktionen, public): the button „Was hat dich gestört?“ on the
+  start page for the launch phase. It opens the Feedback form with category `gestoert`, free
+  text only, no contact (`POST /api/v1/feedback/senden` with `kategorie: "gestoert"`; with a
+  contact 422, while the switch is off 409, never 404). Switch on only with the privacy policy
+  paragraph (legal package 27.11.). From 31.12.2026 (UTC) the switch is no longer effective and
+  the feedback cleanup deletes all entries of the category (`domain/feedback_gestoert.py`).
 - `DOCKER_CONTAINER` - set to `true` inside containers to enforce strict path validation
 
 #### Schalter für das Spielgefühl (#782 to #793)

@@ -7,15 +7,30 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import {
   FEEDBACK_AUFBEWAHRUNG_TAGE,
+  FEEDBACK_GESTOERT,
+  FEEDBACK_GESTOERT_GELOESCHT_AM,
   FEEDBACK_KONTAKT_MAX,
   FEEDBACK_TEXT_MAX,
+  FeedbackKategorie,
   FeedbackService,
 } from './feedback.service';
+
+/** Was das Formular beim Öffnen bekommt. */
+export interface FeedbackDialogDaten {
+  /** Belegt das Feld vor, etwa für die Warteliste auf der Anmeldeseite. */
+  text?: string;
+  /** „gestoert“: Knopf „Was hat dich gestört?“, nur Freitext ohne Kontakt. */
+  kategorie?: FeedbackKategorie;
+}
 
 /**
  * Das kurze Formular hinter dem Knopf "Feedback" im Kopf: Freitext, optional ein
  * Kontakt. Der Hauptweg fuer Fragen und Fehler von Nutzenden; die Kontaktadresse
  * (`ORGANISATION.gutgesagtMail`) ist der zweite (#343, #290).
+ *
+ * Mit der Kategorie „gestoert“ (Schalter feedback_gestoert, Jura 26.11. Punkt g)
+ * dasselbe Formular mit eigener Frage, dem Hinweis „Bitte keine Namen oder Daten
+ * anderer.“ und ohne Kontaktfeld; gelöscht wird es am FEEDBACK_GESTOERT_GELOESCHT_AM.
  */
 @Component({
   selector: 'app-feedback-dialog',
@@ -28,6 +43,8 @@ export class FeedbackDialogComponent {
   readonly textMax = FEEDBACK_TEXT_MAX;
   readonly kontaktMax = FEEDBACK_KONTAKT_MAX;
   readonly aufbewahrungTage = FEEDBACK_AUFBEWAHRUNG_TAGE;
+  readonly gestoertGeloeschtAm = FEEDBACK_GESTOERT_GELOESCHT_AM;
+  readonly kategorie: FeedbackKategorie | undefined;
 
   text = '';
   kontakt = '';
@@ -38,9 +55,14 @@ export class FeedbackDialogComponent {
   constructor(
     public dialogRef: MatDialogRef<FeedbackDialogComponent>,
     private feedbackService: FeedbackService,
-    @Optional() @Inject(MAT_DIALOG_DATA) daten: { text?: string } | null
+    @Optional() @Inject(MAT_DIALOG_DATA) daten: FeedbackDialogDaten | null
   ) {
     this.text = daten?.text ?? '';
+    this.kategorie = daten?.kategorie;
+  }
+
+  get gestoert(): boolean {
+    return this.kategorie === FEEDBACK_GESTOERT;
   }
 
   get kannSenden(): boolean {
@@ -53,7 +75,8 @@ export class FeedbackDialogComponent {
     }
     this.sendet = true;
     this.fehler = null;
-    this.feedbackService.senden(this.text.trim(), this.kontakt.trim() || null).subscribe({
+    const kontakt = this.gestoert ? null : this.kontakt.trim() || null;
+    this.feedbackService.senden(this.text.trim(), kontakt, this.kategorie).subscribe({
       next: () => {
         this.sendet = false;
         this.gesendet = true;
@@ -63,7 +86,9 @@ export class FeedbackDialogComponent {
         this.fehler =
           error?.status === 429
             ? 'Gerade kam sehr viel Feedback an. Bitte versuch es in ein paar Minuten noch einmal.'
-            : 'Dein Feedback wurde nicht gesendet. Bitte versuch es noch einmal.';
+            : error?.status === 409 && this.gestoert
+              ? 'Dieser Knopf ist gerade aus. Über „Feedback“ im Menü „Mehr“ erreichst du uns weiter.'
+              : 'Dein Feedback wurde nicht gesendet. Bitte versuch es noch einmal.';
       },
     });
   }
@@ -82,5 +107,14 @@ export function feedbackDialogOeffnen(dialog: MatDialog, text?: string): MatDial
     width: '560px',
     maxWidth: '95vw',
     data: text ? { text } : undefined,
+  });
+}
+
+/** Öffnet dasselbe Formular als „Was hat dich gestört?“ (Schalter feedback_gestoert). */
+export function gestoertDialogOeffnen(dialog: MatDialog): MatDialogRef<FeedbackDialogComponent> {
+  return dialog.open(FeedbackDialogComponent, {
+    width: '560px',
+    maxWidth: '95vw',
+    data: { kategorie: FEEDBACK_GESTOERT } satisfies FeedbackDialogDaten,
   });
 }

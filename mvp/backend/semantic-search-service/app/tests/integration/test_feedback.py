@@ -26,6 +26,7 @@ from tests.integration.postgres import Datenbank
 
 MIGRATION = postgres.MIGRATIONEN / "2026-10-27-feedback.sql"
 MIGRATION_ERLEDIGT = postgres.MIGRATIONEN / "2026-11-03-425-feedback-erledigt.sql"
+MIGRATION_GESTOERT = postgres.MIGRATIONEN / "2026-11-26-feedback-gestoert.sql"
 
 HEUTE = date(2026, 10, 27)
 GESTERN = date(2026, 10, 26)
@@ -62,7 +63,14 @@ def test_senden_speichert_nur_text_kontakt_und_tag(neue_datenbank):
             "feedback", schema=neue_datenbank.schema
         )
     }
-    assert spalten == {"id", "text", "kontakt", "eingegangen_am", "erledigt"}
+    assert spalten == {
+        "id",
+        "text",
+        "kontakt",
+        "eingegangen_am",
+        "erledigt",
+        "kategorie",
+    }
     with neue_datenbank.engine.connect() as c:
         zeilen = c.execute(
             text("SELECT text, kontakt, eingegangen_am FROM feedback")
@@ -148,6 +156,7 @@ def test_migration_erledigt_macht_vorhandenes_feedback_offen(postgres_url):
             )
 
         postgres.migration(db, MIGRATION_ERLEDIGT)
+        postgres.migration(db, MIGRATION_GESTOERT)
 
         assert [e.text for e in _service(db).neueste(erledigt=False)] == ["von vorher"]
 
@@ -158,7 +167,44 @@ def test_migration_legt_die_tabelle_an_und_darf_zweimal_laufen(postgres_url):
         postgres.migration(db, MIGRATION)
         postgres.migration(db, MIGRATION_ERLEDIGT)
         postgres.migration(db, MIGRATION_ERLEDIGT)
+        postgres.migration(db, MIGRATION_GESTOERT)
 
         _service(db).senden("nach der Migration", None, heute=HEUTE)
 
         assert [e.text for e in _service(db).neueste()] == ["nach der Migration"]
+
+
+def test_gestoert_ohne_kontakt_und_ab_31_12_ganz_geloescht(neue_datenbank):
+    """Knopf "Was hat dich gestört?": eigene Frist, das andere Feedback bleibt."""
+    service = _service(neue_datenbank)
+    service.senden("stoert", "anna@example.org", heute=HEUTE, kategorie="gestoert")
+    service.senden("normal", None, heute=HEUTE)
+
+    gestoert = next(e for e in service.neueste() if e.text == "stoert")
+    assert gestoert.kategorie == "gestoert"
+    assert gestoert.kontakt is None
+
+    assert service.alte_loeschen(heute=date(2026, 12, 30)) == 0
+    assert service.alte_loeschen(heute=date(2026, 12, 31)) == 1
+    assert [e.text for e in service.neueste()] == ["normal"]
+
+
+def test_migration_gestoert_laesst_vorhandenes_ohne_kategorie(postgres_url):
+    with postgres.schema(postgres_url, "itest_fb") as db:
+        postgres.migration(db, MIGRATION)
+        postgres.migration(db, MIGRATION_ERLEDIGT)
+        with db.engine.begin() as c:
+            c.execute(
+                text(
+                    "INSERT INTO feedback (id, text, eingegangen_am) "
+                    "VALUES (gen_random_uuid(), 'von vorher', :tag)"
+                ),
+                {"tag": GESTERN},
+            )
+
+        postgres.migration(db, MIGRATION_GESTOERT)
+        postgres.migration(db, MIGRATION_GESTOERT)
+
+        [eintrag] = _service(db).neueste()
+        assert eintrag.text == "von vorher"
+        assert eintrag.kategorie is None
