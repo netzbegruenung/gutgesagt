@@ -48,7 +48,7 @@ gegen Team. Quest-Punkte (``quest_tage``, ADR 0004 Stufe 2) bekommt, wer zum Tea
 gehoert, mit deckender Einwilligung, und in der Woche einen Beitrag gespeichert hat,
 der heute sichtbar und mindestens drei Tage alt ist; ob die Einwilligung "Punkte und
 Meilensteine" gilt und seit wann die zum Spielgefuehl-Wortlaut mit Quest-Punkten
-(spielgefuehl-2026-11-28), prueft services/punkte_service.py davor und reicht nur
+(spielgefuehl-2026-11-28, nur mit wirksamem Schalter spielgefuehl_buehne), prueft services/punkte_service.py davor und reicht nur
 Beitraege ab dieser Einwilligung herein.
 
 Kontoloeschung und "Team verlassen" loeschen die Mitgliedschaft; der Zaehler bleibt,

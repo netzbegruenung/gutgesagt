@@ -182,7 +182,9 @@ class PunkteService:
         # Seit wann die Einwilligung zum Wortlaut mit Quest-Punkten gilt (None: keine);
         # ohne Angabe aus der Tabelle spielgefuehl, spaet geholt wie oben.
         self._quest_einwilligung_seit = quest_einwilligung_seit or (
-            lambda user_id: spielgefuehl_service.quest_einwilligung_seit(user_id)
+            lambda user_id: spielgefuehl_service.quest_einwilligung_seit(
+                user_id, self._settings
+            )
         )
         # Schalter team_quests: aus, wird auch die Einwilligung nicht gelesen
         self._quests_wirksam = quests_wirksam
