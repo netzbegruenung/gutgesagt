@@ -416,10 +416,13 @@ def get_muster_hinweise_service() -> MusterHinweiseService:
     """
     from repositories.muster_hinweis_repository import get_muster_hinweis_repository
 
+    from services.schalter_service import get_schalter_service
+
     return MusterHinweiseService(
         get_muster_hinweis_repository(),
         eingewilligte=_punkte_eingewilligte,
         stimmen_eingewilligte=_stimmen_eingewilligte,
+        stand_sichern=lambda: get_schalter_service().admin_werte_streng(),
     )
 
 

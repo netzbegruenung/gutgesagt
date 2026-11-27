@@ -751,6 +751,19 @@ class SchalterService:
             self._gelesen_um = self._uhr()
             return self._werte
 
+    def admin_werte_streng(self) -> Dict[str, bool]:
+        """
+        Admin-Werte frisch aus der Datenbank, ohne Rueckfall auf "alle aus": Ein
+        Lesefehler wirft. Fuer Laeufe, die nach dem Stand Daten loeschen (Abgleich der
+        Muster-Hinweise); erneuert den Cache, damit die folgenden Fragen denselben
+        Stand sehen.
+        """
+        werte = dict(self._lesen())
+        with self._sperre:
+            self._werte = werte
+            self._gelesen_um = self._uhr()
+        return werte
+
     def admin_wert(self, name: str) -> bool:
         return bool(self.admin_werte().get(name, False))
 

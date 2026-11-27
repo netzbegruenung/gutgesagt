@@ -355,7 +355,9 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
   Spielgefühl ab „Nur für mich“, Zustimmungen nach dem Wortlaut `spielgefuehl-2026-11-27` ab
   „Nur für mich“ und der Art.-9-Einwilligung (`MusterHinweiseService.ohne_einwilligung_loeschen`,
   Bedingung Jura zu #863, Art. 17 DSGVO); der Abruf des Admin-Dashboards räumt die Hinweise,
-  die er liest, nebenbei genauso auf. Wortgleich in der Datenschutzerklärung:
+  die er liest, nebenbei genauso auf. Welches Einwilligungsmodell gilt (Schalter
+  `spielgefuehl_buehne`), entscheidet der Stand zum Zeitpunkt des Laufs; lässt sich der Stand der
+  Schalter nicht lesen, löscht der Lauf nichts und versucht es beim nächsten Mal. Wortgleich in der Datenschutzerklärung:
   „Die Prüfwerte, mit denen wir Muster erkennen, lassen sich keinem Konto zuordnen und verfallen nach sieben Tagen; nach deinem Widerruf werten wir sie für dich nicht mehr aus.“ Prüfwerte verwirft ein eigener
   Task (`services/entdoppelung.py`), Paar-Prüfwerte und Hinweise ein zweiter
   (`services/muster_hinweise_service.py`), beide unabhängig vom abschaltbaren Bereinigungsjob.

@@ -89,15 +89,21 @@ class MusterHinweiseService:
         repository: MusterHinweisRepository,
         eingewilligte: Optional[Einwilligung] = None,
         stimmen_eingewilligte: Optional[Einwilligung] = None,
+        stand_sichern: Callable[[], object] = lambda: None,
     ):
         """
         ``eingewilligte`` und ``stimmen_eingewilligte``: die Bedingungen fuer Hinweise
         aus Nutzungen bzw. Zustimmungen, fuer den Abgleich im Loeschlauf
         (``ohne_einwilligung_loeschen``). Ohne sie gleicht der Lauf nichts ab.
+        ``stand_sichern``: liest vor dem Abgleich die Schalter frisch und wirft, wenn das
+        nicht geht. Sonst gaelte ein Lesefehler als "alle aus", das Einwilligungsmodell
+        fiele auf das bisherige zurueck, und der Lauf loeschte Hinweise von Konten, die
+        im Spielgefuehl-Modell eingewilligt haben.
         """
         self._repository = repository
         self._eingewilligte = eingewilligte
         self._stimmen_eingewilligte = stimmen_eingewilligte
+        self._stand_sichern = stand_sichern
 
     def nutzung_melden(
         self,
@@ -153,8 +159,8 @@ class MusterHinweiseService:
         """
         Die zuletzt aufgefallenen Hinweise. Mit ``eingewilligte`` (Kennungen -> die
         davon, die aktuell eingewilligt haben) nur Paare, bei denen beide eingewilligt
-        haben; die anderen bleiben bis zu ihrer Frist in der Tabelle, werden aber nicht
-        gezeigt. Hinweise aus Zustimmungen brauchen dann zusaetzlich beide Konten in
+        haben; die gelesenen anderen loescht der Abruf nebenbei, wie der Loeschlauf
+        (``ohne_einwilligung_loeschen``). Hinweise aus Zustimmungen brauchen dann zusaetzlich beide Konten in
         ``stimmen_eingewilligte`` (Einwilligung zum Wortlaut mit Zustimmungen); ohne
         diesen Filter erscheinen sie nicht.
         """
@@ -213,8 +219,10 @@ class MusterHinweiseService:
         """
         if self._eingewilligte is None or self._stimmen_eingewilligte is None:
             return 0
+        # Wirft bei einem Lesefehler: dann loescht dieser Lauf nichts
+        self._stand_sichern()
         paare = self._repository.paare()
-        weg: List[Tuple[str, str, str]] = []
+        geloescht = 0
         for art, bedingung in (
             (NUTZUNG, self._eingewilligte),
             (ZUSTIMMUNG, self._stimmen_eingewilligte),
@@ -222,11 +230,18 @@ class MusterHinweiseService:
             dieser_art = [p for p in paare if p[2] == art]
             if not dieser_art:
                 continue
-            mit = bedingung({k for a, b, _ in dieser_art for k in (a, b)})
-            weg += [p for p in dieser_art if p[0] not in mit or p[1] not in mit]
-        if weg:
-            self._repository.loeschen_paare(weg)
-        return len(weg)
+            # Je Art ein eigener Versuch: Scheitert eine Bedingung, gilt die andere.
+            try:
+                mit = bedingung({k for a, b, _ in dieser_art for k in (a, b)})
+                weg = [p for p in dieser_art if p[0] not in mit or p[1] not in mit]
+                if weg:
+                    geloescht += self._repository.loeschen_paare(weg)
+            except Exception as e:
+                logger.error(
+                    f"Consent check for pattern notes ({art}) failed: {type(e).__name__}",
+                    exc_info=True,
+                )
+        return geloescht
 
     def _loeschen(self, paare: Sequence[Tuple[str, str, str]]) -> None:
         try:

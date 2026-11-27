@@ -320,17 +320,24 @@ class TestAbgleichImLoeschlauf:
         ("ali-3", "bo-2", ZUSTIMMUNG),
     ]
 
-    def _dienst(self, punkte, stimmen):
+    def _dienst(self, punkte, stimmen, stand_sichern=lambda: None):
         repository = Mock()
         repository.paare.return_value = list(self.PAARE)
         repository.paare_verwerfen_vor.return_value = 0
         repository.loeschen_vor.return_value = 0
+        repository.loeschen_paare.side_effect = lambda paare: len(paare)
         dienst = MusterHinweiseService(
             repository,
-            eingewilligte=lambda ks: set(ks) & punkte,
+            eingewilligte=(
+                punkte if callable(punkte) else (lambda ks: set(ks) & punkte)
+            ),
             stimmen_eingewilligte=lambda ks: set(ks) & stimmen,
+            stand_sichern=stand_sichern,
         )
         return dienst, repository
+
+    def _geloescht(self, repository):
+        return [p for c in repository.loeschen_paare.call_args_list for p in c.args[0]]
 
     def test_je_art_die_eigene_bedingung(self):
         # ali-3: Punkte ja, aber nicht -27; kim-1 nach einem Widerruf ohne -27
@@ -340,9 +347,29 @@ class TestAbgleichImLoeschlauf:
 
         assert dienst.ohne_einwilligung_loeschen() == 2
 
-        repository.loeschen_paare.assert_called_once_with(
-            [("ali-3", "kim-1", NUTZUNG), ("bo-2", "kim-1", ZUSTIMMUNG)]
+        assert self._geloescht(repository) == [
+            ("ali-3", "kim-1", NUTZUNG),
+            ("bo-2", "kim-1", ZUSTIMMUNG),
+        ]
+
+    def test_schalter_nicht_lesbar_nichts_geloescht(self):
+        """Ein Lesefehler gaelte sonst als "alle aus" (bisheriges Modell)."""
+        dienst, repository = self._dienst(
+            punkte=set(), stimmen=set(), stand_sichern=Mock(side_effect=OSError("weg"))
         )
+
+        dienst.fristen_anwenden(TAG)
+
+        repository.loeschen_paare.assert_not_called()
+        repository.loeschen_vor.assert_called_once()
+
+    def test_scheitert_eine_bedingung_gilt_die_andere(self):
+        dienst, repository = self._dienst(
+            punkte=Mock(side_effect=RuntimeError("weg")), stimmen=set()
+        )
+
+        assert dienst.ohne_einwilligung_loeschen() == 2
+        assert {p[2] for p in self._geloescht(repository)} == {ZUSTIMMUNG}
 
     def test_alle_eingewilligt_nichts_geloescht(self):
         alle = {"bo-2", "kim-1", "ali-3"}
@@ -362,7 +389,7 @@ class TestAbgleichImLoeschlauf:
 
         dienst.fristen_anwenden(TAG)
 
-        assert len(repository.loeschen_paare.call_args.args[0]) == 4
+        assert len(self._geloescht(repository)) == 4
         repository.loeschen_vor.assert_called_once()
 
     def test_fehler_im_abgleich_kostet_die_fristen_nicht(self):
@@ -416,6 +443,28 @@ class TestAbgleichImLoeschlauf:
 
         assert dienst._eingewilligte is not None
         assert dienst._stimmen_eingewilligte is not None
+
+
+def test_strenges_lesen_wirft_statt_alle_aus():
+    """Fuer den Abgleich: ein Lesefehler darf nicht als "alle Schalter aus" gelten."""
+    dienst = SchalterService(Mock(side_effect=OSError("weg")), Mock())
+
+    with pytest.raises(OSError):
+        dienst.admin_werte_streng()
+    # Das tolerante Lesen bleibt, wie es war
+    assert dienst.admin_werte() == {}
+
+
+def test_strenges_lesen_erneuert_den_cache():
+    werte = {"punkte": True}
+    lesen = Mock(side_effect=lambda: dict(werte))
+    dienst = SchalterService(lesen, Mock())
+    dienst.admin_werte()
+    werte["punkte"] = False
+
+    assert dienst.admin_werte_streng() == {"punkte": False}
+    assert dienst.admin_werte() == {"punkte": False}
+    assert lesen.call_count == 2
 
 
 # --- Abstimmen (api/v1/voting.py) ---------------------------------------------------

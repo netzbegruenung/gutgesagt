@@ -620,7 +620,8 @@ async def get_muster_hinweise(
     keine Hinweise; ``aktiv`` sagt das dem Dashboard. Gezeigt werden nur Paare, bei
     denen beide Konten aktuell eingewilligt haben ("Punkte und Meilensteine" bzw. im
     Spielgefuehl-Modell ab Stufe ``fuer_mich``): Nach einem Widerruf erscheint die
-    Person hier nicht mehr (Art. 7 Abs. 3 DSGVO).
+    Person hier nicht mehr (Art. 7 Abs. 3 DSGVO), und gelesene Hinweise ohne
+    Einwilligung beider loescht der Abruf nebenbei (wie der Loeschlauf).
     """
     if not schalter_wirksam("punkte", settings):
         return MusterHinweiseResponse(
