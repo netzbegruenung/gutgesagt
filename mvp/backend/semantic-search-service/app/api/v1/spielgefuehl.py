@@ -6,13 +6,15 @@ Person selbst (``X-User``).
 Angeboten wird die Frage nur, wenn die Schalter ``spielgefuehl_buehne`` und ``punkte``
 wirken; sonst antwortet ``GET`` mit 200 und ``aktiv: false`` ohne Datenbankabfrage
 (die Seite fragt automatisch, ein 404 je Abruf sperrte am Gateway ein Saal-WLAN,
-docs/ARCHITECTURE.md), ``PUT`` und ``POST`` mit 404.
+docs/ARCHITECTURE.md), ``POST`` mit 404. ``PUT`` nimmt einen Widerruf auch dann an
+(``aus`` immer, ``fuer_mich`` aus Stufe ``rangliste``; Art. 7 Abs. 3 DSGVO: so einfach
+wie die Einwilligung, jederzeit) und lehnt nur ein Heraufstufen ab (409).
 
 - ``GET /users/me/spielgefuehl``: die gewaehlte Stufe (null: noch keine Antwort im
   neuen Modell, die App fragt), die Namenswahl, der Ranglistenname, der Wortlaut und
   ob der einmalige Hinweis zu den Abzeichen faellig ist.
 - ``PUT /users/me/spielgefuehl``: eine Stufe waehlen, jederzeit; Herabstufen wirkt
-  sofort. Stufe rangliste nur mit Namenswahl.
+  sofort und geht auch ohne Schalter. Stufe rangliste nur mit Namenswahl.
 - ``POST /users/me/spielgefuehl/ranglistenname``: einen neuen Zufallsnamen wuerfeln
   (nur mit Stufe rangliste, 409 sonst; hoechstens einmal je 10 s, 429 sonst); eine
   neue Nachweiszeile.
@@ -186,10 +188,24 @@ async def spielgefuehl(
 async def spielgefuehl_waehlen(
     request: SpielgefuehlRequest,
     current_user: str = Depends(require_user),
-    dienst: SpielgefuehlService = Depends(_dienst),
     settings: Settings = Depends(get_settings),
 ) -> Response:
-    if request.stufe is Stufe.RANGLISTE and not _rangliste_angeboten(settings):
+    dienst = get_spielgefuehl_service()
+    if not _angeboten(settings):
+        # Ohne Schalter nur ein Widerruf; "aus" ohne Datenbankabfrage.
+        try:
+            widerruf = await asyncio.to_thread(
+                dienst.herabstufung, current_user, request.stufe
+            )
+        except Exception as e:
+            logger.error(
+                f"Spielgefuehl fuer {log_pseudonym(current_user)} nicht gelesen: {type(e).__name__}",
+                exc_info=True,
+            )
+            raise HTTPException(status_code=500, detail=INTERNER_FEHLER)
+        if not widerruf:
+            raise HTTPException(status_code=409, detail="Not active")
+    elif request.stufe is Stufe.RANGLISTE and not _rangliste_angeboten(settings):
         raise HTTPException(status_code=422, detail="Stufe nicht angeboten")
     try:
         await asyncio.to_thread(

@@ -42,6 +42,9 @@ from services.entdoppelung import deckel_pruefwerte, pruefwert
 from utils.aufrufer import ANONYM
 from services.meilensteine_service import MeilensteineService
 from services.abzeichen_service import AbzeichenService, get_abzeichen_service
+from repositories.abzeichen_sichtbarkeit_repository import (
+    get_abzeichen_sichtbarkeit_repository,
+)
 from domain.abzeichen_sichtbarkeit import (
     AKTUELLER_WORTLAUT as SICHTBARKEIT_WORTLAUT,
     MEHR_DAZU as SICHTBARKEIT_MEHR_DAZU,
@@ -58,6 +61,7 @@ from repositories.punkte_einwilligung_repository import (
     get_punkte_einwilligung_repository,
 )
 from services import spielgefuehl_service
+from domain.spielgefuehl import Stufe as SpielgefuehlStufe
 from services.gepostet_service import GepostetService, get_gepostet_service
 from services.wirkung_service import get_wirkung_service
 from domain.content_registry import BEITRAGSTYPEN_WERTE
@@ -714,23 +718,6 @@ async def eigene_meilensteine(
     )
 
 
-def _abzeichen_dienst(
-    settings: Settings = Depends(get_settings),
-) -> AbzeichenService:
-    """
-    Ohne beide Schalter 404: Sichtbare Abzeichen gibt es dann nicht (#351). Ebenso
-    im neuen Modell (Schalter spielgefuehl_buehne): Abzeichen nur in der Rangliste.
-    """
-    dienst = get_abzeichen_service()
-    if (
-        not schalter_wirksam("abzeichen_sichtbar", settings)
-        or dienst is None
-        or spielgefuehl_service.buehne_aktiv(settings)
-    ):
-        raise HTTPException(status_code=404, detail="Not found")
-    return dienst
-
-
 def _abzeichen_dienst_oder_aus(
     settings: Settings = Depends(get_settings),
 ) -> Optional[AbzeichenService]:
@@ -787,19 +774,39 @@ async def abzeichen_sichtbarkeit(
     )
 
 
+def _abzeichen_nein_ohne_dienst(user_id: str, wortlaut: str) -> None:
+    """Nein zur Sichtbarkeit, wenn die Abzeichen aus sind: nur festhalten."""
+    if wortlaut not in SICHTBARKEIT_WORTLAUTE:
+        raise UnbekannterWortlaut(wortlaut)
+    get_abzeichen_sichtbarkeit_repository().antworten(user_id, False, wortlaut)
+    dienst = get_abzeichen_service()
+    if dienst is not None:
+        dienst.vergessen(user_id)
+
+
 @router.put("/users/me/abzeichen-sichtbarkeit", status_code=204)
 async def abzeichen_sichtbarkeit_antworten(
     request: AbzeichenSichtbarkeitRequest,
     current_user: str = Depends(require_user),
-    dienst: AbzeichenService = Depends(_abzeichen_dienst),
+    dienst: Optional[AbzeichenService] = Depends(_abzeichen_dienst_oder_aus),
 ):
     """
     Ja oder Nein zur Sichtbarkeit, jederzeit aenderbar. Ein Nein nimmt das Abzeichen
     sofort weg. Ohne Art.-9-Einwilligung offen wie jedes Zuruecknehmen; ein Ja zeigt
-    dann nichts, weil es ohne sie keine Meilensteine gibt.
+    dann nichts, weil es ohne sie keine Meilensteine gibt. Ein Nein auch ohne die
+    Schalter und im Spielgefuehl-Modell (Widerruf so einfach wie die Einwilligung,
+    Art. 7 Abs. 3 DSGVO), ein Ja dann nicht (409): Sonst gaelte ein altes Ja nach dem
+    Wiedereinschalten ungefragt weiter.
     """
+    if dienst is None and request.zeigen:
+        raise HTTPException(status_code=409, detail="Not active")
     try:
-        await dienst.antworten(current_user, request.zeigen, request.wortlaut)
+        if dienst is not None:
+            await dienst.antworten(current_user, request.zeigen, request.wortlaut)
+        else:
+            await asyncio.to_thread(
+                _abzeichen_nein_ohne_dienst, current_user, request.wortlaut
+            )
     except UnbekannterWortlaut:
         raise HTTPException(status_code=422, detail="Unbekannter Wortlaut")
     except Exception as e:
@@ -811,17 +818,14 @@ async def abzeichen_sichtbarkeit_antworten(
     return Response(status_code=204)
 
 
-def _punkte_einwilligung_angeboten(
-    settings: Settings = Depends(get_settings),
-) -> None:
+def _punkte_einwilligung_angeboten(settings: Settings) -> bool:
     """
-    Ohne punkte_aktiv 404: Dann gibt es nichts, wozu man einwilligen koennte. Ebenso
-    im neuen Modell: Dort waehlt die Person die Stufe des Spielgefuehls.
+    Ohne punkte_aktiv gibt es nichts, wozu man einwilligen koennte. Ebenso im neuen
+    Modell: Dort waehlt die Person die Stufe des Spielgefuehls.
     """
-    if not schalter_wirksam("punkte", settings) or spielgefuehl_service.buehne_aktiv(
-        settings
-    ):
-        raise HTTPException(status_code=404, detail="Not found")
+    return schalter_wirksam(
+        "punkte", settings
+    ) and not spielgefuehl_service.buehne_aktiv(settings)
 
 
 @router.get("/users/me/punkte-einwilligung", response_model=PunkteEinwilligungResponse)
@@ -868,13 +872,18 @@ async def punkte_einwilligung(
 async def punkte_einwilligung_antworten(
     request: PunkteEinwilligungRequest,
     current_user: str = Depends(require_user),
-    _angeboten: None = Depends(_punkte_einwilligung_angeboten),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Einwilligen oder widerrufen, jederzeit. Einwilligen geht nur zu einem geltenden
-    Wortlaut. Ein Widerruf wirkt sofort: Punkte und Meilensteine werden je Abruf
-    berechnet und fragen die Einwilligung; das Abzeichen am Namen verschwindet.
+    Wortlaut und nur, solange die Einwilligung angeboten wird (sonst 409). Widerrufen
+    geht immer, auch ohne Schalter und im Spielgefuehl-Modell (Art. 7 Abs. 3 DSGVO).
+    Ein Widerruf wirkt sofort: Punkte und Meilensteine werden je Abruf berechnet und
+    fragen die Einwilligung; das Abzeichen am Namen verschwindet, die Muster-Hinweise
+    mit der Person werden geloescht.
     """
+    if request.eingewilligt and not _punkte_einwilligung_angeboten(settings):
+        raise HTTPException(status_code=409, detail="Not active")
     if request.wortlaut not in PUNKTE_WORTLAUTE or (
         request.eingewilligt and request.wortlaut not in PUNKTE_GELTENDE_WORTLAUTE
     ):
@@ -899,14 +908,32 @@ async def punkte_einwilligung_antworten(
             dienst.vergessen(current_user)
         # Ohne Punkte keine Rangliste: ein frueheres Ja gilt als Nein, damit eine neue
         # Einwilligung in die Punkte nicht ungefragt in die Rangliste fuehrt (#793).
+        # Ebenso im Spielgefuehl: eine Stufe ueber "aus" gaelte sonst nach dem
+        # Einschalten des Schalters spielgefuehl_buehne ungefragt weiter.
         try:
             await asyncio.to_thread(rangliste_service.zuruecknehmen, current_user)
+            await asyncio.to_thread(
+                spielgefuehl_service.zuruecknehmen,
+                current_user,
+                None,
+                SpielgefuehlStufe.AUS,
+            )
         except Exception as e:
             logger.error(
                 f"Einwilligung zur Rangliste von {log_pseudonym(current_user)} nicht zurueckgenommen: {type(e).__name__}",
                 exc_info=True,
             )
             raise HTTPException(status_code=500, detail="Internal server error")
+        # Fehler nur im Log: Das Admin-Dashboard filtert ohnehin nach der Einwilligung.
+        try:
+            await asyncio.to_thread(
+                spielgefuehl_service.muster_hinweise_vergessen, current_user
+            )
+        except Exception as e:
+            logger.error(
+                f"Muster-Hinweise von {log_pseudonym(current_user)} nicht geloescht: {type(e).__name__}",
+                exc_info=True,
+            )
     return Response(status_code=204)
 
 

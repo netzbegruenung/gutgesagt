@@ -22,13 +22,19 @@ Fristen, angewendet von loeschen_im_takt, einem eigenen Hintergrund-Task aus mai
 Hinweise entstehen nur mit eingeschalteten Punkten (``punkte_aktiv``, geprueft im
 Zaehl-Endpunkt api/v1/usage.py): Sie schuetzen die Punkte und haben ohne sie keinen
 Zweck. Gemeldet wird dort auch nur, wenn beide Konten die Einwilligung "Punkte und
-Meilensteine" gegeben haben (#351, domain/punkte_einwilligung.py); sonst entsteht kein
-Paar-Pruefwert.
+Meilensteine" gegeben haben (#351, domain/punkte_einwilligung.py; im Spielgefuehl-Modell
+ab Stufe ``fuer_mich``); sonst entsteht kein Paar-Pruefwert.
+
+Widerruf: Das Admin-Dashboard zeigt nur Hinweise, deren beide Konten aktuell
+eingewilligt haben (``hinweise(eingewilligte)``, api/v1/metrics.py). Ein Widerruf
+("Punkte und Meilensteine" Nein, Spielgefuehl ``aus``) loescht ausserdem die Hinweise,
+die die Person nennen (``vergessen``). Paar-Pruefwerte lassen sich nicht per Kennung
+loeschen (Schluessel nur im Speicher) und gehen nach MUSTER_FENSTER_TAGE von selbst.
 """
 
 import asyncio
 from datetime import date, datetime, timedelta, timezone
-from typing import List, Optional
+from typing import Callable, Iterable, List, Optional, Set
 
 from core.logging import get_logger
 from repositories.muster_hinweis_repository import (
@@ -50,6 +56,9 @@ MUSTER_FRIST_TAGE = 56
 
 ANZAHL = 50
 """So viele Hinweise zeigt das Admin-Dashboard hoechstens."""
+
+VORRAT_FAKTOR = 3
+"""Mit Einwilligungsfilter so viel mal ANZAHL lesen, dann kuerzen."""
 
 LOESCH_TAKT_SEKUNDEN = 24 * 60 * 60
 
@@ -80,8 +89,29 @@ class MusterHinweiseService:
             fenster_ab=_fenster_ab(tag),
         )
 
-    def hinweise(self) -> List[MusterHinweis]:
-        return self._repository.hinweise(ANZAHL)
+    def hinweise(
+        self, eingewilligte: Optional[Callable[[Iterable[str]], Set[str]]] = None
+    ) -> List[MusterHinweis]:
+        """
+        Die zuletzt aufgefallenen Hinweise. Mit ``eingewilligte`` (Kennungen -> die
+        davon, die aktuell eingewilligt haben) nur Paare, bei denen beide eingewilligt
+        haben; die anderen bleiben bis zu ihrer Frist in der Tabelle, werden aber nicht
+        gezeigt.
+        """
+        if eingewilligte is None:
+            return self._repository.hinweise(ANZAHL)
+        # Mehr holen als gezeigt, damit nach dem Filter moeglichst ANZAHL bleiben.
+        hinweise = self._repository.hinweise(ANZAHL * VORRAT_FAKTOR)
+        if not hinweise:
+            return hinweise
+        mit = eingewilligte({k for h in hinweise for k in (h.konto_a, h.konto_b)})
+        return [h for h in hinweise if h.konto_a in mit and h.konto_b in mit][:ANZAHL]
+
+    def vergessen(self, user_id: str) -> None:
+        """Beim Widerruf: alle Hinweise loeschen, die ``user_id`` nennen."""
+        if not user_id or user_id == ANONYM:
+            return
+        self._repository.vergessen(user_id)
 
     def fristen_anwenden(self, heute: Optional[date] = None) -> None:
         heute = heute or heute_utc()

@@ -141,5 +141,7 @@
     </ng-container>
     <!-- Eigene, freiwillige Einwilligung, getrennt von der zur Mitwirkung (#351); nur mit Punkten -->
     <app-punkte-einwilligung *ngIf="punkteHaekchenZeigen" ueberschrift="Punkte und Meilensteine"></app-punkte-einwilligung>
+    <!-- Widerruf jederzeit, auch bei ausgeschalteten Schaltern (Art. 7 Abs. 3 DSGVO); zeigt kein Ja -->
+    <app-widerrufbar></app-widerrufbar>
   </mat-card-content>
 </mat-card>

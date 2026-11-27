@@ -387,7 +387,25 @@ def punkte_einwilligung_ohne_datenbank(monkeypatch):
 
     repository = MagicMock()
     repository.eingewilligt.return_value = True
+    repository.eingewilligte.side_effect = lambda kennungen: set(kennungen)
     repository.lesen.return_value = None
+    monkeypatch.setattr(modul, "_repository", repository)
+    yield repository
+
+
+@pytest.fixture(autouse=True)
+def muster_hinweise_ohne_datenbank(monkeypatch):
+    """
+    Muster-Hinweise (services/muster_hinweise_service.py) ohne Datenbank: keine
+    Hinweise. Ein Widerruf ("Punkte und Meilensteine" Nein, Spielgefuehl aus) loescht
+    die Hinweise der Person; Tests pruefen das ueber
+    ``muster_hinweise_ohne_datenbank.vergessen``.
+    """
+    import repositories.muster_hinweis_repository as modul
+
+    repository = MagicMock()
+    repository.hinweise.return_value = []
+    repository.vergessen.return_value = 0
     monkeypatch.setattr(modul, "_repository", repository)
     yield repository
 
