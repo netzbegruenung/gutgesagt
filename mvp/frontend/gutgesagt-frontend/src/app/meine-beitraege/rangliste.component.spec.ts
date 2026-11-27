@@ -76,6 +76,16 @@ describe('RanglisteComponent', () => {
     expect(el().querySelector('[data-testid="platz"]')).toBeNull();
   });
 
+  it('sagt „1 Meilenstein“ im Singular, sonst „Meilensteine“', () => {
+    const oben = plaetze(1).map((p, i) => ({ ...p, abzeichen: i === 0 ? 1 : i === 1 ? 2 : null }));
+    laden(stand({ buehne: true, gefragt: true, teilnehmen: true, rangliste: { oben, eigener: null, teilnehmende: 10 } }));
+
+    const [eins, zwei] = Array.from(el().querySelectorAll('[data-testid="abzeichen"]')).map((x) => x.textContent!);
+    expect(eins).toContain('1 Meilenstein');
+    expect(eins).not.toContain('Meilensteine');
+    expect(zwei).toContain('2 Meilensteine');
+  });
+
   it('zeigt im Spielgefühl-Modell nur die Liste mit Abzeichen, ohne eigene Frage und Namenswahl', () => {
     const oben = plaetze(1).map((p, i) => ({ ...p, abzeichen: i === 0 ? 4 : null }));
     laden(stand({ buehne: true, gefragt: true, teilnehmen: true, rangliste: { oben, eigener: null, teilnehmende: 10 } }));
