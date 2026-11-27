@@ -16,6 +16,7 @@ from repositories.abzeichen_sichtbarkeit_repository import Sichtbarkeit
 from repositories.punkte_einwilligung_repository import PunkteEinwilligung
 from repositories.rangliste_einwilligung_repository import RanglisteAntwort
 from repositories.spielgefuehl_repository import SpielgefuehlAntwort
+from repositories.team_repository import OeffentlichAntwort
 
 pytestmark = pytest.mark.unit
 
@@ -31,6 +32,15 @@ def abzeichen(monkeypatch):
     monkeypatch.setattr(
         "repositories.abzeichen_sichtbarkeit_repository._repository", repository
     )
+    return repository
+
+
+@pytest.fixture(autouse=True)
+def team(monkeypatch):
+    # Ohne Datenbank: die Antwort "Team öffentlich am Namen zeigen"
+    repository = MagicMock()
+    repository.oeffentlich_lesen.return_value = None
+    monkeypatch.setattr("repositories.team_repository._repository", repository)
     return repository
 
 
@@ -50,6 +60,7 @@ def test_nichts_gespeichert_alles_null(abzeichen):
         "punkte": None,
         "rangliste": None,
         "abzeichen": None,
+        "team_oeffentlich": None,
     }
 
 
@@ -81,6 +92,7 @@ def test_gespeicherte_ja_mit_wortlaut(
         "punkte": {"wortlaut": "2026-11-13"},
         "rangliste": {"wortlaut": "rangliste-2026-11-25"},
         "abzeichen": {"wortlaut": "2026-11-09-b"},
+        "team_oeffentlich": None,
     }
 
 
@@ -157,3 +169,39 @@ def test_unbekannte_wortlaute_werden_durch_den_aktuellen_ersetzt(
     assert daten["punkte"] == {"wortlaut": punkte_einwilligung.AKTUELLER_WORTLAUT}
     assert daten["rangliste"] == {"wortlaut": rangliste.AKTUELLER_WORTLAUT}
     assert daten["abzeichen"] == {"wortlaut": abzeichen_sichtbarkeit.AKTUELLER_WORTLAUT}
+
+
+def test_team_oeffentlich_widerrufbar_auch_ohne_schalter(abzeichen, team):
+    """
+    Die Antwort haengt an keinem Schalter: auch bei teams_oeffentlich aus widerrufbar.
+    Der Testclient hat keine Settings, der Endpunkt kann also keinen Schalter fragen.
+    """
+    from domain.teams import OEFFENTLICH_KENNUNG
+
+    team.oeffentlich_lesen.return_value = OeffentlichAntwort(
+        True, OEFFENTLICH_KENNUNG, AM
+    )
+
+    daten = _client().get(URL, headers=KIM).json()
+
+    team.oeffentlich_lesen.assert_called_once_with("kim-1")
+    assert daten["team_oeffentlich"] == {"wortlaut": OEFFENTLICH_KENNUNG}
+
+
+def test_team_oeffentlich_zurueckgenommen_zeigt_nichts(abzeichen, team):
+    team.oeffentlich_lesen.return_value = OeffentlichAntwort(
+        False, "team-oeffentlich-2026-11-25", AM
+    )
+
+    assert _client().get(URL, headers=KIM).json()["team_oeffentlich"] is None
+
+
+def test_team_oeffentlich_unbekannter_wortlaut_wird_ersetzt(abzeichen, team):
+    """Sonst scheiterte PUT /teams/oeffentlich mit 422."""
+    from domain.teams import OEFFENTLICH_KENNUNG
+
+    team.oeffentlich_lesen.return_value = OeffentlichAntwort(True, "team-2099", AM)
+
+    daten = _client().get(URL, headers=KIM).json()
+
+    assert daten["team_oeffentlich"] == {"wortlaut": OEFFENTLICH_KENNUNG}
