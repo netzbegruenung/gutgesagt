@@ -147,8 +147,8 @@ class BesuchResponse(BaseModel):
     # Tagen, die Typen von "Frisch aus der Community". Ebenfalls ein Zeitraum.
     neue_beitraege: int = 0
     # Antworten anderer auf eigene Aussagen aus den letzten BESUCH_ZEITRAUM_TAGE Tagen
-    # (#760, services/antworten_hinweis.py). None, solange der Schalter
-    # antworten_hinweis aus ist: Dann zeigt das Frontend weder Kachel noch Reiter.
+    # (#760, services/antworten_hinweis.py). Basisfunktion seit dem Schalter-Umbau;
+    # None nur, wenn die Zahl nicht zu lesen war.
     antworten_auf_eigene_aussagen: Optional[int] = None
     # Wirkungs-Echo (#790): wie oft die eigenen Beitraege seit dem letzten Besuch als
     # oeffentlich gepostet gemeldet wurden, als Zaehlerstand wie die Nutzung
@@ -519,7 +519,7 @@ async def track_content_usage(
         # nicht beide sie gegeben (oder hat eine widerrufen), keine Meldung - sonst
         # ergaebe ein frueherer Paar-Pruefwert noch einen Hinweis mit ihrer Kennung.
         if (
-            schalter_wirksam("punkte", settings)
+            schalter_wirksam("spielgefuehl_buehne", settings)
             and angemeldet
             and beitrag is not None
             and await _punkte_eingewilligt(aufrufer, settings)
@@ -622,19 +622,22 @@ class PunkteStatusResponse(BaseModel):
 @router.get("/punkte/status", response_model=PunkteStatusResponse)
 async def punkte_status(settings: Settings = Depends(get_settings)):
     """
-    Ob die Punkte wirksam sind (Obergrenze ``SEMANTIC_SEARCH_PUNKTE_AKTIV`` und
-    Admin-Wert, services/schalter_service.py) und ob andere Angemeldete Abzeichen sehen
-    koennen (beide Schalter wirksam).
+    Ob die Punkte wirksam sind (Paket ``spielgefuehl_buehne``: Obergrenze
+    ``SEMANTIC_SEARCH_SPIELGEFUEHL_BUEHNE_AKTIV`` und Admin-Wert,
+    services/schalter_service.py); ``abzeichen_sichtbar`` ist seit dem Schalter-Umbau
+    immer false.
     Ohne Anmeldung lesbar und ohne Personenbezug: Das Frontend fragt hier einmal und ruft
     punkte, meilensteine und abzeichen-sichtbarkeit nur bei eingeschaltetem Schalter auf,
     statt deren 404 abzuwarten (UX-Review B20, Entscheidung Maintainer 13.11.2026).
     """
     buehne = spielgefuehl_service.buehne_aktiv(settings)
     return PunkteStatusResponse(
-        aktiv=schalter_wirksam("punkte", settings),
+        aktiv=schalter_wirksam("spielgefuehl_buehne", settings),
         # Im neuen Modell gibt es keine Abzeichen am Namen (domain/spielgefuehl.py).
-        abzeichen_sichtbar=schalter_wirksam("abzeichen_sichtbar", settings)
-        and not buehne,
+        # Abzeichen am Namen gibt es seit dem Schalter-Umbau nicht mehr, nur in der
+        # Rangliste (Schalter abzeichen_sichtbar entfallen); das Feld bleibt fuer
+        # aeltere Frontends.
+        abzeichen_sichtbar=False,
         spielgefuehl_buehne=buehne,
     )
 
@@ -653,7 +656,7 @@ async def eigene_punkte(
     "Meine Beitraege" fragt automatisch). Die Person kommt aus ``X-User``, nicht aus
     dem Pfad (#284).
     """
-    if not schalter_wirksam("punkte", settings):
+    if not schalter_wirksam("spielgefuehl_buehne", settings):
         return PunkteResponse(
             tun=0, quests=0, wirkung=0, gesamt=0, sammelt=False, aktiv=False
         )
@@ -689,7 +692,7 @@ async def eigene_meilensteine(
     stuetzen sich auf dieselbe Einwilligung und dieselbe DSFA. Die Person kommt aus
     ``X-User``.
     """
-    if not schalter_wirksam("punkte", settings):
+    if not schalter_wirksam("spielgefuehl_buehne", settings):
         return MeilensteineResponse(meilensteine=[], aktiv=False)
     try:
         meilensteine = await service.meilensteine(current_user)
@@ -721,15 +724,12 @@ async def eigene_meilensteine(
 def _abzeichen_dienst_oder_aus(
     settings: Settings = Depends(get_settings),
 ) -> Optional[AbzeichenService]:
-    """Fuer den Abruf: ohne Schalter None statt 404 (automatisch abgefragt)."""
-    dienst = get_abzeichen_service()
-    if (
-        not schalter_wirksam("abzeichen_sichtbar", settings)
-        or dienst is None
-        or spielgefuehl_service.buehne_aktiv(settings)
-    ):
-        return None
-    return dienst
+    """
+    Fuer den Abruf: immer None statt 404 (automatisch abgefragt). Abzeichen am
+    Anzeigenamen gibt es seit dem Schalter-Umbau (27.11.) nicht mehr, nur in der
+    Rangliste des Pakets Spielgefuehl.
+    """
+    return None
 
 
 def _sichtbarkeit_wortlaut() -> SichtbarkeitWortlaut:
@@ -823,8 +823,11 @@ def _punkte_einwilligung_angeboten(settings: Settings) -> bool:
     Ohne punkte_aktiv gibt es nichts, wozu man einwilligen koennte. Ebenso im neuen
     Modell: Dort waehlt die Person die Stufe des Spielgefuehls.
     """
+    # Seit dem Schalter-Umbau (27.11.) sind die Punkte Teil des Pakets Spielgefuehl:
+    # Diese Einwilligung wird nie mehr angeboten. Der Pfad bleibt als totes altes
+    # Modell stehen, bis es ganz entfernt wird.
     return schalter_wirksam(
-        "punkte", settings
+        "spielgefuehl_buehne", settings
     ) and not spielgefuehl_service.buehne_aktiv(settings)
 
 
@@ -845,9 +848,9 @@ async def punkte_einwilligung(
     )
     # Im neuen Modell (Schalter spielgefuehl_buehne) gibt es diese Einwilligung
     # nicht mehr: aktiv false, die App fragt stattdessen nach dem Spielgefuehl.
-    if not schalter_wirksam("punkte", settings) or spielgefuehl_service.buehne_aktiv(
-        settings
-    ):
+    if not schalter_wirksam(
+        "spielgefuehl_buehne", settings
+    ) or spielgefuehl_service.buehne_aktiv(settings):
         return PunkteEinwilligungResponse(
             eingewilligt=False, aktueller_wortlaut=wortlaut_aktuell, aktiv=False
         )
@@ -960,8 +963,6 @@ async def besuch(
     erster = await _erster_besuch(current_user, gesehen)
     # Alle Zahlen zugleich: Die Nebenzahlen haben eine Zeitgrenze, die Nutzung
     # nicht; scheitert sie, ist der Besuch gescheitert (500).
-    # Ohne Schalter fragt der Besuch die eigenen Aussagen gar nicht erst ab (#760).
-    mit_antworten = schalter_wirksam(antworten_hinweis.SCHALTER, settings)
     mit_echo = schalter_wirksam("wirkungs_echo", settings)
     try:
         echo = (
@@ -971,12 +972,8 @@ async def besuch(
             if mit_echo
             else _keine()
         )
-        antworten = (
-            _hoechstens(
-                _neue_antworten(current_user, settings, seit), 0, "Neue Antworten"
-            )
-            if mit_antworten
-            else _keine()
+        antworten = _hoechstens(
+            _neue_antworten(current_user, settings, seit), 0, "Neue Antworten"
         )
         anzahl, neu, wartend, ausformuliert, beitraege, antworten, gepostet = (
             await asyncio.gather(
@@ -1014,7 +1011,7 @@ async def besuch(
         unbeantwortete_aussagen_mehr=wartend >= LIMIT_STANDARD,
         ausformulierte_einwuerfe=max(0, ausformuliert),
         neue_beitraege=max(0, beitraege),
-        antworten_auf_eigene_aussagen=max(0, antworten) if mit_antworten else None,
+        antworten_auf_eigene_aussagen=max(0, antworten),
         neu_oeffentlich_gepostet=max(0, gepostet) if mit_echo else None,
         erster_besuch=erster,
     )
@@ -1108,11 +1105,9 @@ async def eigene_aussagen(
 ):
     """
     Die eigenen Aussagen der angemeldeten Person mit ihren Antworten, Ziel der Kachel
-    "neue Antworten auf deine Aussagen" (#760). Ohne Schalter antworten_hinweis 404.
+    "neue Antworten auf deine Aussagen" (#760, Basisfunktion seit dem Schalter-Umbau).
     Nichts zu anderen Personen: je Antwort nur "von dir" oder nicht.
     """
-    if not schalter_wirksam(antworten_hinweis.SCHALTER, settings):
-        raise HTTPException(status_code=404, detail="Not found")
     seit = datetime.now(timezone.utc) - timedelta(days=BESUCH_ZEITRAUM_TAGE)
     try:
         aussagen = await antworten_hinweis.eigene_aussagen(
@@ -1240,13 +1235,11 @@ def _gepostet_dienst(
     settings: Settings = Depends(get_settings),
 ) -> GepostetService:
     """
-    Ohne ``gepostet_aktiv`` und fuer Startkonten 404: Die Rueckmeldung gibt es dann
-    nicht (#643). Vor der Art.-9-Pruefung, damit ein ausgeschalteter Schalter die
-    Datenbank nicht fragt.
+    Fuer Startkonten 404: Die Rueckmeldung gibt es dann nicht (#643; Basisfunktion
+    seit dem Schalter-Umbau). Vor der Art.-9-Pruefung, damit die Datenbank nicht
+    gefragt wird.
     """
-    if not schalter_wirksam("gepostet", settings) or settings.ist_startkonto(
-        current_user
-    ):
+    if settings.ist_startkonto(current_user):
         raise HTTPException(status_code=404, detail="Not found")
     return get_gepostet_service()
 
@@ -1261,9 +1254,7 @@ def gepostet_angeboten(
     Datenbank nicht und antwortet niemandem 403 (#643). Synchron wie die Sperre selbst.
     tests/unit/api/test_art9_einwilligung_api.py zaehlt diese Abhaengigkeit als Sperre.
     """
-    if not schalter_wirksam("gepostet", settings) or settings.ist_startkonto(
-        current_user
-    ):
+    if settings.ist_startkonto(current_user):
         return False
     require_art9_einwilligung(current_user)
     return True
@@ -1372,7 +1363,7 @@ async def danke_sagen(
     Ohne Schalter 404.
     """
     angemeldet = bool(aufrufer) and aufrufer != ANONYM
-    if not schalter_wirksam("danke_knopf", settings) or (
+    if not schalter_wirksam("wirkungs_echo", settings) or (
         not angemeldet and not schalter_wirksam("danke_ohne_konto", settings)
     ):
         raise HTTPException(status_code=404, detail="Not found")

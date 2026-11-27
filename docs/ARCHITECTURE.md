@@ -426,6 +426,10 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   (0.92), direct raw score above 0.82 to below `…_INHALTSTOR_DIREKT_BIS` (0.90). spaCy model
   of Gegenlesen; open without nouns or before the model is loaded. Measured in
   `tests/regression/SUCHTESTSET.md`, section Inhaltstor.
+- **Switch variables (`SEMANTIC_SEARCH_<NAME>_AKTIV`) below:** since the switch-over of 27.11.2026
+  only the 4 packages, the 7 single switches and the 4 emergency-off variables exist (see
+  "Schalter nach dem Umbau"). Entries below for other names describe the state before and have no
+  effect any more; for a former partial switch read its package.
 - `SEMANTIC_SEARCH_BESTANDSZAHL_ZUWACHS_AKTIV` - upper bound of the Schalter `bestandszahl_zuwachs` (growth next to the Bestandszahl in `/getMetrics`), default `true`
 - `SEMANTIC_SEARCH_HERKUNFT_PRUEFEN_AKTIV` - upper bound of the Schalter `herkunft_pruefen`
   (#759, default `true`: no personal data); takes effect only when an admin switches it on.
@@ -561,12 +565,12 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   after the sentences before the question (`shared/team-texte.ts`, `teamVertrauenssatz`): for a
   team named after a group both sentences, otherwise only the first. The page asks
   `/funktionen` only when the invitation carries a team.
-- `SEMANTIC_SEARCH_FEEDBACK_GESTOERT_AKTIV` - upper bound of the Schalter `feedback_gestoert`
-  (default `false`, group Grundfunktionen, public): the button „Was hat dich gestört?“ on the
+- `SEMANTIC_SEARCH_FEEDBACK_GESTOERT_AKTIV` - emergency off of the basic function `feedback_gestoert`
+  (default `true`, no admin value, reported by `/api/v1/funktionen`): the button „Was hat dich gestört?“ on the
   start page for the launch phase. It opens the Feedback form with category `gestoert`, free
   text only, no contact (`POST /api/v1/feedback/senden` with `kategorie: "gestoert"`; with a
-  contact 422, while the switch is off 409, never 404). Switch on only with the privacy policy
-  paragraph (legal package 27.11.). From 31.12.2026 (UTC) the switch is no longer effective and
+  contact 422, while the emergency off is set 409, never 404). From 31.12.2026 (UTC) a date check
+  stops the button regardless of the variable, and
   the feedback cleanup deletes all entries of the category (`domain/feedback_gestoert.py`).
 - `SEMANTIC_SEARCH_AUFRUFE_ZAEHLEN_AKTIV` - upper bound of the Schalter `aufrufe_zaehlen`
   (#761, default `false`, own switch-on hint: DPO answer on § 25 TDDDG and the DSFA line); takes
@@ -579,6 +583,54 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   no cookie) and an hourly task condenses past days into `aufrufe_tage` (views, visitors).
   Admins read them via `GET /api/v1/aufrufe` (Kennzahlen).
 - `DOCKER_CONTAINER` - set to `true` inside containers to enforce strict path validation
+
+#### Schalter nach dem Umbau (27.11.2026)
+
+Since the switch-over before v1.0.0 there are 4 packages and 7 single switches
+(`PAKET_SCHALTER`, `EINZEL_SCHALTER` in `services/schalter_service.py`). Each still has an upper
+bound (`SEMANTIC_SEARCH_<NAME>_AKTIV`, default `false`) and an admin value (Admin, "Schalter",
+off without an entry); the admin page shows two groups, "Pakete" and "Einzelschalter". A package
+keeps the name, field and variable of its former main switch and replaces the partial switches
+listed below; the code asks only the package name. Admin values stored under the former names are
+ignored, not deleted. The 21 basic functions have no switch, no variable and no admin entry any
+more and run as "on"; their safeguards live in the function itself (table below). Four of them keep
+their variable as an **emergency off** without admin switch (`NOTAUS`, `notaus_wirksam`): default
+`true`, `=false` turns the function off. `abzeichen_sichtbar` is gone: badges exist only in the
+leaderboard of the Spielgefühl package.
+
+`GET /api/v1/funktionen` reports the 4 packages, the public single switches (all except
+`aufrufe_zaehlen`) and the emergency-off functions `gepostet_ohne_konto`, `null_treffer_anzahl`,
+`feedback_gestoert` (the latter also `false` from 31.12.2026).
+
+| Name | Kind | Replaces / contains | Works only with | Legal state (27.11.) |
+|------|------|---------------------|-----------------|----------------------|
+| `teams` | package | `teams`, `team_fortschritt`, `teamlink_vertrauenssatz` | – | cleared (Go des Vorstands) |
+| `spielgefuehl_buehne` | package | `punkte`, `spielgefuehl_buehne`, `rangliste` | – | cleared |
+| `wirkungs_echo` | package | `wirkungs_echo`, `danke_knopf` | – | cleared |
+| `k_begruessung` | package | `k_begruessung`, `saal_spruch` (BDK hint at login only with `?k=bdk`) | – | cleared |
+| `team_quests` | single | – | `teams`; quest points only with wording -28 and `spielgefuehl_buehne` | cleared |
+| `muster_stimmen` | single | – | `spielgefuehl_buehne` | cleared |
+| `teams_oeffentlich` | single | – | `teams` | waiting (Art. 9, DPO); the trust line before login is only true while it is off |
+| `merkliste` | single | – | – | waiting |
+| `aufrufe_zaehlen` | single, not public | – | – | waiting (§ 25 TDDDG) |
+| `danke_ohne_konto` | single | – | `wirkungs_echo` | waiting (not Variante B) |
+| `k_ankuenfte` | single | – | – | waiting (§ 25 TDDDG) |
+| `feedback_gestoert` | basic, emergency off | – | ends 31.12.2026 by date check; deletion run independent | – |
+| `gepostet_ohne_konto` | basic, emergency off | – | – | – |
+| `null_treffer_anzahl` | basic, emergency off | – | shown only from N ≥ 3 and only for Aussagen visible to everyone | – |
+| `herkunft_pruefen` | basic, emergency off | – | admin only | – |
+| `sharepic`, `abkuerzungen`, `bestandszahl_zuwachs`, `meldeweg_sichtbar`, `gepostet`, `antworten_hinweis`, `vertrauenszeile`, `hinweiszeile_kurz`, `saison_ziel`, `gartenansicht`, `kopiert_erfolg`, `konter_probe`, `luecke_zu_gross`, `naechster_schritt` | basic | – | – | – |
+| `dse_kurzfassung` | basic | – | box stays hidden while a sentence is a placeholder | – |
+| `einwilligung_im_gewinn` | basic | – | at most one new question per visit, four in the first month; wordings unchanged | – |
+| `stimmen_text_verfall` | basic | – | only with `dieselbe_aussage_nli = an` | – |
+| `abzeichen_sichtbar` | removed | – | – | – |
+
+The old consent model without Spielgefühl (consent "Punkte und Meilensteine", own leaderboard
+consent, badges at the name) is a dead path now: with the package the Spielgefühl model always
+applies, without it there are no points. The code stays until it can be removed in its own change.
+
+The sections below describe the switches before the switch-over; where they name a partial switch,
+read the package.
 
 #### Schalter für das Spielgefühl (#782 to #793)
 

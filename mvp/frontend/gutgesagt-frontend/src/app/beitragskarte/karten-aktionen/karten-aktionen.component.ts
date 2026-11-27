@@ -19,7 +19,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatSnackBar, MatSnackBarRef } from '@angular/material/snack-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
@@ -38,7 +38,7 @@ import { beitragsLink } from '../../shared/beitrags-link';
 import { TeilenService, hatGeteilt } from '../../shared/teilen.service';
 import { FunktionenService } from '../../services/funktionen.service';
 import { sharepicDialogOeffnen } from '../../shared/sharepic/sharepic-dialog.component';
-import { KOPIERT, KOPIERT_MIT_LUECKE, hatLuecke } from '../../shared/vorlagen-luecke';
+import { KOPIERT_MIT_LUECKE, hatLuecke } from '../../shared/vorlagen-luecke';
 import { platzhalterDialogOeffnen } from './platzhalter-dialog.component';
 import { GEPOSTET_NICHT_GEZAEHLT, GEPOSTET_OHNE_KONTO_DANK, gepostetDank } from './gepostet-texte';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
@@ -47,12 +47,6 @@ import { DankeKnopfComponent } from './danke-knopf.component';
 import { GepostetStand, KopiertErfolgComponent } from './kopiert-erfolg.component';
 import type { AndereTonlage } from './kopiert-erfolg';
 import { KopiertErfolgStelle } from './kopiert-erfolg-stelle';
-
-/**
- * So lange steht „Kopiert“: Mit 1,5 s war es beim Wechsel in die andere App schon weg
- * (Persona-Runde 2, P10).
- */
-export const KOPIERT_DAUER_MS = 4000;
 
 /**
  * Die Aktionsleiste der vollen Beitragskarte: abstimmen, kopieren, teilen, melden, im
@@ -143,10 +137,8 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
   /** Teilen als Bild: das erste Thema der Aussage mit Motiv; null ohne. */
   @Input() thema: { name: string; motiv?: string } | null = null;
 
-  /** „Als Bild teilen“ steht nur im Menue, wenn der Schalter an ist (#756, Standard aus). */
-  readonly sharepicAn = inject(FunktionenService).an('sharepic');
-  /** „Danke an die Autorin“ nach dem Kopieren (#791); ohne Konto nur mit Unterschalter. */
-  readonly dankeKnopfAn = inject(FunktionenService).an('danke_knopf');
+  /** „Danke an die Autorin“ nach dem Kopieren (#791, Paket Wirkungs-Echo); ohne Konto nur mit Einzelschalter. */
+  readonly dankeKnopfAn = inject(FunktionenService).an('wirkungs_echo');
   readonly dankeOhneKontoAn = inject(FunktionenService).an('danke_ohne_konto');
   /** „Ja, gepostet“ auch ohne Konto (#799), nur als Wochenzähler „Meldungen ohne Konto“. */
   readonly gepostetOhneKontoAn = inject(FunktionenService).an('gepostet_ohne_konto');
@@ -173,8 +165,6 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
   get gepostetOhneKonto(): boolean {
     return this.gepostetKennung === null;
   }
-  /** Die Snackbar „Kopiert“, falls ohne Erfolgstext eine Frage sie ablöst. */
-  private kopiertHinweis: MatSnackBarRef<unknown> | null = null;
   /** Seit dem ersten Kopieren auf dieser Karte; kein Zeitlimit. */
   dankeAngeboten = false;
 
@@ -182,8 +172,6 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
   @Input() nutzung: number | null = null;
   /** Erfolgstext nach dem Kopieren: eine Antwort zur selben Aussage in anderem Stil; null = kein Hinweis. */
   @Input() andereTonlage: AndereTonlage | null = null;
-  /** Statt „Kopiert – jetzt unter dem Post einfügen.“ der Erfolgstext unter der Leiste (#785, Standard aus). */
-  readonly kopiertErfolgAn = inject(FunktionenService).an('kopiert_erfolg');
   /** Welche Karte gerade ihren Erfolgstext zeigt; immer nur die zuletzt kopierte (#785). */
   private readonly erfolgStelle = inject(KopiertErfolgStelle);
   /** Kennung dieser Karte bei der Erfolgsstelle. */
@@ -351,8 +339,8 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
 
   /**
    * Der Knopf „Danke an die Autorin“ (#791): nach dem Kopieren, nicht am eigenen Beitrag,
-   * nicht in Vorschau und Album; angemeldet mit `danke_knopf`, ohne Konto nur mit
-   * `danke_ohne_konto`.
+   * nicht in Vorschau und Album; angemeldet mit dem Paket `wirkungs_echo`, ohne Konto nur
+   * mit `danke_ohne_konto`.
    */
   get dankeSichtbar(): boolean {
     if (!this.dankeAngeboten || this.vorschau || this.album || !this.eigeneStimmeImZaehler) {
@@ -363,15 +351,11 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
-   * Nach dem Kopieren: Mit dem Schalter `kopiert_erfolg` (#785) steht der Erfolgstext unter
-   * der Leiste statt der Snackbar „Kopiert“. Wird „Ja, gepostet“ angeboten (angemeldet mit
-   * Einwilligung und Schalter, #643, oder ohne Konto mit `gepostet_ohne_konto`, #799), steht
-   * die Frage mit Knopf im selben Kasten, ohne Frist: Posten dauert länger als eine
-   * Snackbar (Review Spielgefühl 25.11.). Ein Klick zählt die Person einmal je Woche als
-   * öffentlich gekontert.
-   *
-   * Ist `kopiert_erfolg` aus, zeigt der Kasten nur „Kopiert – jetzt unter dem Post
-   * einfügen.“ mit der Frage; ohne Frage bleibt es bei der Snackbar wie bisher.
+   * Nach dem Kopieren steht der Erfolgstext unter der Leiste (#785, Basisfunktion seit dem
+   * Schalter-Umbau 27.11.). Wird „Ja, gepostet“ angeboten (angemeldet mit Einwilligung,
+   * #643, oder ohne Konto mit `gepostet_ohne_konto`, #799), steht die Frage mit Knopf im
+   * selben Kasten, ohne Frist: Posten dauert länger als eine Snackbar (Review Spielgefühl
+   * 25.11.). Ein Klick zählt die Person einmal je Woche als öffentlich gekontert.
    *
    * Hat der Text noch einen Platzhalter „[Hier …]“ (#640), bleibt es beim Hinweis aufs
    * Ausfüllen: Gepostet sein kann der Text dann noch nicht.
@@ -392,20 +376,12 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
     this.gepostetDankText = null;
     const angeboten = this.gepostetSofortAngeboten(kennung);
     this.gepostetStand = angeboten === true ? 'frage' : 'aus';
-    this.kopiertHinweis = null;
-    if (this.kopiertErfolgAn() || angeboten === true) {
-      this.kopiertErfolgZeigen();
-    } else {
-      // Ein offener Kasten (diese oder eine andere Karte) geht zu: „Kopiert“ steht nur einmal.
-      this.erfolgStelle.ohneKasten(this.erfolgKennung);
-      this.cdr.markForCheck();
-      this.kopiertHinweis = this.snackBar.open(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
-    }
+    this.kopiertErfolgZeigen();
     if (angeboten !== null || !kennung) {
       return;
     }
     // Noch unbekannt: Die Bestätigung steht schon; bietet der Server die Frage an, kommt
-    // sie in den Kasten dazu (ohne Erfolgstext löst der Kasten die Snackbar ab).
+    // sie in den Kasten dazu.
     this.usageTrackingService
       .gepostetAngeboten(kennung)
       .pipe(take(1))
@@ -413,22 +389,11 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
         if (!ja || lauf !== this.kopierLauf || this.gepostetGemeldet) {
           return;
         }
-        if (this.kopiertErfolgAn()) {
-          // Geschlossen oder eine andere Karte kopiert: nicht wieder aufdrängen.
-          if (this.kopiertErfolg()) {
-            this.gepostetStand = 'frage';
-            this.cdr.markForCheck();
-          }
-          return;
+        // Geschlossen oder eine andere Karte kopiert: nicht wieder aufdrängen.
+        if (this.kopiertErfolg()) {
+          this.gepostetStand = 'frage';
+          this.cdr.markForCheck();
         }
-        // Inzwischen eine andere Karte kopiert: deren Rückmeldung nicht wegnehmen.
-        if (!this.erfolgStelle.istZuletzt(this.erfolgKennung)) {
-          return;
-        }
-        this.kopiertHinweis?.dismiss();
-        this.kopiertHinweis = null;
-        this.gepostetStand = 'frage';
-        this.kopiertErfolgZeigen();
       });
   }
 
@@ -552,11 +517,11 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  /** Ob „Als Bild teilen“ angeboten wird: Schalter an und ein Text, der ins Bild kann. */
+  /** Ob „Als Bild teilen“ angeboten wird: ein Text, der ins Bild kann (#756, Basisfunktion). */
   get sharepicSichtbar(): boolean {
     const text = (this.bildText || this.kopierText).trim();
     // Vorlagen mit Platzhalter „[Hier …]“ nicht: Im Bild bliebe die Klammer stehen.
-    return this.sharepicAn() && !this.vorschau && !!this.inhaltId && !!text && !hatLuecke(text);
+    return !this.vorschau && !!this.inhaltId && !!text && !hatLuecke(text);
   }
 
   /**

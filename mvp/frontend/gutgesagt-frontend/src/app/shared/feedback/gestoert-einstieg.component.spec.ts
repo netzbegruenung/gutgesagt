@@ -5,8 +5,9 @@ import { MatDialog } from '@angular/material/dialog';
 import { FunktionenService } from '../../services/funktionen.service';
 import { FeedbackDialogComponent } from './feedback-dialog.component';
 import { GestoertEinstiegComponent } from './gestoert-einstieg.component';
+import { FEEDBACK_GESTOERT_ENDE_MS, gestoertOffen } from './feedback.service';
 
-describe('GestoertEinstiegComponent (Schalter feedback_gestoert)', () => {
+describe('GestoertEinstiegComponent (Not-Aus feedback_gestoert)', () => {
   let fixture: ComponentFixture<GestoertEinstiegComponent>;
   const an = signal(false);
   let dialog: jasmine.SpyObj<MatDialog>;
@@ -32,6 +33,8 @@ describe('GestoertEinstiegComponent (Schalter feedback_gestoert)', () => {
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(GestoertEinstiegComponent);
+    // Vor dem Stichtag, unabhängig vom Tag des Testlaufs
+    fixture.componentInstance.jetzt = () => Date.UTC(2026, 10, 27, 12);
     fixture.detectChanges();
   });
 
@@ -43,7 +46,7 @@ describe('GestoertEinstiegComponent (Schalter feedback_gestoert)', () => {
     expect(gefragt).toEqual(['feedback_gestoert']);
   });
 
-  it('ist bei ausgeschaltetem Schalter unsichtbar', () => {
+  it('ist bei greifendem Not-Aus unsichtbar', () => {
     expect(knopf()).toBeNull();
     expect((fixture.nativeElement as HTMLElement).textContent?.trim()).toBe('');
   });
@@ -68,5 +71,29 @@ describe('GestoertEinstiegComponent (Schalter feedback_gestoert)', () => {
       FeedbackDialogComponent,
       jasmine.objectContaining({ data: { kategorie: 'gestoert' } })
     );
+  });
+
+  describe('Stichtag 31.12.2026 (UTC, wie GESTOERT_GELOESCHT_AB im Backend)', () => {
+    it('liegt am 31.12.2026 um 00:00 UTC', () => {
+      expect(new Date(FEEDBACK_GESTOERT_ENDE_MS).toISOString()).toBe('2026-12-31T00:00:00.000Z');
+      expect(gestoertOffen(FEEDBACK_GESTOERT_ENDE_MS - 1)).toBeTrue();
+      expect(gestoertOffen(FEEDBACK_GESTOERT_ENDE_MS)).toBeFalse();
+    });
+
+    it('zeigt den Knopf ab dem Stichtag nicht mehr, auch wenn ein alter Stand ihn als an meldet', () => {
+      const spaeter = TestBed.createComponent(GestoertEinstiegComponent);
+      spaeter.componentInstance.jetzt = () => FEEDBACK_GESTOERT_ENDE_MS;
+      an.set(true);
+      spaeter.detectChanges();
+      expect((spaeter.nativeElement as HTMLElement).querySelector('[data-testid="gestoert-einstieg"]')).toBeNull();
+    });
+
+    it('zeigt ihn am Tag davor noch', () => {
+      const vorher = TestBed.createComponent(GestoertEinstiegComponent);
+      vorher.componentInstance.jetzt = () => FEEDBACK_GESTOERT_ENDE_MS - 1;
+      an.set(true);
+      vorher.detectChanges();
+      expect((vorher.nativeElement as HTMLElement).querySelector('[data-testid="gestoert-einstieg"]')).not.toBeNull();
+    });
   });
 });

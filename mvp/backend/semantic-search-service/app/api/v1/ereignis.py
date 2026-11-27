@@ -31,7 +31,7 @@ from services.gepostet_ohne_konto_service import (
     GepostetOhneKontoService,
     get_gepostet_ohne_konto_service,
 )
-from services.schalter_service import schalter_wirksam
+from services.schalter_service import notaus_wirksam
 from utils.aufrufer import ANONYM
 from utils.rate_limiter import RateLimiter
 
@@ -64,11 +64,12 @@ async def ereignis(
     dienst: GepostetOhneKontoService = Depends(get_gepostet_ohne_konto_service),
 ) -> EreignisResponse:
     """
-    Eine Meldung ohne Konto zaehlen. Ohne Schalter ``gepostet_ohne_konto`` (wirkt nur
-    mit ``gepostet``) 404 und nichts gezaehlt; ueber der Drosselung 429. Geloggt wird
+    Eine Meldung ohne Konto zaehlen. Mit Not-Aus ``gepostet_ohne_konto``
+    (SEMANTIC_SEARCH_GEPOSTET_OHNE_KONTO_AKTIV=false) 404 und nichts gezaehlt; ueber
+    der Drosselung 429. Geloggt wird
     nichts zur Person, auch keine Adresse.
     """
-    if not schalter_wirksam("gepostet_ohne_konto", settings):
+    if not notaus_wirksam("gepostet_ohne_konto", settings):
         raise HTTPException(status_code=404, detail="Not found")
     if aufrufer and aufrufer != ANONYM:
         return EreignisResponse(gezaehlt=False)

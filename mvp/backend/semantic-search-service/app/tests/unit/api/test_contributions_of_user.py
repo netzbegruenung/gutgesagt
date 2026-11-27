@@ -387,16 +387,14 @@ def test_aussagen_nicht_lesbar_liefert_die_liste_ohne_thema(
     "schalter, erwartet",
     [
         ({}, (None, None)),
-        # Nur zusammen (services/schalter_service.py, NUR_ZUSAMMEN): einer allein wirkt nicht
-        ({"wirkungs_echo_aktiv": True}, (None, None)),
-        ({"danke_knopf_aktiv": True}, (None, None)),
-        ({"wirkungs_echo_aktiv": True, "danke_knopf_aktiv": True}, (3, 5)),
+        # Beide Summen gehoeren zum Paket wirkungs_echo (Schalter-Umbau 27.11.)
+        ({"wirkungs_echo_aktiv": True}, (3, 5)),
     ],
 )
 def test_wirkung_und_danke_nur_mit_schalter(
     client, repository, wirkung_ohne_datenbank, schalter, erwartet
 ):
-    """#790, #791: nur Summen je Beitrag, nur mit beiden Schaltern (nur zusammen)."""
+    """#790, #791: nur Summen je Beitrag, nur mit dem Paket wirkungs_echo."""
     from core.config import Settings
 
     eintrag = beitrag()

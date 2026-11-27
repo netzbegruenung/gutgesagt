@@ -18,7 +18,7 @@ def _client(punkte: bool, abzeichen: bool) -> TestClient:
     app = FastAPI()
     app.include_router(usage_router, prefix="/api/v1/usage")
     app.dependency_overrides[get_settings] = lambda: Settings(
-        punkte_aktiv=punkte, abzeichen_sichtbar_aktiv=abzeichen
+        spielgefuehl_buehne_aktiv=punkte
     )
     return TestClient(app)
 
@@ -31,21 +31,12 @@ def _client(punkte: bool, abzeichen: bool) -> TestClient:
             False,
             {"aktiv": False, "abzeichen_sichtbar": False, "spielgefuehl_buehne": False},
         ),
-        (
-            True,
-            False,
-            {"aktiv": True, "abzeichen_sichtbar": False, "spielgefuehl_buehne": False},
-        ),
-        # Abzeichen nur zusammen mit den Punkten
-        (
-            False,
-            True,
-            {"aktiv": False, "abzeichen_sichtbar": False, "spielgefuehl_buehne": False},
-        ),
+        # Paket Spielgefuehl (Schalter-Umbau 27.11.): Punkte und Spielgefuehl zusammen,
+        # Abzeichen am Namen nie
         (
             True,
             True,
-            {"aktiv": True, "abzeichen_sichtbar": True, "spielgefuehl_buehne": False},
+            {"aktiv": True, "abzeichen_sichtbar": False, "spielgefuehl_buehne": True},
         ),
     ],
 )
@@ -67,7 +58,7 @@ def test_spielgefuehl_modell_keine_abzeichen_am_namen():
     app = FastAPI()
     app.include_router(usage_router, prefix="/api/v1/usage")
     app.dependency_overrides[get_settings] = lambda: Settings(
-        punkte_aktiv=True, abzeichen_sichtbar_aktiv=True, spielgefuehl_buehne_aktiv=True
+        spielgefuehl_buehne_aktiv=True,
     )
     client = TestClient(app)
 
@@ -95,7 +86,7 @@ def test_spielgefuehl_ohne_punkte_aus():
     app = FastAPI()
     app.include_router(usage_router, prefix="/api/v1/usage")
     app.dependency_overrides[get_settings] = lambda: Settings(
-        punkte_aktiv=False, spielgefuehl_buehne_aktiv=True
+        spielgefuehl_buehne_aktiv=False,
     )
 
     assert TestClient(app).get(URL).json() == {

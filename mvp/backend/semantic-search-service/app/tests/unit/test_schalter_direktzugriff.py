@@ -38,6 +38,7 @@ from dependencies import (
 )
 from services.abzeichen_service import AbzeichenService, abzeichen_service_setzen
 from services.schalter_service import (
+    NOTAUS,
     SCHALTER,
     SchalterService,
     schalter_service_setzen,
@@ -50,15 +51,7 @@ BEITRAG_ID = "11111111-1111-4111-8111-111111111111"
 PERSON = {"X-User": "bo-2"}
 ADMIN = {"X-User": "admin-1", "X-Is-Admin": "true"}
 
-ALLE_OBERGRENZEN_AN = dict(
-    punkte_aktiv=True,
-    abzeichen_sichtbar_aktiv=True,
-    gepostet_aktiv=True,
-    merkliste_aktiv=True,
-    abkuerzungen_aktiv=True,
-    sharepic_aktiv=True,
-    rangliste_aktiv=True,
-)
+ALLE_OBERGRENZEN_AN = {schalter.feld: True for schalter in SCHALTER.values()}
 
 
 @pytest.fixture
@@ -96,7 +89,9 @@ def abzeichen():
 
 
 @pytest.fixture
-def client(muster, abzeichen, art9_einwilligung_ohne_datenbank):
+def client(
+    muster, abzeichen, art9_einwilligung_ohne_datenbank, spielgefuehl_ohne_datenbank
+):
     app = FastAPI()
     app.include_router(usage_module.router, prefix="/api/v1/usage")
     app.include_router(metrics_module.router, prefix="/api/v1/metrics")
@@ -165,21 +160,6 @@ def _admin_aktiv_aus(pfad):
     return pruefen
 
 
-def _funktion_aus(name):
-    def pruefen(client, muster, abzeichen):
-        antwort = client.get("/api/v1/funktionen")
-        return (
-            antwort.status_code == 200 and antwort.json()["funktionen"][name] is False
-        )
-
-    return pruefen
-
-
-def _kein_muster_hinweis(client, muster, abzeichen):
-    client.post(f"/api/v1/usage/content/{BEITRAG_ID}/usage", json={}, headers=PERSON)
-    return not muster.nutzung_melden.called
-
-
 def _keine_abzeichen(client, muster, abzeichen):
     return abzeichen.dienst.abzeichen(["kim-1"]) == {}
 
@@ -189,40 +169,24 @@ def _takt_rechnet_nicht(client, muster, abzeichen):
     return not abzeichen.repository.zeigende.called
 
 
+# Paket Spielgefuehl (Schalter-Umbau 27.11.): Punkte, Meilensteine, Muster-Hinweise
+# und Rangliste haengen alle am Admin-Wert spielgefuehl_buehne.
 STELLEN = {
-    "status_punkte": (_status_aus("aktiv"), ("punkte",)),
-    "eigene_punkte": (_feld_aus("/api/v1/usage/users/me/punkte"), ("punkte",)),
-    "meilensteine": (_feld_aus("/api/v1/usage/users/me/meilensteine"), ("punkte",)),
-    "punkte_einwilligung": (
-        _feld_aus("/api/v1/usage/users/me/punkte-einwilligung"),
-        ("punkte",),
+    "status_punkte": (_status_aus("aktiv"), ("spielgefuehl_buehne",)),
+    "eigene_punkte": (
+        _feld_aus("/api/v1/usage/users/me/punkte"),
+        ("spielgefuehl_buehne",),
     ),
-    "muster_hinweise_melden": (_kein_muster_hinweis, ("punkte",)),
+    "meilensteine": (
+        _feld_aus("/api/v1/usage/users/me/meilensteine"),
+        ("spielgefuehl_buehne",),
+    ),
     "muster_hinweise_admin": (
         _admin_aktiv_aus("/api/v1/metrics/muster-hinweise"),
-        ("punkte",),
+        ("spielgefuehl_buehne",),
     ),
-    # Abzeichen wirken nur zusammen mit den Punkten: Beide Admin-Werte schalten sie aus.
-    "status_abzeichen": (
-        _status_aus("abzeichen_sichtbar"),
-        ("abzeichen_sichtbar", "punkte"),
-    ),
-    "abzeichen_sichtbarkeit": (
-        _feld_aus("/api/v1/usage/users/me/abzeichen-sichtbarkeit"),
-        ("abzeichen_sichtbar", "punkte"),
-    ),
-    "abzeichen_am_namen": (_keine_abzeichen, ("abzeichen_sichtbar", "punkte")),
-    "abzeichen_takt": (_takt_rechnet_nicht, ("abzeichen_sichtbar", "punkte")),
-    "gepostet_rueckfrage": (
-        _feld_aus("/api/v1/usage/users/me/gepostet", "angeboten"),
-        ("gepostet",),
-    ),
-    "gepostet_admin": (_admin_aktiv_aus("/api/v1/metrics/gepostet"), ("gepostet",)),
     "merkliste": (_feld_aus("/api/v1/merkliste"), ("merkliste",)),
-    "abkuerzungen": (_funktion_aus("abkuerzungen"), ("abkuerzungen",)),
-    "sharepic": (_funktion_aus("sharepic"), ("sharepic",)),
-    # Rangliste je Saison (#793): wirkt nur zusammen mit den Punkten.
-    "rangliste": (_feld_aus("/api/v1/rangliste"), ("rangliste", "punkte")),
+    "rangliste": (_feld_aus("/api/v1/rangliste"), ("spielgefuehl_buehne",)),
 }
 
 FAELLE = [
@@ -230,6 +194,35 @@ FAELLE = [
     for stelle, (_, alle) in STELLEN.items()
     for schalter in alle
 ]
+
+
+class TestAbzeichenAmNamenNie:
+    """
+    Schalter-Umbau 27.11.: abzeichen_sichtbar ist weg, Abzeichen gibt es nur in der
+    Rangliste. Auch mit allen Obergrenzen und Admin-Werten an keine am Namen.
+    """
+
+    def test_status_meldet_keine_abzeichen(self, client):
+        antwort = client.get("/api/v1/usage/punkte/status")
+        assert antwort.status_code == 200
+        assert antwort.json()["abzeichen_sichtbar"] is False
+
+    def test_keine_am_namen(self, client, muster, abzeichen):
+        assert _keine_abzeichen(client, muster, abzeichen)
+
+    def test_frage_zur_sichtbarkeit_aus(self, client):
+        antwort = client.get(
+            "/api/v1/usage/users/me/abzeichen-sichtbarkeit", headers=PERSON
+        )
+        assert antwort.status_code == 200
+        assert antwort.json()["aktiv"] is False
+
+    def test_punkte_einwilligung_altes_modell_aus(self, client):
+        antwort = client.get(
+            "/api/v1/usage/users/me/punkte-einwilligung", headers=PERSON
+        )
+        assert antwort.status_code == 200
+        assert antwort.json()["aktiv"] is False
 
 
 class TestObergrenzeAnAdminAus:
@@ -271,7 +264,7 @@ class TestZustimmungFuerMusterAdminAus:
         app = FastAPI()
         app.include_router(voting_module.router, prefix="/api/v1/voting")
         app.dependency_overrides[get_settings] = lambda: Settings(
-            punkte_aktiv=True, spielgefuehl_buehne_aktiv=True, muster_stimmen_aktiv=True
+            spielgefuehl_buehne_aktiv=True, muster_stimmen_aktiv=True
         )
         app.dependency_overrides[get_beitrag_laden] = lambda: laden
         app.dependency_overrides[get_voting_service] = lambda: dienst
@@ -290,9 +283,7 @@ class TestZustimmungFuerMusterAdminAus:
         assert antwort.status_code == 200
         return muster.zustimmung_melden.called
 
-    @pytest.mark.parametrize(
-        "schalter", ["muster_stimmen", "spielgefuehl_buehne", "punkte"]
-    )
+    @pytest.mark.parametrize("schalter", ["muster_stimmen", "spielgefuehl_buehne"])
     def test_aus(self, schalter, admin_werte, abstimmen):
         admin_werte[schalter] = False
 
@@ -302,9 +293,9 @@ class TestZustimmungFuerMusterAdminAus:
         assert self._gemeldet(abstimmen)
 
 
-# Felder der Obergrenze in Settings (und die Property, die zwei davon verknuepft).
-FELDER = {schalter.feld for schalter in SCHALTER.values()}
-OBERGRENZE = FELDER | {"abzeichen_sichtbar"}
+# Felder der Obergrenze in Settings und die Felder des Not-Aus (notaus_wirksam).
+FELDER = {schalter.feld for schalter in SCHALTER.values()} | set(NOTAUS.values())
+OBERGRENZE = FELDER
 # Wo die Obergrenze direkt gelesen werden darf: die Definition, der Dienst, und der
 # Start des Abzeichen-Takts (laeuft nur mit Obergrenze; ob er rechnet, entscheidet je
 # Lauf der Admin-Wert).
@@ -312,11 +303,8 @@ ERLAUBT = {
     Path("core/config.py"): None,
     Path("services/schalter_service.py"): None,
     Path("main.py"): {
-        "settings.abzeichen_sichtbar",
-        # Im Spielgefuehl-Modell rechnet der Takt die Abzeichen fuer die Rangliste.
+        # Der Takt rechnet die Abzeichen fuer die Rangliste des Pakets Spielgefuehl.
         "settings.spielgefuehl_buehne_aktiv",
-        "settings.punkte_aktiv",
-        "settings.rangliste_aktiv",
     },
 }
 
@@ -333,8 +321,7 @@ def _direktzugriffe():
             if isinstance(knoten, ast.Attribute) and knoten.attr in OBERGRENZE:
                 zugriff = ast.unparse(knoten)
             elif isinstance(knoten, ast.Constant) and knoten.value in FELDER:
-                # getattr(settings, "punkte_aktiv") ginge sonst am Waechter vorbei;
-                # "abzeichen_sichtbar" allein ist auch der Name des Schalters.
+                # getattr(settings, "teams_aktiv") ginge sonst am Waechter vorbei
                 zugriff = repr(knoten.value)
             else:
                 continue
@@ -351,14 +338,15 @@ def test_waechter_erkennt_einen_direktzugriff(tmp_path, monkeypatch):
     """Der Waechter selbst: ein Direktzugriff in einer neuen Datei macht ihn rot."""
     (tmp_path / "api").mkdir()
     (tmp_path / "api" / "neu.py").write_text(
-        "def f(settings):\n    return settings.punkte_aktiv\n", encoding="utf-8"
+        "def f(settings):\n    return settings.teams_aktiv\n", encoding="utf-8"
     )
     (tmp_path / "api" / "auch.py").write_text(
-        "def g(s):\n    return getattr(s, 'gepostet_aktiv')\n", encoding="utf-8"
+        "def g(s):\n    return getattr(s, 'gepostet_ohne_konto_aktiv')\n",
+        encoding="utf-8",
     )
     monkeypatch.setitem(globals(), "APP", tmp_path)
 
     assert list(_direktzugriffe()) == [
-        "api/auch.py:2: 'gepostet_aktiv'",
-        "api/neu.py:2: settings.punkte_aktiv",
+        "api/auch.py:2: 'gepostet_ohne_konto_aktiv'",
+        "api/neu.py:2: settings.teams_aktiv",
     ]

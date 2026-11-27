@@ -5,7 +5,6 @@ import { AuthGuard } from './auth/auth.guard';
 import { PublicGuard } from './auth/public.guard';
 import { gespeichertEltern } from './beitragsformular/beitrag-gespeichert/gespeichert-adresse';
 import { EINWURF_PARAM, alteEinwurfAdresseUmleiten } from './destillieren/einwurf-adresse';
-import { konterProbeGuard } from './konter-probe/konter-probe.guard';
 
 /** Die Elternziel-Funktion einer Route holen, wie goBack sie aufruft. */
 function elternFunktion(pfad: string): (snapshot: ActivatedRouteSnapshot) => string | unknown[] {
@@ -94,10 +93,10 @@ describe('Routentabelle', () => {
     expect(eintrag!.canActivate).toEqual([PublicGuard]);
   });
 
-  it('zeigt die Konter-Probe Besuchern, aber nur bei eingeschaltetem Schalter (#786)', () => {
+  it('zeigt die Konter-Probe Besuchern, ohne Schalter (#786, Basisfunktion)', () => {
     const eintrag = routes.find((route) => route.path === 'konter-probe');
     expect(eintrag).withContext('Route fehlt').toBeTruthy();
-    expect(eintrag!.canActivate).toEqual([PublicGuard, konterProbeGuard]);
+    expect(eintrag!.canActivate).toEqual([PublicGuard]);
   });
 
   it('zeigt "Hier fehlt eine Antwort" nur Angemeldeten', () => {

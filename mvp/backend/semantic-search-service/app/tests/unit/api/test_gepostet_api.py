@@ -34,9 +34,7 @@ def dienst(monkeypatch, art9_einwilligung_ohne_datenbank):
 def _client(an: bool = True, startkonten: str = "") -> TestClient:
     app = FastAPI()
     app.include_router(usage_router, prefix="/api/v1/usage")
-    app.dependency_overrides[get_settings] = lambda: Settings(
-        gepostet_aktiv=an, startkonten=startkonten
-    )
+    app.dependency_overrides[get_settings] = lambda: Settings(startkonten=startkonten)
     return TestClient(app)
 
 
@@ -62,39 +60,6 @@ def test_stand_ohne_zu_zaehlen(dienst):
         "angeboten": True,
     }
     dienst.melden.assert_not_called()
-
-
-def test_ohne_schalter_melden_404_ohne_datenbank(
-    dienst, art9_einwilligung_ohne_datenbank
-):
-    client = _client(an=False)
-
-    assert client.post(URL, headers=KIM).status_code == 404
-    dienst.melden.assert_not_called()
-    art9_einwilligung_ohne_datenbank.lesen.assert_not_called()
-
-
-def test_ohne_schalter_stand_nicht_angeboten(dienst, art9_einwilligung_ohne_datenbank):
-    # Den Stand fragt das Frontend nach dem Kopieren von selbst: 200 statt 404
-    # (Gateway-fail2ban, docs/ARCHITECTURE.md), ohne den Zaehler zu lesen.
-    antwort = _client(an=False).get(URL, headers=KIM)
-
-    assert antwort.status_code == 200
-    assert antwort.json()["angeboten"] is False
-    dienst.diese_woche.assert_not_called()
-    # Erst mit Schalter fragt die Sperre die Einwilligung: kein 403, keine Abfrage (#643)
-    art9_einwilligung_ohne_datenbank.lesen.assert_not_called()
-
-
-def test_ohne_schalter_auch_ohne_einwilligung_kein_403(
-    dienst, art9_einwilligung_ohne_datenbank
-):
-    art9_einwilligung_ohne_datenbank.lesen.return_value = None
-
-    antwort = _client(an=False).get(URL, headers=KIM)
-
-    assert antwort.status_code == 200
-    assert antwort.json()["angeboten"] is False
 
 
 @pytest.mark.parametrize("kopf", [{}, {"X-User": "anonymous"}])
@@ -135,7 +100,7 @@ def test_fehler_ohne_kennung_im_log(dienst, caplog):
 def _admin_client(dienst, an: bool = True) -> TestClient:
     app = FastAPI()
     app.include_router(metrics_router, prefix="/api/v1/metrics")
-    app.dependency_overrides[get_settings] = lambda: Settings(gepostet_aktiv=an)
+    app.dependency_overrides[get_settings] = lambda: Settings()
     app.dependency_overrides[get_gepostet_service] = lambda: dienst
     return TestClient(app)
 
@@ -154,25 +119,11 @@ def test_admin_sieht_die_zahl_je_woche():
     assert antwort.status_code == 200
     assert antwort.json() == {
         "aktiv": True,
-        "ohne_konto_aktiv": False,
+        # Not-Aus, Standard an (Schalter-Umbau 27.11.)
+        "ohne_konto_aktiv": True,
         "woechentlich": [
             {"woche": "2026-11-02", "personen": 3, "meldungen_ohne_konto": 0},
             {"woche": "2026-11-09", "personen": 0, "meldungen_ohne_konto": 0},
         ],
     }
     dienst.wochen.assert_called_once_with(2)
-
-
-def test_admin_ohne_schalter_leer():
-    dienst = Mock()
-
-    antwort = _admin_client(dienst, an=False).get(
-        "/api/v1/metrics/gepostet", headers=ADMIN
-    )
-
-    assert antwort.json() == {
-        "aktiv": False,
-        "ohne_konto_aktiv": False,
-        "woechentlich": [],
-    }
-    dienst.wochen.assert_not_called()

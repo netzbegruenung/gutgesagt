@@ -1,51 +1,38 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree, convertToParamMap, provideRouter } from '@angular/router';
-import { Observable, firstValueFrom, of } from 'rxjs';
 
 import { FunktionenService } from '../services/funktionen.service';
-import { ABKUERZUNGEN_SCHALTER, abkuerzungGuard } from './abkuerzung.guard';
+import { abkuerzungGuard } from './abkuerzung.guard';
 
 describe('abkuerzungGuard (#757)', () => {
-  let frisch: jasmine.Spy;
+  let funktionen: jasmine.SpyObj<FunktionenService>;
 
   beforeEach(() => {
-    frisch = jasmine.createSpy('frisch');
+    funktionen = jasmine.createSpyObj<FunktionenService>('FunktionenService', ['an', 'frisch', 'stand$']);
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), { provide: FunktionenService, useValue: { frisch } }],
+      providers: [provideRouter([]), { provide: FunktionenService, useValue: funktionen }],
     });
   });
 
-  async function ziel(name: string): Promise<string> {
+  function ziel(name: string): string {
     const route = { paramMap: convertToParamMap({ name }) } as ActivatedRouteSnapshot;
     const ergebnis = TestBed.runInInjectionContext(() =>
       abkuerzungGuard(route, {} as RouterStateSnapshot),
-    ) as Observable<UrlTree>;
-    return TestBed.inject(Router).serializeUrl(await firstValueFrom(ergebnis));
+    ) as UrlTree;
+    return TestBed.inject(Router).serializeUrl(ergebnis);
   }
 
-  describe('Schalter an', () => {
-    beforeEach(() => frisch.and.returnValue(of(true)));
-
-    it('fuehrt jede Abkuerzung zu ihrem Ziel', async () => {
-      expect(await ziel('einwerfen')).toBe('/einwerfen');
-      expect(await ziel('suchen')).toBe('/search');
-      expect(await ziel('fangkorb')).toBe('/fangkorb');
-      expect(frisch).toHaveBeenCalledWith(ABKUERZUNGEN_SCHALTER);
-    });
-
-    it('fuehrt unbekannte Namen auf die Startseite', async () => {
-      expect(await ziel('admin')).toBe('/search');
-      expect(await ziel('constructor')).toBe('/search');
-      expect(await ziel('__proto__')).toBe('/search');
-    });
+  it('fuehrt jede Abkuerzung ohne Schalter zu ihrem Ziel (Basisfunktion)', () => {
+    expect(ziel('einwerfen')).toBe('/einwerfen');
+    expect(ziel('suchen')).toBe('/search');
+    expect(ziel('fangkorb')).toBe('/fangkorb');
+    expect(funktionen.frisch).not.toHaveBeenCalled();
+    expect(funktionen.an).not.toHaveBeenCalled();
   });
 
-  describe('Schalter aus', () => {
-    beforeEach(() => frisch.and.returnValue(of(false)));
-
-    it('oeffnet jede Abkuerzung als normale Startseite', async () => {
-      expect(await ziel('einwerfen')).toBe('/search');
-      expect(await ziel('fangkorb')).toBe('/search');
-    });
+  it('fuehrt unbekannte Namen auf die Startseite', () => {
+    expect(ziel('admin')).toBe('/search');
+    expect(ziel('constructor')).toBe('/search');
+    expect(ziel('__proto__')).toBe('/search');
   });
 });

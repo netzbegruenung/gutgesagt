@@ -37,7 +37,7 @@ from tests.unit.services.test_team_fortschritt_service import (
 
 pytestmark = [pytest.mark.unit, pytest.mark.api]
 
-AN = Settings(teams_aktiv=True, team_fortschritt_aktiv=True, team_quests_aktiv=True)
+AN = Settings(teams_aktiv=True, team_quests_aktiv=True)
 NUR_TEAMS = Settings(teams_aktiv=True)
 PERSON = f"{TEAM[0]}-0"
 
@@ -139,13 +139,6 @@ def test_unter_fuenf_waechst_noch():
 
     assert team["wirkung"]["waechst_noch"] is True
     assert team["wirkung"]["beitraege"] is None
-    assert team["quest"] is None
-
-
-def test_schalter_aus_felder_null():
-    team = _team_json(_client(Speicher(_team(7)), settings=NUR_TEAMS))
-
-    assert team["wirkung"] is None
     assert team["quest"] is None
 
 

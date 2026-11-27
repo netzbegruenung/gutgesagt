@@ -45,35 +45,8 @@ def _service(repo, erreicht=None, an=True, meilensteine=None) -> AbzeichenServic
     async def standard(user_id: str) -> List[Meilenstein]:
         return [_meilenstein(True)] * erreicht.get(user_id, 0) + [_meilenstein(False)]
 
-    settings = Settings(punkte_aktiv=an, abzeichen_sichtbar_aktiv=an)
+    settings = Settings(spielgefuehl_buehne_aktiv=an)
     return AbzeichenService(repo, meilensteine or standard, settings)
-
-
-async def test_ja_zeigt_die_zahl_der_erreichten_meilensteine():
-    repo = _Repo()
-    dienst = _service(repo, {"kim-1": 3})
-
-    await dienst.antworten("kim-1", True, WORTLAUT)
-
-    assert dienst.abzeichen(["kim-1", "bo-2", None]) == {"kim-1": 3}
-
-
-async def test_wegmarken_zaehlen_nicht_fuers_abzeichen():
-    repo = _Repo()
-
-    async def meilensteine(user_id: str) -> List[Meilenstein]:
-        return [
-            _meilenstein(True),
-            _meilenstein(True, "unterstuetzung"),
-            _meilenstein(True, "weg"),
-            _meilenstein(True, "weg"),
-        ]
-
-    dienst = _service(repo, meilensteine=meilensteine)
-
-    await dienst.antworten("kim-1", True, WORTLAUT)
-
-    assert dienst.abzeichen(["kim-1"]) == {"kim-1": 2}
 
 
 async def test_ohne_zustimmung_kein_abzeichen():
@@ -124,7 +97,7 @@ async def test_ohne_schalter_keine_abzeichen():
 async def test_nur_punkte_an_reicht_nicht():
     repo = _Repo()
     repo.antworten("kim-1", True, WORTLAUT)
-    settings = Settings(punkte_aktiv=True, abzeichen_sichtbar_aktiv=False)
+    settings = Settings(spielgefuehl_buehne_aktiv=True)
 
     async def drei(user_id):
         return [_meilenstein(True)] * 3
@@ -239,9 +212,6 @@ def _buehne_service(repo, erreicht, mitspielende, rangliste=True) -> AbzeichenSe
         return [_meilenstein(True)] * erreicht.get(user_id, 0)
 
     settings = Settings(
-        punkte_aktiv=True,
-        abzeichen_sichtbar_aktiv=True,
-        rangliste_aktiv=rangliste,
         spielgefuehl_buehne_aktiv=True,
     )
     return AbzeichenService(
@@ -272,43 +242,12 @@ async def test_spielgefuehl_abzeichen_nur_in_der_rangliste_nie_am_namen():
     assert dienst.in_rangliste(["kim-1"]) == {}
 
 
-async def test_spielgefuehl_ohne_schalter_rangliste_keine_abzeichen():
-    dienst = _buehne_service(_Repo(), {"kim-1": 2}, {"kim-1"}, rangliste=False)
-
-    await dienst.alle_aktualisieren()
-
-    assert dienst.in_rangliste(["kim-1"]) == {}
-
-
-async def test_modellwechsel_vergisst_die_alten_zahlen():
+async def test_nie_abzeichen_am_namen_auch_mit_ja():
+    """Schalter-Umbau 27.11.: abzeichen_sichtbar ist weg, Abzeichen nur in der Rangliste."""
     repo = _Repo()
-    an = {"buehne": False}
-    mitspielende: set = set()
+    dienst = _service(repo, {"kim-1": 3})
 
-    async def standard(user_id: str) -> List[Meilenstein]:
-        return [_meilenstein(True)] * 4
-
-    # Das Modell kommt hier aus buehne_aktiv; die Obergrenze des Schalters bleibt aus,
-    # sonst waere abzeichen_sichtbar schon vor dem Wechsel nicht wirksam
-    # (services/schalter_service.py: keine Abzeichen am Namen mit Spielgefuehl).
-    settings = Settings(
-        punkte_aktiv=True,
-        abzeichen_sichtbar_aktiv=True,
-        rangliste_aktiv=True,
-    )
-    dienst = AbzeichenService(
-        repo,
-        standard,
-        settings,
-        buehne_aktiv=lambda: an["buehne"],
-        mitspielende=lambda: list(mitspielende),
-        spielt_mit=lambda user_id: user_id in mitspielende,
-    )
     await dienst.antworten("kim-1", True, WORTLAUT)
-    assert dienst.abzeichen(["kim-1"]) == {"kim-1": 4}
-
-    an["buehne"] = True
-    assert dienst.abzeichen(["kim-1"]) == {}
-    assert dienst.in_rangliste(["kim-1"]) == {}
     await dienst.alle_aktualisieren()
-    assert dienst.in_rangliste(["kim-1"]) == {}
+
+    assert dienst.abzeichen(["kim-1"]) == {}

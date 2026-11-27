@@ -30,19 +30,8 @@ def repo(monkeypatch):
 def _client(aktiv: bool = True) -> TestClient:
     app = FastAPI()
     app.include_router(router, prefix="/api/v1/usage")
-    app.dependency_overrides[get_settings] = lambda: Settings(
-        einwilligung_im_gewinn_aktiv=aktiv
-    )
+    app.dependency_overrides[get_settings] = lambda: Settings()
     return TestClient(app)
-
-
-def test_ohne_schalter_aus_und_keine_abfrage(repo):
-    # 200 statt 404 (Gateway-fail2ban); aktiv false ist das sichere "Schalter aus" (#812)
-    antwort = _client(aktiv=False).get(URL, headers=KIM)
-
-    assert antwort.status_code == 200
-    assert antwort.json()["aktiv"] is False
-    repo.lesen.assert_not_called()
 
 
 def test_nur_angemeldet(repo):

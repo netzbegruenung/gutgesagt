@@ -25,7 +25,7 @@ from services.feedback_service import (
     FeedbackEintrag,
     FeedbackService,
 )
-from services.schalter_service import schalter_wirksam
+from services.feedback_service import gestoert_knopf_an
 from utils.client_identity import derive_client_key
 from utils.rate_limiter import feedback_rate_limiter
 
@@ -114,9 +114,7 @@ async def feedback_senden(
     antwortet 409, nicht 404: Senden ist eine Handlung, und das Formular sagt dann,
     dass der Knopf gerade aus ist.
     """
-    if request.kategorie == KATEGORIE_GESTOERT and not schalter_wirksam(
-        "feedback_gestoert", settings
-    ):
+    if request.kategorie == KATEGORIE_GESTOERT and not gestoert_knopf_an(settings):
         raise HTTPException(status_code=409, detail="Feedback category is off")
     if await feedback_rate_limiter.is_rate_limited(derive_client_key(http_request)):
         raise HTTPException(

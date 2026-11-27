@@ -38,6 +38,22 @@ from utils.utc_tag import heute_utc, sekunden_bis_mitternacht
 logger = get_logger(__name__)
 
 AUFBEWAHRUNG_TAGE = 180
+
+
+def gestoert_knopf_an(einstellungen=None, heute: Optional[date] = None) -> bool:
+    """
+    Ob der Knopf "Was hat dich gestört?" Eintraege annimmt: Basisfunktion seit dem
+    Schalter-Umbau (27.11.), abschaltbar nur ueber den Not-Aus
+    SEMANTIC_SEARCH_FEEDBACK_GESTOERT_AKTIV=false, und ab dem 31.12.2026 nie mehr
+    (Datumspruefung, domain/feedback_gestoert.py). Der Loeschlauf haengt an keinem
+    von beiden.
+    """
+    from services.schalter_service import notaus_wirksam
+
+    tag = heute if heute is not None else heute_utc()
+    return notaus_wirksam("feedback_gestoert", einstellungen) and gestoert_offen(tag)
+
+
 TEXT_MAX = 2000
 KONTAKT_MAX = 200
 LIMIT_STANDARD = 100

@@ -353,13 +353,10 @@ class TestGleicherText:
 
 @pytest.mark.asyncio
 class TestGleicherTextImStatementService:
-    def _dienst(
-        self, test_settings, repository_factory, modus, wert=0.5, obergrenze=True
-    ):
+    def _dienst(self, test_settings, repository_factory, modus, wert=0.5):
         settings = test_settings.model_copy(
             update={
                 "dieselbe_aussage_nli": modus,
-                "stimmen_text_verfall_aktiv": obergrenze,
             }
         )
         dienst = StatementService(
@@ -389,39 +386,6 @@ class TestGleicherTextImStatementService:
         dienst = self._dienst(test_settings, repository_factory, "an")
         dienst._aehnlichkeit = AsyncMock(side_effect=RuntimeError())
         assert await dienst.gleicher_text("alt", "neu") is None
-
-    async def test_schalter_obergrenze_aus_entscheidet_niemand(
-        self, test_settings, repository_factory
-    ):
-        """Standard: Obergrenze aus, keine Einbettung, die Stimmen bleiben."""
-        dienst = self._dienst(test_settings, repository_factory, "an", obergrenze=False)
-        assert await dienst.gleicher_text("alt", "neu") is None
-        dienst._aehnlichkeit.assert_not_awaited()
-
-    async def test_schalter_admin_wert_aus_entscheidet_niemand(
-        self, test_settings, repository_factory
-    ):
-        werte = {"stimmen_text_verfall": False}
-        schalter_service_setzen(
-            SchalterService(
-                admin_werte_lesen=lambda: dict(werte),
-                admin_wert_setzen=lambda name, an, admin: None,
-            )
-        )
-        try:
-            dienst = self._dienst(test_settings, repository_factory, "an")
-            assert await dienst.gleicher_text("alt", "neu") is None
-            dienst._aehnlichkeit.assert_not_awaited()
-            werte["stimmen_text_verfall"] = True
-            schalter_service_setzen(
-                SchalterService(
-                    admin_werte_lesen=lambda: dict(werte),
-                    admin_wert_setzen=lambda name, an, admin: None,
-                )
-            )
-            assert await dienst.gleicher_text("alt", "neu") is False
-        finally:
-            schalter_service_setzen(None)
 
 
 class TestVerdrahtung:

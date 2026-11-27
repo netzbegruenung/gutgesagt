@@ -24,7 +24,6 @@ from dependencies import get_settings, require_user
 from repositories.einwilligungs_moment_repository import (
     get_einwilligungs_moment_repository,
 )
-from services.schalter_service import schalter_wirksam
 from services.spielgefuehl_service import buehne_aktiv
 
 logger = get_logger(__name__)
@@ -43,8 +42,12 @@ class EinwilligungsMomentResponse(BaseModel):
 
 
 def _angeboten(settings: Settings = Depends(get_settings)) -> bool:
-    """Ob der Schalter wirkt; geprueft vor jeder Datenbankabfrage."""
-    return schalter_wirksam(SCHALTER, settings)
+    """
+    Basisfunktion seit dem Schalter-Umbau (27.11.): immer angeboten. Die Grenzen
+    (hoechstens eine neue Frage je Besuch, vier im ersten Monat) setzt das Frontend
+    (shared/einwilligungs-budget), unabhaengig von einem Schalter.
+    """
+    return True
 
 
 @router.get(

@@ -28,7 +28,7 @@ BESUCHER = {"X-User": "anonymous"}
 def _client(dienst, limiter=None, **schalter):
     app = FastAPI()
     app.include_router(ereignis_router, prefix=PFAD)
-    werte = dict(gepostet_aktiv=True, gepostet_ohne_konto_aktiv=True)
+    werte = dict(gepostet_ohne_konto_aktiv=True)
     werte.update(schalter)
     app.dependency_overrides[get_settings] = lambda: Settings(**werte)
     app.dependency_overrides[get_gepostet_ohne_konto_service] = lambda: dienst
@@ -63,16 +63,9 @@ def test_ohne_kopfzeile_wie_besucher(dienst):
     dienst.melden.assert_called_once_with()
 
 
-@pytest.mark.parametrize(
-    "schalter",
-    [
-        dict(gepostet_ohne_konto_aktiv=False),
-        # Unterschalter: ohne "Ja, gepostet" auch keine Meldungen ohne Konto
-        dict(gepostet_aktiv=False),
-    ],
-)
-def test_schalter_aus_404_und_nichts_gezaehlt(dienst, schalter):
-    client, _ = _client(dienst, **schalter)
+def test_notaus_404_und_nichts_gezaehlt(dienst):
+    """Not-Aus SEMANTIC_SEARCH_GEPOSTET_OHNE_KONTO_AKTIV=false (Schalter-Umbau 27.11.)."""
+    client, _ = _client(dienst, gepostet_ohne_konto_aktiv=False)
 
     antwort = client.post(PFAD, json=ART, headers=BESUCHER)
 
@@ -80,12 +73,21 @@ def test_schalter_aus_404_und_nichts_gezaehlt(dienst, schalter):
     dienst.melden.assert_not_called()
 
 
-def test_admin_wert_aus_404(dienst, schalter_admin_alle_an):
-    schalter_admin_alle_an["gepostet_ohne_konto"] = False
-    client, _ = _client(dienst)
+def test_ohne_admin_wert_an_standard_an(dienst):
+    """Kein Admin-Wert mehr: Basisfunktion, Standard an."""
+    from services.schalter_service import SchalterService, schalter_service_setzen
 
-    assert client.post(PFAD, json=ART).status_code == 404
-    dienst.melden.assert_not_called()
+    schalter_service_setzen(SchalterService(lambda: {}, lambda n, a, w: None))
+    app = FastAPI()
+    app.include_router(ereignis_router, prefix=PFAD)
+    app.dependency_overrides[get_settings] = lambda: Settings()
+    app.dependency_overrides[get_gepostet_ohne_konto_service] = lambda: dienst
+    app.dependency_overrides[get_ereignis_rate_limiter] = lambda: RateLimiter(
+        max_requests=100, window_seconds=1
+    )
+
+    assert TestClient(app).post(PFAD, json=ART).status_code == 200
+    dienst.melden.assert_called_once_with()
 
 
 def test_angemeldete_zaehlen_hier_nicht(dienst):

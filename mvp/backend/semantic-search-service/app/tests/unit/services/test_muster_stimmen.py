@@ -61,9 +61,7 @@ ADMIN = {"X-User": "admin-1", "X-Is-Admin": "true"}
 
 # Alle Obergrenzen, die muster_stimmen braucht (die Admin-Werte setzt das Autouse-
 # Fixture schalter_admin_alle_an auf an)
-STIMMEN_AN = dict(
-    punkte_aktiv=True, spielgefuehl_buehne_aktiv=True, muster_stimmen_aktiv=True
-)
+STIMMEN_AN = dict(spielgefuehl_buehne_aktiv=True, muster_stimmen_aktiv=True)
 
 
 def _antwort(stufe: Stufe, wortlaut: str) -> SpielgefuehlAntwort:
@@ -543,7 +541,7 @@ class TestAbstimmen:
         muster.zustimmung_melden.assert_not_called()
 
     @pytest.mark.parametrize(
-        "ohne", ["muster_stimmen_aktiv", "spielgefuehl_buehne_aktiv", "punkte_aktiv"]
+        "ohne", ["muster_stimmen_aktiv", "spielgefuehl_buehne_aktiv"]
     )
     def test_ohne_schalter_nichts_und_keine_abfrage(self, abstimmen, muster, ohne):
         abstimmen.einstellungen["settings"] = Settings(**{**STIMMEN_AN, ohne: False})
@@ -737,4 +735,6 @@ class TestEinschalttag:
         assert antwort.json() == {"seit": None}
 
     def test_andere_schalter_nicht(self):
-        assert _seit(Settings(punkte_aktiv=True), "punkte").status_code == 404
+        assert (
+            _seit(Settings(spielgefuehl_buehne_aktiv=True), "punkte").status_code == 404
+        )

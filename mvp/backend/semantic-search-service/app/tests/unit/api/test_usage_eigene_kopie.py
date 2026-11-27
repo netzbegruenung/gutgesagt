@@ -34,7 +34,7 @@ STARTKONTO = "start-9"
 
 
 def einstellungen() -> Settings:
-    return Settings(startkonten=STARTKONTO, punkte_aktiv=True)
+    return Settings(startkonten=STARTKONTO, spielgefuehl_buehne_aktiv=True)
 
 
 @pytest.fixture
@@ -165,14 +165,6 @@ class TestEntdoppelung:
             "bo-2", None, uuid.UUID(BEITRAG_ID), mittag
         )
 
-    def test_nutzung_wird_fuer_muster_gemeldet(self, client, muster):
-        zaehlen(client, "bo-2")
-
-        muster.nutzung_melden.assert_called_once()
-        nutzende, autor, moment = muster.nutzung_melden.call_args.args
-        assert (nutzende, autor) == ("bo-2", AUTORIN)
-        assert moment.tzinfo is not None
-
     def test_ohne_punkte_keine_meldung_fuer_muster(self, client, muster):
         client.app.dependency_overrides[get_settings] = lambda: Settings()
 
@@ -266,11 +258,6 @@ class TestPunkteEinwilligung:
     gegeben haben (#351): Ihr Wortlaut nennt den Hinweis an die Admins, die
     Art.-9-Einwilligung nicht mehr. Der Pruefwert bleibt an der Art.-9-Einwilligung.
     """
-
-    def test_beide_eingewilligt_meldet(self, client, muster):
-        assert zaehlen(client, "bo-2").status_code == 200
-
-        muster.nutzung_melden.assert_called_once()
 
     def test_kopierende_ohne_einwilligung_kein_muster_aber_pruefwert(
         self, client, dienst, muster, punkte_einwilligung_ohne_datenbank
@@ -411,7 +398,8 @@ class TestSpielgefuehlEinwilligungBeimErzeugen:
         app = FastAPI()
         app.include_router(usage_router, prefix="/api/v1/usage")
         app.dependency_overrides[get_settings] = lambda: Settings(
-            startkonten=STARTKONTO, punkte_aktiv=True, spielgefuehl_buehne_aktiv=True
+            startkonten=STARTKONTO,
+            spielgefuehl_buehne_aktiv=True,
         )
 
         async def laden(content_id):

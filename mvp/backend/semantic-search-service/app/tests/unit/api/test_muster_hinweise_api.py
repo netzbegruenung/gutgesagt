@@ -32,7 +32,9 @@ def dienst():
 def _client(dienst, aktiv: bool = True) -> TestClient:
     app = FastAPI()
     app.include_router(metrics_router, prefix="/api/v1/metrics")
-    app.dependency_overrides[get_settings] = lambda: Settings(punkte_aktiv=aktiv)
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        spielgefuehl_buehne_aktiv=aktiv
+    )
     app.dependency_overrides[get_muster_hinweise_service] = lambda: dienst
     return TestClient(app)
 
@@ -73,19 +75,6 @@ def _paar(a: str, b: str) -> MusterHinweis:
     return MusterHinweis(a, b, 1, date(2026, 10, 29), date(2026, 10, 29))
 
 
-def test_nur_paare_mit_aktueller_punkte_einwilligung(
-    punkte_einwilligung_ohne_datenbank,
-):
-    """Nach einem Widerruf erscheint die Person nicht mehr (Art. 7 Abs. 3 DSGVO)."""
-    punkte_einwilligung_ohne_datenbank.eingewilligte.side_effect = None
-    punkte_einwilligung_ohne_datenbank.eingewilligte.return_value = {"bo-2", "kim-1"}
-    dienst = _echter_dienst(_paar("bo-2", "kim-1"), _paar("ali-3", "kim-1"))
-
-    hinweise = _client(dienst).get(URL, headers=ADMIN).json()["hinweise"]
-
-    assert [(h["konto_a"], h["konto_b"]) for h in hinweise] == [("bo-2", "kim-1")]
-
-
 def test_im_spielgefuehl_modell_ab_stufe_fuer_mich(
     spielgefuehl_ohne_datenbank, punkte_einwilligung_ohne_datenbank
 ):
@@ -101,7 +90,7 @@ def test_im_spielgefuehl_modell_ab_stufe_fuer_mich(
     app = FastAPI()
     app.include_router(metrics_router, prefix="/api/v1/metrics")
     app.dependency_overrides[get_settings] = lambda: Settings(
-        punkte_aktiv=True, spielgefuehl_buehne_aktiv=True
+        spielgefuehl_buehne_aktiv=True,
     )
     app.dependency_overrides[get_muster_hinweise_service] = lambda: dienst
 

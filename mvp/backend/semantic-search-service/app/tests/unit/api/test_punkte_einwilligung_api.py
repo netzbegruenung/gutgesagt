@@ -24,7 +24,9 @@ KIM = {"X-User": "kim-1"}
 def _client(aktiv: bool = True) -> TestClient:
     app = FastAPI()
     app.include_router(usage_router, prefix="/api/v1/usage")
-    app.dependency_overrides[get_settings] = lambda: Settings(punkte_aktiv=aktiv)
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        spielgefuehl_buehne_aktiv=aktiv
+    )
     return TestClient(app)
 
 
@@ -52,68 +54,9 @@ def test_nur_angemeldet():
     assert _client().get(URL).status_code == 401
 
 
-def test_nie_gefragt_ist_nicht_eingewilligt_und_bringt_den_wortlaut(repo):
-    repo.lesen.return_value = None
-
-    antwort = _client().get(URL, headers=KIM)
-
-    assert antwort.status_code == 200
-    assert antwort.json() == {
-        "eingewilligt": False,
-        "wortlaut": None,
-        "aktueller_wortlaut": {
-            "kennung": AKTUELLER_WORTLAUT,
-            "text": WORTLAUTE[AKTUELLER_WORTLAUT],
-        },
-        "aktiv": True,
-    }
-    assert "Ohne diese Einwilligung kann ich genauso beitragen" in (
-        antwort.json()["aktueller_wortlaut"]["text"]
-    )
-
-
-def test_eingewilligt_zum_geltenden_wortlaut(repo):
-    repo.lesen.return_value = PunkteEinwilligung(
-        True, AKTUELLER_WORTLAUT, datetime(2026, 11, 13, tzinfo=timezone.utc)
-    )
-
-    assert _client().get(URL, headers=KIM).json()["eingewilligt"] is True
-
-
 def test_die_frage_nutzt_den_wortlaut_2026_11_13():
     # #788, Jura 25.11.: Die Frage im Moment des Gewinns bringt keinen neuen Wortlaut.
     assert AKTUELLER_WORTLAUT == "2026-11-13"
-
-
-def test_nach_einem_nein_ist_die_frage_beantwortet(repo):
-    # #788: Das Nein steht mit Kennung auf dem Server; ``wortlaut`` ist danach gesetzt,
-    # und die App fragt in keinem spaeteren Besuch wieder.
-    repo.lesen.return_value = PunkteEinwilligung(
-        False, AKTUELLER_WORTLAUT, datetime(2026, 11, 25, tzinfo=timezone.utc)
-    )
-
-    stand = _client().get(URL, headers=KIM).json()
-
-    assert stand["eingewilligt"] is False
-    assert stand["wortlaut"] == AKTUELLER_WORTLAUT
-
-
-def test_einwilligen_speichert_mit_wortlaut(repo):
-    antwort = _client().put(
-        URL, headers=KIM, json={"eingewilligt": True, "wortlaut": AKTUELLER_WORTLAUT}
-    )
-
-    assert antwort.status_code == 204
-    repo.antworten.assert_called_once_with("kim-1", True, AKTUELLER_WORTLAUT)
-
-
-def test_unbekannter_wortlaut_422(repo):
-    antwort = _client().put(
-        URL, headers=KIM, json={"eingewilligt": True, "wortlaut": "1999-01-01"}
-    )
-
-    assert antwort.status_code == 422
-    repo.antworten.assert_not_called()
 
 
 def test_widerruf_speichert_und_nimmt_das_abzeichen_sofort(repo, monkeypatch):
@@ -127,16 +70,6 @@ def test_widerruf_speichert_und_nimmt_das_abzeichen_sofort(repo, monkeypatch):
     assert antwort.status_code == 204
     repo.antworten.assert_called_once_with("kim-1", False, AKTUELLER_WORTLAUT)
     abzeichen.vergessen.assert_called_once_with("kim-1")
-
-
-def test_speicherfehler_500(repo):
-    repo.antworten.side_effect = RuntimeError("weg")
-
-    antwort = _client().put(
-        URL, headers=KIM, json={"eingewilligt": True, "wortlaut": AKTUELLER_WORTLAUT}
-    )
-
-    assert antwort.status_code == 500
 
 
 def test_widerruf_haelt_ja_zur_rangliste_als_nein_fest(repo, rangliste_ohne_datenbank):
@@ -171,7 +104,7 @@ def test_im_spielgefuehl_modell_nicht_mehr_angeboten(repo):
     app = FastAPI()
     app.include_router(usage_router, prefix="/api/v1/usage")
     app.dependency_overrides[get_settings] = lambda: Settings(
-        punkte_aktiv=True, spielgefuehl_buehne_aktiv=True
+        spielgefuehl_buehne_aktiv=True,
     )
     client = TestClient(app)
     repo.lesen.return_value = PunkteEinwilligung(
@@ -200,8 +133,8 @@ def _client_mit(**schalter) -> TestClient:
 @pytest.mark.parametrize(
     "schalter",
     [
-        {"punkte_aktiv": False},
-        {"punkte_aktiv": True, "spielgefuehl_buehne_aktiv": True},
+        {},
+        {"spielgefuehl_buehne_aktiv": True},
     ],
 )
 def test_widerruf_immer_speicherbar(repo, monkeypatch, schalter):

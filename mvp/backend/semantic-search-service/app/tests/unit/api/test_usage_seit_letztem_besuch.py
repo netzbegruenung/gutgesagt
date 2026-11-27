@@ -110,7 +110,7 @@ class TestSeitLetztemBesuch:
             "ausformulierte_einwuerfe": 2,
             "neue_beitraege": 6,
             # Obergrenze aus (Standard, #760): keine Zahl
-            "antworten_auf_eigene_aussagen": None,
+            "antworten_auf_eigene_aussagen": 0,
             # Wirkungs-Echo aus (Standard, #790): keine Summe
             "neu_oeffentlich_gepostet": None,
             # Schon einmal da gewesen
@@ -217,7 +217,7 @@ class TestSeitDeinemLetztenBesuch:
             "ausformulierte_einwuerfe": 0,
             "neue_beitraege": 0,
             # Obergrenze aus (Standard, #760): keine Zahl
-            "antworten_auf_eigene_aussagen": None,
+            "antworten_auf_eigene_aussagen": 0,
             # Wirkungs-Echo aus (Standard, #790): keine Summe
             "neu_oeffentlich_gepostet": None,
             "erster_besuch": False,
@@ -353,7 +353,7 @@ class TestWirkungsEcho:
             "22222222-2222-4222-8222-222222222222": (2, 0),
         }
         client.app.dependency_overrides[get_settings] = lambda: Settings(
-            wirkungs_echo_aktiv=True, danke_knopf_aktiv=True
+            wirkungs_echo_aktiv=True,
         )
 
         antwort = client.post(URL, headers={"X-User": "kim-1"})
@@ -368,7 +368,7 @@ class TestWirkungsEcho:
         inhalte.getByAuthor = AsyncMock(return_value=[])
         gesehen.neues_echo_seit_letztem_besuch = Mock(return_value=0)
         client.app.dependency_overrides[get_settings] = lambda: Settings(
-            wirkungs_echo_aktiv=True, danke_knopf_aktiv=True
+            wirkungs_echo_aktiv=True,
         )
 
         antwort = client.post(URL, headers={"X-User": "kim-1"})
@@ -378,7 +378,7 @@ class TestWirkungsEcho:
     def test_fehler_kostet_nur_die_summe(self, client, inhalte):
         inhalte.getByAuthor = AsyncMock(side_effect=RuntimeError("weg"))
         client.app.dependency_overrides[get_settings] = lambda: Settings(
-            wirkungs_echo_aktiv=True, danke_knopf_aktiv=True
+            wirkungs_echo_aktiv=True,
         )
 
         antwort = client.post(URL, headers={"X-User": "kim-1"})

@@ -61,8 +61,9 @@ describe('SpielgefuehlComponent', () => {
   }
 
   beforeEach(async () => {
-    moment = null;
-    faellig = false;
+    // Das Budget gilt immer (Schalter-Umbau 27.11.); die meisten Fälle haben die Frage frei.
+    moment = { abgestimmt: true, beantwortet: 0, konto_seit: null };
+    faellig = true;
     schalter = null;
     budget = Object.assign(jasmine.createSpyObj<EinwilligungsBudgetService>('Budget', ['moment', 'punkteFaellig', 'gezeigt']), {
       gewinn$: new Subject<void>(),
@@ -285,6 +286,14 @@ describe('SpielgefuehlComponent', () => {
       .flush({ detail: 'kaputt' }, { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
     expect(el().querySelector('[data-testid="fehler"]')!.textContent).toContain('Das hat nicht geklappt');
+  });
+
+  it('ohne Moment (Fehler oder Zeitüberschreitung) fragt die Seite in diesem Besuch nicht', () => {
+    moment = null;
+    erstellen();
+    laden(stand());
+    expect(el().querySelector('[data-testid="spielgefuehl"]')).toBeNull();
+    expect(budget.gezeigt).not.toHaveBeenCalled();
   });
 
   it('mit Einwilligungs-Budget erst, wenn die Frage fällig ist', () => {

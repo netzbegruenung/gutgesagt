@@ -12,8 +12,8 @@ import { WEGGEKLICKT_SCHLUESSEL, WEGGEKLICKT_TAGE } from './naechster-schritt';
 /**
  * Die Sätze der Datenschutzerklärung zur Karte „Dein nächster Schritt“ (#789): unter
  * „Rückmeldung zur Nutzung“ der Halbsatz aus dem Issue, unter „Speicherung auf deinem
- * Gerät“ Schlüssel, Inhalt und Dauer. Der erste Satz steht nur mit Schalter, der zweite
- * immer: Ein Eintrag kann nach dem Ausschalten noch bis zu sieben Tage liegen.
+ * Gerät“ Schlüssel, Inhalt und Dauer. Beide Sätze stehen immer (Basisfunktion seit dem
+ * Schalter-Umbau 27.11.).
  */
 describe('Datenschutzerklärung zu „Dein nächster Schritt“ (#789)', () => {
   function seite(an: boolean): HTMLElement {
@@ -44,10 +44,9 @@ describe('Datenschutzerklärung zu „Dein nächster Schritt“ (#789)', () => {
     expect(text).toContain('sieben Tage');
   });
 
-  it('nennt den Satz zur Rückmeldung nur mit Schalter, den Eintrag auf dem Gerät immer', () => {
+  it('nennt den Satz zur Rückmeldung und den Eintrag auf dem Gerät auch, wenn alle Schalter aus sind', () => {
     const s = seite(false);
-    expect(abschnitt(s, 'Rückmeldung zur Nutzung deiner Beiträge')).not.toContain('nächsten Schritt');
-    // Ein Eintrag aus der Zeit, als der Schalter an war, kann noch bis zu sieben Tage liegen
+    expect(abschnitt(s, 'Rückmeldung zur Nutzung deiner Beiträge')).toContain('nächsten Schritt');
     expect(abschnitt(s, 'Weitere Einträge')).toContain(WEGGEKLICKT_SCHLUESSEL);
     expect(abschnitt(s, 'Weitere Einträge')).toContain('beim Abmelden');
   });

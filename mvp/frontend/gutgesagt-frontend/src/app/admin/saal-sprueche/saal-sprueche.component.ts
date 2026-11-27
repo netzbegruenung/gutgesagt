@@ -19,7 +19,7 @@ export function saalTag(iso: string): string {
 }
 
 /**
- * Saal-Sprüche auf der Seite „Schalter“ (Schalter „saal_spruch“, Glossar „Saal-Spruch“): je
+ * Saal-Sprüche auf der Seite „Schalter“ (Paket „k_begruessung“, Glossar „Saal-Spruch“): je
  * Tag ein öffentlicher Spruch, der gerade unter Beiträgen zur BDK im Netz kursiert; die
  * Startseite zeigt ihn an diesem Tag als „Heute im Netz zur BDK:“. Festlegen, ersetzen und
  * entfernen geht auch bei Schalter aus, damit die Sprüche vor dem Einschalten bereitstehen. Nur Text, nichts zur Person. Lädt selbst nach.
@@ -38,7 +38,7 @@ export function saalTag(iso: string): string {
       </p>
       @if (liste; as l) {
         <p class="zustand" data-testid="saal-sprueche-zustand">
-          Schalter „saal_spruch“: {{ l.schalter_wirksam ? 'wirksam' : 'aus' }}
+          Paket BDK-Begrüßung: {{ l.schalter_wirksam ? 'wirksam' : 'aus' }}
         </p>
         @if (l.sprueche.length === 0) {
           <p class="leise">Ab heute kein Spruch festgelegt.</p>

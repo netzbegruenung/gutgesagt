@@ -1,99 +1,153 @@
 """
 GET /api/v1/funktionen (#756): der wirksame Wert der oeffentlichen Schalter, ohne
-Anmeldung. Ohne Admin-Wert aus, mit Admin-Wert und Obergrenze an, ohne Obergrenze aus;
-Schalter ohne ``oeffentlich`` stehen nicht darin. Die Tests setzen einen eigenen
-oeffentlichen Schalter ein, der an der Obergrenze von "gepostet" haengt.
+Anmeldung. Ohne Admin-Wert aus, mit Admin-Wert und Obergrenze an, ohne Obergrenze aus.
+
+Seit dem Schalter-Umbau (27.11.2026): genau die vier Pakete und die oeffentlichen
+Einzelschalter, dazu drei Basisfunktionen mit Not-Aus (Standard an, ohne Admin-Wert).
+Die frueheren Teil-Schalter und die uebrigen Basisfunktionen stehen nicht mehr darin.
 """
+
+from datetime import date
+from unittest.mock import patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-import services.schalter_service as schalter_modul
 from api.v1.funktionen import router as funktionen_router
 from core.config import Settings
 from dependencies import get_settings
-from services.schalter_service import (
-    SchalterService,
-    Schalterart,
-    schalter_service_setzen,
-)
+from services.schalter_service import SchalterService, schalter_service_setzen
 
 pytestmark = pytest.mark.unit
 
 URL = "/api/v1/funktionen"
 
+PAKETE = ("teams", "spielgefuehl_buehne", "wirkungs_echo", "k_begruessung")
+GEMELDET = {
+    *PAKETE,
+    "team_quests",
+    "muster_stimmen",
+    "teams_oeffentlich",
+    "merkliste",
+    "danke_ohne_konto",
+    "k_ankuenfte",
+    "gepostet_ohne_konto",
+    "null_treffer_anzahl",
+    "feedback_gestoert",
+}
+ALLE_OBERGRENZEN = dict(
+    teams_aktiv=True,
+    spielgefuehl_buehne_aktiv=True,
+    wirkungs_echo_aktiv=True,
+    k_begruessung_aktiv=True,
+    team_quests_aktiv=True,
+    muster_stimmen_aktiv=True,
+    teams_oeffentlich_aktiv=True,
+    merkliste_aktiv=True,
+    danke_ohne_konto_aktiv=True,
+    k_ankuenfte_aktiv=True,
+)
+
 
 @pytest.fixture
-def werte(monkeypatch):
-    """Eigener Dienst ohne Eintraege und ein oeffentlicher Schalter "beispiel"."""
-    monkeypatch.setitem(
-        schalter_modul.SCHALTER,
-        "beispiel",
-        Schalterart(
-            name="beispiel",
-            feld="gepostet_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_GEPOSTET_AKTIV",
-            erklaerung="Nur im Test",
-            oeffentlich=True,
-        ),
-    )
+def werte():
+    """Eigener Dienst ohne Eintraege."""
     werte = {}
     schalter_service_setzen(
         SchalterService(
             admin_werte_lesen=lambda: dict(werte),
             admin_wert_setzen=lambda name, an, admin: werte.__setitem__(name, an),
+            # Ohne Cache: Die Tests aendern Admin-Werte zwischen zwei Abrufen
+            cache_sekunden=0,
         )
     )
     yield werte
     schalter_service_setzen(None)
 
 
-def _client(**obergrenzen) -> TestClient:
+def _funktionen(**obergrenzen) -> dict:
     app = FastAPI()
     app.include_router(funktionen_router, prefix=URL)
     app.dependency_overrides[get_settings] = lambda: Settings(**obergrenzen)
-    return TestClient(app)
-
-
-def test_ohne_admin_wert_aus_und_ohne_anmeldung_lesbar(werte):
-    antwort = _client(gepostet_aktiv=True).get(URL)
-
+    antwort = TestClient(app).get(URL)
     assert antwort.status_code == 200
-    assert antwort.json()["funktionen"]["beispiel"] is False
+    return antwort.json()["funktionen"]
 
 
-def test_an_mit_admin_wert_und_obergrenze(werte):
-    werte["beispiel"] = True
-
-    antwort = _client(gepostet_aktiv=True).get(URL)
-
-    assert antwort.json()["funktionen"]["beispiel"] is True
+def test_genau_diese_namen(werte):
+    assert set(_funktionen()) == GEMELDET
 
 
-def test_obergrenze_aus_schlaegt_admin_wert(werte):
-    werte["beispiel"] = True
+def test_ohne_admin_wert_alle_schalter_aus_not_aus_an(werte):
+    funktionen = _funktionen(**ALLE_OBERGRENZEN)
 
-    antwort = _client(gepostet_aktiv=False).get(URL)
+    assert {n for n, an in funktionen.items() if an} == {
+        "gepostet_ohne_konto",
+        "null_treffer_anzahl",
+        "feedback_gestoert",
+    }
 
-    assert antwort.json()["funktionen"]["beispiel"] is False
+
+@pytest.mark.parametrize("paket", PAKETE)
+def test_paket_an_nur_mit_admin_wert_und_obergrenze(werte, paket):
+    werte[paket] = True
+
+    assert _funktionen(**ALLE_OBERGRENZEN)[paket] is True
+    assert _funktionen()[paket] is False
 
 
-def test_nur_oeffentliche_schalter(werte):
-    werte.update(gepostet=True, herkunft_pruefen=True)
+@pytest.mark.parametrize(
+    "schalter, paket",
+    [
+        ("team_quests", "teams"),
+        ("teams_oeffentlich", "teams"),
+        ("muster_stimmen", "spielgefuehl_buehne"),
+        ("danke_ohne_konto", "wirkungs_echo"),
+    ],
+)
+def test_einzelschalter_mit_paket_an_ohne_paket_aus(werte, schalter, paket):
+    werte[schalter] = True
+    assert _funktionen(**ALLE_OBERGRENZEN)[schalter] is False
 
-    funktionen = (
-        _client(gepostet_aktiv=True, herkunft_pruefen_aktiv=True).get(URL).json()
+    werte[paket] = True
+    assert _funktionen(**ALLE_OBERGRENZEN)[schalter] is True
+
+
+def test_admin_werte_frueherer_teile_zaehlen_nicht(werte):
+    werte.update(
+        punkte=True,
+        rangliste=True,
+        team_fortschritt=True,
+        teamlink_vertrauenssatz=True,
+        danke_knopf=True,
+        saal_spruch=True,
     )
 
-    assert "gepostet" not in funktionen["funktionen"]
-    assert "herkunft_pruefen" not in funktionen["funktionen"]
+    funktionen = _funktionen(**ALLE_OBERGRENZEN)
+
+    for paket in PAKETE:
+        assert funktionen[paket] is False
+    assert not {"punkte", "rangliste", "danke_knopf", "saal_spruch"} & set(funktionen)
 
 
-def test_punkte_oeffentlich_fuer_die_datenschutzerklaerung(werte):
-    """Jura 26.11.: der Vorbehalt „noch nicht eingeschaltet“ haengt am wirksamen Wert."""
-    werte.update(punkte=True)
+@pytest.mark.parametrize(
+    "name", ["gepostet_ohne_konto", "null_treffer_anzahl", "feedback_gestoert"]
+)
+def test_not_aus_false_meldet_aus(werte, name):
+    assert _funktionen()[name] is True
+    assert _funktionen(**{f"{name}_aktiv": False})[name] is False
 
-    funktionen = _client(punkte_aktiv=True).get(URL).json()
 
-    assert funktionen["funktionen"]["punkte"] is True
+def test_feedback_gestoert_ab_dem_stichtag_aus(werte):
+    with patch("services.feedback_service.heute_utc", return_value=date(2026, 12, 31)):
+        assert _funktionen()["feedback_gestoert"] is False
+    with patch("services.feedback_service.heute_utc", return_value=date(2026, 12, 30)):
+        assert _funktionen()["feedback_gestoert"] is True
+
+
+def test_herkunft_pruefen_und_aufrufe_nicht_oeffentlich(werte):
+    funktionen = _funktionen(aufrufe_zaehlen_aktiv=True)
+
+    assert "herkunft_pruefen" not in funktionen
+    assert "aufrufe_zaehlen" not in funktionen

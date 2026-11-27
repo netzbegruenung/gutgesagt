@@ -1,7 +1,7 @@
 import { Component, Input, Type, forwardRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, NavigationEnd, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { NEVER, Observable, Subject, of, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -56,8 +56,6 @@ describe('BeitragGespeichertComponent', () => {
   let nav: TeilenNavigator;
   /** Was statt der echten Karte gerendert wird. */
   let karteStub: Type<unknown>;
-  /** Schalter luecke_zu_gross laut /api/v1/funktionen; Standard aus. */
-  let lueckeZuGrossAn: Observable<boolean>;
   /** Steht statt router.events, wenn ein Test das Ende der Navigation selbst meldet. */
   let routerEvents: Subject<unknown> | null;
   /** Baut den AudioContext für „Ton bei Erfolgen“; null: kein Lautsprecher im Test. */
@@ -67,7 +65,6 @@ describe('BeitragGespeichertComponent', () => {
     audio = jasmine.createSpy('audio').and.returnValue(null);
     localStorage.removeItem(FEIER_TON_SCHLUESSEL);
     nav = {};
-    lueckeZuGrossAn = of(false);
     routerEvents = null;
     karteStub = BeitragskarteStubComponent;
     geladenerEinwurf = of({ id: 'e-1', ist_eigener_einwurf: true } as Einwurf);
@@ -122,10 +119,8 @@ describe('BeitragGespeichertComponent', () => {
         },
         { provide: TEILEN_NAVIGATOR, useFactory: () => nav },
         { provide: FEIER_AUDIO, useFactory: () => audio },
-        {
-          provide: FunktionenService,
-          useFactory: () => ({ frisch: (name: string) => (name === 'luecke_zu_gross' ? lueckeZuGrossAn : of(false)) }),
-        },
+        // Kein Schalter: „Lücke zu!“ als großer Moment ist Basisfunktion (Schalter-Umbau 27.11.)
+        { provide: FunktionenService, useValue: jasmine.createSpyObj('FunktionenService', ['an', 'frisch', 'stand$']) },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -279,8 +274,10 @@ describe('BeitragGespeichertComponent', () => {
     });
   });
 
+  // Der kleine Satz steht nach dem Neuladen oder „Zurück“ (Vermerk lueckeZuGezeigt), direkt
+  // nach dem Speichern der große Moment (unten).
   describe('Lücke zu (Nutzerfuehrung 13.11.)', () => {
-    const aussage = { aussage: { id: 'a-1', text: 'Windkraft tötet Vögel' }, verknuepft: true };
+    const aussage = { aussage: { id: 'a-1', text: 'Windkraft tötet Vögel' }, verknuepft: true, lueckeZuGezeigt: true };
 
     it('sagt nach "Hier fehlt eine Antwort" Lücke zu, mit der Nachfrage, und bietet die nächste an', async () => {
       await oeffnen({ von: 'hier-fehlt-eine-antwort', gesucht: '2' }, aussage);
@@ -321,8 +318,6 @@ describe('BeitragGespeichertComponent', () => {
     const aussage = { aussage: { id: 'a-1', text: 'Windkraft tötet Vögel' }, verknuepft: true };
     const vonDort = { von: 'hier-fehlt-eine-antwort', gesucht: '4' };
 
-    beforeEach(() => (lueckeZuGrossAn = of(true)));
-
     it('zeigt den Moment mit der Zahl, Überschrift im Fokus und „Nächste Lücke“', async () => {
       await oeffnen(vonDort, aussage);
       await fixture.whenStable();
@@ -361,10 +356,17 @@ describe('BeitragGespeichertComponent', () => {
       );
     });
 
-    it('bleibt beim kleinen Satz, wenn der Schalter aus ist: kein Keim, kein Umschalter, kein Ton', async () => {
-      lueckeZuGrossAn = of(false);
-      localStorage.setItem(FEIER_TON_SCHLUESSEL, '1');
+    it('kommt ohne Schalter, ohne Abfrage beim Server', async () => {
       await oeffnen(vonDort, aussage);
+      const funktionen = TestBed.inject(FunktionenService) as jasmine.SpyObj<FunktionenService>;
+      expect(seite().querySelector('.luecke-zu-moment')).not.toBeNull();
+      expect(funktionen.frisch).not.toHaveBeenCalled();
+      expect(funktionen.an).not.toHaveBeenCalled();
+    });
+
+    it('nach dem Neuladen der kleine Satz: kein Keim, kein Umschalter, kein Ton', async () => {
+      localStorage.setItem(FEIER_TON_SCHLUESSEL, '1');
+      await oeffnen(vonDort, { ...aussage, lueckeZuGezeigt: true });
       await fixture.whenStable();
       expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
       expect(seite().querySelector('.luecke-zu-titel')!.textContent!.trim()).toBe('Lücke zu.');
@@ -416,37 +418,27 @@ describe('BeitragGespeichertComponent', () => {
       expect(ersetzen.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ lueckeZuGezeigt: true }));
     });
 
-    it('vermerkt nichts, wenn der Schalter aus ist', async () => {
-      lueckeZuGrossAn = of(false);
+    it('vermerkt nichts nach dem Neuladen (kleiner Satz)', async () => {
       routerEvents = new Subject<unknown>();
       const ersetzen = spyOn(window.history, 'replaceState');
-      await oeffnen(vonDort, aussage);
+      await oeffnen(vonDort, { ...aussage, lueckeZuGezeigt: true });
       routerEvents.next(new NavigationEnd(1, '/x', '/x'));
       expect(ersetzen).not.toHaveBeenCalled();
     });
 
-    it('springt nicht: solange der Schalter aussteht, bleibt der Kopf leer', async () => {
-      lueckeZuGrossAn = NEVER;
-      await oeffnen(vonDort, aussage);
-      expect(seite().querySelector('.luecke-zu-moment')).toBeNull();
-      expect(seite().querySelector('.luecke-zu')).toBeNull();
-      expect(seite().querySelector('.naechste-luecke')).toBeNull();
-    });
-
     it('zieht den Fokus nicht weg, wenn er schon woanders steht', async () => {
-      const schalter = new Subject<boolean>();
-      lueckeZuGrossAn = schalter;
-      await oeffnen(vonDort, aussage);
-      const teilen = seite().querySelector('.teilen') as HTMLButtonElement;
-      document.body.appendChild(fixture.nativeElement);
-      teilen.focus();
-      schalter.next(true);
-      schalter.complete();
-      fixture.detectChanges();
-      await fixture.whenStable();
-      expect(seite().querySelector('.luecke-zu-moment')).not.toBeNull();
-      expect(document.activeElement).toBe(teilen);
-      fixture.nativeElement.remove();
+      const anderswo = document.createElement('button');
+      document.body.appendChild(anderswo);
+      anderswo.focus();
+      try {
+        await oeffnen(vonDort, aussage);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(seite().querySelector('.luecke-zu-moment')).not.toBeNull();
+        expect(document.activeElement).toBe(anderswo);
+      } finally {
+        anderswo.remove();
+      }
     });
 
     it('nicht, wenn die Verknüpfung scheiterte oder es nicht von dort kam', async () => {

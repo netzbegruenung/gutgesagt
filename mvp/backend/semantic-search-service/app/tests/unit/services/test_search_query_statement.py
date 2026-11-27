@@ -401,7 +401,7 @@ class TestSuchenOhneTreffer:
         namen = [aufruf[0] for aufruf in suchen_ohne_treffer.method_calls]
         assert namen.index("erfassen") < namen.index("schon_gesucht")
 
-    @pytest.mark.parametrize("obergrenze,admin_wert", [(False, True), (True, False)])
+    @pytest.mark.parametrize("obergrenze,admin_wert", [(False, True)])
     def test_schalter_aus_keine_zahl_und_keine_abfrage(
         self,
         suchapp,
@@ -411,7 +411,7 @@ class TestSuchenOhneTreffer:
         obergrenze,
         admin_wert,
     ):
-        """Schalter null_treffer_anzahl (Jura vorlaeufig 26.11.): aus heisst keine Zahl."""
+        """Not-Aus null_treffer_anzahl (Schalter-Umbau 27.11.): aus heisst keine Zahl."""
         app, service = suchapp
         self._vorhandene_aussage(app, service, suchen_ohne_treffer)
         monkeypatch.setattr(settings, "null_treffer_anzahl_aktiv", obergrenze)

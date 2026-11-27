@@ -8,9 +8,6 @@ import { KartenDaten, ausSuchergebnis } from '../beitragskarte/karten-daten';
 import { LADE_TIMEOUT_MS } from '../shared/lade-wiederholung';
 import { STIL_LABEL, Stil } from '../shared/zweck-stil';
 
-/** Name des Schalters (services/schalter_service.py, SPIEL_SCHALTER). */
-export const KONTER_PROBE_SCHALTER = 'konter_probe';
-
 /** Pfad im Suchdienst; nur lesend, der Tipp geht nie an den Server. */
 export const KONTER_PROBE_PFAD = '/api/v1/konter-probe';
 

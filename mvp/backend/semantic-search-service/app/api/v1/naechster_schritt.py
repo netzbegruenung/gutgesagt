@@ -30,13 +30,11 @@ from dtos.contribution import ContributionEntry
 from repositories.einwurf_repository import EinwurfRepository, get_einwurf_repository
 from repositories.punkte_repository import PunkteRepository
 from services.naechster_schritt import (
-    SCHALTER,
     Brachflaeche,
     EigenerStand,
     meistgenutzter_ohne_kurzfassung,
     vorschlaege,
 )
-from services.schalter_service import schalter_wirksam
 from services.unbeantwortete_aussagen_service import UnbeantworteteAussagenService
 from services.usage_tracking_service import get_usage_service
 
@@ -154,7 +152,8 @@ async def _oder_none(aufruf: Awaitable[T], was: str) -> Optional[T]:
 
 
 def _schalter_an(settings: Settings = Depends(get_settings)) -> bool:
-    return schalter_wirksam(SCHALTER, settings)
+    # Basisfunktion seit dem Schalter-Umbau (27.11.): immer an
+    return True
 
 
 @router.get("/users/me/naechster-schritt", response_model=NaechsterSchrittResponse)

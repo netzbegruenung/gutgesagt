@@ -206,13 +206,13 @@ class TestListe:
 
 
 class TestGestoert:
-    """Knopf "Was hat dich gestört?" (Schalter feedback_gestoert, Jura 26.11. Punkt g)."""
+    """Knopf "Was hat dich gestört?" (Not-Aus feedback_gestoert, Standard an, Jura 26.11. Punkt g)."""
 
     @pytest.fixture(autouse=True)
     def startphase(self):
         # Fester Tag in der Startphase: sonst kippen die Tests ab dem 31.12.2026 auf 409.
         with patch(
-            "services.schalter_service.heute_utc", return_value=date(2026, 11, 27)
+            "services.feedback_service.heute_utc", return_value=date(2026, 11, 27)
         ):
             yield
 
@@ -238,7 +238,7 @@ class TestGestoert:
             "Zu viele Klicks", None, kategorie="gestoert"
         )
 
-    def test_obergrenze_aus_antwortet_409_nie_404(self, client, service, obergrenze):
+    def test_not_aus_antwortet_409_nie_404(self, client, service, obergrenze):
         obergrenze(False)
 
         response = client.post(SENDEN, json={"text": "Hallo", "kategorie": "gestoert"})
@@ -250,7 +250,7 @@ class TestGestoert:
         self, client, service, obergrenze
     ):
         with patch(
-            "services.schalter_service.heute_utc", return_value=date(2026, 12, 31)
+            "services.feedback_service.heute_utc", return_value=date(2026, 12, 31)
         ):
             response = client.post(
                 SENDEN, json={"text": "Hallo", "kategorie": "gestoert"}
@@ -258,6 +258,17 @@ class TestGestoert:
 
         assert response.status_code == 409
         service.senden.assert_not_called()
+
+    def test_ohne_admin_wert_und_mit_standard_settings_an(self, client, service):
+        """Basisfunktion seit dem Schalter-Umbau: kein Admin-Wert, Standard an."""
+        from services.schalter_service import SchalterService, schalter_service_setzen
+
+        schalter_service_setzen(SchalterService(lambda: {}, lambda n, a, w: None))
+        client.app.dependency_overrides[get_settings] = lambda: Settings()
+
+        response = client.post(SENDEN, json={"text": "Hallo", "kategorie": "gestoert"})
+
+        assert response.status_code == 201
 
     def test_kontakt_ist_bei_gestoert_ungueltig(self, client, service, obergrenze):
         response = client.post(

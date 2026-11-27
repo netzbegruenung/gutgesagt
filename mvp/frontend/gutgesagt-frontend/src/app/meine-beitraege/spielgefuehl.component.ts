@@ -144,13 +144,17 @@ export class SpielgefuehlComponent implements OnInit {
     });
   }
 
-  /** Ohne Schalter einwilligung_im_gewinn fragt die Seite sofort, sonst nach dem Budget. */
+  /**
+   * Gefragt wird nach dem Budget (höchstens eine neue Frage je Besuch, vier im ersten
+   * Monat), seit dem Schalter-Umbau immer. Ohne Moment (Fehler, Zeitüberschreitung) fragt
+   * die Seite in diesem Besuch nicht: Die Grenzen lassen sich dann nicht prüfen.
+   */
   private entscheiden(): void {
     if (!this.momentGeladen || !this.stand || this.stand.stufe !== null) {
       return;
     }
     if (!this.moment) {
-      this.budgetFrei = true;
+      this.budgetFrei = false;
       return;
     }
     const faellig = this.budget.punkteFaellig(this.moment);

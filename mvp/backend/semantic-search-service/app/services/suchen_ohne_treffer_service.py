@@ -96,7 +96,7 @@ MINDESTANZAHL = 2
 # vorlaeufig 26.11.: hoeher als die Listen-Schwelle, und "N-mal" statt "N Personen", weil
 # das Tagespseudonym Anschluesse je Tag zaehlt, nicht Personen.
 ANZEIGE_AB = 3
-# Schalter der Anzeige (services/schalter_service.py, Gruppe Spielgefuehl)
+# Not-Aus der Anzeige (services/schalter_service.py NOTAUS, Standard an)
 NULL_TREFFER_ANZAHL = "null_treffer_anzahl"
 LIMIT_STANDARD = 20
 LOESCH_TAKT_SEKUNDEN = 24 * 60 * 60
@@ -303,7 +303,7 @@ class SuchenOhneTrefferService:
         None unter ANZEIGE_AB. Nur eine Zahl, gelesen aus den Zaehlern, die erfassen
         ohnehin schreibt: kein Text, nichts zusaetzlich gespeichert. Auch Besucher sehen
         sie (Entscheidung des Maintainers vom 28.10.2026 in #362), aber nur zu einer
-        Aussage, die sie sehen duerfen, und nur mit dem Schalter null_treffer_anzahl:
+        Aussage, die sie sehen duerfen, und nicht bei Not-Aus null_treffer_anzahl:
         Das prueft der Suchpfad (api/v1/search.py, Vormoderation P6).
         """
         if statement_id is None:

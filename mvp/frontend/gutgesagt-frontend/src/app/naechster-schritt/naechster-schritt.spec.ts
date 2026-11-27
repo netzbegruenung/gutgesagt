@@ -165,11 +165,10 @@ describe('Dein nächster Schritt (#789)', () => {
       expect(fixture.nativeElement.querySelector('.naechster-schritt')).toBeNull();
     });
 
-    it('fragt ohne Schalter nichts, räumt aber Abgelaufenes auf', () => {
+    it('fragt Angemeldete auch, wenn alle Schalter aus sind (Basisfunktion), und räumt Abgelaufenes auf', () => {
       localStorage.setItem(WEGGEKLICKT_SCHLUESSEL, JSON.stringify({ einwerfen: '2020-01-01' }));
-      const fixture = starten(true, false);
-      http.expectNone(NAECHSTER_SCHRITT_URL);
-      expect(fixture.nativeElement.querySelector('.naechster-schritt')).toBeNull();
+      starten(true, false);
+      http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [] });
       expect(localStorage.getItem(WEGGEKLICKT_SCHLUESSEL)).toBeNull();
     });
 

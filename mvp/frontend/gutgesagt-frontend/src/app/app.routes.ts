@@ -5,7 +5,6 @@ import { AdminGuard } from './auth/admin.guard';
 import { PublicGuard } from './auth/public.guard';
 import { ShareTargetGuard } from './share-target/share-target.guard';
 import { abkuerzungGuard } from './abkuerzung/abkuerzung.guard';
-import { konterProbeGuard } from './konter-probe/konter-probe.guard';
 import {
     gespeichertEltern,
     vonHierFehltEineAntwort,
@@ -133,11 +132,10 @@ export const routes: Routes = [
         data: { parent: '/search' }
     },
     {
-        // Konter-Probe (#786): ohne Konto spielbar; ist der Schalter aus, fuehrt die
-        // Adresse auf die Startseite (konterProbeGuard).
+        // Konter-Probe (#786): ohne Konto spielbar (Basisfunktion seit dem Schalter-Umbau).
         path: 'konter-probe',
         loadComponent: () => import('./konter-probe/konter-probe.component').then(m => m.KonterProbeComponent),
-        canActivate: [PublicGuard, konterProbeGuard],
+        canActivate: [PublicGuard],
         data: { parent: '/search' }
     },
     {
@@ -223,7 +221,7 @@ export const routes: Routes = [
     },
     {
         // App-Abkuerzungen (shortcuts im Manifest, #757): Der Guard leitet immer weiter,
-        // bei ausgeschaltetem Schalter auf die Startseite. Keine Komponente.
+        // unbekannte Namen auf die Startseite. Keine Komponente.
         path: 'abkuerzung/:name',
         canActivate: [abkuerzungGuard],
         children: []

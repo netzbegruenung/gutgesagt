@@ -23,7 +23,7 @@ from services.herkunft_pruefen import (
     HerkunftPruefenService,
     get_herkunft_pruefen_service,
 )
-from services.schalter_service import schalter_wirksam
+from services.schalter_service import notaus_wirksam
 
 logger = get_logger(__name__)
 
@@ -60,7 +60,7 @@ async def herkunft_pruefen_stand(
     settings: Settings = Depends(get_settings),
     dienst: Optional[HerkunftPruefenService] = Depends(_dienst),
 ) -> HerkunftPruefenResponse:
-    if not schalter_wirksam(SCHALTER, settings) or dienst is None:
+    if not notaus_wirksam(SCHALTER, settings) or dienst is None:
         return HerkunftPruefenResponse(aktiv=False)
     try:
         stand = await dienst.stand()
@@ -84,7 +84,7 @@ async def herkunft_pruefen_anstossen(
     dienst: Optional[HerkunftPruefenService] = Depends(_dienst),
 ) -> Response:
     """Einen Lauf sofort starten; 409, wenn schon einer laeuft."""
-    if not schalter_wirksam(SCHALTER, settings) or dienst is None:
+    if not notaus_wirksam(SCHALTER, settings) or dienst is None:
         raise HTTPException(status_code=404, detail="Not found")
     if not dienst.anstossen():
         raise HTTPException(status_code=409, detail="Die Prüfung läuft schon.")

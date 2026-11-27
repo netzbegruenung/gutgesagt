@@ -1,9 +1,8 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, ChangeDetectionStrategy, NgZone, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, ChangeDetectionStrategy, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { HOT_TAKES } from '../shared/startbeispiel';
 import { NavigationService } from '../services/navigation.service';
 import { LoggingService } from '../services/logging.service';
 import { SearchService } from '../services/search.service';
-import { FunktionenService } from '../services/funktionen.service';
 import { Router, RouterLink } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { TextFieldModule } from '@angular/cdk/text-field';
@@ -19,33 +18,23 @@ export const SUCHFELD_NAME = 'Worauf willst du antworten? Text einfügen';
 /** Kurz fuer das kompakte Feld ueber den Treffern: Daneben steht der Such-Knopf (#644). */
 export const SUCHFELD_NAME_KOMPAKT = 'Worauf antworten? Text einfügen';
 /**
- * Unter dem Feld: dass der Suchtext gespeichert wird und nach der Vormoderation (#664)
- * sichtbar werden kann. Die Einzelheiten stehen im Abschnitt der Datenschutzerklärung,
- * auf den der Link springt (Persona-Test Gerd). Wortlaut rechtlich abgestimmt (16.11.2026),
- * am 18.11.2026 vom Maintainer bestätigt. Kein „nur“: Proxy-Logs halten Suchtexte mit IP
- * befristet (siehe Löschkonzept). Nur nach Ruecksprache aendern.
- */
-export const SUCHHINWEIS = 'Suchtexte speichern wir ohne deinen Namen. Nach Prüfung können sie öffentlich werden.';
-/**
- * Über den Treffern nur der erste Satz und „Mehr“ (Freigabe E5, 14.11.2026): Der volle
- * Hinweis schob die erste Antwort mobil aus dem ersten Bildschirm. Der Start behält ihn ganz.
- */
-export const SUCHHINWEIS_KURZ = 'Suchtexte speichern wir ohne deinen Namen.';
-/**
- * Hinter dem Schalter `hinweiszeile_kurz` (Designwichtel Nr. 5): eine Zeile statt zwei,
- * dahinter der Link „Datenschutz“. Wortlaut nach der vorläufigen juristischen Einschätzung vom
+ * Unter dem Feld (Designwichtel Nr. 5, Basisfunktion seit dem Schalter-Umbau 27.11.): eine
+ * Zeile, dahinter der Link „Datenschutz“ auf den Abschnitt der Datenschutzerklärung mit den
+ * Einzelheiten (Persona-Test Gerd). Wortlaut nach der vorläufigen juristischen Einschätzung vom
  * 26.11.2026: „Ohne Namen gespeichert“ nur, wenn Suchen auch bei Angemeldeten nicht an der
  * Kennung hängen. Das tun sie: Die Aussage zur Suche trägt zwar den Systemautor, das
  * Suchereignis aber bis zum Tagesende ein Tagespseudonym, das bei Angemeldeten aus Kennung und
  * Datum mit dem festen Server-Schlüssel berechnet wird (services/search_tracking_service.py,
  * _derive_actor_hash). Deshalb der neutrale
- * Verweis. Nie „anonym“: Proxy-Logs halten Suchtexte mit IP befristet (siehe SUCHHINWEIS).
+ * Verweis. Nie „anonym“, kein „nur“: Proxy-Logs halten Suchtexte mit IP befristet (siehe
+ * Löschkonzept).
  */
 export const HINWEISZEILE_KURZ = 'Wie wir Suchen speichern';
 /**
- * Der zweite Satz von SUCHHINWEIS bleibt auf dem Start erhalten: aufklappbar hinter dem Info-Knopf
- * HINWEIS_MEHR_KNOPF, und Screenreader lesen ihn mit dem Feld immer vor (aria-describedby auf die
- * zugeklappte Zeile). Über den Treffern fehlt er wie seit E5 (SUCHHINWEIS_KURZ).
+ * Dass Suchtexte nach der Vormoderation (#664) sichtbar werden können, steht auf dem Start:
+ * aufklappbar hinter dem Info-Knopf HINWEIS_MEHR_KNOPF, und Screenreader lesen ihn mit dem Feld
+ * immer vor (aria-describedby auf die zugeklappte Zeile). Über den Treffern fehlt er wie seit E5
+ * (Freigabe 14.11.2026: mobil schob der volle Hinweis die erste Antwort aus dem Bildschirm).
  */
 export const HINWEISZEILE_MEHR = 'Nach Prüfung können Suchtexte öffentlich werden.';
 /** Name des Info-Knopfs, eigenständig verständlich auch in der Liste der Bedienelemente. */
@@ -120,12 +109,7 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
   get beispielSatz(): string {
     return HOT_TAKES[this.beispielNr].text;
   }
-  get suchhinweis(): string {
-    return this.compactMode ? SUCHHINWEIS_KURZ : SUCHHINWEIS;
-  }
   readonly suchanfragenAbschnitt = SUCHANFRAGEN_ABSCHNITT;
-  /** Eine Zeile „Wie wir Suchen speichern · Datenschutz“ statt zwei (Schalter, Standard aus). */
-  readonly hinweiszeileKurz = inject(FunktionenService).an('hinweiszeile_kurz');
   readonly hinweiszeile = HINWEISZEILE_KURZ;
   readonly hinweiszeileMehr = HINWEISZEILE_MEHR;
   readonly mehrKnopfName = HINWEIS_MEHR_KNOPF;
@@ -136,11 +120,11 @@ export class SearchComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly hinweisId = `such-hinweis-${this.hinweisNr}`;
   readonly hinweisMehrId = `such-hinweis-mehr-${this.hinweisNr}`;
   /**
-   * Mit kurzer Zeile auf dem Start auch der zugeklappte Satz: Direkt per aria-describedby verwiesen,
+   * Auf dem Start auch der zugeklappte Satz: Direkt per aria-describedby verwiesen,
    * liest ihn ein Screenreader trotz hidden vor, so geht der Hinweis auf die Veröffentlichung nicht verloren.
    */
   get beschreibungIds(): string {
-    return this.hinweiszeileKurz() && !this.compactMode ? `${this.hinweisId} ${this.hinweisMehrId}` : this.hinweisId;
+    return !this.compactMode ? `${this.hinweisId} ${this.hinweisMehrId}` : this.hinweisId;
   }
   get feldName(): string {
     return this.compactMode ? SUCHFELD_NAME_KOMPAKT : SUCHFELD_NAME;

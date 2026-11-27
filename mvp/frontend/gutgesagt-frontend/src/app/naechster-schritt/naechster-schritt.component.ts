@@ -1,19 +1,17 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { combineLatest, of } from 'rxjs';
+import { of } from 'rxjs';
 import { catchError, distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
 import { AuthService } from '../auth/auth.service';
-import { FunktionenService } from '../services/funktionen.service';
 import { stillerKontext } from '../shared/selbst-nachladen';
 import { SeitLetztemBesuchService } from '../seit-letztem-besuch/seit-letztem-besuch.service';
 import {
-  NAECHSTER_SCHRITT_SCHALTER,
   NaechsterSchrittAntwort,
   SUCHFELD_ID,
   Vorschlag,
@@ -26,8 +24,8 @@ import {
 export const NAECHSTER_SCHRITT_URL = `${environment.baseUrl}/api/v1/usage/users/me/naechster-schritt`;
 
 /**
- * Karte „Dein nächster Schritt“ auf der Startseite (#789), nur für Angemeldete und nur
- * mit dem Schalter `naechster_schritt`: genau ein Vorschlag aus dem eigenen Stand, ohne
+ * Karte „Dein nächster Schritt“ auf der Startseite (#789), nur für Angemeldete
+ * (Basisfunktion seit dem Schalter-Umbau 27.11.): genau ein Vorschlag aus dem eigenen Stand, ohne
  * Frist, ohne Zähler. Der Server liefert alle passenden Vorschläge in ihrer Reihenfolge
  * (services/naechster_schritt.py); die Karte zeigt den ersten, den die Person nicht
  * weggeklickt hat. „Anderer Vorschlag“ zeigt den nächsten; was weggeklickt ist, merkt sich
@@ -130,7 +128,6 @@ export const NAECHSTER_SCHRITT_URL = `${environment.baseUrl}/api/v1/usage/users/
 export class NaechsterSchrittComponent {
   private readonly http = inject(HttpClient);
 
-  private readonly an = inject(FunktionenService).an(NAECHSTER_SCHRITT_SCHALTER);
   private readonly vorschlaege = signal<Vorschlag[]>([]);
   private readonly weggeklickt = signal<ReturnType<typeof weggeklicktLesen>>({});
   /** Für Screenreader nach dem Wegklicken. */
@@ -157,7 +154,7 @@ export class NaechsterSchrittComponent {
     if (gemerkt) {
       this.vorschlaege.set(gemerkt);
     }
-    // Aufräumen bei jedem Laden der Startseite, auch ohne Schalter und ohne Anmeldung:
+    // Aufräumen bei jedem Laden der Startseite, auch ohne Anmeldung:
     // Abgelaufenes fällt weg, damit kein Eintrag länger als sieben Tage liegt.
     this.weggeklickt.set(weggeklicktLesen());
     if (gemerkt) {
@@ -167,10 +164,10 @@ export class NaechsterSchrittComponent {
       map((info) => info?.isAuthenticated === true),
       distinctUntilChanged(),
     );
-    combineLatest([angemeldet$, toObservable(this.an)])
+    angemeldet$
       .pipe(
-        switchMap(([angemeldet, an]) => {
-          if (!angemeldet || !an) {
+        switchMap((angemeldet) => {
+          if (!angemeldet) {
             return of([] as Vorschlag[]);
           }
           return this.http.get<NaechsterSchrittAntwort>(NAECHSTER_SCHRITT_URL, { context: stillerKontext() }).pipe(

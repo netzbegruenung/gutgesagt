@@ -84,9 +84,7 @@ def test_nur_fuer_admins(admin_werte, dienst):
     dienst.anstossen.assert_not_called()
 
 
-@pytest.mark.parametrize(
-    "obergrenze, admin_wert", [(True, False), (False, True), (False, False)]
-)
+@pytest.mark.parametrize("obergrenze, admin_wert", [(False, True), (False, False)])
 def test_aus_nichts_sichtbar_kein_lauf(admin_werte, dienst, obergrenze, admin_wert):
     admin_werte["herkunft_pruefen"] = admin_wert
     client = _client(dienst, obergrenze)

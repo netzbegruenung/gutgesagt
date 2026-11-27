@@ -1078,9 +1078,12 @@ describe('DatenschutzComponent', () => {
   });
 });
 
-/** Spielgefühl als eine Frage (Schalter spielgefuehl_buehne): ersetzt die Einwilligungsteile. */
+/**
+ * Paket Spielgefühl (spielgefuehl_buehne: Punkte, Spielgefühl als eine Frage, Rangliste;
+ * Schalter-Umbau 27.11.): ersetzt die Einwilligungsteile.
+ */
 describe('DatenschutzComponent: Spielgefühl', () => {
-  const ALLE = ['spielgefuehl_buehne', 'punkte', 'rangliste'];
+  const ALLE = ['spielgefuehl_buehne'];
   function seiteMit(an: boolean | string[]): HTMLElement {
     const namen = an === true ? ALLE : an === false ? [] : an;
     TestBed.configureTestingModule({
@@ -1129,20 +1132,14 @@ describe('DatenschutzComponent: Spielgefühl', () => {
     expect(punkte).toContain('Paar-Prüfwert');
   });
 
-  it('Schalter an: die angebotenen Stufen als Liste, Rangliste nur mit Schalter rangliste', () => {
-    const stufen = (an: string[]) =>
-      Array.from(seiteMit(an).querySelectorAll('[data-testid="dse-spielgefuehl"] li')).map((li) => normalisiert(li.textContent));
-
-    const mit = stufen(ALLE);
+  it('Paket an: die angebotenen Stufen als Liste, die Rangliste gehört zum Paket', () => {
+    const mit = Array.from(seiteMit(ALLE).querySelectorAll('[data-testid="dse-spielgefuehl"] li')).map((li) =>
+      normalisiert(li.textContent),
+    );
     expect(mit.length).toBe(3);
     expect(mit[0]).toBe('‚Aus‘: Wir berechnen nichts.');
     expect(mit[1]).toContain('‚Nur für mich‘: Wir berechnen Punkte und Meilensteine, die nur du siehst');
     expect(mit[2]).toContain('‚In der Saison-Rangliste mitspielen‘: Zusätzlich stehst du in der Rangliste');
-
-    TestBed.resetTestingModule();
-    const ohne = stufen(['spielgefuehl_buehne', 'punkte']);
-    expect(ohne.length).toBe(2);
-    expect(ohne.join(' ')).not.toContain('In der Saison-Rangliste mitspielen');
   });
 
   it('mit Rangliste: kein Satz, dass wir die Stufe gerade nicht anbieten', () => {
@@ -1157,24 +1154,17 @@ describe('DatenschutzComponent: Spielgefühl', () => {
     'Datenschutz-Einstellungen, auch wenn wir die Funktion gerade nicht anbieten.';
 
   it('der Sockelsatz steht immer, auch ohne Schalter', () => {
-    for (const namen of [[], ['spielgefuehl_buehne'], ALLE]) {
+    for (const namen of [[], ['punkte', 'rangliste'], ALLE]) {
       TestBed.resetTestingModule();
       expect(normalisiert(seiteMit(namen).querySelector('[data-testid="dse-spielgefuehl-sockel"]')!.textContent)).toBe(SOCKEL);
     }
   });
 
-  it('ohne Punkte kein Absatz „Spielgefühl“, auch wenn spielgefuehl_buehne an ist', () => {
-    const seite = seiteMit(['spielgefuehl_buehne']);
+  it('die früheren Schalter punkte und rangliste bringen allein keinen Absatz „Spielgefühl“', () => {
+    const seite = seiteMit(['punkte', 'rangliste']);
     expect(seite.querySelector('[data-testid="dse-spielgefuehl"]')).toBeNull();
-  });
-
-  it('ohne Rangliste: statt der Stufe Rangliste der Satz, dass wir sie gerade nicht anbieten', () => {
-    const absatz = normalisiert(
-      seiteMit(['spielgefuehl_buehne', 'punkte']).querySelector('[data-testid="dse-spielgefuehl"]')!.textContent,
-    );
-    expect(absatz).toContain('Die Stufe ‚In der Saison-Rangliste mitspielen‘ bieten wir gerade nicht an.');
-    expect(absatz).not.toContain('zufällig vergebenen Ranglistennamen');
-    expect(absatz).toContain('Jede Antwort speichern wir mit Stufe');
+    expect(seite.querySelector('[data-testid="dse-rangliste-platzhalter"]')).not.toBeNull();
+    expect(seite.querySelector('[data-testid="dse-punkte-vorbehalt"]')).not.toBeNull();
   });
 
   it('Punkte: Bewertungen, Nutzung ohne Anmeldung und die Wegmarke „Erste 10 Bewertungen“', () => {
@@ -1190,7 +1180,10 @@ describe('DatenschutzComponent: Spielgefühl', () => {
   });
 });
 
-/** „Danach wurde schon N-mal gesucht“ (#362, Jura vorläufig 26.11.): Absatz nur mit Schalter. */
+/**
+ * „Danach wurde schon N-mal gesucht“ (#362, Jura vorläufig 26.11.): Basisfunktion mit Not-Aus;
+ * der Absatz steht seit dem Schalter-Umbau (27.11.) ohne Bedingung.
+ */
 describe('DatenschutzComponent: Suchen ohne Treffer, Anzahl auf der Ergebnisseite', () => {
   function seiteMit(an: boolean): HTMLElement {
     TestBed.configureTestingModule({
@@ -1205,7 +1198,7 @@ describe('DatenschutzComponent: Suchen ohne Treffer, Anzahl auf der Ergebnisseit
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('nennt mit Schalter an „n-mal gesucht“ ab drei, je Pseudonym und Tag, nicht „Personen“', () => {
+  it('nennt „n-mal gesucht“ ab drei, je Pseudonym und Tag, nicht „Personen“', () => {
     const text = abschnittIn(seiteMit(true), 'Suchen ohne Treffer');
 
     expect(text).toContain('„Danach wurde in den letzten vier Wochen schon n-mal gesucht.“');
@@ -1215,20 +1208,19 @@ describe('DatenschutzComponent: Suchen ohne Treffer, Anzahl auf der Ergebnisseit
     expect(text).not.toContain('schon n Personen gesucht');
   });
 
-  it('lässt den Absatz mit Schalter aus weg', () => {
+  it('steht auch, wenn der Dienst null_treffer_anzahl als aus meldet (Not-Aus)', () => {
     const text = abschnittIn(seiteMit(false), 'Suchen ohne Treffer');
 
-    expect(text).not.toContain('n-mal gesucht');
+    expect(text).toContain('„Danach wurde in den letzten vier Wochen schon n-mal gesucht.“');
     expect(text).toContain('Auf die Listen der Suchen ohne Treffer kommt ein Eintrag erst');
   });
 });
 
-/** Halbsatz zum Stimmenverfall bei ganz anderem Text (#636) hinter dem Schalter stimmen_text_verfall. */
+/** Halbsatz zum Stimmenverfall bei ganz anderem Text (#636): Basisfunktion, steht ohne Schalter. */
 describe('DatenschutzComponent - Stimmenverfall bei ganz anderem Text (#636)', () => {
   // Wortlaut Jura vorläufig 26.11.2026
   const HALBSATZ =
     'sagt der Text einer Aussage unter gleichem Titel später etwas ganz anderes, verfallen die Bewertungen dazu und werden gelöscht';
-  const schalter = signal(false);
 
   function bewertungen(): string {
     const fixture = TestBed.createComponent(DatenschutzComponent);
@@ -1237,45 +1229,20 @@ describe('DatenschutzComponent - Stimmenverfall bei ganz anderem Text (#636)', (
   }
 
   beforeEach(async () => {
-    schalter.set(false);
     await TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
       providers: [
         provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
-        {
-          provide: FunktionenService,
-          useValue: { an: (name: string) => (name === 'stimmen_text_verfall' ? schalter : signal(false)) },
-        },
+        // Alle Schalter aus
+        { provide: FunktionenService, useValue: { an: () => signal(false) } },
       ],
     }).compileComponents();
   });
 
-  it('Schalter aus: nur der Titel, kein Halbsatz zum Text', () => {
-    const text = bewertungen();
-
-    expect(text).not.toContain(HALBSATZ);
-    expect(text).toContain(
-      'Ändert die Autorin oder der Autor den Titel so, dass er etwas anderes behauptet, löschen wir die Bewertungen dazu.'
-    );
-  });
-
-  it('Schalter an: Halbsatz steht im Satz zum Titel', () => {
-    schalter.set(true);
+  it('ohne Schalter: der Halbsatz steht im Satz zum Titel', () => {
     const text = bewertungen();
 
     expect(text).toContain(`dass er etwas anderes behauptet, löschen wir die Bewertungen dazu; ${HALBSATZ}.`);
-  });
-
-  it('erscheint ohne Neuladen, sobald der Schalter umspringt', () => {
-    const fixture = TestBed.createComponent(DatenschutzComponent);
-    fixture.detectChanges();
-    const seite = fixture.nativeElement as HTMLElement;
-    expect(abschnittIn(seite, 'Bewertungen')).not.toContain(HALBSATZ);
-
-    schalter.set(true);
-    fixture.detectChanges();
-
-    expect(abschnittIn(seite, 'Bewertungen')).toContain(HALBSATZ);
   });
 });
 
@@ -1283,6 +1250,8 @@ describe('DatenschutzComponent - Stimmenverfall bei ganz anderem Text (#636)', (
  * Absätze an Schaltern (vorläufige juristische Einschätzung 26.11.2026, interner Test):
  * Grundsatz „kein Schalter ohne seinen Absatz“. Jeder Absatz steht wortgleich, sobald sein
  * Schalter wirkt, und fehlt sonst; „noch nicht eingeschaltet“ entfällt mit dem Schalter.
+ * Seit dem Schalter-Umbau (27.11.) hängen die Absätze an den vier Paketen und den
+ * Einzelschaltern; die Absätze der Basisfunktionen stehen immer.
  */
 describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.2026)', () => {
   const RANGLISTE =
@@ -1350,22 +1319,15 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('alle Schalter aus: keiner der neuen Absätze, die Vorbehalte stehen', () => {
+  it('alle Schalter aus: die Absätze der Basisfunktionen stehen, keiner der Pakete, die Vorbehalte stehen', () => {
     const seite = seiteMit();
     const ganz = normalisiert(seite.textContent);
 
-    for (const text of [
-      RANGLISTE,
-      ECHO_DANKE,
-      GEPOSTET_OHNE_KONTO,
-      ANTWORTEN,
-      MELDEN,
-      GESTOERT,
-      NULL_TREFFER,
-      KAMPAGNENWORT,
-      BESTANDSZAHL,
-    ]) {
+    for (const text of [RANGLISTE, ECHO_DANKE, KAMPAGNENWORT]) {
       expect(ganz).not.toContain(text.slice(0, 60));
+    }
+    for (const text of [GEPOSTET_OHNE_KONTO, ANTWORTEN, MELDEN, GESTOERT, NULL_TREFFER, BESTANDSZAHL]) {
+      expect(ganz).toContain(text);
     }
     expect(ganz).toContain('Punkte sind noch nicht eingeschaltet.');
     expect(ganz).toContain('Die Team-Summe ist noch nicht eingeschaltet.');
@@ -1376,18 +1338,27 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     expect(seite.querySelectorAll('#rangliste').length).toBe(1);
   });
 
-  it('punkte: der Vorbehalt entfällt, die Muster-Hinweise gelten ohne „sobald“', () => {
-    const ganz = normalisiert(seiteMit('punkte').textContent);
+  it('spielgefuehl_buehne: der Vorbehalt entfällt, die Muster-Hinweise gelten ohne „sobald“', () => {
+    const ganz = normalisiert(seiteMit('spielgefuehl_buehne').textContent);
 
     expect(ganz).not.toContain('Punkte sind noch nicht eingeschaltet');
     expect(ganz).toContain('Einzige Ausnahme: Nutzen sich zwei Konten gegenseitig');
     expect(ganz).not.toContain('sobald Punkte eingeschaltet sind');
-    // Abzeichen haben einen eigenen Schalter und bleiben aus
-    expect(ganz).toContain('Abzeichen an deinem Namen. Abzeichen sind noch nicht eingeschaltet');
+    // Abzeichen am Namen gibt es nicht mehr, nur in der Rangliste
+    expect(ganz).not.toContain('Abzeichen an deinem Namen.');
+    expect(ganz).toContain('deine Abzeichen zeigen wir nur in der Rangliste, wenn du mitspielst');
   });
 
-  it('team_fortschritt: „Die Team-Summe ist noch nicht eingeschaltet“ entfällt, die Anzeige am Namen bleibt aus', () => {
-    const text = abschnittIn(seiteMit('team_fortschritt'), 'Teams');
+  it('die früheren Teil-Schalter punkte, rangliste, team_fortschritt und danke_knopf bringen allein nichts', () => {
+    const alt = normalisiert(seiteMit('punkte', 'rangliste', 'team_fortschritt', 'danke_knopf').textContent);
+    TestBed.resetTestingModule();
+    const aus = normalisiert(seiteMit().textContent);
+
+    expect(alt).toBe(aus);
+  });
+
+  it('teams: „Die Team-Summe ist noch nicht eingeschaltet“ entfällt, die Anzeige am Namen bleibt aus', () => {
+    const text = abschnittIn(seiteMit('teams'), 'Teams');
 
     expect(text).not.toContain('Die Team-Summe ist noch nicht eingeschaltet');
     expect(text).toContain('erst wenn mindestens fünf Mitglieder eingewilligt haben, gerundet und nie mit einzelnen Namen.');
@@ -1405,20 +1376,20 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     'Zustimmung speicherst.';
 
   it('team_quests mit spielgefuehl_buehne: der Absatz unter „Teams“ mit dem Satz zu Quest-Punkten', () => {
-    expect(abschnittIn(seiteMit('team_fortschritt', 'team_quests', 'spielgefuehl_buehne'), 'Teams')).toContain(
+    expect(abschnittIn(seiteMit('teams', 'team_quests', 'spielgefuehl_buehne'), 'Teams')).toContain(
       QUESTS + ' ' + QUEST_PUNKTE,
     );
   });
 
   it('team_quests ohne spielgefuehl_buehne: der Absatz ohne Quest-Punkte', () => {
-    const text = abschnittIn(seiteMit('team_fortschritt', 'team_quests'), 'Teams');
+    const text = abschnittIn(seiteMit('teams', 'team_quests'), 'Teams');
 
     expect(text).toContain(QUESTS);
     expect(text).not.toContain('bringen dir erfüllte Quests auch Punkte');
   });
 
   it('ohne team_quests: kein Absatz zu Quests', () => {
-    expect(abschnittIn(seiteMit('team_fortschritt'), 'Teams')).not.toContain('Quests');
+    expect(abschnittIn(seiteMit('teams'), 'Teams')).not.toContain('Quests');
   });
 
   // Juristische Vorgabe vom 27.11.: Quest-Punkte im Absatz „Mit Punkten zeigen wir dir …“, nur mit
@@ -1430,7 +1401,7 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
 
   it('team_quests und spielgefuehl_buehne: „Punkte“ nennt Quest-Punkte und die Wochensummen der Teams', () => {
     const text = abschnittIn(
-      seiteMit('punkte', 'team_fortschritt', 'team_quests', 'spielgefuehl_buehne'),
+      seiteMit('teams', 'team_quests', 'spielgefuehl_buehne'),
       'Punkte',
     );
 
@@ -1441,9 +1412,9 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
   });
 
   for (const [titel, namen] of [
-    ['nur team_quests', ['punkte', 'team_fortschritt', 'team_quests']],
-    ['nur spielgefuehl_buehne', ['punkte', 'spielgefuehl_buehne']],
-    ['keiner von beiden', ['punkte']],
+    ['nur team_quests', ['teams', 'team_quests']],
+    ['nur spielgefuehl_buehne', ['spielgefuehl_buehne']],
+    ['keiner von beiden', []],
   ] as const) {
     it(`${titel}: „Punkte“ ohne Quest-Punkte, die übrigen Sätze unverändert`, () => {
       const text = abschnittIn(seiteMit(...namen), 'Punkte');
@@ -1455,27 +1426,29 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     });
   }
 
-  it('rangliste: im Abschnitt „Punkte“ sehen Mitspielende den Punktestand', () => {
-    expect(abschnittIn(seiteMit('punkte', 'rangliste'), 'Punkte')).toContain(
+  it('spielgefuehl_buehne (Rangliste im Paket): im Abschnitt „Punkte“ sehen Mitspielende den Punktestand', () => {
+    expect(abschnittIn(seiteMit('spielgefuehl_buehne'), 'Punkte')).toContain(
       'Deinen Punktestand siehst nur du, außer du spielst in der Rangliste mit; dann sehen ihn auch die anderen ' +
         'Mitspielenden (siehe unten). Wir speichern ihn nicht,',
     );
   });
 
-  it('ohne rangliste: im Abschnitt „Punkte“ der alte Satz', () => {
-    expect(abschnittIn(seiteMit('punkte'), 'Punkte')).toContain('Deinen Punktestand siehst nur du. Wir speichern ihn nicht,');
+  it('ohne Paket Spielgefühl: im Abschnitt „Punkte“ der alte Satz', () => {
+    expect(abschnittIn(seiteMit(), 'Punkte')).toContain('Deinen Punktestand siehst nur du. Wir speichern ihn nicht,');
   });
 
-  it('rangliste: der Absatz von Jura statt des Hinweises, unter „Punkte“', () => {
-    const seite = seiteMit('punkte', 'rangliste');
+  // Im alten Modell stand mit dem Schalter rangliste ohne spielgefuehl_buehne ein eigener Absatz
+  // „Rangliste.“; seit dem Umbau beschreibt das Paket die Rangliste im Absatz „Spielgefühl“.
+  it('spielgefuehl_buehne: Rangliste als Stufe im Absatz „Spielgefühl“, ohne Platzhalter', () => {
+    const seite = seiteMit('spielgefuehl_buehne');
 
-    expect(abschnittIn(seite, 'Punkte')).toContain(RANGLISTE);
+    expect(seite.querySelector('[data-testid="dse-spielgefuehl-stufe-rangliste"]')).not.toBeNull();
     expect(abschnittIn(seite, 'Punkte')).not.toContain('Eine Rangliste je Saison ist noch nicht eingeschaltet');
-    expect(seite.querySelectorAll('#rangliste').length).toBe(1);
+    expect(abschnittIn(seite, 'Punkte')).not.toContain(RANGLISTE);
   });
 
-  it('wirkungs_echo und danke_knopf: der ganze Absatz und „nur drei Zahlen“ mit der dritten', () => {
-    const text = abschnittIn(seiteMit('wirkungs_echo', 'danke_knopf'), 'Rückmeldung zur Nutzung deiner Beiträge');
+  it('wirkungs_echo: der ganze Absatz mit den Sätzen zum Danke und „nur drei Zahlen“ mit der dritten', () => {
+    const text = abschnittIn(seiteMit('wirkungs_echo'), 'Rückmeldung zur Nutzung deiner Beiträge');
 
     expect(text).toContain(ECHO_DANKE);
     expect(text).toContain(
@@ -1486,11 +1459,10 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     expect(text).not.toContain('nur zwei Zahlen');
   });
 
-  it('nur danke_knopf: die Sätze zum Danke, kein Zählerstand des Echos, zwei Zahlen', () => {
-    const text = abschnittIn(seiteMit('danke_knopf'), 'Rückmeldung zur Nutzung deiner Beiträge');
+  it('ohne wirkungs_echo: kein Absatz zum Echo, zwei Zahlen', () => {
+    const text = abschnittIn(seiteMit(), 'Rückmeldung zur Nutzung deiner Beiträge');
 
-    expect(text).toContain('kannst du mit „Danke“ der Person danken');
-    expect(text).toContain('einen eigenen Tages-Prüfwert, gebildet wie beim Kopieren');
+    expect(text).not.toContain('kannst du mit „Danke“ der Person danken');
     expect(text).not.toContain('an Echo dazukam');
     expect(text).toContain(
       'nur zwei Zahlen: wie oft deine Beiträge insgesamt genutzt waren und wie viele Einwürfe anderer es im ' +
@@ -1498,14 +1470,14 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     );
   });
 
-  // Juristische Vorgabe vom 27.11. (vorläufig): DSE-Satz 1, nur mit danke_knopf
+  // Juristische Vorgabe vom 27.11. (vorläufig): DSE-Satz 1, mit dem Danke-Knopf (Paket wirkungs_echo)
   const DANKE_EINWILLIGUNG =
     'Wenn du selbst ‚Danke‘ sagst, verarbeiten wir das mit deiner Einwilligung nach Artikel 9 Absatz 2 ' +
     'Buchstabe a DSGVO (siehe ‚Deine Zustimmung und deine Einwilligung‘); ohne diese Einwilligung gibt es den ' +
     'Knopf nicht.';
 
-  it('danke_knopf: der Satz zur Einwilligung steht im Block Zweck/Rechtsgrundlage nach lit. f', () => {
-    const text = abschnittIn(seiteMit('danke_knopf'), 'Rückmeldung zur Nutzung deiner Beiträge');
+  it('wirkungs_echo: der Satz zur Einwilligung steht im Block Zweck/Rechtsgrundlage nach lit. f', () => {
+    const text = abschnittIn(seiteMit('wirkungs_echo'), 'Rückmeldung zur Nutzung deiner Beiträge');
 
     expect(text).toContain(
       'Rechtsgrundlage: Artikel 6 Absatz 1 Buchstabe f DSGVO — unser berechtigtes Interesse ist, Mitwirkende über ' +
@@ -1513,18 +1485,10 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     );
   });
 
-  it('ohne danke_knopf kein Satz zur Einwilligung ins Danke', () => {
-    const ganz = normalisiert(seiteMit('wirkungs_echo').textContent);
+  it('ohne wirkungs_echo kein Satz zur Einwilligung ins Danke, auch nicht mit dem früheren Schalter danke_knopf', () => {
+    const ganz = normalisiert(seiteMit('danke_knopf').textContent);
 
     expect(ganz).not.toContain('Wenn du selbst ‚Danke‘ sagst');
-  });
-
-  it('nur wirkungs_echo: Zählerstand des Echos, keine Sätze zum Danke-Knopf', () => {
-    const text = abschnittIn(seiteMit('wirkungs_echo'), 'Rückmeldung zur Nutzung deiner Beiträge');
-
-    expect(text).toContain('merken wir uns als weiteren Zählerstand zu deiner Kennung.');
-    expect(text).not.toContain('kannst du mit „Danke“');
-    expect(text).not.toContain('Tages-Prüfwert');
   });
 
   it('danke_ohne_konto allein bringt keinen Satz (Variante B nicht erfüllt, bleibt aus)', () => {
@@ -1551,8 +1515,8 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     );
   });
 
-  it('rangliste: der Punktestand ist für Mitspielende der Rangliste sichtbar (Keine automatisierte Entscheidungsfindung)', () => {
-    const text = abschnittIn(seiteMit('punkte', 'rangliste'), 'Keine automatisierte Entscheidungsfindung');
+  it('spielgefuehl_buehne: der Punktestand ist für Mitspielende der Rangliste sichtbar (Keine automatisierte Entscheidungsfindung)', () => {
+    const text = abschnittIn(seiteMit('spielgefuehl_buehne'), 'Keine automatisierte Entscheidungsfindung');
 
     expect(text).toContain(
       'Deinen Punktestand zeigen wir nur dir, außer du spielst in der Saison-Rangliste mit; dann sehen ihn auch die ' +
@@ -1560,32 +1524,32 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     );
   });
 
-  it('gepostet_ohne_konto: der Absatz unter „Rückmeldung „Ja, gepostet““', () => {
-    expect(abschnittIn(seiteMit('gepostet_ohne_konto'), 'Rückmeldung „Ja, gepostet“')).toContain(GEPOSTET_OHNE_KONTO);
+  it('gepostet_ohne_konto (Not-Aus): der Absatz unter „Rückmeldung „Ja, gepostet““ steht ohne Schalter', () => {
+    expect(abschnittIn(seiteMit(), 'Rückmeldung „Ja, gepostet“')).toContain(GEPOSTET_OHNE_KONTO);
   });
 
-  it('antworten_hinweis: der Satz vom 25.11. unter „Rückmeldung zur Nutzung“', () => {
-    expect(abschnittIn(seiteMit('antworten_hinweis'), 'Rückmeldung zur Nutzung deiner Beiträge')).toContain(ANTWORTEN);
+  it('antworten_hinweis: der Satz vom 25.11. unter „Rückmeldung zur Nutzung“ steht ohne Schalter', () => {
+    expect(abschnittIn(seiteMit(), 'Rückmeldung zur Nutzung deiner Beiträge')).toContain(ANTWORTEN);
   });
 
-  it('meldeweg_sichtbar: der Satz im Abschnitt „Meldungen von Beiträgen“', () => {
-    expect(abschnittIn(seiteMit('meldeweg_sichtbar'), 'Meldungen von Beiträgen')).toContain(MELDEN);
+  it('meldeweg_sichtbar: der Satz im Abschnitt „Meldungen von Beiträgen“ steht ohne Schalter', () => {
+    expect(abschnittIn(seiteMit(), 'Meldungen von Beiträgen')).toContain(MELDEN);
   });
 
-  it('feedback_gestoert: der Absatz unter „Feedback“', () => {
-    expect(abschnittIn(seiteMit('feedback_gestoert'), 'Feedback')).toContain(GESTOERT);
+  it('feedback_gestoert (Not-Aus): der Absatz unter „Feedback“ steht ohne Schalter', () => {
+    expect(abschnittIn(seiteMit(), 'Feedback')).toContain(GESTOERT);
   });
 
-  it('null_treffer_anzahl: der kurze Absatz unter „Suchen ohne Treffer“', () => {
-    expect(abschnittIn(seiteMit('null_treffer_anzahl'), 'Suchen ohne Treffer')).toContain(NULL_TREFFER);
+  it('null_treffer_anzahl (Not-Aus): der kurze Absatz unter „Suchen ohne Treffer“ steht ohne Schalter', () => {
+    expect(abschnittIn(seiteMit(), 'Suchen ohne Treffer')).toContain(NULL_TREFFER);
   });
 
   it('k_begruessung: nur der Begrüßungssatz unter „Messung der Nutzung“', () => {
     expect(abschnittIn(seiteMit('k_begruessung'), 'Messung der Nutzung')).toContain(KAMPAGNENWORT);
   });
 
-  it('bestandszahl_zuwachs: eigener Unterabschnitt „Startseite“', () => {
-    expect(abschnittIn(seiteMit('bestandszahl_zuwachs'), 'Startseite')).toBe(BESTANDSZAHL);
+  it('bestandszahl_zuwachs: eigener Unterabschnitt „Startseite“ ohne Schalter', () => {
+    expect(abschnittIn(seiteMit(), 'Startseite')).toBe(BESTANDSZAHL);
   });
 });
 

@@ -13,76 +13,38 @@ import { ohneRechte, selbstNachladen } from '../../shared/selbst-nachladen';
 import { SaisonsComponent } from '../saisons/saisons.component';
 import { SaalSpruecheComponent } from '../saal-sprueche/saal-sprueche.component';
 
-/** Anzeigenamen der Schalter; unbekannte zeigen ihren technischen Namen. */
+/**
+ * Anzeigenamen der Schalter (Schalter-Umbau 27.11.: vier Pakete, sieben Einzelschalter);
+ * unbekannte zeigen ihren technischen Namen.
+ */
 const TITEL: Record<string, string> = {
-  punkte: 'Punkte und Meilensteine',
-  abzeichen_sichtbar: 'Abzeichen am Anzeigenamen',
-  gepostet: 'Rückfrage „Ja, gepostet“',
-  gepostet_ohne_konto: '„Ja, gepostet“ ohne Konto',
-  herkunft_pruefen: 'Links unter „Herkunft“ prüfen',
-  merkliste: 'Merkliste',
-  abkuerzungen: 'App-Abkürzungen',
-  antworten_hinweis: 'Neue Antworten auf eigene Aussagen',
-  aufrufe_zaehlen: 'Aufrufe und Besucher pro Tag',
-  sharepic: 'Teilen als Bild',
-  meldeweg_sichtbar: '„Melden“ sichtbar und Meldeweg im Fuß',
-  bestandszahl_zuwachs: 'Zuwachs neben der Bestandszahl',
-  vertrauenszeile: 'Vertrauenszeile vor dem Anmelden',
-  feedback_gestoert: 'Knopf „Was hat dich gestört?“',
-  dse_kurzfassung: 'Kurzfassung der Datenschutzerklärung',
-  hinweiszeile_kurz: 'Kurze Hinweiszeile unter dem Suchknopf',
-  k_begruessung: 'Begrüßung nach ?k= (Sticker, BDK)',
-  k_ankuenfte: 'Ankünfte je Kampagnenwort und Tag',
-  team_fortschritt: 'Team-Fortschritt',
+  // Pakete
+  teams: 'Paket Teams',
+  spielgefuehl_buehne: 'Paket Spielgefühl',
+  wirkungs_echo: 'Paket Wirkungs-Echo',
+  k_begruessung: 'Paket BDK-Begrüßung',
+  // Einzelschalter
   team_quests: 'Team-Quests',
-  teams: 'Teams über Einladungen',
-  teams_oeffentlich: 'Teams am Anzeigenamen',
-  teamlink_vertrauenssatz: 'Vertrauenssatz beim Teambeitritt',
-  // Spielgefühl zur BDK (#782 bis #793)
-  saison_ziel: 'Saison und Gemeinschaftsziel',
-  gartenansicht: 'Gartenansicht',
-  kopiert_erfolg: 'Erfolgstext nach dem Kopieren',
-  konter_probe: 'Konter-Probe',
-  saal_spruch: 'Saal-Spruch „Heute im Netz zur BDK:“',
-  luecke_zu_gross: '„Lücke zu!“ als großer Moment',
-  einwilligung_im_gewinn: 'Einwilligung im passenden Moment',
-  naechster_schritt: '„Dein nächster Schritt“',
-  null_treffer_anzahl: '„Schon N-mal gesucht“ ohne Treffer',
-  wirkungs_echo: 'Wirkungs-Echo „öffentlich gepostet“',
-  danke_knopf: 'Danke-Knopf',
-  danke_ohne_konto: 'Danke-Knopf ohne Konto',
-  rangliste: 'Rangliste je Saison',
-  spielgefuehl_buehne: 'Spielgefühl als eine Frage',
   muster_stimmen: 'Muster-Hinweise aus Zustimmungen',
+  teams_oeffentlich: 'Teams am Anzeigenamen',
+  merkliste: 'Merkliste',
+  aufrufe_zaehlen: 'Aufrufe und Besucher pro Tag',
+  danke_ohne_konto: 'Danke-Knopf ohne Konto',
+  k_ankuenfte: 'Ankünfte je Kampagnenwort und Tag',
 };
 
 /**
- * Schalter, die nur zusammen mit anderen wirken: Name → [[Voraussetzung, Anzeige], …], wie im
- * Backend (schalter_service._wirksam). Die Zustandszeile nennt die erste, die nicht wirkt.
+ * Einzelschalter, die nur zusammen mit einem Paket wirken: Name → [[Voraussetzung, Anzeige]],
+ * wie im Backend (schalter_service.VORAUSSETZUNG). Die Zustandszeile nennt die erste, die
+ * nicht wirkt.
  */
 const VORAUSSETZUNG: Record<string, [string, string][]> = {
-  abzeichen_sichtbar: [['punkte', 'Punkte']],
-  teams_oeffentlich: [['teams', 'Teams']],
-  // Der Satz verspricht eine Team-Summe: Teams und Team-Fortschritt
-  teamlink_vertrauenssatz: [['teams', 'Teams'], ['team_fortschritt', 'Team-Fortschritt']],
-  // Kette: teams → team_fortschritt → team_quests
-  team_fortschritt: [['teams', 'Teams']],
-  team_quests: [['team_fortschritt', 'Team-Fortschritt']],
-  // Wirkungs-Echo und Danke-Knopf nur zusammen (Jura: der Absatz nennt beide Summen)
-  wirkungs_echo: [['danke_knopf', 'Danke-Knopf']],
-  danke_knopf: [['wirkungs_echo', 'Wirkungs-Echo']],
-  danke_ohne_konto: [['danke_knopf', 'Danke-Knopf']],
-  gepostet_ohne_konto: [['gepostet', 'Rückfrage „Ja, gepostet“']],
-  rangliste: [['punkte', 'Punkte']],
-  // Die Spielgefühl-Frage gibt es nur mit Punkten
-  spielgefuehl_buehne: [['punkte', 'Punkte']],
+  team_quests: [['teams', 'Paket Teams']],
+  teams_oeffentlich: [['teams', 'Paket Teams']],
   // Der Zweck Zustimmungen steht im Wortlaut des Spielgefühls
-  muster_stimmen: [['punkte', 'Punkte'], ['spielgefuehl_buehne', 'Spielgefühl als eine Frage']],
-};
-
-/** Schalter, die nicht wirken, solange ein anderer wirkt: Name → [anderer, Anzeige, Folge]. */
-const AUSSCHLUSS: Record<string, [string, string, string]> = {
-  abzeichen_sichtbar: ['spielgefuehl_buehne', 'Spielgefühl als eine Frage', 'Abzeichen dann nur in der Rangliste'],
+  muster_stimmen: [['spielgefuehl_buehne', 'Paket Spielgefühl']],
+  // Ohne Danke-Knopf (Paket Wirkungs-Echo) kein Danke ohne Konto
+  danke_ohne_konto: [['wirkungs_echo', 'Paket Wirkungs-Echo']],
 };
 
 /** Status je Schalter für Pille und Filter (siehe status()). */
@@ -274,7 +236,7 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
       </section>
       <!-- Saisons mit Gemeinschaftsziel (#782) -->
       <app-saisons></app-saisons>
-      <!-- Saal-Sprüche je Tag (Schalter saal_spruch) -->
+      <!-- Saal-Sprüche je Tag (Paket k_begruessung) -->
       <app-saal-sprueche></app-saal-sprueche>
     </ng-container>
   `,
@@ -469,10 +431,6 @@ export class SchalterComponent implements OnInit {
       if (fehlt) {
         return `${admin} · wirksam: aus, weil ${fehlt[1]} aus`;
       }
-      const [anderer, anzeige, folge] = AUSSCHLUSS[s.name] ?? [];
-      if (anderer && this.schalter(anderer)?.wirksam) {
-        return `${admin} · wirksam: aus, weil ${anzeige} an (${folge})`;
-      }
     }
     return `${admin} · wirksam: aus`;
   }
@@ -483,10 +441,6 @@ export class SchalterComponent implements OnInit {
     const voraus = VORAUSSETZUNG[s.name] ?? [];
     if (voraus.length > 0) {
       teile.push(`Wirkt nur zusammen mit: ${voraus.map(([, anzeige]) => anzeige).join(', ')}.`);
-    }
-    const ausschluss = AUSSCHLUSS[s.name];
-    if (ausschluss) {
-      teile.push(`Wirkt nicht, solange ${ausschluss[1]} an ist (${ausschluss[2]}).`);
     }
     return teile.length > 0 ? teile.join(' ') : null;
   }

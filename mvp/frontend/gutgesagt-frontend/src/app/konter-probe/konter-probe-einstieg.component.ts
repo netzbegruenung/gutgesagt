@@ -1,22 +1,20 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { Subject, Subscription, timer } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { FunktionenService } from '../services/funktionen.service';
 import { ROUTES } from '../shared/constants/app.constants';
 import { LadeWiederholung } from '../shared/lade-wiederholung';
-import { KONTER_PROBE_SCHALTER, KonterProbeService } from './konter-probe';
+import { KonterProbeService } from './konter-probe';
 
 /** So oft fragt der Einstieg ohne passende Aussage erneut; so lange hält der Server seinen Vorrat. */
 export const KONTER_PROBE_NACHFRAGEN_MS = 5 * 60 * 1000;
 
 /**
- * Einstieg in die Konter-Probe auf der Startseite (#786): nur wenn der Schalter an ist
- * und es mindestens eine passende Aussage gibt. Sonst nichts, auch kein Platzhalter.
- * Schaltet ein Admin um, kommt das mit dem nächsten Stand der Funktionen an
- * (FunktionenService), ohne dass jemand neu lädt. Ebenso ohne Neuladen: Nach einem
+ * Einstieg in die Konter-Probe auf der Startseite (#786, Basisfunktion seit dem
+ * Schalter-Umbau 27.11.): nur wenn es mindestens eine passende Aussage gibt. Sonst nichts,
+ * auch kein Platzhalter. Ohne Neuladen: Nach einem
  * Ladefehler fragt der Einstieg von selbst erneut (LadeWiederholung), ohne passende
  * Aussage alle KONTER_PROBE_NACHFRAGEN_MS.
  */
@@ -26,7 +24,7 @@ export const KONTER_PROBE_NACHFRAGEN_MS = 5 * 60 * 1000;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, MatButtonModule],
   template: `
-    @if (an() && sichtbar()) {
+    @if (sichtbar()) {
       <section class="konter-einstieg" aria-labelledby="konter-einstieg-titel">
         <h2 id="konter-einstieg-titel">Konter-Probe</h2>
         <div class="konter-einstieg-zeile">
@@ -90,7 +88,6 @@ export const KONTER_PROBE_NACHFRAGEN_MS = 5 * 60 * 1000;
 })
 export class KonterProbeEinstiegComponent {
   private readonly service = inject(KonterProbeService);
-  readonly an = inject(FunktionenService).an(KONTER_PROBE_SCHALTER);
   readonly sichtbar = signal(false);
   readonly ziel = ROUTES.KONTER_PROBE;
 
@@ -100,15 +97,7 @@ export class KonterProbeEinstiegComponent {
   private nachfrage: Subscription | null = null;
 
   constructor() {
-    // Erst fragen, wenn der Schalter an ist: Aus kostet keinen Abruf. Geht er aus,
-    // endet alles; geht er wieder an, wird neu gefragt.
-    effect(() => {
-      if (!this.an()) {
-        untracked(() => this.beenden());
-      } else if (!this.anfrage) {
-        untracked(() => this.laden());
-      }
-    });
+    this.laden();
     inject(DestroyRef).onDestroy(() => {
       this.ende$.next();
       this.ende$.complete();
@@ -130,7 +119,7 @@ export class KonterProbeEinstiegComponent {
         }
       },
       // Beiwerk der Startseite: Ohne Antwort bleibt der Einstieg weg, bis ein neuer
-      // Versuch (LadeWiederholung) klappt; 404 heißt Schalter aus, dann wie leer.
+      // Versuch (LadeWiederholung) klappt; 404 (älterer Suchdienst mit Schalter) wie leer.
       error: (fehler) => {
         this.sichtbar.set(false);
         if (fehler?.status === 404) {

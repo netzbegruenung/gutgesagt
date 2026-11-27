@@ -25,13 +25,10 @@ from services.team_fortschritt_service import (
 
 pytestmark = pytest.mark.unit
 
-AN = Settings(teams_aktiv=True, team_fortschritt_aktiv=True, team_quests_aktiv=True)
-OHNE_QUESTS = Settings(teams_aktiv=True, team_fortschritt_aktiv=True)
-FORTSCHRITT_AUS = Settings(teams_aktiv=True, team_quests_aktiv=True)
-TEAMS_AUS = Settings(team_fortschritt_aktiv=True, team_quests_aktiv=True)
-MIT_STARTKONTO = Settings(
-    teams_aktiv=True, team_fortschritt_aktiv=True, startkonten="start-1"
-)
+AN = Settings(teams_aktiv=True, team_quests_aktiv=True)
+OHNE_QUESTS = Settings(teams_aktiv=True)
+TEAMS_AUS = Settings(team_quests_aktiv=True)
+MIT_STARTKONTO = Settings(teams_aktiv=True, startkonten="start-1")
 
 # Mittwoch; laufende Woche ab Montag 23.11., abgeschlossene ab 16.11.
 HEUTE = date(2026, 11, 25)
@@ -247,7 +244,7 @@ class TestZaehlen:
         assert _dienst(speicher).zaehlen("fremd", Art.BEITRAG, "b-1") == 0
         assert _dienst(speicher).zaehlen(None, Art.BEITRAG, "b-1") == 0
 
-    @pytest.mark.parametrize("settings", [FORTSCHRITT_AUS, TEAMS_AUS, Settings()])
+    @pytest.mark.parametrize("settings", [TEAMS_AUS, Settings()])
     def test_schalter_aus_zaehlt_nichts_und_fragt_keine_datenbank(self, settings):
         repository = MagicMock()
         dienst = _dienst(repository, settings=settings)
@@ -390,7 +387,7 @@ class TestZeigen:
         speicher = Speicher(_team(5) + [Mitglied("alt", TEAM, FRUEHER)])
         assert _staende(_dienst(speicher), "alt") == {}
 
-    @pytest.mark.parametrize("settings", [FORTSCHRITT_AUS, TEAMS_AUS, Settings()])
+    @pytest.mark.parametrize("settings", [TEAMS_AUS, Settings()])
     def test_schalter_aus_zeigt_nichts(self, settings):
         repository = MagicMock()
         assert _staende(_dienst(repository, settings=settings), "konto") == {}

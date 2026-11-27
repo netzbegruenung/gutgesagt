@@ -1,7 +1,7 @@
 """
-Ankuenfte je Kampagnenwort und Tag (services/ankunft_service.py) und ihre beiden
-Schalter ``k_begruessung`` und ``k_ankuenfte``: Obergrenze von Haus aus aus, oeffentlich,
-Grundfunktionen, Einschalt-Hinweis mit der Jura-Bedingung.
+Ankuenfte je Kampagnenwort und Tag (services/ankunft_service.py). Die Schalter
+``k_begruessung`` (Paket) und ``k_ankuenfte`` prueft tests/unit/services/
+test_schalter_service.py.
 """
 
 from datetime import date
@@ -15,12 +15,6 @@ from services.ankunft_service import (
     AnkuenfteAmTag,
     AnkunftService,
     kampagnenwort_pruefen,
-)
-from services.schalter_service import (
-    GRUNDFUNKTIONEN,
-    SCHALTER,
-    SchalterService,
-    oeffentliche_schalter,
 )
 
 pytestmark = pytest.mark.unit
@@ -67,43 +61,3 @@ def test_positivliste_ohne_zu_lange_woerter():
 
 def test_frist_zwoelf_monate():
     assert ANKUNFT_TAGE == 365
-
-
-class TestSchalter:
-    @pytest.mark.parametrize("name", ["k_begruessung", "k_ankuenfte"])
-    def test_registriert_oeffentlich_grundfunktionen(self, name):
-        art = SCHALTER[name]
-        assert art.gruppe == GRUNDFUNKTIONEN
-        assert art.umgebungsvariable == f"SEMANTIC_SEARCH_{name.upper()}_AKTIV"
-        assert Settings.model_fields[art.feld].default is False
-        assert name in oeffentliche_schalter()
-        assert art.einschalt_hinweis
-        assert not art.rechtlich_freigegeben
-
-    def test_hinweis_ankuenfte_wortlaut_jura(self):
-        # Jura vorlaeufig 26.11.: Ankuenfte heute aus, die Begruessung darf an
-        assert SCHALTER["k_ankuenfte"].einschalt_hinweis.startswith("Aus lassen")
-        assert "§ 25" in SCHALTER["k_ankuenfte"].einschalt_hinweis
-        assert SCHALTER["k_begruessung"].einschalt_hinweis.startswith(
-            "Jura vorläufig ok 26.11."
-        )
-
-    @pytest.mark.parametrize("name", ["k_begruessung", "k_ankuenfte"])
-    def test_wirksam_nur_mit_obergrenze_und_admin_wert(self, name):
-        werte = {}
-        dienst = SchalterService(lambda: dict(werte), lambda n, a, w: None)
-        an = Settings(**{SCHALTER[name].feld: True})
-
-        assert dienst.wirksam(name, an) is False
-        werte[name] = True
-        dienst.admin_werte(frisch=True)
-        assert dienst.wirksam(name, an) is True
-        assert dienst.wirksam(name, Settings()) is False
-
-    def test_stand_wartet_auf_recht(self):
-        dienst = SchalterService(lambda: {}, lambda n, a, w: None)
-        stand = {s.name: s for s in dienst.stand(Settings())}
-
-        for name in ("k_begruessung", "k_ankuenfte"):
-            assert stand[name].wartet_auf_recht is True
-            assert stand[name].gruppe == GRUNDFUNKTIONEN
