@@ -21,8 +21,8 @@ export function saalTag(iso: string): string {
 /**
  * Saal-Sprüche auf der Seite „Schalter“ (Schalter „saal_spruch“, Glossar „Saal-Spruch“): je
  * Tag ein öffentlicher Spruch, der gerade unter Beiträgen zur BDK im Netz kursiert; die
- * Startseite zeigt ihn an diesem Tag als „Heute im Netz zur BDK:“. Festlegen, ersetzen und entfernen geht auch bei Schalter aus, damit die Sprüche
- * vor dem Einschalten bereitstehen. Nur Text, nichts zur Person. Lädt selbst nach.
+ * Startseite zeigt ihn an diesem Tag als „Heute im Netz zur BDK:“. Festlegen, ersetzen und
+ * entfernen geht auch bei Schalter aus, damit die Sprüche vor dem Einschalten bereitstehen. Nur Text, nichts zur Person. Lädt selbst nach.
  */
 @Component({
   selector: 'app-saal-sprueche',

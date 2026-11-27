@@ -58,7 +58,7 @@ class SpruchEintrag(BaseModel):
 class SpruchListeResponse(BaseModel):
     sprueche: List[SpruchEintrag]
     schalter_wirksam: bool
-    # Der heutige Tag im Saal (Europe/Berlin), fuer das Formular
+    # Der heutige Tag in deutscher Zeit (Europe/Berlin), fuer das Formular
     heute: date
     text_max: int = SAAL_SPRUCH_MAX
 

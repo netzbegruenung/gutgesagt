@@ -4,9 +4,9 @@ Saal-Spruch (Schalter ``saal_spruch``, GLOSSARY.md "Saal-Spruch").
 Ein Admin legt je Tag einen oeffentlichen Spruch fest, etwa an den Tagen der BDK jeden
 Morgen den, der gerade unter BDK-Beitraegen im Netz kursiert; die Startseite zeigt ihn an
 diesem Tag als Karte "Heute im Netz zur BDK:" mit dem Knopf "Antworten ansehen", der die
-Suche mit dem Spruch startet. Der Tag gilt in Europe/Berlin, weil BDK und Publikum dort
-sind: Um 00:30 Uhr am Samstag gilt der Spruch fuer
-Samstag, nicht der des UTC-Freitags.
+Suche mit dem Spruch startet. Der Tag gilt in Europe/Berlin, weil die BDK in deutscher
+Zeit stattfindet: Um 00:30 Uhr am Samstag gilt der Spruch fuer Samstag, nicht der des
+UTC-Freitags.
 
 Gespeichert wird nur Datum und Text (Tabelle ``saal_sprueche``), nichts zur Person.
 Gelesen wird der heutige Spruch mit kurzem Cache, weil die Startseite bei jedem Aufruf
