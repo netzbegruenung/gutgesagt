@@ -201,7 +201,7 @@ describe('WiderrufbarComponent', () => {
 
   it('kommt mit einem älteren Backend ohne team_oeffentlich zurecht', () => {
     const { team_oeffentlich: _weg, ...ohne } = ALLES;
-    starten(ohne as Widerrufbar);
+    starten(ohne);
 
     expect(zeile('team_oeffentlich')).toBeNull();
     expect(zeile('abzeichen')).not.toBeNull();

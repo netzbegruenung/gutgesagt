@@ -172,7 +172,10 @@ def test_unbekannte_wortlaute_werden_durch_den_aktuellen_ersetzt(
 
 
 def test_team_oeffentlich_widerrufbar_auch_ohne_schalter(abzeichen, team):
-    """Die Antwort haengt an keinem Schalter: auch bei teams_oeffentlich aus widerrufbar."""
+    """
+    Die Antwort haengt an keinem Schalter: auch bei teams_oeffentlich aus widerrufbar.
+    Der Testclient hat keine Settings, der Endpunkt kann also keinen Schalter fragen.
+    """
     from domain.teams import OEFFENTLICH_KENNUNG
 
     team.oeffentlich_lesen.return_value = OeffentlichAntwort(
