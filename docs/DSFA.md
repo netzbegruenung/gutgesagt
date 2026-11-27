@@ -1,10 +1,12 @@
 # Datenschutz-Folgenabschätzung
 
-> **Entwurf, nicht juristisch geprüft, nicht beschlossen.** Keine Rechtsberatung. Entscheiden
-> müssen der Vorstand der Netzbegrünung als Verantwortlicher und die Datenschutzbeauftragte, am
-> besten in derselben Runde wie #296; die Fragen an sie stehen in Abschnitt 6. Bedingung für
-> das Einschalten der Punkte ist diese Entscheidung (#708, Abschnitt 7); ob der Admin-Schalter
-> heute aus ist, ist offen. Die Obergrenze `SEMANTIC_SEARCH_PUNKTE_AKTIV` steht in Produktion auf
+> **Entwurf, nicht juristisch geprüft.** Keine Rechtsberatung. Verantwortlich ist der Vorstand
+> der Netzbegrünung; die Datenschutzbeauftragte ist zu beteiligen (Art. 35 Abs. 2), die Fragen
+> an beide stehen in Abschnitt 6. **Stand 27.11.2026 (Entscheidung des Maintainers):** AV-Vertrag
+> laut Vorstand geschlossen; Go des Vorstands angenommen. Beides ist hier als Annahme vermerkt,
+> nicht als Beleg (8.6, F1); Datum und Unterzeichnung des Vertrags stehen nicht im Repo.
+> Bedingung für das Einschalten der Punkte bleiben die übrigen Punkte in Abschnitt 7 (#708);
+> ob der Admin-Schalter heute aus ist, ist offen. Die Obergrenze `SEMANTIC_SEARCH_PUNKTE_AKTIV` steht in Produktion auf
 > an (erlaubt). Aussagen ohne Beleg im Repo oder in der Konfiguration des Betreibers stehen als
 > **offen** da.
 
@@ -12,6 +14,12 @@ Abschnitte 1 bis 7 prüfen Punkte, Quests und Ranglisten, Abschnitte 8 und 9 all
 Verarbeitungen des Dienstes (#374). Das Verzeichnis der Verarbeitungstätigkeiten (Art. 30)
 steht in [`docs/VERARBEITUNGSVERZEICHNIS.md`](./VERARBEITUNGSVERZEICHNIS.md) und verweist je
 Tätigkeit hierher.
+
+**Nachgezogen 27.11.2026:** `main` @ `62adefa3` eingemergt, darin der Absatz zu Zustimmungen in
+den Muster-Hinweisen (#863, V11); die Spielgefühl- und Wirkungs-Funktionen (V28 bis V31) bewertet
+der Nachtrag `docs/DSFA_NACHTRAG_SPIELGEFUEHL.md` (#860). Annahmen nach Entscheidung des
+Maintainers: AV-Vertrag laut Vorstand geschlossen (F1), Go des Vorstands (Abschnitt 7). Die
+übrigen Fundstellen sind nicht neu geprüft und gelten auf dem Stand vom 25.11.
 
 **Stand 25.11.2026:** Code `main` @ `34f8b1fb` (einschließlich #779), letzter Tag `v0.9.11` (20.11.2026,
 auf `088ac0bf`). Seit dem Stand vom 13.11. in diese DSFA eingearbeitet: #657 (Nacharbeit,
@@ -26,7 +34,7 @@ Konfiguration des Betreibers belegen lassen, die Haken in Abschnitt 7 und 9 und 
 Konfiguration des Betreibers (nicht öffentlich, Stand 24.11.2026); die Zeilenbelege liegen
 beim Betreiber. In `main` enthalten, nicht in `v0.9.11` und damit nicht im Betrieb, geprüft als V24 bis V27:
 #746 (Linkvorschau), #765 (Herkunft prüfen), #767 (Teilen als Bild) und #778 (Tagesdeckel).
-Fundstellen dort auf `34f8b1fb` (Code bis zum Kopf dieses PRs unverändert).
+Fundstellen dort auf `34f8b1fb`.
 
 **Stand 13.11.2026:** Code `main` @ `5816e358`, Tag `v0.8.4` (Release-PR #656);
 eingearbeitet sind #622, #643, #651 und #655 (Tagespseudonym
@@ -201,7 +209,6 @@ Bedingung für das Einschalten: die Punkte unten unter „Offen“.
 
 Offen:
 
-- DSFA übernommen (Abschnitt 6).
 - Datenschutzerklärung, Abschnitt „Punkte“: nennt Punkte fürs Bewerten, die Wegmarke „Erste 10
   Bewertungen“ und den Hinweis nach einer Stimme (eigenes Ticket, Rechtstexte; V11 Nachtrag
   20.11.2026).
@@ -211,6 +218,8 @@ Offen:
 
 Erledigt:
 
+- DSFA übernommen: Go des Vorstands angenommen (Entscheidung des Maintainers, 27.11.2026);
+  die Fragen in Abschnitt 6 bleiben zur Beratung, halten das Go aber nicht auf.
 - Datenschutzerklärung angepasst (#499): Prüfwert und Vermerk der ersten Kopie unter
   „Verwendung von Beiträgen“, eigener Abschnitt „Punkte“ mit Paar-Prüfwert (7 Tage) und
   Muster-Hinweisen (8 Wochen), Startkonten; „kein Pseudonym“ beim Kopieren gestrichen, „kein
@@ -293,11 +302,11 @@ Empfänger und Ort“.
   `docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md`, Frage 3).
   **AV-Vertrag (F1):** verdigado hat am 04.09.2026 bestätigt, dass AV-Verträge vorliegen
   (`docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md`, Frage 3); die Datenschutzerklärung nennt den Vertrag
-  (`DSE:66-75`). Ob der bestehende Rahmenvertrag Gut gesagt mit Zweck, Datenarten (auch
-  politische Meinung, Art. 9) und Kategorien der Betroffenen erfasst, ist **offen** (#506). Eine
-  Anlage „Gut gesagt“ liegt als Entwurf vor, ist nicht unterschrieben; ihr Verhältnis zum
-  Rahmenvertrag ist offen. Erfasst der Rahmenvertrag Gut gesagt nicht, fehlt ohne die Anlage die
-  Grundlage für die Verarbeitungen bei verdigado, auch für die Art.-9-Daten (R4).
+  (`DSE:66-75`). **Stand 27.11.2026:** AV-Vertrag laut Vorstand geschlossen, so dass er Gut
+  gesagt mit Zweck, Datenarten (auch politische Meinung, Art. 9) und Kategorien der Betroffenen
+  erfasst (Annahme nach Entscheidung des Maintainers, #506). Den Vertrag selbst, sein Datum und
+  seine Unterzeichnung belegt das Repo nicht. Ohne ihn fehlte die Grundlage für die
+  Verarbeitungen bei verdigado, auch für die Art.-9-Daten (R4).
 - Keine Übermittlung außerhalb der EU, kein KI-Anbieter (`DSE:1048-1051`, `CLAUDE.md`, Abschnitt
   „Datenschutz — keine KI-Anbieter“). Ausnahme: Bilder von fremden Servern lädt der Browser erst
   nach Klick (`DSE:996-1022`).
@@ -658,8 +667,9 @@ Empfänger und Ort“.
   Kontozuordnung, Schlüssel nur im Arbeitsspeicher, 7 Tage; Hinweis 56 Tage. Ausgewertet nur bei
   Paaren, die beide dem Spielgefühl-Wortlaut `spielgefuehl-2026-11-27` zugestimmt haben (Jura
   27.11.), geprüft beim Erzeugen und beim Zeigen; Ablehnungen zählen nicht. Kein Einfluss auf
-  Punkte oder Rangliste. Nachtrag in Abschnitt 3 (Nutzungsnetz) vor dem Einschalten auf Prod:
-  **offen**.
+  Punkte oder Rangliste. Bewertet im Nachtrag Spielgefühl und Wirkung, Zeile V30
+  (`docs/DSFA_NACHTRAG_SPIELGEFUEHL.md`, #860); in Abschnitt 3 (Nutzungsnetz) noch nicht
+  eingearbeitet.
 - **Risiko und Maßnahmen:** Abschnitt 3 (Sichtbarkeit, Nutzungsnetz, Zweckentfremdung),
   Rechtsgrundlage Abschnitt 4. Schalter `punkte_aktiv`, Standard aus (`ss/core/config.py:238-244`).
 - **Meilensteine, nur für die Person selbst (#615, gemergt am 09.11.2026):** hinter
@@ -799,7 +809,7 @@ Empfänger und Ort“.
 - **Bewusst akzeptiert (Entscheidung Maintainer, 25.11.2026):** Die Verschlüsselung der Kopie
   beim Betreiber ist nicht belegt. Restrisiko, angemessen, weil nur `root` und das Betriebsteam
   zugreifen, die Kopie im Rechenzentrum des Betreibers verdigado liegt und der AV-Vertrag gilt
-  (unter dem Vorbehalt von F1).
+  (F1: laut Vorstand geschlossen, angenommen 27.11.2026).
 
 #### V18 Flüchtige Zähler gegen Missbrauch
 
@@ -1044,7 +1054,7 @@ empfiehlt sie schon vor dem Einschalten der Punkte.
 | R1 | **Politische Haltung wird sichtbar**: Anzeigename an Beiträgen, Einwürfen und Sätzen für alle Angemeldeten, darunter Nicht-Mitglieder (V1, V3, V4) | nur Angemeldete, nur Vorname und Initial, Kennung nur für Admins; Einwilligung vor dem Beitragen (V2) | geringes Risiko |
 | R2 | **Zuordnung pseudonymer Daten**: Tagespseudonym der Angemeldeten am laufenden Tag nachrechenbar, der Schlüssel ist in Produktion gesetzt (V7, F5), Uhrzeiten im vorgelagerten Webserver (V16) | Tag statt Uhrzeit, Verdichten am Tagesende, Schlüssel der Besucher nur im Speicher, Besucher ohne User-Agent; für Angemeldete am laufenden Tag **offen** | Risiko; geringes Risiko, sobald V7 umgestellt ist |
 | R3 | **Daten Dritter** in Beiträgen, Einwürfen und Suchtexten, auch deren politische Zuordnung (V3, V4, V6), darunter „Gepostet von“ am Post | Hinweise im Formular und in der Erklärung; „Gepostet von“ freiwillig; Melden; Einzelfall-Löschung | Risiko, hinnehmbar |
-| R4 | **Datenpanne oder Zugriff durch Admins**: Kennungen, Meldungen mit Name und E-Mail-Adresse, Muster-Hinweise | Fristen (`LK:150-164`), Kennungen nur gekürzt im Log, keine Weitergabe (`DSE:74-75`); Host nur für benannte Gruppen mit Schlüssel, Datenbanken ohne Port nach außen, kleiner Kreis von Admins in der App (F4, Stand 25.11.); AV-Rahmenvertrag liegt vor, ob er Gut gesagt erfasst, ist offen (F1); Verschlüsselung der Kopie der Sicherungen nicht belegt, bewusst akzeptiert (F3, V17) | Risiko unter Vorbehalt von 8.6; **hoch**, wenn der bestehende AV-Vertrag Gut gesagt nicht erfasst |
+| R4 | **Datenpanne oder Zugriff durch Admins**: Kennungen, Meldungen mit Name und E-Mail-Adresse, Muster-Hinweise | Fristen (`LK:150-164`), Kennungen nur gekürzt im Log, keine Weitergabe (`DSE:74-75`); Host nur für benannte Gruppen mit Schlüssel, Datenbanken ohne Port nach außen, kleiner Kreis von Admins in der App (F4, Stand 25.11.); AV-Vertrag laut Vorstand geschlossen, angenommen 27.11. (F1); Verschlüsselung der Kopie der Sicherungen nicht belegt, bewusst akzeptiert (F3, V17) | Risiko unter Vorbehalt von 8.6 (F4 teilweise) |
 | R5 | **Protokolle**: Container-Logs ohne Frist, Suchtexte im vorgelagerten Webserver bei direktem Aufruf der Ergebnisseite (V16) | Container-Logs ohne Suchtext und ohne Altbestand (Zählung 25.11.); Frist 14 Tage Voraussetzung für den Livebetrieb (Salt#5653); vorgelagerter Webserver 14 Tage, nur `root`, bewusst akzeptiert | geringes Risiko mit der Frist für die Container-Logs |
 | R6 | **Löschung von Hand, nie an echten Daten erprobt** (`LK:3-13`, `DSE:1161-1163`) | Skript getestet gegen Testdaten (`LK:531-532`); Backup und Protokoll beim ersten Lauf | Risiko; geringes Risiko nach dem ersten belegten Lauf |
 | R7 | **Scoring und Zweckentfremdung** durch Punkte (V11) | Abschnitt 3 | Risiko (wie Risiko 3) |
@@ -1089,7 +1099,7 @@ Entwurfs; sie zu bestätigen oder zu ändern, ist Teil der Beratung (Abschnitt 6
 | R1 Haltung sichtbar | überschaubar | überschaubar: Vorname und Initial, nur Angemeldete | gering | gering |
 | R2 Zuordnung pseudonymer Daten | überschaubar: braucht Datenbank und Konfiguration, nur der laufende Tag | substanziell: kann auf einen Suchtext führen | **Risiko** | gering (V7 umgestellt) |
 | R3 Daten Dritter | substanziell: Beiträge nennen oft Dritte | überschaubar: öffentliche Äußerungen, Melden möglich | **Risiko** | Risiko, hinnehmbar |
-| R4 Datenpanne, Zugriff durch Admins | überschaubar, unter Vorbehalt von 8.6 (F2, F3 und F5 belegt, F4 teilweise, Stand 25.11.); substanziell, wenn der bestehende AV-Vertrag Gut gesagt nicht erfasst | substanziell: Art.-9-Daten, Name und E-Mail in Meldungen | **Risiko**, im genannten Fall **hoch** | gering (8.6 belegt, Zugriff geregelt) |
+| R4 Datenpanne, Zugriff durch Admins | überschaubar, unter Vorbehalt von 8.6 (F2, F3 und F5 belegt, F4 teilweise, Stand 25.11.; F1 angenommen, 27.11.) | substanziell: Art.-9-Daten, Name und E-Mail in Meldungen | **Risiko** | gering (8.6 belegt, Zugriff geregelt) |
 | R5 Protokolle | geringfügig: Wahrscheinlichkeit eines Schadens, nicht Zahl der Zeilen; kein Altbestand auf gutgesagt\*, Suchtexte nur bei direktem Aufruf, nur `root`, 14 Tage; die Speicherbegrenzung (Art. 5 Abs. 1 lit. e) gilt unabhängig von der Klasse | substanziell: Suchtext mit IP | **gering**, unter der Voraussetzung der Frist für die Container-Logs vor dem Livebetrieb | gering |
 | R6 Löschung von Hand | überschaubar: nie an echten Daten gelaufen | substanziell: Art.-9-Daten bleiben | **Risiko** | gering (erster Lauf belegt) |
 | R8 Rückschluss auf Stimmen | geringfügig: Schwelle drei | überschaubar | gering | gering |
@@ -1098,10 +1108,10 @@ Entwurfs; sie zu bestätigen oder zu ändern, ist Teil der Beratung (Abschnitt 6
 
 **Gesamtrisiko heute: Risiko**, unter dem Vorbehalt der offenen Fakten (8.6): Mit dem
 Löschauftrag (#661) liegt R9 in der mittleren Klasse, vorher war es **hoch**. **Folgerung zu
-Art. 36:** Nach den Maßnahmen bleibt kein hohes Risiko, solange die offenen Fakten F1 bis F6 (8.6)
-R4 nicht auf hoch heben, also der bestehende AV-Vertrag Gut gesagt erfasst (F1, offen; Anlage als
-Entwurf). Bis das geklärt ist, ist das Gesamtrisiko nicht abschließend eingestuft: Erfasst der
-Vertrag Gut gesagt nicht, sind R4 und das Gesamtrisiko ohne unterschriebene Anlage **hoch** (Art. 36). Für R5
+Art. 36:** Nach den Maßnahmen bleibt kein hohes Risiko. Die Bedingung dafür war, dass der
+AV-Vertrag Gut gesagt erfasst (F1); er gilt laut Vorstand als geschlossen (Annahme nach
+Entscheidung des Maintainers, 27.11.2026). Stellt sich das als falsch heraus, wären R4 und das
+Gesamtrisiko **hoch** (Art. 36). Für R5
 ist die Frist für die Container-Logs Voraussetzung für den Livebetrieb (F6); F3 ist bewusst
 akzeptiert (V17). Ob für R9 die Ausführung von Hand binnen sieben Tagen genügt oder erst der
 vollautomatische Ablauf, ist Frage 7 an die Datenschutzbeauftragte.
@@ -1147,7 +1157,8 @@ Abschnitt 5 prüft das für die Punkte. Für den Grundbetrieb ohne Punkte:
   nicht; die Erklärung nennt das Recht. Ob Art. 20 hier greift und wie eine Anfrage bedient
   wird, steht nicht im Repo.
 - **Auftragsverarbeitung, Drittland:** Keine Übermittlung außerhalb der EU; Hosts im
-  Rechenzentrum von verdigado in Nürnberg. Ob der AV-Rahmenvertrag Gut gesagt erfasst, ist offen (8.6, F1).
+  Rechenzentrum von verdigado in Nürnberg. AV-Vertrag laut Vorstand geschlossen, angenommen
+  27.11.2026 (8.6, F1).
 
 **Ergebnis:** Der Grundbetrieb ist im Kern notwendig und verhältnismäßig. Nicht verhältnismäßig
 sind heute vier Punkte, die Maßnahmen dazu stehen in Abschnitt 9: Anzeigename vor der
@@ -1162,7 +1173,7 @@ Konfiguration des Betreibers (`Salt:…`, Stand 24.11.2026) oder aus Tickets die
 
 | # | Offen | Warum es zählt | Stand 25.11.2026 | Stellen |
 |---|---|---|---|---|
-| F1 | **AV-Vertrag** mit verdigado: erfasst er Gut gesagt mit Zweck, Datenarten (auch Art. 9) und Betroffenen (Art. 28 Abs. 3)? Rolle von Hetzner? | Ohne Vertrag fehlt die Grundlage für die Verarbeitung bei verdigado, und die Aussage der Datenschutzerklärung stimmt nicht. | **offen:** ob der bestehende Rahmenvertrag Gut gesagt erfasst; Anlage „Gut gesagt“ als Entwurf, nicht unterschrieben, Verhältnis zum Rahmenvertrag offen. **Belegt:** gutgesagt* im Rechenzentrum von verdigado in Nürnberg; Hetzner nur noch für die Altsysteme unter dem früheren Projektnamen (Abbau offen, #206). | „Für alle“, R4, #506 |
+| F1 | **AV-Vertrag** mit verdigado: erfasst er Gut gesagt mit Zweck, Datenarten (auch Art. 9) und Betroffenen (Art. 28 Abs. 3)? Rolle von Hetzner? | Ohne Vertrag fehlt die Grundlage für die Verarbeitung bei verdigado, und die Aussage der Datenschutzerklärung stimmt nicht. | **angenommen (27.11.2026):** AV-Vertrag laut Vorstand geschlossen (Entscheidung des Maintainers); Vertrag, Datum und Unterzeichnung nicht im Repo belegt. **Belegt:** gutgesagt* im Rechenzentrum von verdigado in Nürnberg; Hetzner nur noch für die Altsysteme unter dem früheren Projektnamen (Abbau offen, #206). | „Für alle“, R4, #506 |
 | F2 | **SMTP-Server** in Produktion: welcher, wer betreibt ihn? Ebenso der Mailversand des Anmeldedienstes. | Mails tragen E-Mail-Adresse und Anlass (Meldung, Entscheidung). | **belegt:** `mail.verdigado.net`, betrieben von verdigado, Port 465 mit TLS (`Salt:states/gutgesagt/files/docker-compose.yml`). **offen:** Mailversand des Anmeldedienstes (Einstellung des Realms). | „Für alle“ |
 | F3 | **Sicherungen**: Verschlüsselung, Ablage außerhalb des Hosts, Zugriff. | Sicherungen halten alles bis zu 28 Tage, auch Gelöschtes. | **belegt:** Ablage auf dem Host und als Kopie beim Betreiber im selben Rechenzentrum, innerhalb der Frist der Datenschutzerklärung (`Salt:states/gutgesagt/init.sls`, `Salt:states/backup/files/config.yml.j2`). **Verschlüsselung der Kopie:** nicht belegt, bewusst akzeptiert (V17). | V17, R4 |
 | F4 | **Rollen und Zugriff**: wer Admin ist, wer an Host, Datenbank, Konfiguration und die Datei der Beta-Zugänge kommt, wie Zugänge vergeben und entzogen werden. | Admins sehen Kennungen, Meldungen mit Name und E-Mail-Adresse, Muster-Hinweise. | **belegt:** Admins in Produktion ein kleiner Kreis, nur über die Liste, die Realm-Vorlage setzt keinen Claim; Host nur für das Betriebsteam von verdigado und eine kleine Gruppe für gutgesagt*, Anmeldung nur mit Schlüssel; Datenbank und Konfiguration nur über `root`; Datei der Beta-Zugänge entfernt. **offen:** Admin-Claim im laufenden Realm, Mitglieder der Passbolt-Gruppe, Ablauf für Vergabe und Entzug. | „Für alle“, R4, V19 |
@@ -1189,7 +1200,7 @@ Konfiguration des Betreibers (`Salt:…`, Stand 24.11.2026) oder aus Tickets die
    25.11.2026, F6). Suchtexte im vorgelagerten Webserver bei direktem Aufruf der Ergebnisseite:
    bewusst akzeptiert (V16).
 5. **Formales:** Wer übernimmt die DSFA (Vorstand mit Datenschutzbeauftragter, Art. 35 Abs. 2)?
-   Das Verzeichnis der Verarbeitungstätigkeiten steht als Entwurf in
+   **Stand 27.11.2026:** Go des Vorstands angenommen (Entscheidung des Maintainers). Das Verzeichnis der Verarbeitungstätigkeiten steht als Entwurf in
    `docs/VERARBEITUNGSVERZEICHNIS.md`; führen muss es der Verein (Art. 30 Abs. 1).
 6. **Fragen an die Datenschutzbeauftragte:** Lücke aus Abschnitt 4, Meldungen ohne Einwilligung
    (V12) und Altersgrenze (WP 248 Kriterium 7) zu `docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md` hinzufügen
@@ -1205,4 +1216,5 @@ Konfiguration des Betreibers (`Salt:…`, Stand 24.11.2026) oder aus Tickets die
 8. **Offene Fakten** (8.6): F1 bis F6 belegen, vor allem den AV-Vertrag (F1), bevor Art.-9-Daten
    echter Personen verarbeitet werden. **Stand 25.11.2026:** F2, F3 (Verschlüsselung der Kopie
    bewusst akzeptiert) und F5 belegt; F4 teilweise; F6 belegt bis auf die Frist der
-   Container-Logs (Voraussetzung für den Livebetrieb); F1 offen (8.6).
+   Container-Logs (Voraussetzung für den Livebetrieb). **Stand 27.11.2026:** F1 angenommen,
+   AV-Vertrag laut Vorstand geschlossen (8.6).
