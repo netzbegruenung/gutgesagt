@@ -271,6 +271,33 @@ class TestQuestPunkte:
         assert stand.quests == 4
         assert gefragt == [[datetime(2026, 11, 17, 12, tzinfo=timezone.utc)]]
 
+    def test_quests_aus_liest_die_einwilligung_nicht(self):
+        seit = Mock(return_value=EINWILLIGUNG_28)
+        quest_tage = Mock(return_value={LAUFENDE: 1})
+        dienst = PunkteService(
+            AsyncMock(return_value=[]),
+            Mock(**{"get_nutzung_entdoppelt_batch.return_value": {}}),
+            Mock(
+                **{
+                    "zustimmungen.return_value": 0,
+                    "einwuerfe_ausformuliert_je_tag.return_value": {},
+                    "bewertungen_je_tag.return_value": {},
+                }
+            ),
+            Settings(punkte_quest=4),
+            eingewilligt=lambda k: True,
+            quest_tage=quest_tage,
+            quest_einwilligung_seit=seit,
+            quests_wirksam=lambda: False,
+        )
+
+        stand = asyncio.run(dienst.punkte("konto"))
+
+        assert stand.quests == 0
+        assert stand.vollstaendig is True
+        seit.assert_not_called()
+        quest_tage.assert_not_called()
+
     def test_mit_echtem_dienst(self):
         speicher = Speicher(_team(5))
         speicher.mitglieder[0].konto = "konto"

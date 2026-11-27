@@ -46,6 +46,7 @@ from repositories.spielgefuehl_repository import SpielgefuehlAntwort
 from services.muster_hinweise_service import MusterHinweiseService
 from services.schalter_service import SchalterService, schalter_service_setzen
 from services.spielgefuehl_service import (
+    KeinWiderruf,
     SpielgefuehlService,
     spielgefuehl_service_setzen,
 )
@@ -185,6 +186,36 @@ class TestSpielgefuehlService:
         dienst.antworten("kim-1", Stufe.AUS, None, AKTUELL)
 
         alle.assert_called_once_with("kim-1")
+
+    @pytest.mark.parametrize("wortlaut", [ALT, NEU])
+    def test_widerruf_ohne_schalter_behaelt_den_alten_wortlaut(self, wortlaut):
+        """Ohne Schalter sieht die Person -28 nicht: keine Einwilligung zu -28."""
+        dienst, repository = self._dienst(_antwort(Stufe.RANGLISTE, wortlaut))
+
+        dienst.antworten("kim-1", Stufe.FUER_MICH, None, AKTUELL, widerruf=True)
+
+        repository.antworten.assert_called_once_with(
+            "kim-1", Stufe.FUER_MICH, False, wortlaut, None
+        )
+
+    @pytest.mark.parametrize(
+        "vorher", [None, _antwort(Stufe.FUER_MICH, ALT), _antwort(Stufe.AUS, ALT)]
+    )
+    def test_widerruf_ohne_schalter_nie_gleich_oder_hoeher(self, vorher):
+        dienst, repository = self._dienst(vorher)
+
+        with pytest.raises(KeinWiderruf):
+            dienst.antworten("kim-1", Stufe.FUER_MICH, None, AKTUELL, widerruf=True)
+        repository.antworten.assert_not_called()
+
+    def test_widerruf_aus_mit_jedem_wortlaut(self):
+        dienst, repository = self._dienst(_antwort(Stufe.RANGLISTE, ALT))
+
+        dienst.antworten("kim-1", Stufe.AUS, None, AKTUELL, widerruf=True)
+
+        repository.antworten.assert_called_once_with(
+            "kim-1", Stufe.AUS, False, AKTUELL, None
+        )
 
     def test_herabstufen_behaelt_die_hinweise(self):
         alle = Mock()

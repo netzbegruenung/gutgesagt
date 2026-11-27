@@ -779,7 +779,12 @@ also deletes every Muster-Hinweis whose two accounts no longer both consent (usa
 consent or Spielgefühl ≥ `fuer_mich`; approvals: `-27`/`-28` ≥ `fuer_mich` plus Art. 9), so a hint
 written during a withdrawal goes within one run; the dashboard request cleans up the rows it reads
 the same way. No effect on points or the Rangliste. `aus` deletes all hints of the person; a
-withdrawal of the Art. 9 consent deletes the hints of kind `zustimmung`.
+withdrawal of the Art. 9 consent deletes the hints of kind `zustimmung`. Without the switches
+`spielgefuehl_buehne` and `punkte` the person does not see the question; a downgrade then keeps
+the wording id of the previous answer (`SpielgefuehlService.antworten(widerruf=True)`), so no
+consent to a text the person never saw is recorded. `GET /api/v1/funktionen/muster_stimmen/seit`
+(no sign-in, always 200) gives the day (German time) the admin value was last switched on, for the
+sentence in the privacy policy; `seit: null` while not effective.
 
 Quest-Punkte (Team-Quests, switch `team_quests`) count only for accounts whose newest answer is
 `-28` at level `fuer_mich` or above, and only for Beiträge saved since that consent
@@ -788,9 +793,8 @@ above `aus`; a change between `fuer_mich` and `rangliste` does not interrupt it,
 `PunkteService` passes only those Beiträge to `TeamFortschrittService.quest_tage`, so a quest week
 before the consent is never credited afterwards. The check does not ask `spielgefuehl_buehne`:
 in the old model points follow the points consent, but Quest-Punkte still need a `-28` answer,
-which can only be given while the switch is effective. `GET /api/v1/funktionen/muster_stimmen/seit` (no sign-in, always
-200) gives the day (German time) the admin value was last switched on, for the sentence in the
-privacy policy; `seit: null` while not effective.
+which can only be given while the switch is effective. With `team_quests` off the consent is not
+read at all.
 
 - `GET /api/v1/usage/users/me/spielgefuehl`: level (null = not asked yet), name choice,
   Ranglistenname, wording in button order (community first), one-time badge note; 200 with

@@ -666,7 +666,7 @@ Empfänger und Ort“.
 - **Zustimmungen (Schalter `muster_stimmen`, Standard aus):** Gegenseitige Zustimmungen als
   weiteres Merkmal der Muster-Hinweise, mit denselben Garantien: Paar-Prüfwerte ohne
   Kontozuordnung, Schlüssel nur im Arbeitsspeicher, 7 Tage; Hinweis 56 Tage. Ausgewertet nur bei
-  Paaren, die beide dem Spielgefühl-Wortlaut `spielgefuehl-2026-11-27` zugestimmt haben
+  Paaren, die beide einem Spielgefühl-Wortlaut mit Zustimmungen (`spielgefuehl-2026-11-27` oder `-28`) zugestimmt haben
   (rechtliche Einschätzung vom 27.11.), geprüft beim Erzeugen und beim Zeigen; Ablehnungen zählen nicht. Kein Einfluss auf
   Punkte oder Rangliste. Bewertet im Nachtrag Spielgefühl und Wirkung, Zeile V30
   (`docs/DSFA_NACHTRAG_SPIELGEFUEHL.md`, #860); in Abschnitt 3 (Nutzungsnetz) noch nicht

@@ -29,11 +29,11 @@ from core.config import Settings
 from core.logging import get_logger
 from domain.rangliste import neuer_ranglistenname
 from domain.spielgefuehl import (
+    AKTUELLER_WORTLAUT,
     NAMENS_VORBELEGUNG,
     WORTLAUTE,
     NamenswahlFehlt,
     Stufe,
-    AKTUELLER_WORTLAUT,
     UnbekannterWortlaut,
     in_rangliste,
     neu_fragen,
@@ -53,6 +53,10 @@ logger = get_logger(__name__)
 
 SCHALTER = "spielgefuehl_buehne"
 STIMMEN_SCHALTER = "muster_stimmen"
+
+
+class KeinWiderruf(RuntimeError):
+    """Ohne Schalter geht nur ein Herabstufen, kein gleich hoch oder hoeher."""
 
 
 class NichtInRangliste(RuntimeError):
@@ -306,10 +310,14 @@ class SpielgefuehlService:
         stufe: Stufe,
         mit_anzeigename: Optional[bool],
         wortlaut: str,
+        widerruf: bool = False,
     ) -> None:
         """
         Eine Stufe waehlen, jederzeit. Eine Stufe ueber ``aus`` nur zum aktuellen
-        Wortlaut, ``aus`` zu jedem bekannten. Stufe rangliste braucht die Namenswahl
+        Wortlaut, ``aus`` zu jedem bekannten. ``widerruf`` (ohne Schalter, die Person
+        sieht die Frage nicht): nur ein Herabstufen, und eine Stufe ueber ``aus``
+        behaelt den Wortlaut der bisherigen Antwort, sonst entstuende eine Einwilligung
+        in einen Text, den die Person nie gesehen hat (etwa Quest-Punkte mit ``-28``). Stufe rangliste braucht die Namenswahl
         (``NAMENS_VORBELEGUNG`` ist None); das erste Mitspielen wuerfelt den
         Zufallsnamen, auch wenn die Person den Anzeigenamen waehlt, damit sie jederzeit
         wechseln kann. Herabstufen nimmt die Abzeichen sofort aus der Rangliste und
@@ -322,11 +330,15 @@ class SpielgefuehlService:
         die die Person nennen; Fehler dabei nur im Log (die Admin-Ansicht filtert
         ohnehin nach der aktuellen Einwilligung).
         """
-        if wortlaut not in WORTLAUTE or (
-            stufe is not Stufe.AUS and wortlaut != AKTUELLER_WORTLAUT
-        ):
+        if wortlaut not in WORTLAUTE:
             raise UnbekannterWortlaut(wortlaut)
         vorher = self._repository.lesen(user_id)
+        if widerruf and stufe is not Stufe.AUS:
+            if vorher is None or _RANG[stufe] >= _RANG[vorher.wirksame_stufe]:
+                raise KeinWiderruf()
+            wortlaut = vorher.wortlaut
+        elif stufe is not Stufe.AUS and wortlaut != AKTUELLER_WORTLAUT:
+            raise UnbekannterWortlaut(wortlaut)
         name: Optional[str] = None
         if in_rangliste(stufe):
             if mit_anzeigename is None:

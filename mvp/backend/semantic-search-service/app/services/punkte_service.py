@@ -164,6 +164,7 @@ class PunkteService:
             Callable[[str, List[datetime], datetime], Dict[date, int]]
         ] = None,
         quest_einwilligung_seit: Optional[Callable[[str], Optional[datetime]]] = None,
+        quests_wirksam: Callable[[], bool] = lambda: True,
     ):
         self._sichtbare_beitraege = sichtbare_beitraege
         self._nutzung = nutzung
@@ -182,6 +183,8 @@ class PunkteService:
         self._quest_einwilligung_seit = quest_einwilligung_seit or (
             lambda user_id: spielgefuehl_service.quest_einwilligung_seit(user_id)
         )
+        # Schalter team_quests: aus, wird auch die Einwilligung nicht gelesen
+        self._quests_wirksam = quests_wirksam
 
     async def _quests(self, user_id, beitraege, grenze) -> Tuple[Dict[date, int], bool]:
         """
@@ -193,6 +196,8 @@ class PunkteService:
         if self._quest_tage is None:
             return {}, True
         try:
+            if not self._quests_wirksam():
+                return {}, True
             seit = await asyncio.to_thread(self._quest_einwilligung_seit, user_id)
             if seit is None:
                 return {}, True

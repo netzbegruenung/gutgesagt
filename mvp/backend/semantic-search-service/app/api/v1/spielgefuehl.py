@@ -46,6 +46,7 @@ from domain.spielgefuehl import (
 )
 from services.schalter_service import schalter_wirksam
 from services.spielgefuehl_service import (
+    KeinWiderruf,
     NichtInRangliste,
     SpielgefuehlService,
     ZuOftGewuerfelt,
@@ -193,7 +194,8 @@ async def spielgefuehl_waehlen(
     settings: Settings = Depends(get_settings),
 ) -> Response:
     dienst = get_spielgefuehl_service()
-    if not _angeboten(settings):
+    angeboten = _angeboten(settings)
+    if not angeboten:
         # Ohne Schalter nur ein Widerruf; "aus" ohne Datenbankabfrage.
         try:
             widerruf = await asyncio.to_thread(
@@ -216,7 +218,11 @@ async def spielgefuehl_waehlen(
             request.stufe,
             request.mit_anzeigename,
             request.wortlaut,
+            # Ohne Schalter behaelt ein Herabstufen den bisherigen Wortlaut
+            not angeboten,
         )
+    except KeinWiderruf:
+        raise HTTPException(status_code=409, detail="Not active")
     except UnbekannterWortlaut:
         raise HTTPException(status_code=422, detail="Unbekannter Wortlaut")
     except NamenswahlFehlt:

@@ -271,9 +271,9 @@ def quest_einwilligung_seit(
     Seit wann die Person ohne Unterbrechung zu ``QUEST_WORTLAUT`` ab ``fuer_mich``
     eingewilligt hat, oder None, wenn ihre juengste Antwort das nicht ist.
     ``antworten``: alle Antworten der Person als (Wortlaut, Stufe, Zeitpunkt), die
-    juengste zuerst (wie ``SpielgefuehlRepository.lesen`` ordnet). Ein Wechsel zwischen ``fuer_mich`` und ``rangliste`` oder
-    ein neuer Zufallsname unterbricht nicht; ``aus`` oder eine Antwort zu einem anderen
-    Wortlaut schon. Quest-Punkte gibt es nur fuer Beitraege ab diesem Zeitpunkt, also
+    juengste zuerst (wie ``SpielgefuehlRepository.lesen`` ordnet). Ein Wechsel zwischen
+    ``fuer_mich`` und ``rangliste`` oder ein neuer Zufallsname unterbricht nicht; ``aus``
+    oder eine Antwort zu einem anderen Wortlaut schon. Quest-Punkte gibt es nur fuer Beitraege ab diesem Zeitpunkt, also
     nicht rueckwirkend fuer Wochen davor.
     """
     seit: Optional[datetime] = None

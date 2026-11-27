@@ -9,14 +9,14 @@ import pytest
 from sqlalchemy import text
 
 from domain.spielgefuehl import AKTUELLER_WORTLAUT, Stufe
-
-MINUS_26 = "spielgefuehl-2026-11-26"
-MINUS_27 = "spielgefuehl-2026-11-27"
 from repositories.einwilligungs_moment_repository import EinwilligungsMomentRepository
 from repositories.spielgefuehl_repository import SpielgefuehlRepository
 from tests.integration.test_loeschkommando import datenbank  # noqa: F401
 
 pytestmark = pytest.mark.integration
+
+MINUS_26 = "spielgefuehl-2026-11-26"
+MINUS_27 = "spielgefuehl-2026-11-27"
 
 
 def _zeilen(datenbank, kennung) -> int:  # noqa: F811
