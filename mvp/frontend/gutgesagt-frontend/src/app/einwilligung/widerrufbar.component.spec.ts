@@ -67,6 +67,8 @@ describe('WiderrufbarComponent', () => {
     expect(zeile('rangliste')?.textContent).toContain('Rangliste: dabei');
     expect(zeile('abzeichen')?.textContent).toContain('Abzeichen am Namen: sichtbar');
     expect(zeile('team_oeffentlich')?.textContent).toContain('Teams am Namen: sichtbar');
+    // Jura 27.11.: neutral, weil darunter auch die Teams stehen
+    expect(el().querySelector('#widerrufbar-titel')?.textContent?.trim()).toBe('Einwilligungen ausschalten');
     const knoepfe = Array.from(el().querySelectorAll('button')).map((b) => b.textContent?.trim());
     expect(knoepfe).toEqual(['Ausschalten', 'Ausschalten', 'Ausschalten', 'Ausschalten', 'Ausschalten']);
   });

@@ -54,7 +54,7 @@ const BASIS = `${environment.baseUrl}/api/v1`;
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section *ngIf="zeilen.length" class="widerrufbar" aria-labelledby="widerrufbar-titel" data-testid="widerrufbar">
-      <h3 id="widerrufbar-titel">Spielgefühl und Punkte ausschalten</h3>
+      <h3 id="widerrufbar-titel">Einwilligungen ausschalten</h3>
       <ul>
         <li *ngFor="let zeile of zeilen; trackBy: art" [attr.data-testid]="'widerruf-' + zeile.art">
           <span>{{ zeile.text }}</span>
