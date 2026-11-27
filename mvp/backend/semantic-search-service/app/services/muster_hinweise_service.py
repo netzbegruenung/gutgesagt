@@ -139,7 +139,12 @@ class MusterHinweiseService:
         if eingewilligte is None:
             return self._repository.hinweise(ANZAHL)
         # Mehr holen als gezeigt, damit nach dem Filter moeglichst ANZAHL bleiben.
-        hinweise = self._repository.hinweise(ANZAHL * VORRAT_FAKTOR)
+        # Ohne Filter fuer Zustimmungen nur Nutzungen lesen: Versteckte Zustimmungen
+        # sollen keine Nutzungen aus der Liste draengen.
+        if stimmen_eingewilligte is None:
+            hinweise = self._repository.hinweise(ANZAHL * VORRAT_FAKTOR, art=NUTZUNG)
+        else:
+            hinweise = self._repository.hinweise(ANZAHL * VORRAT_FAKTOR)
         if not hinweise:
             return hinweise
         mit = eingewilligte({k for h in hinweise for k in (h.konto_a, h.konto_b)})

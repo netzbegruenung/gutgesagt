@@ -104,19 +104,21 @@ class MusterHinweisRepository:
             )
             return True
 
-    def hinweise(self, limit: int) -> List[MusterHinweis]:
-        """Die zuletzt aufgefallenen zuerst, bei gleichem Tag die mit mehr Tagen."""
-        abfrage = (
-            select(MusterHinweisZeile)
-            .order_by(
-                desc(MusterHinweisZeile.letzter_tag),
-                desc(MusterHinweisZeile.tage),
-                MusterHinweisZeile.konto_a,
-                MusterHinweisZeile.konto_b,
-                MusterHinweisZeile.art,
-            )
-            .limit(limit)
-        )
+    def hinweise(self, limit: int, art: Optional[str] = None) -> List[MusterHinweis]:
+        """
+        Die zuletzt aufgefallenen zuerst, bei gleichem Tag die mit mehr Tagen; mit
+        ``art`` nur die dieser Art.
+        """
+        abfrage = select(MusterHinweisZeile)
+        if art is not None:
+            abfrage = abfrage.where(MusterHinweisZeile.art == art)
+        abfrage = abfrage.order_by(
+            desc(MusterHinweisZeile.letzter_tag),
+            desc(MusterHinweisZeile.tage),
+            MusterHinweisZeile.konto_a,
+            MusterHinweisZeile.konto_b,
+            MusterHinweisZeile.art,
+        ).limit(limit)
         with self.db.get_session() as session:
             return [
                 MusterHinweis(

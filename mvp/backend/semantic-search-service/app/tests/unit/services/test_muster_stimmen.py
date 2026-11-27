@@ -413,6 +413,21 @@ class TestAbstimmen:
 
         assert _stimme(abstimmen).status_code == 200
 
+    def test_ohne_art9_einwilligung_der_autorin_nichts(
+        self, abstimmen, muster, art9_einwilligung_ohne_datenbank
+    ):
+        """
+        Nach einem Art.-9-Widerruf (Stimmen geloescht, Spielgefuehl bleibt auf
+        fuer_mich) darf ein alter Paar-Pruefwert keinen neuen Hinweis ergeben.
+        """
+        art9_einwilligung_ohne_datenbank.zaehlende.side_effect = lambda ks: set(ks) - {
+            "bo-2"
+        }
+
+        assert _stimme(abstimmen).status_code == 200
+
+        muster.zustimmung_melden.assert_not_called()
+
 
 # --- Admin-Dashboard (api/v1/metrics.py) --------------------------------------------
 
@@ -453,6 +468,17 @@ class TestAdmin:
         settings = Settings(**{**STIMMEN_AN, "muster_stimmen_aktiv": False})
 
         assert _admin(settings, self.HINWEISE) == [("bo-2", "kim-1", NUTZUNG)]
+
+    def test_ohne_art9_einwilligung_keine_zustimmungen(
+        self, art9_einwilligung_ohne_datenbank
+    ):
+        art9_einwilligung_ohne_datenbank.zaehlende.side_effect = lambda ks: set(ks) - {
+            "kim-1"
+        }
+
+        assert ("bo-2", "kim-1", ZUSTIMMUNG) not in _admin(
+            Settings(**STIMMEN_AN), self.HINWEISE
+        )
 
     def test_widerruf_des_neuen_wortlauts_versteckt_sofort(self, eingewilligt):
         eingewilligt.stimmen_eingewilligte.side_effect = lambda ks: {"bo-2"}

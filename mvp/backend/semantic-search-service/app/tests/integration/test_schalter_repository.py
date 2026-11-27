@@ -60,3 +60,22 @@ class TestSchalterRepository:
 
         assert _zahl(datenbank, "schalter_verlauf") == 1
         assert repo.admin_werte() == {"punkte": False}
+
+    def test_eingeschaltet_am_bleibt_beim_erneuten_an(self, datenbank):  # noqa: F811
+        """Der Tag fuer die Datenschutzerklaerung (muster_stimmen) wandert nicht."""
+        repo = SchalterRepository(datenbank)
+        assert repo.eingeschaltet_am("muster_stimmen") is None
+        repo.setzen("muster_stimmen", True, "admin-1")
+        alt = datetime.now(timezone.utc) - timedelta(days=3)
+        with datenbank.get_session() as s:
+            s.execute(text("UPDATE schalter SET geaendert_am = :alt"), {"alt": alt})
+
+        repo.setzen("muster_stimmen", True, "admin-2")
+
+        assert repo.eingeschaltet_am("muster_stimmen") == alt
+        assert _zahl(datenbank, "schalter_verlauf") == 2
+
+        repo.setzen("muster_stimmen", False, "admin-1")
+        assert repo.eingeschaltet_am("muster_stimmen") is None
+        repo.setzen("muster_stimmen", True, "admin-1")
+        assert repo.eingeschaltet_am("muster_stimmen") > alt

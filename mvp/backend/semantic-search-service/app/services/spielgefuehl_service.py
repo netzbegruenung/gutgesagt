@@ -138,10 +138,20 @@ def punkte_eingewilligte(
 def stimmen_eingewilligte(kennungen: Iterable[str]) -> Set[str]:
     """
     Die Kennungen, deren Zustimmungen in die Muster-Hinweise einfliessen duerfen: Stufe
-    ab ``fuer_mich`` zum Wortlaut ``STIMMEN_WORTLAUT`` (domain/spielgefuehl.py). Fragt
-    den Schalter nicht; das tun die Aufrufer.
+    ab ``fuer_mich`` zum Wortlaut ``STIMMEN_WORTLAUT`` (domain/spielgefuehl.py) und eine
+    geltende Art.-9-Einwilligung. Ohne diese gibt es keine Stimmen (ihr Widerruf loescht
+    sie), also auch keinen Hinweis daraus, auch nicht aus einem Paar-Pruefwert von davor.
+    Fragt den Schalter nicht; das tun die Aufrufer.
     """
-    return _neues_repository().stimmen_eingewilligte(kennungen)
+    liste = list(set(kennungen))
+    if not liste:
+        return set()
+    mit = _neues_repository().stimmen_eingewilligte(liste)
+    if not mit:
+        return set()
+    from services.art9_einwilligung_service import get_art9_einwilligung_service
+
+    return mit & get_art9_einwilligung_service().eingewilligte(mit)
 
 
 class RanglistenQuelle:

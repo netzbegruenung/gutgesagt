@@ -389,6 +389,17 @@ class TestWiderrufen:
         repository.widerrufen.assert_called_once()
         assert repository.widerrufen.call_args.args == ("user-001",)
 
+    def test_delete_loescht_muster_hinweise_aus_zustimmungen(
+        self, client, muster_hinweise_ohne_datenbank
+    ):
+        """Die Stimmen gehen mit dem Widerruf, also auch die Hinweise daraus."""
+        antwort = client.delete(BASIS, headers=PERSON)
+
+        assert antwort.status_code == 204
+        muster_hinweise_ohne_datenbank.vergessen.assert_called_once_with(
+            "user-001", art="zustimmung"
+        )
+
     def test_delete_nimmt_das_sichtbare_abzeichen_sofort_weg(
         self, client, repository, monkeypatch
     ):

@@ -37,7 +37,11 @@ class SchalterRepository:
             return zeile.geaendert_am
 
     def setzen(self, name: str, an: bool, admin: str) -> None:
-        """Admin-Wert setzen und die Aenderung im Verlauf festhalten, in einer Transaktion."""
+        """
+        Admin-Wert setzen und die Aenderung im Verlauf festhalten, in einer Transaktion.
+        Ist der Wert schon so, bleibt die Zeile in ``schalter`` (samt Zeitpunkt) stehen;
+        der Verlauf bekommt den Eintrag trotzdem.
+        """
         with self.db.get_session() as session:
             einfuegen = pg_insert(SchalterZeile).values(
                 name=name, an=an, geaendert_am=func.now(), geaendert_von=admin
@@ -50,6 +54,9 @@ class SchalterRepository:
                         "geaendert_am": einfuegen.excluded.geaendert_am,
                         "geaendert_von": einfuegen.excluded.geaendert_von,
                     },
+                    # Nur bei einem Wechsel: Ein erneutes "an" verschiebt den Tag des
+                    # Einschaltens nicht (eingeschaltet_am, Datenschutzerklaerung).
+                    where=SchalterZeile.an != einfuegen.excluded.an,
                 )
             )
             session.execute(

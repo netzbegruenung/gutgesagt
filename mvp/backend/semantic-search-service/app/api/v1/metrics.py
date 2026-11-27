@@ -633,7 +633,7 @@ async def get_muster_hinweise(
         hinweise = await asyncio.to_thread(
             service.hinweise,
             lambda kennungen: punkte_eingewilligte(kennungen, settings),
-            stimmen_eingewilligte if mit_stimmen else (lambda kennungen: set()),
+            stimmen_eingewilligte if mit_stimmen else None,
         )
         namen = await asyncio.to_thread(
             get_anzeigename_service().namen,

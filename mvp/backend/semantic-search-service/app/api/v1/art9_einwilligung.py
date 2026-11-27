@@ -168,6 +168,16 @@ def widerrufen(user_id: str = Depends(require_user)) -> Response:
             f"Spielgefuehl von {log_pseudonym(user_id)} nicht zurueckgenommen: {type(e).__name__}",
             exc_info=True,
         )
+    # Der Widerruf loescht alle Stimmen der Person: Muster-Hinweise aus Zustimmungen
+    # (Schalter muster_stimmen) verlieren damit ihre Grundlage und gehen mit.
+    try:
+        spielgefuehl_service.muster_stimmen_hinweise_vergessen(user_id)
+    except Exception as e:
+        zuruecknehmen_fehlgeschlagen = True
+        logger.error(
+            f"Muster-Hinweise aus Zustimmungen von {log_pseudonym(user_id)} nicht geloescht: {type(e).__name__}",
+            exc_info=True,
+        )
     # Vermerk, Loeschen der Stimmen und Loeschauftrag in einer Transaktion
     # (Art9EinwilligungService.widerrufen): Bei einem Fehler gilt die Einwilligung
     # weiter, und die Person kann erneut widerrufen.

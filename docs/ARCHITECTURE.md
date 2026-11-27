@@ -285,6 +285,7 @@ reported off reload every 5 minutes instead of every 30 seconds (`AUS_NACHLADEN_
 | `GET /api/v1/usage/users/me/einwilligungs-moment` | Meine Beiträge | `aktiv: false` |
 | `GET /api/v1/teams/meine` | Meine Beiträge, every 30 s | `teams: []`, `teams_aktiv: false` |
 | `GET /api/v1/rangliste` | Meine Beiträge, every 30 s | `aktiv: false`, nothing asked |
+| `GET /api/v1/funktionen/muster_stimmen/seit` | privacy policy page, only while `muster_stimmen` is reported on | `seit: null` (also on a read error); 404 only for names other than `muster_stimmen` |
 | `GET /api/v1/usage/users/me/punkte`, `/meilensteine`, `/abzeichen-sichtbarkeit`, `/punkte-einwilligung` | Meine Beiträge, Einwilligungen | `aktiv: false` |
 | `GET /api/v1/usage/users/me/gepostet` | after a copy, once per signed-in person until reload | `angeboten: false`; consent checked (403) only while on |
 | `POST /api/v1/ankunft` | app start with `?k=<word>`, once per page load, only while `k_ankuenfte` is not surely off | `gezaehlt: false` (switch off or word not on the allow list); 429 above the throttle |
