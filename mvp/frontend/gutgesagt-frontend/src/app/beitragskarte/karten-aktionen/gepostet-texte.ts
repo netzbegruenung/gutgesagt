@@ -9,6 +9,11 @@
  * Snackbar (Review Spielgefühl 25.11., WCAG 2.2.1).
  */
 export const GEPOSTET_FRAGE = 'Gepostet? Dann zählt dein Konter mit.';
+/**
+ * Dieselbe Frage ohne Konto (Gamification-Check 26.11., Befund 21): Meldungen ohne Konto
+ * zählen nicht zu „Öffentlich gekontert“, deshalb ohne „zählt mit“.
+ */
+export const GEPOSTET_FRAGE_OHNE_KONTO = 'Gepostet? Kurz antippen, wenn ja.';
 export const JA_GEPOSTET = 'Ja, gepostet';
 /**
  * Statt der Frage, wenn die Person nach dem Kopieren zurückkommt (Rückkehr-Moment,

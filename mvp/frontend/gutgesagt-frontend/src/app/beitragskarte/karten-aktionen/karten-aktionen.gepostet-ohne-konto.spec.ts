@@ -18,6 +18,7 @@ import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hin
 import { KOPIERT } from '../../shared/vorlagen-luecke';
 import {
   GEPOSTET_FRAGE,
+  GEPOSTET_FRAGE_OHNE_KONTO,
   GEPOSTET_NICHT_GEZAEHLT,
   GEPOSTET_OHNE_KONTO_DANK,
   GEPOSTET_RUECKKEHR,
@@ -107,11 +108,13 @@ describe('KartenAktionenComponent - Ja, gepostet ohne Konto', () => {
     expect(usage.gepostetAngeboten).not.toHaveBeenCalled();
   });
 
-  it('Schalter an: dieselbe Frage wie mit Konto im Kasten, Dank ohne Zahl und ohne Druck', () => {
+  it('Schalter an: Frage ohne „zählt mit“ im Kasten, Dank ohne Zahl und ohne Druck', () => {
     schalter['gepostet_ohne_konto'].set(true);
     kopieren();
 
-    expect(fixture.nativeElement.querySelector('.kopiert-erfolg').textContent).toContain(GEPOSTET_FRAGE);
+    // Ohne Konto ohne „zählt mit“: Meldungen ohne Konto zählen nicht zu „Öffentlich gekontert“
+    expect(fixture.nativeElement.querySelector('.kopiert-erfolg').textContent).toContain(GEPOSTET_FRAGE_OHNE_KONTO);
+    expect(fixture.nativeElement.querySelector('.kopiert-erfolg').textContent).not.toContain(GEPOSTET_FRAGE);
     expect(snackBar.open).not.toHaveBeenCalled();
     expect(usage.gepostetOhneKontoMelden).not.toHaveBeenCalled();
 
@@ -214,7 +217,7 @@ describe('KartenAktionenComponent - Ja, gepostet ohne Konto', () => {
 
     // Neues Kopieren: wieder die Frage, der Moment kommt erneut erst nach 3 s
     kopieren();
-    expect(frage()).toBe(GEPOSTET_FRAGE);
+    expect(frage()).toBe(GEPOSTET_FRAGE_OHNE_KONTO);
     tick(RUECKKEHR_LEUCHTEN_MS);
   }));
 });
