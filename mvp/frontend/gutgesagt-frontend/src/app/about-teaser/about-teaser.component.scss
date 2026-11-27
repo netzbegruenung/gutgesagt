@@ -78,6 +78,7 @@
 .macher {
   margin: 1rem 0 0;
   font-size: 0.9rem;
+  // 4,85:1 auf --karte-kommentar (AA 4,5:1): wird eine der beiden Farben geaendert, hier nachrechnen
   color: var(--text-leise);
 
   // Zielgroesse 24 px (WCAG 2.2, 2.5.8) fuer den Link in der kleinen Zeile
