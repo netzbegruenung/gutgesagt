@@ -252,6 +252,7 @@ def spielgefuehl_ohne_datenbank(monkeypatch):
     repository.lesen.return_value = None
     repository.teilnehmende.return_value = {}
     repository.wirksame_stufen.return_value = {}
+    repository.stimmen_eingewilligte.return_value = set()
     repository.vergebene_namen.return_value = set()
     monkeypatch.setattr(modul, "_repository", repository)
     spielgefuehl_service_setzen(None)

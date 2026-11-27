@@ -663,6 +663,31 @@ SCHALTER["spielgefuehl_buehne"] = Schalterart(
 )
 
 
+# Gegenseitige Zustimmungen in den Muster-Hinweisen (Entscheidung Maintainer 27.11.,
+# Wortlaut und Kennung spielgefuehl-2026-11-27 von Jura 27.11.): Obergrenze von Haus aus
+# aus. Wirkt nur mit spielgefuehl_buehne, weil der Zweck im Wortlaut des Spielgefuehls
+# steht (domain/spielgefuehl.py STIMMEN_WORTLAUT). Oeffentlich, weil die
+# Datenschutzerklaerung ihren Satz danach zeigt.
+SCHALTER["muster_stimmen"] = Schalterart(
+    name="muster_stimmen",
+    gruppe=PUNKTE_ANERKENNUNG,
+    feld="muster_stimmen_aktiv",
+    umgebungsvariable="SEMANTIC_SEARCH_MUSTER_STIMMEN_AKTIV",
+    erklaerung=(
+        "Muster-Hinweise auch, wenn zwei Konten einander innerhalb von sieben Tagen "
+        "zustimmen, nur bei Konten, die beide dem neuen Wortlaut des Spielgefühls "
+        "zugestimmt haben; die Frage zeigt dann diesen Wortlaut und fragt alle neu. "
+        "Nur ein Hinweis für Admins, keine Wirkung auf Punkte oder Rangliste; wirkt "
+        "nur zusammen mit dem Spielgefühl in drei Stufen."
+    ),
+    einschalt_hinweis=(
+        "Wortlaut spielgefuehl-2026-11-27 von Jura 27.11., DSE-Satz drin; "
+        f"{GO_VOR_AUSWEITUNG}"
+    ),
+    oeffentlich=True,
+)
+
+
 class UnbekannterSchalter(KeyError):
     pass
 
@@ -793,6 +818,9 @@ def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool
         # Die Frage gibt es nur mit Punkten (api/v1/spielgefuehl.py); ohne sie sieht
         # niemand etwas, und alles, was das Modell umschaltet, haengt an den Punkten.
         return an and _wirksam("punkte", einstellungen, werte)
+    if name == "muster_stimmen":
+        # Der Zweck steht im Wortlaut des Spielgefuehls (domain/spielgefuehl.py)
+        return an and _wirksam("spielgefuehl_buehne", einstellungen, werte)
     if name == "team_fortschritt":
         # Ohne Teams keine Summe des Teams
         return an and _wirksam("teams", einstellungen, werte)

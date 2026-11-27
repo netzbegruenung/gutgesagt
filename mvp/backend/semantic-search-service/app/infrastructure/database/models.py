@@ -282,7 +282,8 @@ class WirkungJeBeitrag(Base):
 class MusterHinweisZeile(Base):
     """
     Ein auffaelliges Muster fuer Admins (ADR 0004, #352): zwei Konten, die innerhalb
-    von sieben Tagen jeweils einen Beitrag des anderen genutzt haben. Ein Hinweis,
+    von sieben Tagen jeweils einen Beitrag des anderen genutzt (oder, mit dem Schalter
+    muster_stimmen, einem Beitrag des anderen zugestimmt) haben. Ein Hinweis,
     keine Automatik; niemand verliert dadurch Punkte.
 
     konto_a ist die kleinere Kennung, konto_b die groessere. tage zaehlt die Tage, an
@@ -294,6 +295,12 @@ class MusterHinweisZeile(Base):
 
     konto_a = Column(String(255), primary_key=True)
     konto_b = Column(String(255), primary_key=True)
+    # Woran das Muster auffiel: "nutzung" (gegenseitig genutzt) oder "zustimmung"
+    # (einander zugestimmt, Schalter muster_stimmen); je Art ein eigener Hinweis
+    # (Migration 2026-11-27-muster-stimmen.sql)
+    art = Column(
+        String(16), primary_key=True, default="nutzung", server_default="nutzung"
+    )
     tage = Column(Integer, nullable=False)
     erster_tag = Column(Date, nullable=False)
     letzter_tag = Column(Date, nullable=False)

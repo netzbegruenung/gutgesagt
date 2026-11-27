@@ -72,7 +72,7 @@ def test_ohne_schalter_aus_immer_speicherbar(dienst, buehne, punkte):
     assert antwort.status_code == 204
     dienst.herabstufung.assert_called_once_with("kim-1", Stufe.AUS)
     dienst.antworten.assert_called_once_with(
-        "kim-1", Stufe.AUS, None, AKTUELLER_WORTLAUT
+        "kim-1", Stufe.AUS, None, AKTUELLER_WORTLAUT, False
     )
 
 
@@ -85,7 +85,7 @@ def test_ohne_schalter_herabstufen_aus_der_rangliste(dienst):
 
     assert antwort.status_code == 204
     dienst.antworten.assert_called_once_with(
-        "kim-1", Stufe.FUER_MICH, None, AKTUELLER_WORTLAUT
+        "kim-1", Stufe.FUER_MICH, None, AKTUELLER_WORTLAUT, False
     )
 
 
@@ -179,7 +179,7 @@ def test_waehlen(dienst):
 
     assert antwort.status_code == 204
     dienst.antworten.assert_called_once_with(
-        "kim-1", Stufe.RANGLISTE, True, AKTUELLER_WORTLAUT
+        "kim-1", Stufe.RANGLISTE, True, AKTUELLER_WORTLAUT, False
     )
 
 

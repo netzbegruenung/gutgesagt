@@ -24,6 +24,18 @@ class SchalterRepository:
             zeilen = session.execute(select(SchalterZeile.name, SchalterZeile.an)).all()
             return {zeile.name: zeile.an for zeile in zeilen}
 
+    def eingeschaltet_am(self, name: str) -> Optional[datetime]:
+        """Wann ein Admin den Schalter zuletzt eingeschaltet hat; None, wenn er aus ist."""
+        with self.db.get_session() as session:
+            zeile = session.execute(
+                select(SchalterZeile.an, SchalterZeile.geaendert_am).where(
+                    SchalterZeile.name == name
+                )
+            ).first()
+            if zeile is None or not zeile.an:
+                return None
+            return zeile.geaendert_am
+
     def setzen(self, name: str, an: bool, admin: str) -> None:
         """Admin-Wert setzen und die Aenderung im Verlauf festhalten, in einer Transaktion."""
         with self.db.get_session() as session:

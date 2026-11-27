@@ -27,6 +27,8 @@ beginnt neu. Wie beim Tagesschluessel setzt das einen uvicorn-Worker voraus.
   zwei Bloecke, also liegt jeder Wert aus dem Fenster unter dem aktuellen oder dem
   vorigen Schluessel. Gemerkt wird mit dem aktuellen, verglichen mit beiden
   (paar_pruefwerte_im_fenster); nach zwei Bloecken ist ein Schluessel weg.
+  Zustimmungen (Schalter muster_stimmen) nutzen dieselben Schluessel und dieselbe
+  Tabelle mit eigenem Praefix im HMAC-Text.
 """
 
 import asyncio
@@ -165,23 +167,32 @@ def danke_pruefwert(
     )
 
 
-def paar_pruefwert(nutzende: str, autor: str, tag: date) -> str:
+# Praefix je Art des Paar-Pruefwerts: "paar" fuer Nutzung (wie seit #352), eigenes fuer
+# Zustimmung (Schalter muster_stimmen), damit eine Nutzung nie auf eine Zustimmung der
+# Gegenrichtung trifft.
+_PAAR_PRAEFIX = {"nutzung": "paar", "zustimmung": "zustimmung"}
+
+
+def paar_pruefwert(nutzende: str, autor: str, tag: date, art: str = "nutzung") -> str:
     """
-    Der Pruefwert fuer "``nutzende`` hat einen Beitrag von ``autor`` genutzt", wie er
-    an ``tag`` gemerkt wird (Schluessel des laufenden Blocks).
+    Der Pruefwert fuer "``nutzende`` hat einen Beitrag von ``autor`` genutzt" (oder mit
+    ``art="zustimmung"``: ihm zugestimmt), wie er an ``tag`` gemerkt wird (Schluessel
+    des laufenden Blocks).
     """
     aktuell, _ = _PAAR_SCHLUESSEL.fuer(tag)
-    return _hmac(aktuell, f"paar|{nutzende}|{autor}")
+    return _hmac(aktuell, f"{_PAAR_PRAEFIX[art]}|{nutzende}|{autor}")
 
 
-def paar_pruefwerte_im_fenster(nutzende: str, autor: str, tag: date) -> List[str]:
+def paar_pruefwerte_im_fenster(
+    nutzende: str, autor: str, tag: date, art: str = "nutzung"
+) -> List[str]:
     """
     Alle Werte, unter denen "``nutzende`` hat einen Beitrag von ``autor`` genutzt"
-    seit ``tag`` - MUSTER_FENSTER_TAGE + 1 gemerkt sein kann: mit dem aktuellen und,
-    falls noch im Speicher, dem vorigen Schluessel.
+    (bzw. ihm zugestimmt) seit ``tag`` - MUSTER_FENSTER_TAGE + 1 gemerkt sein kann: mit
+    dem aktuellen und, falls noch im Speicher, dem vorigen Schluessel.
     """
     return [
-        _hmac(schluessel, f"paar|{nutzende}|{autor}")
+        _hmac(schluessel, f"{_PAAR_PRAEFIX[art]}|{nutzende}|{autor}")
         for schluessel in _PAAR_SCHLUESSEL.fuer(tag)
         if schluessel is not None
     ]

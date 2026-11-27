@@ -6,14 +6,19 @@ from core.logging import get_logger
 from auth.authorization import validate_user_id, require_auth
 from domain.models.vote import VoteCreate, VoteResponse
 from services.voting_service import VotingService
+from core.config import Settings
 from dependencies import (
     get_beitrag_laden,
+    get_muster_hinweise_service,
+    get_settings,
     get_voting_service,
     require_art9_einwilligung,
 )
+from services.spielgefuehl_service import stimmen_aktiv, stimmen_eingewilligte
 from services.beitrag_laden import BeitragLader, BeitragUnlesbar
 from middleware.rate_limiter import check_voting_rate_limit
 from core.fehler import NICHT_ERREICHBAR, UNGUELTIGE_ANFRAGE, Validierungsfehler
+from domain.models.content import ContentDbEntry
 from domain.team_fortschritt import Art as TeamArt
 from services.team_fortschritt_service import team_zaehlen
 
@@ -31,7 +36,7 @@ def get_current_user(x_user: Optional[str] = Header(None)) -> str:
 
 async def nur_sichtbarer_beitrag(
     content_id: uuid.UUID, laden: BeitragLader = Depends(get_beitrag_laden)
-) -> None:
+) -> Optional[ContentDbEntry]:
     """
     Abstimmen nur auf einen Beitrag, den die Person sehen kann: Gesperrt, geloescht
     oder nie vorhanden gibt 404 und keine Stimme. Zuruecknehmen prueft das nicht,
@@ -42,19 +47,48 @@ async def nur_sichtbarer_beitrag(
     Antwortet der Suchindex nicht, zaehlt sie ebenfalls: Stimmen liegen in
     PostgreSQL und gingen bis #272 ohne Suchindex, die Pruefung soll sie nicht davon
     abhaengig machen.
+
+    Liefert den Beitrag (fuer die Muster-Hinweise aus Zustimmungen), None, wenn er
+    sich nicht lesen liess.
     """
     try:
         beitrag = await laden(content_id)
     except BeitragUnlesbar:
-        return
+        return None
     except Exception as fehler:
         # Mit Stacktrace: Auch ein Programmierfehler landet hier und soll auffallen.
         logger.warning(
             f"Visibility check for vote skipped: {type(fehler).__name__}", exc_info=True
         )
-        return
+        return None
     if beitrag is None:
         raise HTTPException(status_code=404, detail="Content not found")
+    return beitrag
+
+
+def zustimmung_fuer_muster(
+    user_id: str, beitrag: Optional[ContentDbEntry], settings: Settings
+) -> None:
+    """
+    Eine Zustimmung fuer die Muster-Hinweise melden (Schalter ``muster_stimmen``):
+    nur, wenn der Schalter wirkt und beide Konten zum Spielgefuehl-Wortlaut mit
+    Zustimmungen eingewilligt haben (domain/spielgefuehl.py ``STIMMEN_WORTLAUT``),
+    geprueft bei jeder Meldung. Ablehnungen zaehlen nicht. Ohne Schalter keine
+    Datenbankabfrage. Fehler nur im Log: Die Stimme ist schon gespeichert.
+    """
+    autor = getattr(beitrag, "original_author", None)
+    if not autor:
+        return
+    try:
+        if not stimmen_aktiv(settings):
+            return
+        if settings.ist_startkonto(user_id) or settings.ist_startkonto(autor):
+            return
+        if stimmen_eingewilligte([user_id, autor]) != {user_id, autor}:
+            return
+        get_muster_hinweise_service().zustimmung_melden(user_id, autor)
+    except Exception as e:
+        logger.error(f"Pattern check for approval failed: {type(e).__name__}")
 
 
 @router.put(
@@ -65,8 +99,9 @@ async def nur_sichtbarer_beitrag(
 def set_like(
     content_id: uuid.UUID,
     user_id: str = Depends(get_current_user),
-    _: None = Depends(nur_sichtbarer_beitrag),
+    beitrag: Optional[ContentDbEntry] = Depends(nur_sichtbarer_beitrag),
     voting_service: VotingService = Depends(get_voting_service),
+    settings: Settings = Depends(get_settings),
 ) -> VoteResponse:
     """
     Set a like for a content item. Idempotent operation.
@@ -78,6 +113,8 @@ def set_like(
         result = voting_service.set_like(user_id, content_id)
         # Zaehlt fuer die Teams der Person (Team-Fortschritt, #784); Fehler nur im Log.
         team_zaehlen(user_id, TeamArt.BEWERTUNG, str(content_id))
+        # Muster-Hinweise aus gegenseitigen Zustimmungen; Fehler nur im Log.
+        zustimmung_fuer_muster(user_id, beitrag, settings)
         logger.debug("Like set successfully")
         return result
     except Validierungsfehler as e:
@@ -129,7 +166,7 @@ def remove_like(
 def set_dislike(
     content_id: uuid.UUID,
     user_id: str = Depends(get_current_user),
-    _: None = Depends(nur_sichtbarer_beitrag),
+    _: Optional[ContentDbEntry] = Depends(nur_sichtbarer_beitrag),
     voting_service: VotingService = Depends(get_voting_service),
 ) -> VoteResponse:
     """

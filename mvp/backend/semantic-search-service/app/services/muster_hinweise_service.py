@@ -25,6 +25,14 @@ Zweck. Gemeldet wird dort auch nur, wenn beide Konten die Einwilligung "Punkte u
 Meilensteine" gegeben haben (#351, domain/punkte_einwilligung.py; im Spielgefuehl-Modell
 ab Stufe ``fuer_mich``); sonst entsteht kein Paar-Pruefwert.
 
+Zustimmungen (Schalter ``muster_stimmen``, wirkt nur mit ``spielgefuehl_buehne``):
+Ein eigener Hinweis der Art ``zustimmung`` nach derselben Regel, sieben Tage Fenster,
+MUSTER_FRIST_TAGE Frist, dieselben Paar-Pruefwerte mit eigenem Praefix. Gemeldet wird
+nur bei einer Zustimmung (nicht bei einer Ablehnung) und nur, wenn beide Konten zum
+Spielgefuehl-Wortlaut mit Zustimmungen eingewilligt haben (domain/spielgefuehl.py
+``STIMMEN_WORTLAUT``, geprueft in api/v1/voting.py); das Admin-Dashboard prueft das
+beim Zeigen erneut. Keine Wirkung auf Punkte oder Rangliste.
+
 Widerruf: Das Admin-Dashboard zeigt nur Hinweise, deren beide Konten aktuell
 eingewilligt haben (``hinweise(eingewilligte)``, api/v1/metrics.py). Ein Widerruf
 ("Punkte und Meilensteine" Nein, Spielgefuehl ``aus``) loescht ausserdem die Hinweise,
@@ -38,6 +46,8 @@ from typing import Callable, Iterable, List, Optional, Set
 
 from core.logging import get_logger
 from repositories.muster_hinweis_repository import (
+    NUTZUNG,
+    ZUSTIMMUNG,
     MusterHinweis,
     MusterHinweisRepository,
 )
@@ -74,29 +84,57 @@ class MusterHinweiseService:
         moment: Optional[datetime] = None,
     ) -> None:
         """Eine Nutzung eines Beitrags von ``autor`` durch das Konto ``nutzende``."""
-        if not nutzende or not autor or ANONYM in (nutzende, autor):
+        self._melden(nutzende, autor, moment, NUTZUNG)
+
+    def zustimmung_melden(
+        self,
+        stimmende: Optional[str],
+        autor: Optional[str],
+        moment: Optional[datetime] = None,
+    ) -> None:
+        """
+        Eine Zustimmung des Kontos ``stimmende`` zu einem Beitrag von ``autor``
+        (Schalter ``muster_stimmen``): dasselbe Fenster, dieselbe Frist und dieselben
+        Paar-Pruefwerte wie bei der Nutzung, mit eigenem Praefix und eigenem Hinweis.
+        Ob beide eingewilligt haben, prueft der Aufrufer (api/v1/voting.py).
+        """
+        self._melden(stimmende, autor, moment, ZUSTIMMUNG)
+
+    def _melden(
+        self,
+        von: Optional[str],
+        autor: Optional[str],
+        moment: Optional[datetime],
+        art: str,
+    ) -> None:
+        if not von or not autor or ANONYM in (von, autor):
             return
-        if nutzende == autor:
+        if von == autor:
             return
         moment = moment or datetime.now(timezone.utc)
         tag = moment.astimezone(timezone.utc).date()
         self._repository.nutzung_merken(
-            paar_pruefwert(nutzende, autor, tag),
-            paar_pruefwerte_im_fenster(autor, nutzende, tag),
-            nutzende,
+            paar_pruefwert(von, autor, tag, art),
+            paar_pruefwerte_im_fenster(autor, von, tag, art),
+            von,
             autor,
             tag,
             fenster_ab=_fenster_ab(tag),
+            art=art,
         )
 
     def hinweise(
-        self, eingewilligte: Optional[Callable[[Iterable[str]], Set[str]]] = None
+        self,
+        eingewilligte: Optional[Callable[[Iterable[str]], Set[str]]] = None,
+        stimmen_eingewilligte: Optional[Callable[[Iterable[str]], Set[str]]] = None,
     ) -> List[MusterHinweis]:
         """
         Die zuletzt aufgefallenen Hinweise. Mit ``eingewilligte`` (Kennungen -> die
         davon, die aktuell eingewilligt haben) nur Paare, bei denen beide eingewilligt
         haben; die anderen bleiben bis zu ihrer Frist in der Tabelle, werden aber nicht
-        gezeigt.
+        gezeigt. Hinweise aus Zustimmungen brauchen dann zusaetzlich beide Konten in
+        ``stimmen_eingewilligte`` (Einwilligung zum Wortlaut mit Zustimmungen); ohne
+        diesen Filter erscheinen sie nicht.
         """
         if eingewilligte is None:
             return self._repository.hinweise(ANZAHL)
@@ -105,13 +143,33 @@ class MusterHinweiseService:
         if not hinweise:
             return hinweise
         mit = eingewilligte({k for h in hinweise for k in (h.konto_a, h.konto_b)})
-        return [h for h in hinweise if h.konto_a in mit and h.konto_b in mit][:ANZAHL]
+        zustimmungen = [h for h in hinweise if h.art == ZUSTIMMUNG]
+        stimmen_mit: Set[str] = set()
+        if zustimmungen and stimmen_eingewilligte is not None:
+            stimmen_mit = stimmen_eingewilligte(
+                {k for h in zustimmungen for k in (h.konto_a, h.konto_b)}
+            )
 
-    def vergessen(self, user_id: str) -> None:
-        """Beim Widerruf: alle Hinweise loeschen, die ``user_id`` nennen."""
+        def gezeigt(h: MusterHinweis) -> bool:
+            if h.konto_a not in mit or h.konto_b not in mit:
+                return False
+            if h.art == ZUSTIMMUNG:
+                return h.konto_a in stimmen_mit and h.konto_b in stimmen_mit
+            return True
+
+        return [h for h in hinweise if gezeigt(h)][:ANZAHL]
+
+    def vergessen(self, user_id: str, art: Optional[str] = None) -> None:
+        """
+        Beim Widerruf: alle Hinweise loeschen, die ``user_id`` nennen; mit ``art`` nur
+        die dieser Art (Widerruf nur des Zwecks Zustimmungen).
+        """
         if not user_id or user_id == ANONYM:
             return
-        self._repository.vergessen(user_id)
+        if art is None:
+            self._repository.vergessen(user_id)
+        else:
+            self._repository.vergessen(user_id, art=art)
 
     def fristen_anwenden(self, heute: Optional[date] = None) -> None:
         heute = heute or heute_utc()
