@@ -9,9 +9,9 @@
 Ergänzt [`docs/DSFA.md`](./DSFA.md) um die Daten, die mit dem Spielgefühl-Modell und den
 Wirkungs-Funktionen dazukommen. Die Nummern sind die der Verarbeitungen in `docs/DSFA.md`
 und im Verzeichnis ([`docs/VERARBEITUNGSVERZEICHNIS.md`](./VERARBEITUNGSVERZEICHNIS.md)):
-V9a, V10 und V21 stehen dort schon, V23 kommt mit dem DSFA-Stand vom 25.11. (#780); V28,
-V29 und V31 sind neu und dort noch **offen**, bis die DSFA sie als eigene Verarbeitungen
-beschreibt. Eine Zeile je Datum: Risiko · Maßnahme · Restrisiko. Fundstellen auf `main` @
+V9a, V10 und V21 stehen dort schon, V23 kommt mit dem DSFA-Stand vom 25.11. (#780), der
+bei V27 endet; V28 bis V31 sind neu und dort noch **offen**, bis die DSFA sie als eigene
+Verarbeitungen beschreibt. Eine Zeile je Datum: Risiko · Maßnahme · Restrisiko. Fundstellen auf `main` @
 `d3b3def7` (27.11.2026), `ss/` = `mvp/backend/semantic-search-service/app/`.
 
 Rahmen: alles Opt-in, Standard aus; Art.-9-Nähe, weil Nutzung auf politische Haltung schließen
@@ -21,12 +21,12 @@ sonst Art. 6 Abs. 1 lit. f mit Art.-9-Mitwirkung wie V10.
 | # | Datum (neu) | Risiko | Maßnahme | Restrisiko |
 |---|---|---|---|---|
 | V28 | Spielgefühl-Stufe (aus / nur für mich / Saison-Rangliste), Namenswahl, Zufallsname, Kennung des Wortlauts, Zeitpunkt (#849) | Vorbelegung, gebündelte Einwilligung | eine Frage, drei gleichwertige Knöpfe, keine Vorauswahl; Namenswahl Pflicht ohne Vorauswahl; Hinweis vor den Knöpfen; Kennung spielgefuehl-2026-11-26 | gering |
-| V28 | Rangliste: Name, Platz, Punkte, Abzeichen, sichtbar nur für angemeldete Mitspielende | Offenlegung von Aktivität und Parteinähe ggü. Dritten (Art. 9) | nur Stufe 3; Zufallsname wählbar; erst ab 10 Teilnehmenden sichtbar; kein Abruf ohne Anmeldung (Code prüfen ❔) [Prüfvermerk 1: bestätigt]; im Wortlaut: Mitspielende sehen deinen Namen, Zufallsname schützt; Übergang: alle zurückgesetzt und neu gefragt | gering bis mittel |
+| V28 | Rangliste: Name, Platz, Punkte, Abzeichen, sichtbar nur für angemeldete Mitspielende | Offenlegung von Aktivität und Parteinähe ggü. Dritten (Art. 9) | nur Stufe 3; Zufallsname wählbar; erst ab 10 Teilnehmenden sichtbar; kein Abruf ohne Anmeldung (Code prüfen ❔) [Prüfvermerk 1: bestätigt]; im Wortlaut: Mitspielende sehen deinen Namen, ein Zufallsname erschwert das Erkennen, schützt aber nicht sicher; Übergang: alle zurückgesetzt und neu gefragt | gering bis mittel |
 | V28 | Widerruf (#853) | Widerruf schwerer als Erteilung (Art. 7 Abs. 3) | Nein/Aus/Widerruf immer speicherbar, auch bei Schalter aus; Widerruf entfernt Rangliste, Punkte, Abzeichen sofort; sichtbarer Weg auf der Datenschutzseite (Folge-PR) **Bedingung fürs Go**, spätestens vor Vorhut-Ausweitung | gering, sobald Folge-PR da |
 | V28 | Punkte aus Nutzungsereignissen, 90 Tage (ab 2. Saison 100) | Profilbildung über Zeit | nur mit Stufe ≥2; Löschung nach Frist (LOESCHKONZEPT); 100 Tage nur für neu erhobene Ereignisse, DSE vorher | gering |
 | V28 | Punkt je Bewertung fremder Beiträge, ≤3/Tag, Richtung zählt nicht | Rückschluss auf Meinung | Richtung fließt nicht ein; Deckel | gering |
-| V28 | Muster-Hinweise und Paar-Prüfwerte (Zweitkonten/Absprachen) | Verdacht gegen Einzelne, Art.-9-Profil | nur wenn beide aktuell eingewilligt (auch beim Erzeugen geprüft); Prüfwerte ohne Kontozuordnung, Schlüssel nur im Arbeitsspeicher, nicht einzeln löschbar, Verfall 7 Tage; Hinweise (am Konto) beim Widerruf sofort gelöscht; nur Admin, ein Mensch entscheidet, keine automatische Sperre (Art. 22 greift nicht ❔) | gering. Zustimmungen als weiteres Merkmal: **offen**, braucht neue Kennung, bis dahin nicht gebaut [Prüfvermerk 2: bestätigt] |
-| V9a | Deckel für Nutzungen ohne Anmeldung (#857): Platz-Prüfwert aus Beitrag, Tag, Platznummer | Erfassung Besuchender | kein Besuchermerkmal, kein Speicherzugriff im Endgerät (also kein § 25 TDDDG ❔); ≤3 je Beitrag und Tag | gering |
+| V30 | Muster-Hinweise und Paar-Prüfwerte (Zweitkonten/Absprachen; ab Kennung spielgefuehl-2026-11-27 auch Zustimmungen, nur Admin-Hinweis, keine Wirkung auf Punkte/Rangliste) | Verdacht gegen Einzelne, Art.-9-Profil | nur wenn beide aktuell eingewilligt (auch beim Erzeugen geprüft); Paar-Prüfwerte ohne Kontozuordnung, Schlüssel nur im Arbeitsspeicher, nicht einzeln löschbar, Verfall nach 7 Tagen; Hinweise (am Konto) höchstens 56 Tage, beim Widerruf sofort gelöscht; Zustimmungen nur für Konten mit neuer Kennung, eigener Schalter [Prüfvermerk 2: auf `main` noch nicht gebaut]; nur Admin, ein Mensch entscheidet, keine automatische Sperre (Art. 22 greift nicht ❔) | gering |
+| V9a | Nutzung ohne Anmeldung: Tages-Prüfwert aus dem Anschluss (IPv6 /64, Schlüssel je Tag nur im Speicher, nach Tageswechsel verworfen, Adresse nicht gespeichert; bestehend, M2) [Prüfvermerk 3: bestätigt] plus Deckel (#857): Platz-Prüfwert aus Beitrag, Tag, Platznummer | Erfassung Besuchender | Deckel ohne Besuchermerkmal; kein Speicherzugriff im Endgerät (kein § 25 TDDDG ❔); ≤1 je Anschluss und ≤3 insgesamt je Beitrag und Tag | gering |
 | V9a | öffentliche Saison-Summe (#814), Zähler „Meldungen ohne Konto“ | Einzelne erkennbar bei kleinen Zahlen | erst ab 3 Wochen × 25 Personen; Drosselung insgesamt, ohne Adresse | gering |
 | V10 | „Dein nächster Schritt“ (#789/#816), Antworten-Hinweis (#760) | Profil aus eigenem Verhalten | beim Abruf berechnet, nichts gespeichert; Weggeklicktes nur im Browser 7 Tage | gering |
 | V21 | Profilbildwahl, „schon gesehen“, „Ton bei Erfolgen“ (#809) | Speicher im Endgerät | vom Nutzer gewünscht (§ 25 Abs. 2 Nr. 2 TDDDG ❔) | gering |
@@ -64,10 +64,21 @@ Aufsicht (Art. 36, bis 8 Wochen 📖) nach der BDK.
    (`mvp/backend/BFF/Proxy/EndpointPolicy.cs`), ohne Anmeldung antwortet es 401
    (`mvp/backend/BFF/Program.cs:537`). Andere Wege zur Rangliste gibt es nicht: Die übrigen
    Aufrufer des Ranglisten-Dienstes nehmen nur Einträge zurück (Widerruf).
-2. **Stimmen (Zustimmung oder Ablehnung, GLOSSARY.md) in der Muster-Prüfung: nicht gebaut.** Muster-Hinweise entstehen nur aus
-   Nutzungen: Der einzige Aufruf von `nutzung_melden` steht im Zähl-Endpunkt
-   `POST /content/{content_id}/usage` (`ss/api/v1/usage.py:521–533`), und zwar nur mit
-   eingeschalteten Punkten und wenn beide Konten in die Punkte eingewilligt haben (die
-   Prüfung „beim Erzeugen“ aus der Tabelle). Bewertungen, also auch Stimmen, rufen die
-   Muster-Prüfung nirgends auf (`ss/services/muster_hinweise_service.py`, Kopf und
-   `nutzung_melden`).
+2. **Zustimmungen als Merkmal der Muster-Prüfung (V30): auf `main` noch nicht gebaut.**
+   Die Tabelle beschreibt den Stand ab Kennung `spielgefuehl-2026-11-27` mit eigenem
+   Schalter. Auf `main` gibt es weder diese Kennung noch einen Schalter dafür; aktuell ist
+   `spielgefuehl-2026-11-26` (`ss/domain/spielgefuehl.py:38`). Muster-Hinweise entstehen bisher
+   nur aus Nutzungen: Der einzige Aufruf von `nutzung_melden` steht im Zähl-Endpunkt
+   `POST /content/{content_id}/usage` (`ss/api/v1/usage.py:521–533`), nur mit eingeschalteten
+   Punkten und wenn beide Konten in die Punkte eingewilligt haben (die Prüfung „beim
+   Erzeugen“). Bewertungen, also auch Stimmen (Zustimmung oder Ablehnung, GLOSSARY.md), rufen
+   die Muster-Prüfung nirgends auf. Die Fristen der Zeile stimmen: Paar-Prüfwerte 7 Tage
+   (`MUSTER_FENSTER_TAGE`, `ss/services/entdoppelung.py:49`), Hinweise höchstens 56 Tage
+   (`MUSTER_FRIST_TAGE`, `ss/services/muster_hinweise_service.py:53`).
+3. **Nutzung ohne Anmeldung (V9a): bestätigt.** Ohne Anmeldung bildet der Zähl-Endpunkt den
+   Tages-Prüfwert aus dem Besuchermerkmal (`ss/api/v1/usage.py:485`). Das Merkmal ist der
+   Anschluss, bei IPv6 sein /64, unter einem HMAC mit einem Schlüssel, der je Tag zufällig
+   entsteht und nur im Speicher liegt; die Adresse wird weder gespeichert noch geloggt
+   (`ss/utils/besucher_pseudonym.py`, Kopf). Dazu kommt der Deckel je Beitrag und Tag
+   (`deckel_pruefwerte`, `ss/api/v1/usage.py:488–490`; `punkte_nutzung_ohne_anmeldung_je_tag`
+   = 3 in `ss/core/config.py`).
