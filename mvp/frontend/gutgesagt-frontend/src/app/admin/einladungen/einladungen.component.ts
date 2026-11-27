@@ -77,6 +77,8 @@ export class EinladungenComponent implements OnInit {
   schaltenFehler = false;
   kopierenFehler = false;
   anlegenFehler = false;
+  /** Text des Servers bei 422 (etwa: diese Saison gibt es nicht), sonst null. */
+  anlegenFehlerText: string | null = null;
   speichert = false;
   kopiert: string | null = null;
 
@@ -202,14 +204,18 @@ export class EinladungenComponent implements OnInit {
       : undefined;
     this.speichert = true;
     this.anlegenFehler = false;
+    this.anlegenFehlerText = null;
     this.einladungService.anlegen(this.notiz.trim(), this.erlaubteEinloesungen, this.gueltigBis, team).subscribe({
       next: (neu) => {
         this.einladungen = [neu, ...(this.einladungen ?? [])];
         this.speichert = false;
         this.zuruecksetzen();
       },
-      error: () => {
+      error: (fehler: { status?: number; error?: { detail?: unknown } }) => {
         this.anlegenFehler = true;
+        // 422 mit Text: etwa eine Saison, die es nicht gibt (Befund 6); der Server sagt, was zu tun ist.
+        const detail = fehler?.error?.detail;
+        this.anlegenFehlerText = fehler?.status === 422 && typeof detail === 'string' ? detail : null;
         this.speichert = false;
       },
     });

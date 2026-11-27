@@ -23,6 +23,7 @@ from infrastructure.database.models import (
     Base,
     EinladungZeile,
     EinstellungZeile,
+    SaisonZeile,
     TeamMitgliedschaftZeile,
     TeamNummerZeile,
     TeamOeffentlichZeile,
@@ -47,6 +48,7 @@ LOESCHSKRIPT = (
 MIGRATION = postgres.MIGRATIONEN / "2026-11-25-teams.sql"
 UMBENENNEN = postgres.REPO_WURZEL / "mvp" / "scripts" / "manual" / "team_umbenennen.sql"
 MIGRATION_NACH_GRUPPE = postgres.MIGRATIONEN / "2026-11-26-teams-nach-gruppe.sql"
+MIGRATION_SAISON_ID = postgres.MIGRATIONEN / "2026-11-26-teamlink-saison-id.sql"
 GRUPPE = Team(
     "Netzfeuerwehr",
     "handschlag",
@@ -344,6 +346,9 @@ def test_migration_auf_bestehender_einladungstabelle(postgres_url):
         postgres.migration(db, MIGRATION)
         postgres.migration(db, MIGRATION)
         postgres.migration(db, MIGRATION_NACH_GRUPPE)
+        # saisons legt create_all vor den Migrationen an
+        Base.metadata.create_all(db.engine, tables=[SaisonZeile.__table__])
+        postgres.migration(db, MIGRATION_SAISON_ID)
 
         einladungen, teams = _dienste(db)
         code = _teamlink(einladungen)

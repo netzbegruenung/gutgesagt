@@ -17,7 +17,7 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy import inspect, text
 
-from infrastructure.database.models import Base, EinladungZeile
+from infrastructure.database.models import Base, EinladungZeile, SaisonZeile
 from repositories.einladung_repository import EinladungRepository
 from domain.interfaces.konten_im_realm import KontoErgebnis
 from services.einladung_service import (
@@ -32,6 +32,7 @@ from tests.integration.postgres import Datenbank
 MIGRATION = postgres.MIGRATIONEN / "2026-10-30-429-einladungen.sql"
 TEAMS = postgres.MIGRATIONEN / "2026-11-25-teams.sql"
 TEAMS_NACH_GRUPPE = postgres.MIGRATIONEN / "2026-11-26-teams-nach-gruppe.sql"
+SAISON_ID = postgres.MIGRATIONEN / "2026-11-26-teamlink-saison-id.sql"
 
 HEUTE = date(2026, 10, 30)
 LETZTER_TAG = date(2026, 11, 13)
@@ -172,6 +173,8 @@ def test_tabelle_kennt_keine_mail_adresse_und_keinen_namen(neue_datenbank):
         "team_name",
         "team_motiv",
         "team_saison",
+        # Die Saison per ID (Befund 6), keine Person
+        "team_saison_id",
         # Teamart und Tag der Zustimmung der Gruppenleitung, kein Name
         "team_art",
         "team_zustimmung_am",
@@ -189,6 +192,10 @@ def test_migration_legt_die_tabelle_an_und_darf_zweimal_laufen(postgres_url):
         # Spaeter kamen die Teamspalten dazu (2026-11-25-teams.sql)
         postgres.migration(db, TEAMS)
         postgres.migration(db, TEAMS_NACH_GRUPPE)
+        # saisons legt create_all vor den Migrationen an
+        Base.metadata.create_all(db.engine, tables=[SaisonZeile.__table__])
+        postgres.migration(db, SAISON_ID)
+        postgres.migration(db, SAISON_ID)
 
         service = _service(db, KontenAttrappe())
         code = service.anlegen("nach der Migration", 1, LETZTER_TAG, heute=HEUTE).code

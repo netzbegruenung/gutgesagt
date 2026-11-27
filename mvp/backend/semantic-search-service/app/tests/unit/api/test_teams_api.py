@@ -19,6 +19,7 @@ import api.v1.teams as teams_module
 from api.v1.einladungen import router as einladungen_router
 from api.v1.schalter import router as schalter_router
 from api.v1.teams import router as teams_router
+from domain.saisons import Saison
 from core.config import Settings
 from dependencies import get_einladung_service, get_settings
 from domain.teams import (
@@ -117,12 +118,13 @@ def team_repo():
     return repo
 
 
-def _client(einladung_repo, team_repo, settings=AN, vorschlag=None):
+def _client(einladung_repo, team_repo, settings=AN, vorschlag=None, saisons=None):
     teams = TeamService(
         team_repo,
         settings,
         saison=lambda: "2026",
         vorschlag=(lambda: vorschlag) if vorschlag else None,
+        saisons=(lambda: saisons) if saisons is not None else None,
     )
     team_service_setzen(teams)
     service = EinladungService(einladung_repo, Mock(), teams)
@@ -361,6 +363,7 @@ class TestAdmin:
             "team_name": "Bayreuth",
             "team_motiv": "waage",
             "team_saison": "26",
+            "team_saison_id": None,
             "team_art": "anlass",
             "team_zustimmung_am": None,
         }
@@ -399,6 +402,7 @@ class TestAdmin:
             "team_name": None,
             "team_motiv": None,
             "team_saison": None,
+            "team_saison_id": None,
             "team_art": None,
             "team_zustimmung_am": None,
         }
@@ -931,3 +935,45 @@ class TestAmNamen:
 
         assert beitrag.autor_teams is None
         team_repo.oeffentliche_teams.assert_not_called()
+
+
+class TestSaisonPerId:
+    """Befund 6: Ein Teamlink verweist auf eine vorhandene Saison per ID."""
+
+    WINTER = Saison(
+        uuid.UUID("33333333-3333-4333-8333-333333333333"),
+        "Winter 26/27",
+        date(2026, 11, 27),
+        date(2027, 2, 24),
+        5,
+    )
+
+    def _anlegen(self, client, saison):
+        return client.post(
+            "/api/v1/einladungen",
+            headers=ADMIN,
+            json={
+                "notiz": "BDK",
+                "erlaubte_einloesungen": 5,
+                "gueltig_bis": "2026-12-06",
+                "team_name": "BDK",
+                "team_motiv": "waage",
+                "team_saison": saison,
+            },
+        )
+
+    def test_saison_mit_schraegstrich_bekommt_ihre_id(self, einladung_repo, team_repo):
+        client = _client(einladung_repo, team_repo, saisons=[self.WINTER])
+        self._anlegen(client, "Winter 26/27")
+        kwargs = einladung_repo.anlegen.call_args.kwargs
+        assert (kwargs["team_saison"], kwargs["team_saison_id"]) == (
+            "Winter 26/27",
+            self.WINTER.id,
+        )
+
+    def test_unbekannte_saison_ergibt_422(self, einladung_repo, team_repo):
+        client = _client(einladung_repo, team_repo, saisons=[self.WINTER])
+        antwort = self._anlegen(client, "2026")
+        assert antwort.status_code == 422
+        assert "Diese Saison gibt es nicht" in antwort.json()["detail"]
+        einladung_repo.anlegen.assert_not_called()

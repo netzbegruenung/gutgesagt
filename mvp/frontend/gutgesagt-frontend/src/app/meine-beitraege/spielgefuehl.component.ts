@@ -33,6 +33,22 @@ export const ANSAGE_STUFE: Record<SpielgefuehlStufe, string> = {
   aus: 'Spielgefühl ist aus.',
 };
 
+/** Allgemeiner Fehlertext nach Wahl oder Würfeln. */
+export const FEHLER_TEXT = 'Das hat nicht geklappt. Bitte versuch es noch einmal.';
+/** Würfeln zu schnell hintereinander (429): höchstens ein Wurf je 10 Sekunden. */
+export const ZU_SCHNELL_TEXT = 'Du hast gerade erst neu gewürfelt. Warte ein paar Sekunden, dann klappt es wieder.';
+
+/**
+ * Text, wenn die gewählte Stufe gerade nicht angeboten wird. Bisher kann das nur die
+ * Rangliste sein (Schalter rangliste aus); Punkte und Meilensteine laufen dann weiter.
+ */
+export const NICHT_ANGEBOTEN_TEXT: Partial<Record<SpielgefuehlStufe, string>> = {
+  rangliste:
+    'Du hast gewählt, in der Saison-Rangliste mitzuspielen. Die Rangliste ist gerade ausgeschaltet; ' +
+    'solange siehst du deine Punkte und Meilensteine nur für dich.',
+};
+const NICHT_ANGEBOTEN_STANDARD = 'Deine Wahl wird gerade nicht angeboten. Du kannst sie hier ändern.';
+
 /**
  * Spielgefühl als eine Einstellung in „Meine Beiträge“ (Schalter `spielgefuehl_buehne`,
  * GLOSSARY.md „Spielgefühl“): eine Frage mit drei gleich großen Knöpfen ohne
@@ -71,6 +87,8 @@ export class SpielgefuehlComponent implements OnInit {
   namenswahl: boolean | null = null;
   speichert = false;
   fehler = false;
+  /** Text zum Fehler: bei 429 beim Würfeln ein eigener. */
+  fehlerText = FEHLER_TEXT;
   ansage = '';
   /** Mit Schalter einwilligung_im_gewinn: Die Frage darf in diesem Besuch stehen. */
   budgetFrei = false;
@@ -155,9 +173,15 @@ export class SpielgefuehlComponent implements OnInit {
     return this.stand?.aktueller_wortlaut.stufen ?? [];
   }
 
-  /** Titel der gewählten Stufe. */
+  /** Titel der gewählten Stufe; leer, wenn der Server sie gerade nicht anbietet. */
   get gewaehlt(): string {
     return this.stufen.find((s) => s.stufe === this.stand?.stufe)?.titel ?? '';
+  }
+
+  /** Ersatz für „Deine Wahl“, wenn die gewählte Stufe gerade nicht angeboten wird. */
+  get nichtAngebotenText(): string {
+    const stufe = this.stand?.stufe;
+    return (stufe && NICHT_ANGEBOTEN_TEXT[stufe]) || NICHT_ANGEBOTEN_STANDARD;
   }
 
   /** Die anderen Stufen zum Wechseln, in derselben Reihenfolge. */
@@ -228,6 +252,7 @@ export class SpielgefuehlComponent implements OnInit {
     }
     this.speichert = true;
     this.fehler = false;
+    this.fehlerText = FEHLER_TEXT;
     this.ansage = '';
     this.service.wuerfeln().subscribe({
       next: ({ ranglistenname }) => {
@@ -236,9 +261,10 @@ export class SpielgefuehlComponent implements OnInit {
         this.ansage = `Dein neuer Zufallsname: ${ranglistenname}.`;
         this.cdr.markForCheck();
       },
-      error: () => {
+      error: (fehler: { status?: number } | null) => {
         this.speichert = false;
         this.fehler = true;
+        this.fehlerText = fehler?.status === 429 ? ZU_SCHNELL_TEXT : FEHLER_TEXT;
         this.cdr.markForCheck();
       },
     });
@@ -251,6 +277,7 @@ export class SpielgefuehlComponent implements OnInit {
     }
     this.speichert = true;
     this.fehler = false;
+    this.fehlerText = FEHLER_TEXT;
     this.ansage = '';
     this.service.waehlen(stufe, mitAnzeigename, stand.aktueller_wortlaut.kennung).subscribe({
       next: () => {
@@ -279,6 +306,7 @@ export class SpielgefuehlComponent implements OnInit {
       error: () => {
         this.speichert = false;
         this.fehler = true;
+        this.fehlerText = FEHLER_TEXT;
         // [checked] hat sich nicht geändert, Angular setzt den angeklickten Knopf also nicht
         // zurück: Sonst sähe die Person eine Wahl, die nicht gespeichert ist.
         this.nameWahlZuruecksetzen();

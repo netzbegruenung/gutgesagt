@@ -195,7 +195,7 @@ SPIEL_SCHALTER = (
         umgebungsvariable="SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV",
         erklaerung=(
             "Wer schreibt, sieht je Beitrag, wie oft er öffentlich gepostet wurde, "
-            "nur als Summe und nie, von wem."
+            "nur als Summe und nie, von wem; wirkt nur zusammen mit dem Danke-Knopf."
         ),
         einschalt_hinweis=(
             f"{JURA_VORLAEUFIG} (drei gespeicherte Zahlen, Zählerstand des Echos); "
@@ -211,7 +211,8 @@ SPIEL_SCHALTER = (
         umgebungsvariable="SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV",
         erklaerung=(
             "Knopf „Danke an die Autorin“ nach dem Kopieren, für Angemeldete; die "
-            "Autorin sieht nur die Summe je Beitrag. Bringt keine Punkte."
+            "Autorin sieht nur die Summe je Beitrag. Bringt keine Punkte; wirkt nur "
+            "zusammen mit dem Wirkungs-Echo."
         ),
         einschalt_hinweis=(
             f"{JURA_VORLAEUFIG}; nur zusammen mit wirkungs_echo, der Absatz nennt "
@@ -276,7 +277,9 @@ SCHALTER: Dict[str, Schalterart] = {
             umgebungsvariable="SEMANTIC_SEARCH_ABZEICHEN_SICHTBAR_AKTIV",
             erklaerung=(
                 "Meilenstein-Abzeichen am Anzeigenamen, die andere Angemeldete sehen; "
-                "wirkt nur zusammen mit den Punkten, erscheint spätestens nach 15 Minuten."
+                "wirkt nur zusammen mit den Punkten und nicht, solange das Spielgefühl "
+                "in drei Stufen an ist (dann nur in der Rangliste); erscheint spätestens "
+                "nach 15 Minuten."
             ),
             dsfa_hinweis=True,
             einschalt_hinweis=(
@@ -490,7 +493,8 @@ SCHALTER: Dict[str, Schalterart] = {
                 "Vertrauenssatz vor der Frage beim Teambeitritt: „Beitreten heißt: Du "
                 "zählst zu diesem Team und trägst zu seiner Summe bei.“, bei einem Team "
                 "nach Gruppe dazu, dass die Gruppe keine Daten bekommt. Speichert "
-                "nichts; wirkt nur zusammen mit „teams“."
+                "nichts; wirkt nur zusammen mit dem Team-Fortschritt, weil der Satz "
+                "dessen Summe verspricht."
             ),
             einschalt_hinweis=(
                 f"{JURA_26_11}, Wortlaut drin; nennt die "
@@ -636,7 +640,9 @@ SCHALTER.update({s.name: s for s in K_SCHALTER})
 
 # Spielgefuehl als eine Einstellung in drei Stufen (domain/spielgefuehl.py,
 # services/spielgefuehl_service.py): waehlt das Einwilligungsmodell, Obergrenze von
-# Haus aus aus. Wirkt fuer sich; was es zeigt, haengt weiter an punkte und rangliste.
+# Haus aus aus. Wirkt nur zusammen mit punkte: Die Frage stellt der Dienst nur mit
+# Punkten (api/v1/spielgefuehl.py), ohne sie saehen Nutzer nichts. Die Stufe Rangliste
+# haengt weiter an rangliste.
 SCHALTER["spielgefuehl_buehne"] = Schalterart(
     name="spielgefuehl_buehne",
     gruppe=PUNKTE_ANERKENNUNG,
@@ -647,7 +653,8 @@ SCHALTER["spielgefuehl_buehne"] = Schalterart(
     erklaerung=(
         "Spielgefühl als eine Frage in drei Stufen (Aus, Nur für mich, in der "
         "Saison-Rangliste mitspielen) statt der Einwilligungen Punkte, Abzeichen am "
-        "Namen und Rangliste; Abzeichen erscheinen dann nur in der Rangliste."
+        "Namen und Rangliste; Abzeichen erscheinen dann nur in der Rangliste. Wirkt "
+        "nur zusammen mit den Punkten."
     ),
     einschalt_hinweis=(
         "Jura vorläufig ok 26.11., interner Test; Go vor Vorhut/BDK; braucht "
@@ -767,9 +774,26 @@ def _stand(
     )
 
 
-def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool:
+def _an(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool:
+    """Obergrenze und Admin-Wert, ohne Kopplungen an andere Schalter."""
     art = _art(name)
-    an = bool(getattr(einstellungen, art.feld)) and bool(werte.get(name, False))
+    return bool(getattr(einstellungen, art.feld)) and bool(werte.get(name, False))
+
+
+# Schalter, die laut Jura nur zusammen wirken duerfen (beide Absaetze der
+# Datenschutzerklaerung nennen beide Summen): einer wirkt nur, wenn der andere auch an ist.
+NUR_ZUSAMMEN = {"wirkungs_echo": "danke_knopf", "danke_knopf": "wirkungs_echo"}
+
+
+def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool:
+    an = _an(name, einstellungen, werte)
+    if name in NUR_ZUSAMMEN:
+        # Gegenseitig: nur den Partner selbst pruefen, sonst liefe es im Kreis
+        return an and _an(NUR_ZUSAMMEN[name], einstellungen, werte)
+    if name == "spielgefuehl_buehne":
+        # Die Frage gibt es nur mit Punkten (api/v1/spielgefuehl.py); ohne sie sieht
+        # niemand etwas, und alles, was das Modell umschaltet, haengt an den Punkten.
+        return an and _wirksam("punkte", einstellungen, werte)
     if name == "team_fortschritt":
         # Ohne Teams keine Summe des Teams
         return an and _wirksam("teams", einstellungen, werte)
@@ -777,14 +801,20 @@ def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool
         # Die Quests zaehlen mit dem Wochenzaehler des Team-Fortschritts
         return an and _wirksam("team_fortschritt", einstellungen, werte)
     if name == "abzeichen_sichtbar":
-        # Ohne Punkte keine sichtbaren Abzeichen (wie Settings.abzeichen_sichtbar)
-        return an and _wirksam("punkte", einstellungen, werte)
+        # Ohne Punkte keine sichtbaren Abzeichen (wie Settings.abzeichen_sichtbar); im
+        # Spielgefuehl-Modell nie am Namen, nur in der Rangliste (services/abzeichen_service.py)
+        return (
+            an
+            and _wirksam("punkte", einstellungen, werte)
+            and not _wirksam("spielgefuehl_buehne", einstellungen, werte)
+        )
     if name == "teams_oeffentlich":
         # Ohne Teams keine Teams am Namen
         return an and _wirksam("teams", einstellungen, werte)
     if name == "teamlink_vertrauenssatz":
-        # Ohne Teams keine Frage zum Teambeitritt, an der der Satz stehen koennte
-        return an and _wirksam("teams", einstellungen, werte)
+        # Der Satz verspricht eine Team-Summe: nur mit dem Team-Fortschritt (und damit
+        # mit Teams, ohne die es keine Frage zum Teambeitritt gibt)
+        return an and _wirksam("team_fortschritt", einstellungen, werte)
     if name == "gepostet_ohne_konto":
         # Unterschalter: ohne "Ja, gepostet" keine Meldungen ohne Konto
         return an and _wirksam("gepostet", einstellungen, werte)

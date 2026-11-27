@@ -77,7 +77,7 @@
 
     <ng-template #zeile let-platz>
         <span class="rangliste-nummer">{{ platz.platz }}.</span>
-        <span class="rangliste-name-text">{{ platz.name }}<span *ngIf="platz.ich" class="rangliste-du"> (du)</span><span *ngIf="platz.abzeichen" class="rangliste-abzeichen" data-testid="abzeichen"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M6 .8l1.5 3.3 3.6.4-2.7 2.4.8 3.6L6 8.7 2.8 10.5l.8-3.6L.9 4.5l3.6-.4z" fill="currentColor"></path></svg><span aria-hidden="true">{{ platz.abzeichen }}</span><span class="visually-hidden">, {{ platz.abzeichen }} Meilensteine</span></span></span>
+        <span class="rangliste-name-text">{{ platz.name }}<span *ngIf="platz.ich" class="rangliste-du"> (du)</span><span *ngIf="platz.abzeichen" class="rangliste-abzeichen" data-testid="abzeichen"><svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M6 .8l1.5 3.3 3.6.4-2.7 2.4.8 3.6L6 8.7 2.8 10.5l.8-3.6L.9 4.5l3.6-.4z" fill="currentColor"></path></svg><span aria-hidden="true">{{ platz.abzeichen }}</span><span class="visually-hidden">, {{ platz.abzeichen }} {{ platz.abzeichen === 1 ? 'Meilenstein' : 'Meilensteine' }}</span></span></span>
         <span class="rangliste-punkte">{{ platz.punkte }} Punkte</span>
     </ng-template>
 

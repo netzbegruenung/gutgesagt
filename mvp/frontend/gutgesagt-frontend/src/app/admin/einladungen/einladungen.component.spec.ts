@@ -222,6 +222,31 @@ describe('EinladungenComponent', () => {
       http.expectNone((r) => r.method === 'POST');
     });
 
+    it('erlaubt eine Saison mit Schrägstrich wie „Winter 26/27“ (Befund 6)', () => {
+      mitTeams([]);
+      const k = fixture.componentInstance;
+      k.notiz = 'Stand';
+      k.teamName = 'BDK';
+      k.teamSaison = 'Winter 26/27';
+      expect(k.kannAnlegen).toBeTrue();
+    });
+
+    it('zeigt bei 422 den Text des Servers, etwa für eine Saison, die es nicht gibt', () => {
+      mitTeams([]);
+      const k = fixture.componentInstance;
+      k.notiz = 'Stand';
+      k.teamName = 'BDK';
+      k.teamSaison = '2026';
+      k.anlegen();
+      http
+        .expectOne((r) => r.method === 'POST' && r.url === URL)
+        .flush({ detail: 'Diese Saison gibt es nicht.' }, { status: 422, statusText: 'Unprocessable' });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain(
+        'Die Einladung konnte nicht angelegt werden. Diese Saison gibt es nicht.',
+      );
+    });
+
     it('Teamart: Standard „Team nach Anlass, Ort oder Saison“, Datum nur bei „Team nach Gruppe“', () => {
       mitTeams([]);
       const block = el().querySelector('[data-testid="team-block"]') as HTMLElement;

@@ -550,8 +550,9 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
 - `SEMANTIC_SEARCH_TEAMLINK_VERTRAUENSSATZ_AKTIV` - upper bound of the Schalter
   `teamlink_vertrauenssatz` (default `false`; switch on only after legal has checked what team
   members see of each other, preliminary legal assessment of 26.11.2026, point d). Text only,
-  stores nothing; public (`GET /api/v1/funktionen`), works only together with `teams`, and an
-  admin has to switch it on too. While on, the greeting of a team link shows the trust sentence
+  stores nothing; public (`GET /api/v1/funktionen`), works only together with `team_fortschritt`
+  (and thus `teams`), because the sentence promises a team sum, and an admin has to switch it on
+  too. While on, the greeting of a team link shows the trust sentence
   after the sentences before the question (`shared/team-texte.ts`, `teamVertrauenssatz`): for a
   team named after a group both sentences, otherwise only the first. The page asks
   `/funktionen` only when the invitation carries a team.
@@ -600,10 +601,10 @@ officer has advised.
 | `einwilligung_im_gewinn` | `SEMANTIC_SEARCH_EINWILLIGUNG_IM_GEWINN_AKTIV` | off | yes | none, wordings stay (#788) |
 | `naechster_schritt` | `SEMANTIC_SEARCH_NAECHSTER_SCHRITT_AKTIV` | off | yes | DSFA addendum Spielgefühl (V10); privacy policy sentences ship with #789 |
 | `null_treffer_anzahl` | `SEMANTIC_SEARCH_NULL_TREFFER_ANZAHL_AKTIV` | off | yes | legal OK, preliminary 26.11.: only from N ≥ 3, wording „N-mal gesucht“, privacy policy paragraph „Suchen ohne Treffer“ (ships with #763, shown while on); final with the legal package 27.11. (#362) |
-| `wirkungs_echo` | `SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV` | off | no | DSFA addendum V31 (#790) |
-| `danke_knopf` | `SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV` | off | yes | DSFA addendum V31 (#791) |
+| `wirkungs_echo` | `SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV` | off | yes | DSFA addendum V31 (#790); works only together with `danke_knopf` |
+| `danke_knopf` | `SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV` | off | yes | DSFA addendum V31 (#791); works only together with `wirkungs_echo` |
 | `danke_ohne_konto` | `SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV` | off | yes | V31 and visitor marker (#495); works only with `danke_knopf` |
-| `rangliste` | `SEMANTIC_SEARCH_RANGLISTE_AKTIV` | off | no | legal OK (wording, DSFA V28, privacy policy) and Punkte on (#793); works only with `punkte` |
+| `rangliste` | `SEMANTIC_SEARCH_RANGLISTE_AKTIV` | off | yes | legal OK (wording, DSFA V28, privacy policy) and Punkte on (#793); works only with `punkte` |
 | `saal_spruch` | `SEMANTIC_SEARCH_SAAL_SPRUCH_AKTIV` | off | yes | none: public text only, nothing about the person (see "Saal-Spruch" below) |
 
 #### Saal-Spruch
@@ -731,7 +732,12 @@ yes as no.
 One question in three levels (`aus`, `fuer_mich`, `rangliste`) replaces the consents "Punkte und
 Meilensteine", badge visibility and Rangliste while the switch is effective (`domain/spielgefuehl.py`,
 `services/spielgefuehl_service.py`, table `spielgefuehl`: level, choice of display name or random
-name, wording id, time, Ranglistenname; newest row counts). Switch off: the old model, unchanged.
+name, wording id, time, Ranglistenname; newest row counts). The switch is effective only together
+with `punkte` (`schalter_service._wirksam`): without points there is no question, and the admin
+page must not report it as on. While it is effective, `abzeichen_sichtbar` is not effective
+either (no badges at the name). Switching `punkte` off (emergency stop) therefore also selects
+the old model; everything that depends on points is off then anyway, only the consent budget
+(`einwilligungs_moment`) counts the old answers meanwhile. Switch off: the old model, unchanged.
 Switch on: only the new table counts, old answers stay as proof but are neither read nor carried
 over, so everyone is asked again. Points ⇔ level ≥ `fuer_mich`; Rangliste ⇔ level `rangliste`
 (still only with the switches `punkte` and `rangliste`); badges never at the display name

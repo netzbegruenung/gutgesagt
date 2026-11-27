@@ -89,7 +89,7 @@
         Einladung anlegen
       </button>
     </form>
-    <p *ngIf="anlegenFehler" class="warnung" role="alert">Die Einladung konnte nicht angelegt werden.</p>
+    <p *ngIf="anlegenFehler" class="warnung" role="alert">Die Einladung konnte nicht angelegt werden.<ng-container *ngIf="anlegenFehlerText"> {{ anlegenFehlerText }}</ng-container></p>
 
     <app-nachlade-hinweis [fehler]="fehler" [geladen]="einladungen !== null" was="Einladungen"></app-nachlade-hinweis>
     <p *ngIf="schaltenFehler" class="warnung" role="alert">Die Einladung konnte nicht umgeschaltet werden.</p>

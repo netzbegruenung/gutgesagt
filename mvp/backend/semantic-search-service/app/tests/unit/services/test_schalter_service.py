@@ -69,6 +69,62 @@ def test_abzeichen_nur_mit_wirksamen_punkten():
     assert dienst.wirksam("abzeichen_sichtbar", settings) is True
 
 
+def test_spielgefuehl_nur_mit_wirksamen_punkten():
+    """Die Frage gibt es nur mit Punkten: ohne sie nicht "wirksam: an" (Check 26.11., #7)."""
+    settings = Settings(punkte_aktiv=True, spielgefuehl_buehne_aktiv=True)
+    dienst, _, _ = _dienst({"spielgefuehl_buehne": True, "punkte": False})
+
+    assert dienst.wirksam("spielgefuehl_buehne", settings) is False
+    stand = {s.name: s for s in dienst.stand(settings)}
+    assert stand["spielgefuehl_buehne"].wirksam is False
+    assert stand["spielgefuehl_buehne"].admin_wert is True
+
+    dienst, _, _ = _dienst({"spielgefuehl_buehne": True, "punkte": True})
+    assert dienst.wirksam("spielgefuehl_buehne", settings) is True
+    ohne_punkte_obergrenze = Settings(spielgefuehl_buehne_aktiv=True)
+    assert dienst.wirksam("spielgefuehl_buehne", ohne_punkte_obergrenze) is False
+
+
+def test_abzeichen_am_namen_nicht_mit_spielgefuehl():
+    """Im Spielgefuehl-Modell gibt es Abzeichen nur in der Rangliste (Check 26.11., #7)."""
+    settings = Settings(
+        punkte_aktiv=True, abzeichen_sichtbar_aktiv=True, spielgefuehl_buehne_aktiv=True
+    )
+    werte = {"abzeichen_sichtbar": True, "punkte": True, "spielgefuehl_buehne": True}
+    dienst, _, _ = _dienst(werte)
+
+    assert dienst.wirksam("abzeichen_sichtbar", settings) is False
+    stand = {s.name: s for s in dienst.stand(settings)}
+    assert stand["abzeichen_sichtbar"].wirksam is False
+
+    dienst, _, _ = _dienst({**werte, "spielgefuehl_buehne": False})
+    assert dienst.wirksam("abzeichen_sichtbar", settings) is True
+
+
+@pytest.mark.parametrize(
+    "echo, danke, erwartet",
+    [(True, False, False), (False, True, False), (True, True, True)],
+)
+def test_wirkungs_echo_und_danke_knopf_nur_zusammen(echo, danke, erwartet):
+    """Der DSE-Absatz nennt beide Summen (Jura): nur zusammen (Check 26.11., #8)."""
+    settings = Settings(wirkungs_echo_aktiv=True, danke_knopf_aktiv=True)
+    dienst, _, _ = _dienst({"wirkungs_echo": echo, "danke_knopf": danke})
+
+    assert dienst.wirksam("wirkungs_echo", settings) is erwartet
+    assert dienst.wirksam("danke_knopf", settings) is erwartet
+
+
+def test_nur_zusammen_auch_ueber_die_obergrenze_des_partners():
+    werte = {"wirkungs_echo": True, "danke_knopf": True, "danke_ohne_konto": True}
+    dienst, _, _ = _dienst(werte)
+
+    ohne_danke = Settings(wirkungs_echo_aktiv=True, danke_ohne_konto_aktiv=True)
+    assert dienst.wirksam("wirkungs_echo", ohne_danke) is False
+    # Der Unterschalter haengt am Danke-Knopf und damit auch am Echo
+    ohne_echo = Settings(danke_knopf_aktiv=True, danke_ohne_konto_aktiv=True)
+    assert dienst.wirksam("danke_ohne_konto", ohne_echo) is False
+
+
 def test_einschalten_ueber_die_obergrenze_abgelehnt_ausschalten_geht():
     dienst, werte, gesetzt = _dienst()
 

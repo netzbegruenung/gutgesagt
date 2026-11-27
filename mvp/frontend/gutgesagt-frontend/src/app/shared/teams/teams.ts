@@ -69,7 +69,10 @@ export function teamTextGueltig(text: string, max: number): boolean {
   return t.length > 0 && t.length <= max && !TEAM_VERBOTEN.test(text);
 }
 
-/** Ob die Saison am Teamlink so durchgeht, wie das Backend sie prüft (Schrägstrich erlaubt). */
+/**
+ * Ob die Saison am Teamlink so durchgeht, wie das Backend sie prüft (Schrägstrich erlaubt). Ob es
+ * die Saison gibt, prüft der Server.
+ */
 export function teamSaisonGueltig(text: string, max: number): boolean {
   const t = text.trim().split(/\s+/).join(' ');
   return t.length > 0 && t.length <= max && !SAISON_VERBOTEN.test(text);
