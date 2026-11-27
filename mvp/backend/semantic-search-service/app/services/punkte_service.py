@@ -40,6 +40,7 @@ Gespeichert wird dafuer nichts Neues.
 """
 
 import asyncio
+from dataclasses import replace
 from datetime import date, datetime, timedelta, timezone
 from typing import (
     Any,
@@ -173,17 +174,23 @@ class PunkteService:
         # Team-Quests (#792); ohne Angabe keine Quest-Punkte.
         self._quest_tage = quest_tage
 
-    async def _quests(self, user_id, beitraege, grenze) -> Dict[date, int]:
-        """Quest-Punkte der Team-Quests; scheitert das, fehlen nur sie (Fehler im Log)."""
+    async def _quests(self, user_id, beitraege, grenze) -> Tuple[Dict[date, int], bool]:
+        """
+        Quest-Punkte der Team-Quests und ob sie gelesen wurden. Scheitert das, fehlen
+        nur sie (Fehler im Log), und der Stand gilt als unvollstaendig.
+        """
         if self._quest_tage is None:
-            return {}
+            return {}, True
         try:
-            return await asyncio.to_thread(
-                self._quest_tage, user_id, [b.created for b in beitraege], grenze
+            return (
+                await asyncio.to_thread(
+                    self._quest_tage, user_id, [b.created for b in beitraege], grenze
+                ),
+                True,
             )
         except Exception as e:
             logger.error(f"Team quest points not read: {type(e).__name__}")
-            return {}
+            return {}, False
 
     async def punkte(
         self, user_id: str, zeitraum: Optional[Tuple[date, date]] = None
@@ -237,7 +244,7 @@ class PunkteService:
             if b.created.astimezone(timezone.utc) <= grenze
         ]
         beitraege_je_tag = _je_tag(stehende)
-        quests = await self._quests(user_id, beitraege, grenze)
+        quests, vollstaendig = await self._quests(user_id, beitraege, grenze)
         if zeitraum is not None:
             beitraege_je_tag = _im_zeitraum(beitraege_je_tag, zeitraum)
             einwuerfe = _im_zeitraum(einwuerfe, zeitraum)
@@ -252,4 +259,5 @@ class PunkteService:
             quests_je_tag=quests,
             bewertungen_je_tag=bewertungen,
         )
-        return punkte_berechnen(daten, gewichte)
+        stand = punkte_berechnen(daten, gewichte)
+        return stand if vollstaendig else replace(stand, vollstaendig=False)

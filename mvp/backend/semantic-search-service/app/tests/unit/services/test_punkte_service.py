@@ -342,6 +342,37 @@ async def test_quest_punkte_zaehlen_fuer_die_saison_ihrer_quest_woche():
     assert (await dienst.punkte(KIM)).quests == 4 * 4
 
 
+async def test_scheitern_der_quests_macht_den_stand_unvollstaendig():
+    """Die uebrigen Punkte bleiben, der Stand sagt aber, dass etwas fehlt (Rangliste)."""
+    beitrag = _beitrag(10)
+    quellen = _QuellenImZeitraum([beitrag], nutzung={beitrag.id: 1}, zustimmungen=1)
+
+    def kaputt(user_id, erstellt, grenze):
+        raise RuntimeError("PostgreSQL weg")
+
+    dienst = PunkteService(
+        quellen.sichtbare_beitraege,
+        quellen,
+        quellen,
+        Settings(startkonten=START),
+        jetzt=lambda: JETZT,
+        eingewilligt=lambda user_id: True,
+        quest_tage=kaputt,
+    )
+
+    stand = await dienst.punkte(KIM)
+    assert stand.quests == 0
+    assert stand.wirkung > 0
+    assert stand.vollstaendig is False
+
+
+async def test_ohne_fehler_ist_der_stand_vollstaendig():
+    beitrag = _beitrag(10)
+    quellen = _QuellenImZeitraum([beitrag], nutzung={beitrag.id: 1}, zustimmungen=1)
+
+    assert (await _service(quellen).punkte(KIM)).vollstaendig is True
+
+
 async def test_punkte_ohne_zeitraum_fragen_die_gesamtzahlen():
     beitrag = _beitrag(10)
     quellen = _QuellenImZeitraum([beitrag], nutzung={beitrag.id: 1}, zustimmungen=1)
