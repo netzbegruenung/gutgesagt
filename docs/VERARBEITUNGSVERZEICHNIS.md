@@ -377,7 +377,7 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   „Aus“). Punkte, Plätze und Abzeichen werden nicht gespeichert, sondern bei jedem Abruf
   berechnet: aus der Nutzung der eigenen Beiträge (`usage_events`), aus Zustimmung anderer,
   eigenen Beiträgen, Einwürfen und Bewertungen fremder Beiträge (Richtung zählt nicht, höchstens
-  3 je Tag) und aus Team-Quests (T17). Die Kombination kann politische Haltung und Aktivität
+  3 je Tag (Standardwert der Konfiguration)) und aus Team-Quests (T17). Die Kombination kann politische Haltung und Aktivität
   erkennen lassen (Art. 9).
 - **Empfänger:** Punkte nur die Person selbst. Rangliste (Name, Platz, Punkte, Abzeichen) nur
   angemeldete Mitspielende der Stufe 3, erst ab 10 Teilnehmenden, kein Abruf ohne Anmeldung.
@@ -400,9 +400,9 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   an der Person zusätzlich die Einwilligung aus T16 im Wortlaut `spielgefuehl-2026-11-28`, der
   die Quest-Punkte nennt (siehe „Offen“).
 - **Betroffene:** Mitglieder von Teams mit Team-Einwilligung, ohne Startkonten.
-- **Daten:** Wochenzähler je Team, Saison und Woche (Zahl der Beiträge, Bewertungen,
-  Kommentare, Meldungen „Ja, gepostet“, `team_wochen`). Je Team und Woche eine Quest mit Thema
-  und Ziel (`team_quests`). Beides ohne Kennung, Beitrag und Zeitpunkt. Entdoppelt wird über
+- **Daten:** Wochenzähler je Team, Saison und Woche (Zahl der Beiträge einschließlich
+  Kommentaren, Bewertungen und Meldungen „Ja, gepostet“, `team_wochen`). Je Team und Woche eine
+  Quest mit Thema und Ziel (`team_quests`). Beides ohne Kennung, Beitrag und Zeitpunkt. Entdoppelt wird über
   einen Wochen-Prüfwert nur im Arbeitsspeicher, der Schlüssel entsteht jede Woche neu.
   Quest-Punkte werden beim Abruf berechnet und nicht gespeichert.
 - **Empfänger:** nur Mitglieder des Teams, nur die letzte abgeschlossene Woche, erst ab 5
@@ -429,16 +429,20 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
 - **Betroffene:** Paare angemeldeter Konten, die beide aktuell eingewilligt haben.
 - **Daten:** Paar-Prüfwerte (HMAC, keinem Konto zuordenbar, Schlüssel nur im Arbeitsspeicher,
   `muster_pruefwerte`). Muster-Hinweise mit den Kennungen beider Konten, Art (Nutzung oder
-  Zustimmung) und letztem Tag (`muster_hinweise`). Ablehnungen zählen nicht.
-- **Empfänger:** nur Admins (Admin-Dashboard, beim Zeigen erneut gegen die Einwilligungen
-  geprüft). Ein Mensch entscheidet; keine Wirkung auf Punkte oder Rangliste, keine automatische
-  Sperre (Art. 22 greift nicht).
-- **Fristen:** LK „Fristen“: Paar-Prüfwerte 7 Tage, Hinweise höchstens 56 Tage. Bei Widerruf von
-  Spielgefühl oder Art.-9-Einwilligung sofort gelöscht (bei Zustimmungen), sonst spätestens im
-  nächsten täglichen Lauf (`ohne_einwilligung_loeschen`).
+  Zustimmung), erstem und letztem Tag und der Zahl der Tage mit gegenseitiger Nutzung bzw.
+  Zustimmung (`muster_hinweise`). Ablehnungen zählen nicht.
+- **Empfänger:** nur Admins; das Admin-Dashboard zeigt Anzeigename und Kennung beider Konten und
+  prüft beim Zeigen erneut die Einwilligungen. Ein Mensch entscheidet; keine Wirkung auf Punkte
+  oder Rangliste, keine automatische Sperre (Art. 22 greift nicht).
+- **Fristen:** LK „Fristen“: Paar-Prüfwerte 7 Tage, Hinweise höchstens 56 Tage nach dem letzten
+  Tag. Sofort gelöscht: alle Hinweise, die eine Person nennen, wenn sie „Aus“ wählt; die Hinweise
+  aus Zustimmungen, wenn sie die Art.-9-Einwilligung widerruft oder auf einen Wortlaut ohne
+  Zustimmungen zurückgeht. Im Übrigen spätestens im nächsten täglichen Lauf, sobald nicht mehr
+  beide Konten wirksam eingewilligt haben.
 - **TOM:** DSFA-Nachtrag V30, DSFA V11. Admins prüfen jeden Hinweis selbst und halten fest, wie
   sie geprüft haben (sonst kann trotz menschlicher Entscheidung Art. 22 greifen, EuGH
-  C-634/21). Hinweise erscheinen in der Auskunft nach Art. 15. Schalter `muster_stimmen`
+  C-634/21). Hinweise gehören zur Auskunft nach Art. 15; sie wird von Hand erteilt. Schalter
+  `muster_stimmen`
   (Obergrenze aus, wirkt nur mit `spielgefuehl_buehne`); Einwilligung beim Erzeugen und beim
   Zeigen geprüft; täglicher Löschlauf unabhängig vom abschaltbaren Bereinigungsjob.
 
