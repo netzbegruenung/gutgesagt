@@ -396,10 +396,15 @@ class TestEinstellungen:
         )
         assert service.wert("aktuelle_saison") == "Saison 2027"
 
-    @pytest.mark.parametrize("wert", ["", "   ", "x" * 21, "20\x0026"])
+    @pytest.mark.parametrize(
+        "wert", ["", "   ", "x" * 21, "20\x0026", "<b>26</b>", "A & B"]
+    )
     def test_ungueltige_werte(self, wert):
         with pytest.raises(UngueltigerWert):
             wert_bereinigen("aktuelle_saison", wert)
+
+    def test_schraegstrich_wie_bei_den_saisons(self):
+        assert wert_bereinigen("aktuelle_saison", "Winter 26/27") == "Winter 26/27"
 
     def test_datenbank_weg_gilt_standard(self):
         def kaputt():

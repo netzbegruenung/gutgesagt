@@ -6,6 +6,7 @@ import {
   teamBegruessungTitel,
   teamDabeiSatz,
   teamGruppeSatz,
+  wocheVorBeitritt,
 } from './team-texte';
 
 describe('Texte der Teams', () => {
@@ -52,5 +53,23 @@ describe('Texte der Teams', () => {
     expect(MEINE_TEAMS_TITEL).toBe('Meine Teams');
     expect(TEAM_VERLASSEN).toBe('Team verlassen');
     expect(TEAM_DATENSCHUTZ_HINWEIS).toContain('„Teams“');
+  });
+});
+
+describe('wocheVorBeitritt', () => {
+  it('nur wenn die Woche (Montag bis Sonntag) ganz vor dem Beitritt endete', () => {
+    expect(wocheVorBeitritt('2026-11-16', '2026-11-26')).toBeTrue();
+    expect(wocheVorBeitritt('2026-11-16', '2026-11-23')).toBeTrue();
+    expect(wocheVorBeitritt('2026-11-16', '2026-11-22')).toBeFalse();
+    expect(wocheVorBeitritt('2026-11-16', '2026-11-10')).toBeFalse();
+    // Ueber den Monatswechsel
+    expect(wocheVorBeitritt('2026-11-30', '2026-12-07')).toBeTrue();
+    expect(wocheVorBeitritt('2026-11-30', '2026-12-06')).toBeFalse();
+  });
+
+  it('unlesbar: false, dann bleibt alles wie bisher', () => {
+    expect(wocheVorBeitritt(null, '2026-11-26')).toBeFalse();
+    expect(wocheVorBeitritt('2026-11-16', undefined)).toBeFalse();
+    expect(wocheVorBeitritt('16.11.2026', '2026-11-26')).toBeFalse();
   });
 });

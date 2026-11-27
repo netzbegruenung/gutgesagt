@@ -107,6 +107,31 @@ export function teamWocheTitel(montagIso: string): string {
 }
 
 /**
+ * Statt des Team-Fortschritts, solange die gezeigte Woche vor dem eigenen Beitritt liegt
+ * (UX-Review 26.11.2026, Befund 3): Gezeigt wird nur die letzte abgeschlossene Woche, ein
+ * Team von der BDK sähe sonst bis zum Montag danach eine leere Vorwoche.
+ */
+export const TEAM_ERSTE_WOCHE = 'Eure erste gemeinsame Woche läuft. Am Montag seht ihr hier, was ihr zusammen geschafft habt.';
+
+/**
+ * Ob die Woche ab ``montagIso`` (Montag bis Sonntag) ganz vor ``eingetretenAm`` liegt, also
+ * vor dem eigenen Beitritt endete. Beide als JJJJ-MM-TT; unlesbar: false (dann wie bisher).
+ */
+export function wocheVorBeitritt(montagIso: string | null | undefined, eingetretenAm: string | null | undefined): boolean {
+  const tag = (iso: string | null | undefined): number | null => {
+    const teile = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? '');
+    return teile ? Date.UTC(+teile[1], +teile[2] - 1, +teile[3]) : null;
+  };
+  const montag = tag(montagIso);
+  const beitritt = tag(eingetretenAm);
+  if (montag === null || beitritt === null) {
+    return false;
+  }
+  const sonntag = montag + 6 * 24 * 60 * 60 * 1000;
+  return sonntag < beitritt;
+}
+
+/**
  * Das Wochenziel einer Team-Quest (#792), ohne Stand und ohne Frist. Das Thema heißt hier
  * „Beet“, das einzige Gartenwort; der Name des Themas steht daneben im Motiv.
  */

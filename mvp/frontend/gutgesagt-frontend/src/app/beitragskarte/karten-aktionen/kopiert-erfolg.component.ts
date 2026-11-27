@@ -21,6 +21,7 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { ROUTES } from '../../shared/constants/app.constants';
 import { KOPIERT } from '../../shared/vorlagen-luecke';
+import { SUCHFELD_FOKUS_FRAGMENT } from '../../naechster-schritt/naechster-schritt';
 import { AndereTonlage, KOPIERT_ERFOLG, KOPIERT_ERFOLG_ZEICHEN, nutzungSatz, tonlagenHinweis } from './kopiert-erfolg';
 import {
   GEPOSTET_FRAGE,
@@ -28,6 +29,8 @@ import {
   GEPOSTET_GEMELDET,
   GEPOSTET_RUECKKEHR,
   GEPOSTET_RUECKKEHR_OHNE_KONTO,
+  GEPOSTET_WEITER,
+  GEPOSTET_WEITER_LINK,
   JA_GEPOSTET,
 } from './gepostet-texte';
 
@@ -73,7 +76,7 @@ export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
   imports: [CommonModule, RouterLink, MatButtonModule, MatIconModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="kopiert-erfolg-rahmen" [class.sichtbar]="sichtbar">
+    <div #rahmen class="kopiert-erfolg-rahmen" [class.sichtbar]="sichtbar">
       <div class="kopiert-erfolg-inhalt">
         <div class="kopiert-erfolg-region" role="status" aria-atomic="false">
           <div class="kopiert-erfolg" *ngIf="sichtbar">
@@ -101,6 +104,10 @@ export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
         </div>
         <!-- Dank, oder nach einem Fehler der Hinweis, es noch einmal zu versuchen -->
         <p class="erfolg-gepostet-dank" *ngIf="sichtbar" role="status">{{ dankZeile }}</p>
+        <!-- Nach dem Dank ein nächster Schritt (UX-Review 26.11.): noch ein Spruch -->
+        <p class="erfolg-weiter" *ngIf="sichtbar && gepostet === 'gemeldet'" data-testid="gepostet-weiter">
+          {{ weiter }}&ngsp;<a class="erfolg-weiter-link" [routerLink]="suche" [fragment]="suchfeld">{{ weiterLink }}</a>
+        </p>
       </div>
       <!-- Ausserhalb der Status-Region: Der Knopf soll nicht mit angesagt werden -->
       <button #schliessenKnopf *ngIf="sichtbar" mat-icon-button type="button" class="erfolg-schliessen" aria-label="Hinweis schließen"
@@ -197,6 +204,21 @@ export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
         line-height: 1.45;
         overflow-wrap: anywhere;
       }
+      .erfolg-weiter {
+        margin: var(--spacing-xs) 0 0;
+        font-size: 15px;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+      }
+      .erfolg-weiter-link {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        color: var(--primaer-text);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        font-weight: 600;
+      }
       .erfolg-gepostet-dank:empty {
         display: none;
       }
@@ -241,6 +263,10 @@ export class KopiertErfolgComponent implements OnChanges, AfterViewChecked, OnDe
   readonly erfolg = KOPIERT_ERFOLG;
   readonly zeichen = KOPIERT_ERFOLG_ZEICHEN;
   readonly beitragPfad = ROUTES.BEITRAG;
+  readonly weiter = GEPOSTET_WEITER;
+  readonly weiterLink = GEPOSTET_WEITER_LINK;
+  readonly suche = ROUTES.SEARCH;
+  readonly suchfeld = SUCHFELD_FOKUS_FRAGMENT;
 
   /** Seit wann der laufende Kopiervorgang steht (Date.now()). */
   private kopiertUm = 0;
@@ -317,6 +343,9 @@ export class KopiertErfolgComponent implements OnChanges, AfterViewChecked, OnDe
 
   @ViewChild('jaKnopf', { read: ElementRef }) private jaKnopf?: ElementRef<HTMLButtonElement>;
   @ViewChild('schliessenKnopf', { read: ElementRef }) private schliessenKnopf?: ElementRef<HTMLButtonElement>;
+  @ViewChild('rahmen') private rahmen?: ElementRef<HTMLElement>;
+  /** Der Kasten ist gerade erschienen (oder neu kopiert): einmal ins Bild holen. */
+  private insBild = false;
   /** Der Fokus lag auf „Ja, gepostet“, als der Knopf verschwand (nicht mehr angeboten). */
   private fokusUmsetzen = false;
 
@@ -326,6 +355,11 @@ export class KopiertErfolgComponent implements OnChanges, AfterViewChecked, OnDe
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    // Erscheint der Kasten am Handy unter der Bildschirmkante, sähe niemand „Ja, gepostet“
+    // (UX-Review 26.11.2026, Befund 6): einmal je Kopieren ins Bild holen.
+    if ((changes['sichtbar'] || changes['kopierLauf']) && this.sichtbar) {
+      this.insBild = true;
+    }
     if (changes['kopierLauf']) {
       this.kopiertUm = Date.now();
       this.rueckkehrGezeigt = false;
@@ -344,6 +378,15 @@ export class KopiertErfolgComponent implements OnChanges, AfterViewChecked, OnDe
   }
 
   ngAfterViewChecked(): void {
+    if (this.insBild && this.rahmen) {
+      this.insBild = false;
+      const kasten = this.rahmen.nativeElement;
+      // block 'nearest': Steht der Kasten schon ganz da, bewegt sich nichts. Den Rand über der
+      // unteren Leiste hält scroll-padding-bottom (styles.css).
+      if (typeof kasten.scrollIntoView === 'function') {
+        kasten.scrollIntoView({ block: 'nearest', behavior: bewegungReduziert() ? 'auto' : 'smooth' });
+      }
+    }
     if (this.fokusUmsetzen) {
       this.fokusUmsetzen = false;
       this.schliessenKnopf?.nativeElement.focus();

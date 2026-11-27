@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional
 
 from core.logging import get_logger
-from domain.teams import SAISON_MAX
+from domain.teams import SAISON_MAX, SAISON_VERBOTEN
 from utils.utc_tag import heute_utc
 
 logger = get_logger(__name__)
@@ -76,6 +76,9 @@ def wert_bereinigen(name: str, wert: str) -> str:
     """Leerraum zusammenfassen; leer, zu lang oder mit Steuerzeichen: UngueltigerWert."""
     art = _art(name)
     if _STEUERZEICHEN.search(wert.replace(" ", "")):
+        raise UngueltigerWert(name)
+    # Die Saison der Teams nach derselben Regel wie Saisons und Teamlinks
+    if name == AKTUELLE_SAISON and SAISON_VERBOTEN.search(wert):
         raise UngueltigerWert(name)
     wert = " ".join(wert.split())
     if not wert or len(wert) > art.max_laenge:

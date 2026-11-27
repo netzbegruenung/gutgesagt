@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, Signal, computed, inject, signal } from '@angular/core';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { SHARED_IMPORTS } from '../shared/shared-imports';
@@ -10,6 +10,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { feedbackDialogOeffnen } from '../shared/feedback/feedback-dialog.component';
 import { ORGANISATION } from '../shared/organisation';
 import { FunktionenService } from '../services/funktionen.service';
+import { KampagnenwortService } from '../shared/kampagnenwort.service';
 
 /** Vorbelegt im Feedback-Dialog, damit die Warteliste von anderem Feedback zu trennen ist. */
 export const WARTELISTE_TEXT = 'Bitte setzt mich auf die Warteliste für eine Einladung.';
@@ -26,6 +27,16 @@ export const VERTRAUENSZEILE =
 
 /** Schalter der Vertrauenszeile (services/schalter_service.py), Standard aus. */
 export const VERTRAUENSZEILE_SCHALTER = 'vertrauenszeile';
+
+/**
+ * Hinweis unter „Noch kein Konto?“, nur mit Kampagnenwort ``bdk`` (UX-Review 26.11.2026,
+ * Befund 4): Am Stand gibt es den Teamlink, die Seite nannte ihn nicht. Wie die Begrüßung nach
+ * dem Kampagnenwort nur Anzeige und nur mit Schalter `k_begruessung`.
+ */
+export const BDK_KONTO_HINWEIS = {
+  titel: 'Auf der BDK?',
+  satz: 'Am Gut-gesagt-Stand bekommst du einen Teamlink, damit legst du dein Konto in einer Minute an.',
+} as const;
 
 interface AuthModes {
   keycloakEnabled: boolean;
@@ -52,6 +63,13 @@ export class LoginSelectorComponent implements OnInit {
   readonly vertrauenszeile = VERTRAUENSZEILE;
   /** Ob die Vertrauenszeile steht; kommt nach, ohne dass jemand neu lädt (FunktionenService). */
   readonly vertrauenszeileAn = inject(FunktionenService).an(VERTRAUENSZEILE_SCHALTER);
+  readonly bdkHinweis = BDK_KONTO_HINWEIS;
+  /** Den Schalter nur fragen, wenn das Wort passt: sonst kein Abruf nur dafür. */
+  private readonly bdkWort = inject(KampagnenwortService).wort === 'bdk';
+  private readonly kBegruessungAn: Signal<boolean> = this.bdkWort
+    ? inject(FunktionenService).an('k_begruessung')
+    : signal(false);
+  readonly bdkHinweisAn = computed(() => this.bdkWort && this.kBegruessungAn());
 
   constructor(
     private authService: AuthService,

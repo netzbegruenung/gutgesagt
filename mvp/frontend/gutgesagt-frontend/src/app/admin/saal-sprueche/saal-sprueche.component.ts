@@ -20,9 +20,9 @@ export function saalTag(iso: string): string {
 
 /**
  * Saal-Sprüche auf der Seite „Schalter“ (Schalter „saal_spruch“, Glossar „Saal-Spruch“): je
- * Tag ein öffentlicher Spruch, den die Startseite an diesem Tag als „Heute im Saal gehört:“
- * zeigt. Festlegen, ersetzen und entfernen geht auch bei Schalter aus, damit die Sprüche
- * vor dem Einschalten bereitstehen. Nur Text, nichts zur Person. Lädt selbst nach.
+ * Tag ein öffentlicher Spruch, der gerade unter Beiträgen zur BDK im Netz kursiert; die
+ * Startseite zeigt ihn an diesem Tag als „Heute im Netz zur BDK:“. Festlegen, ersetzen und
+ * entfernen geht auch bei Schalter aus, damit die Sprüche vor dem Einschalten bereitstehen. Nur Text, nichts zur Person. Lädt selbst nach.
  */
 @Component({
   selector: 'app-saal-sprueche',
@@ -32,8 +32,9 @@ export function saalTag(iso: string): string {
     <section class="saal-sprueche mat-elevation-z1" aria-labelledby="saal-sprueche-titel" data-testid="saal-sprueche">
       <div class="kopf"><h3 id="saal-sprueche-titel">Saal-Sprüche</h3></div>
       <p>
-        Je Tag ein Spruch, den die Startseite an diesem Tag oben als „Heute im Saal gehört:“ zeigt, mit dem Knopf
-        „Antworten ansehen“. Nur öffentlicher Text, keine Namen. Der Tag gilt in deutscher Zeit.
+        Jeden Morgen den Spruch wählen, der gerade unter Beiträgen zur BDK im Netz kursiert. Die Startseite zeigt
+        ihn an diesem Tag oben als „Heute im Netz zur BDK:“, mit dem Knopf „Antworten ansehen“. Nur öffentlicher
+        Text, keine Namen. Der Tag gilt in deutscher Zeit.
       </p>
       @if (liste; as l) {
         <p class="zustand" data-testid="saal-sprueche-zustand">
@@ -53,7 +54,7 @@ export function saalTag(iso: string): string {
                         [attr.aria-label]="'Spruch für ' + tag(s.datum) + ' ändern'">Ändern</button>
                 <button mat-stroked-button type="button" (click)="entfernen(s)" [disabled]="speichernd"
                         [attr.aria-label]="'Spruch für ' + tag(s.datum) + ' entfernen'">Entfernen</button>
-                <!-- Prüfen, ob „Antworten ansehen“ etwas findet, bevor der Saal den Spruch hört -->
+                <!-- Prüfen, ob „Antworten ansehen“ etwas findet, bevor die Startseite den Spruch zeigt -->
                 <a mat-button [routerLink]="ergebnisse" [queryParams]="suche(s.text)" target="_blank"
                    data-testid="saal-spruch-suche"
                    [attr.aria-label]="'Suche zum Spruch für ' + tag(s.datum) + ' ansehen (neuer Tab)'">Suche ansehen</a>
@@ -72,7 +73,7 @@ export function saalTag(iso: string): string {
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="breit">
             <mat-label>Spruch</mat-label>
             <textarea #textFeld matInput name="text" data-testid="saal-spruch-textfeld" [(ngModel)]="text" [maxlength]="l.text_max" rows="2" required></textarea>
-            <mat-hint>etwa „Klimaschutz können wir uns gerade nicht leisten.“ · höchstens {{ l.text_max }} Zeichen</mat-hint>
+            <mat-hint>wie er unter BDK-Beiträgen kursiert, etwa „Klimaschutz können wir uns gerade nicht leisten.“ · höchstens {{ l.text_max }} Zeichen</mat-hint>
           </mat-form-field>
           <div class="knoepfe">
             <button mat-flat-button color="primary" type="submit" [disabled]="!vollstaendig() || speichernd"

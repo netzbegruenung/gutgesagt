@@ -4,7 +4,7 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Router } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
 import { KartenAktionenComponent } from './karten-aktionen.component';
@@ -65,7 +65,7 @@ describe('KartenAktionenComponent - Ja, gepostet ohne Konto', () => {
         { provide: UsageTrackingService, useValue: usage },
         { provide: AuthService, useValue: auth },
         { provide: MatDialog, useValue: jasmine.createSpyObj('MatDialog', ['open']) },
-        { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate']) },
+        provideRouter([]),
         { provide: TEILEN_NAVIGATOR, useValue: {} },
         { provide: MeilensteinHinweisService, useValue: jasmine.createSpyObj('MeilensteinHinweisService', ['bestaetigen']) },
         {

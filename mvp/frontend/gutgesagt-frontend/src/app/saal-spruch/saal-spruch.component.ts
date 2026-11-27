@@ -20,9 +20,10 @@ export function browserTag(jetzt = new Date()): string {
 }
 
 /**
- * Karte „Heute im Saal gehört:“ oben auf der Startseite (Schalter „saal_spruch“, Glossar
- * „Saal-Spruch“): ein Spruch, den ein Admin vorab für diesen Tag festgelegt hat, etwa für
- * die Tage der BDK, und der Knopf „Antworten ansehen“, der die Suche mit dem Spruch
+ * Karte „Heute im Netz zur BDK:“ oben auf der Startseite (Schalter „saal_spruch“, Glossar
+ * „Saal-Spruch“): der Spruch, den ein Admin für diesen Tag gewählt hat, weil er gerade unter
+ * Beiträgen zur BDK im Netz kursiert (im Saal bei den Grünen fallen solche Sprüche nicht,
+ * Entscheidung 27.11.2026), und der Knopf „Antworten ansehen“, der die Suche mit dem Spruch
  * startet. Ohne Spruch für heute oder bei Schalter aus gibt es die Karte nicht.
  *
  * Höchstens ein Aufruf über dem Feed (Review Spielgefühl 25.11.): Den Vorrang gegenüber
@@ -31,7 +32,8 @@ export function browserTag(jetzt = new Date()): string {
  * dorthin nur, ob sie heute einen Spruch hat. Eigenes Neues und der Vorschlag gehen ihr
  * vor, nur die allgemeinen Zahlen treten an ihren Tagen zurück. Steht ein Rundgang-Angebot
  * auf der Startseite (Willkommen, Startbildschirm, App installieren), wartet sie, bis es
- * beantwortet ist: Das Angebot ist dann der eine Aufruf. Besucher ohne Konto sehen weder
+ * beantwortet ist: Das Angebot ist dann der eine Aufruf; nur neben dem schlanken Willkommen
+ * steht sie gleich (UX-Review 26.11.2026). Besucher ohne Konto sehen weder
  * Block noch Vorschlag, deshalb wartet die Karte für sie auf nichts davon.
  *
  * Bekannt: Kommt der Spruch erst nach START_WARTEZEIT_MS (zwei Abrufe nacheinander,
@@ -48,7 +50,7 @@ export function browserTag(jetzt = new Date()): string {
       <section class="saal-spruch" aria-labelledby="saal-spruch-titel" data-testid="saal-spruch">
         <h2 id="saal-spruch-titel" class="saal-spruch-titel">
           <mat-icon aria-hidden="true">campaign</mat-icon>
-          Heute im Saal gehört:
+          Heute im Netz zur BDK:
         </h2>
         <blockquote class="saal-spruch-zitat" data-testid="saal-spruch-text">„{{ spruch }}“</blockquote>
         <p class="saal-spruch-frage">Wie würdest du antworten?</p>
@@ -132,8 +134,17 @@ export class SaalSpruchComponent {
     ),
     { initialValue: false },
   );
-  /** Ein Rundgang-Angebot (Willkommen, Startbildschirm, App) steht gerade auf der Startseite. */
-  private readonly rundgangHier = computed(() => !!this.rundgang.band()?.imInhalt);
+  /**
+   * Ein Rundgang-Angebot (Willkommen, Startbildschirm, App) steht gerade auf der Startseite.
+   * Ausnahme: das schlanke Willkommen („Neu hier?“, auch als „Von der BDK?“ nach dem
+   * Kampagnenwort). Für genau diese Neuen ist die Karte gebaut; sonst sähen sie sie beim
+   * ersten Besuch nie (UX-Review 26.11.2026, Befund 8). Das Willkommen ist eine Zeile, die
+   * Karte sagt nichts doppelt.
+   */
+  private readonly rundgangHier = computed(() => {
+    const band = this.rundgang.band();
+    return !!band?.imInhalt && !band.schlank;
+  });
 
   /** Der Spruch, wenn die Karte ihn zeigen darf; sonst null. */
   readonly sichtbar = computed(() => {
