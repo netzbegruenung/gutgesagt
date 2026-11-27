@@ -245,6 +245,48 @@ describe('SpielgefuehlComponent', () => {
     expect(el().textContent).not.toContain('Kluge Eule 11');
   });
 
+  it('Stufe Rangliste, aber Rangliste nicht angeboten: Ersatztext statt leerer Wahl, kein Namensblock', () => {
+    const ohneRangliste = stand({ stufe: 'rangliste', mit_anzeigename: false, ranglistenname: 'Kluge Eule 11' });
+    ohneRangliste.aktueller_wortlaut.stufen = ohneRangliste.aktueller_wortlaut.stufen.filter((x) => x.stufe !== 'rangliste');
+    erstellen();
+    laden(ohneRangliste);
+
+    expect(knopf('stand')).toBeNull();
+    expect(el().textContent).not.toContain('Deine Wahl:');
+    expect(el().querySelector('[data-testid="stand-nicht-angeboten"]')!.textContent).toContain('Rangliste ist gerade ausgeschaltet');
+    expect(el().querySelector('[data-testid="name-umstellen"]')).toBeNull();
+    expect(knopf('wuerfeln')).toBeNull();
+    expect(el().textContent).not.toContain('Kluge Eule 11');
+
+    // Herabstufen bleibt mit einem Klick möglich
+    knopf('wechsel-fuer_mich').click();
+    const put = http.expectOne((r) => r.method === 'PUT' && r.url === URL);
+    expect(put.request.body.stufe).toBe('fuer_mich');
+    put.flush(null);
+    http.expectOne((r) => r.method === 'GET' && r.url === URL).flush(stand({ stufe: 'fuer_mich' }));
+    fixture.detectChanges();
+    expect(knopf('stand').textContent).toContain('Nur für mich');
+  });
+
+  it('Würfeln zu schnell (429): eigener freundlicher Text, sonst der allgemeine', () => {
+    erstellen();
+    laden(stand({ stufe: 'rangliste', mit_anzeigename: false, ranglistenname: 'Kluge Eule 11' }));
+
+    knopf('wuerfeln').click();
+    http
+      .expectOne((r) => r.method === 'POST' && r.url === `${URL}/ranglistenname`)
+      .flush({ detail: 'zu schnell' }, { status: 429, statusText: 'Too Many Requests' });
+    fixture.detectChanges();
+    expect(el().querySelector('[data-testid="fehler"]')!.textContent).toContain('gerade erst neu gewürfelt');
+
+    knopf('wuerfeln').click();
+    http
+      .expectOne((r) => r.method === 'POST' && r.url === `${URL}/ranglistenname`)
+      .flush({ detail: 'kaputt' }, { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+    expect(el().querySelector('[data-testid="fehler"]')!.textContent).toContain('Das hat nicht geklappt');
+  });
+
   it('mit Einwilligungs-Budget erst, wenn die Frage fällig ist', () => {
     moment = { abgestimmt: false, beantwortet: 0, konto_seit: null };
     faellig = false;

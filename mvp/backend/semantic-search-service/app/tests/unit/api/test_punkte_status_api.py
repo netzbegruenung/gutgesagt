@@ -87,3 +87,19 @@ def test_spielgefuehl_modell_keine_abzeichen_am_namen():
         json={"zeigen": True, "wortlaut": "2026-11-09"},
     )
     assert antwort.status_code == 404
+
+
+def test_spielgefuehl_ohne_punkte_aus():
+    """Ohne Punkte gibt es die Spielgefuehl-Frage nicht: der Status meldet das Modell
+    aus (services/schalter_service.py, Gamification-Check 26.11., Befund 7)."""
+    app = FastAPI()
+    app.include_router(usage_router, prefix="/api/v1/usage")
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        punkte_aktiv=False, spielgefuehl_buehne_aktiv=True
+    )
+
+    assert TestClient(app).get(URL).json() == {
+        "aktiv": False,
+        "abzeichen_sichtbar": False,
+        "spielgefuehl_buehne": False,
+    }

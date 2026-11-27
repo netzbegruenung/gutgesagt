@@ -41,14 +41,18 @@
 
     <ng-template #standAnzeige>
         <h2 id="spielgefuehl-titel" #titel tabindex="-1">Spielgefühl</h2>
-        <p class="spielgefuehl-stand" data-testid="stand">Deine Wahl: <strong>{{ gewaehlt }}</strong></p>
+        <p *ngIf="gewaehlt; else nichtAngeboten" class="spielgefuehl-stand" data-testid="stand">Deine Wahl: <strong>{{ gewaehlt }}</strong></p>
+        <!-- Gewählte Stufe gerade nicht angeboten (etwa Rangliste ausgeschaltet): kein leerer Text -->
+        <ng-template #nichtAngeboten>
+            <p class="spielgefuehl-stand" data-testid="stand-nicht-angeboten">{{ nichtAngebotenText }}</p>
+        </ng-template>
         <!-- Umstellen an derselben Stelle mit einem Klick; heraufstufen zeigt erst den Wortlaut -->
         <div class="spielgefuehl-wechsel" role="group" aria-label="Spielgefühl ändern">
             <button *ngFor="let s of andere" mat-stroked-button type="button" class="spielgefuehl-knopf"
                     [attr.data-testid]="'wechsel-' + s.stufe" [disabled]="speichert" (click)="wechseln(s.stufe)">{{ s.titel }}</button>
         </div>
 
-        <ng-container *ngIf="stand.stufe === 'rangliste'">
+        <ng-container *ngIf="stand.stufe === 'rangliste' && gewaehlt">
             <!-- Nicht deaktivieren: Sonst verliert die Tastatur beim Umstellen mit Pfeiltasten den Fokus -->
             <fieldset class="spielgefuehl-namenswahl" data-testid="name-umstellen" [attr.aria-busy]="speichert">
                 <legend>{{ stand.aktueller_wortlaut.namenswahl.frage }}</legend>
@@ -71,6 +75,6 @@
     <!-- Immer da, damit Screenreader den neuen Stand nach einer Antwort ansagen -->
     <div role="status" class="spielgefuehl-status">
         <p *ngIf="ansage && !fehler" class="visually-hidden" data-testid="ansage">{{ ansage }}</p>
-        <p *ngIf="fehler" class="spielgefuehl-fehler">Das hat nicht geklappt. Bitte versuch es noch einmal.</p>
+        <p *ngIf="fehler" class="spielgefuehl-fehler" data-testid="fehler">{{ fehlerText }}</p>
     </div>
 </section>

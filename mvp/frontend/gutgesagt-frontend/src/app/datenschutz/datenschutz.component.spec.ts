@@ -1045,12 +1045,14 @@ describe('DatenschutzComponent', () => {
 
 /** Spielgefühl in drei Stufen (Schalter spielgefuehl_buehne): ersetzt die Einwilligungsteile. */
 describe('DatenschutzComponent: Spielgefühl', () => {
-  function seiteMit(an: boolean): HTMLElement {
+  const ALLE = ['spielgefuehl_buehne', 'punkte', 'rangliste'];
+  function seiteMit(an: boolean | string[]): HTMLElement {
+    const namen = an === true ? ALLE : an === false ? [] : an;
     TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
       providers: [
         provideRouter([]),
-        { provide: FunktionenService, useValue: { an: (name: string) => signal(an && name === 'spielgefuehl_buehne') } },
+        { provide: FunktionenService, useValue: { an: (name: string) => signal(namen.includes(name)) } },
       ],
     });
     const fixture = TestBed.createComponent(DatenschutzComponent);
@@ -1089,6 +1091,44 @@ describe('DatenschutzComponent: Spielgefühl', () => {
     expect(punkte).not.toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
     // Die Rechenregeln bleiben
     expect(punkte).toContain('Paar-Prüfwert');
+  });
+
+  // Jura zum Gamification-Gegencheck (26.11.)
+  const SOCKEL =
+    'Hast du beim Spielgefühl eine Stufe gewählt, speichern wir deine Wahl und den Zeitpunkt. Ausschalten kannst du das ' +
+    'jederzeit in deinen Datenschutz-Einstellungen, auch wenn wir die Funktion gerade nicht anbieten.';
+
+  it('der Sockelsatz steht immer, auch ohne Schalter', () => {
+    for (const namen of [[], ['spielgefuehl_buehne'], ALLE]) {
+      TestBed.resetTestingModule();
+      expect(normalisiert(seiteMit(namen).querySelector('[data-testid="dse-spielgefuehl-sockel"]')!.textContent)).toBe(SOCKEL);
+    }
+  });
+
+  it('ohne Punkte kein Absatz „Spielgefühl“, auch wenn spielgefuehl_buehne an ist', () => {
+    const seite = seiteMit(['spielgefuehl_buehne']);
+    expect(seite.querySelector('[data-testid="dse-spielgefuehl"]')).toBeNull();
+  });
+
+  it('ohne Rangliste: statt der Stufe Rangliste der Satz, dass wir sie gerade nicht anbieten', () => {
+    const absatz = normalisiert(
+      seiteMit(['spielgefuehl_buehne', 'punkte']).querySelector('[data-testid="dse-spielgefuehl"]')!.textContent,
+    );
+    expect(absatz).toContain('Die Stufe ‚In der Saison-Rangliste mitspielen‘ bieten wir gerade nicht an.');
+    expect(absatz).not.toContain('zufällig vergebenen Ranglistennamen');
+    expect(absatz).toContain('Jede Antwort speichern wir mit Stufe');
+  });
+
+  it('Punkte: Bewertungen, Nutzung ohne Anmeldung und die Wegmarke „Erste 10 Bewertungen“', () => {
+    const punkte = abschnittIn(seiteMit(false), 'Punkte');
+    expect(punkte).toContain(
+      'und einen kleinen Punkt je Bewertung eines fremden Beitrags, höchstens drei am Tag; die Richtung der Bewertung zählt nicht',
+    );
+    expect(punkte).toContain(
+      'Kopiert oder nutzt jemand ohne Anmeldung deinen Beitrag, zählen wir das für deine Punkte höchstens dreimal je ' +
+        'Beitrag und Tag; wer das war, wissen und speichern wir nicht.',
+    );
+    expect(punkte).toContain('und „Erste 10 Bewertungen“');
   });
 });
 

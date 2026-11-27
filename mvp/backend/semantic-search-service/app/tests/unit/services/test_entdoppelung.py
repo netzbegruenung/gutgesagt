@@ -12,6 +12,7 @@ from core.config import settings
 from services.entdoppelung import (
     MUSTER_FENSTER_TAGE,
     Fensterschluessel,
+    deckel_pruefwerte,
     paar_pruefwert,
     paar_pruefwerte_im_fenster,
     pruefwert,
@@ -163,3 +164,13 @@ def _neustart(monkeypatch):
     monkeypatch.setattr(
         entdoppelung, "_PAAR_SCHLUESSEL", Fensterschluessel(tage=MUSTER_FENSTER_TAGE)
     )
+
+
+def test_deckel_pruefwerte_je_beitrag_und_tag_ohne_merkmal():
+    """Befund 9: N Plaetze je Beitrag und Tag, gleich fuer alle Besuchenden."""
+    morgens = deckel_pruefwerte(BEITRAG, 3, MORGENS)
+    assert len(set(morgens)) == 3
+    assert morgens == deckel_pruefwerte(BEITRAG, 3, ABENDS)
+    assert set(morgens).isdisjoint(deckel_pruefwerte(ANDERER, 3, MORGENS))
+    assert set(morgens).isdisjoint(deckel_pruefwerte(BEITRAG, 3, FOLGETAG))
+    assert deckel_pruefwerte(BEITRAG, 0, MORGENS) == []

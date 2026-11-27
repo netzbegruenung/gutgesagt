@@ -65,6 +65,19 @@ export function teamTextGueltig(text: string, max: number): boolean {
   return t.length > 0 && t.length <= max && !TEAM_VERBOTEN.test(text);
 }
 
+/**
+ * Die Saison an einem Teamlink: wie beim Anlegen der Saison nur ohne Steuerzeichen, damit ein
+ * Name wie „Winter 26/27“ geht (Befund 6, backend api/v1/einladungen.py). Ob es die Saison
+ * gibt, prüft der Server.
+ */
+// eslint-disable-next-line no-control-regex
+const SAISON_STEUERZEICHEN = /[\x00-\x1f\x7f]/;
+
+export function saisonTextGueltig(text: string, max: number): boolean {
+  const t = text.trim().split(/\s+/).join(' ');
+  return t.length > 0 && t.length <= max && !SAISON_STEUERZEICHEN.test(text);
+}
+
 /** Ein Team am Anzeigenamen (autor_teams): nur aktuelle Saison, ohne Nummer. */
 export interface TeamAmNamen {
   name: string;
