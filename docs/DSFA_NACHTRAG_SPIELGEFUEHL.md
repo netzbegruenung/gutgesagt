@@ -1,6 +1,6 @@
 # DSFA-Nachtrag: Spielgefühl und Wirkung (Vorstands-Go)
 
-> **Entwurf des Jurawichtels (KI), keine Rechtsberatung, zur Prüfung durch Vorstand und DSB.**
+> **KI-gestützter Entwurf, keine Rechtsberatung, zur Prüfung durch Vorstand und DSB.**
 > Herkunft: Jura-Entwurf vom 27.11.2026, Teil A, inhaltlich unverändert übernommen.
 > Einschübe in eckigen Klammern [Prüfvermerk …] sind nachträglich ergänzt und verweisen auf
 > die Prüfvermerke am Code am Ende. Mit ❔ markierte Stellen sind **offen** und brauchen den
@@ -40,7 +40,7 @@ politischer Meinung, Bewertung/Scoring); dagegen stehen kleiner Kreis, Freiwilli
 Voreinstellung aus, Pseudonymwahl.
 
 **Bedingungen fürs Go:** sichtbarer Widerrufsweg (#853-Folge-PR), Rangliste ohne Abruf ohne
-Anmeldung (✅ laut Meister: require_user, test_rangliste_api.py:215) [Prüfvermerk 1],
+Anmeldung (✅ belegt im Code: require_user, test_rangliste_api.py:215) [Prüfvermerk 1],
 Wortlaut Stufe 3 (✅ selbst gelesen, spielgefuehl.py:93–104 origin/main 27.11.)
 [`ss/domain/spielgefuehl.py`], DSE und VVT ergänzt vor dem Einschalten.
 Offen ❔: Mindestalter 16 für Stufe ≥2 (Art. 8, falls Mitglieder unter 16 die App nutzen).
