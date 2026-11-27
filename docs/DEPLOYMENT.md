@@ -174,6 +174,17 @@ your own address, then dismiss the Meldung in the moderation; both mails must ar
 
 ### 🎚 Schalter: upper bound and admin value (#708)
 
+**Since the switch-over of 27.11.2026** there are only 4 packages (`teams`,
+`spielgefuehl_buehne`, `wirkungs_echo`, `k_begruessung`) and 7 single switches; the table is in
+`docs/ARCHITECTURE.md`, "Schalter nach dem Umbau". The variables of the removed switches have no
+effect any more and can be deleted from the server configuration. Admin values under former names
+are ignored: after the rollout each package is off until an admin switches the package name on,
+even if all its former parts were on. Four basic functions keep their variable as emergency off
+without admin switch (`SEMANTIC_SEARCH_FEEDBACK_GESTOERT_AKTIV`, `..._GEPOSTET_OHNE_KONTO_AKTIV`,
+`..._NULL_TREFFER_ANZAHL_AKTIV`, `..._HERKUNFT_PRUEFEN_AKTIV`): default `true`, `false` turns the
+function off. The paragraphs below describe the state before the switch-over where they name a
+removed switch.
+
 `SEMANTIC_SEARCH_PUNKTE_AKTIV`, `SEMANTIC_SEARCH_ABZEICHEN_SICHTBAR_AKTIV` and
 `SEMANTIC_SEARCH_GEPOSTET_AKTIV` are only **upper bounds** now. A Schalter takes effect only when
 its variable is `true` **and** an admin has switched it on in the app (Admin, „Schalter“; stored
