@@ -52,7 +52,7 @@ Wortlaut Stufe 3 (✅ selbst gelesen, spielgefuehl.py:93–104 origin/main 27.11
 [`ss/domain/spielgefuehl.py`, Zeilen auf `d3b3def7`], DSE und VVT ergänzt vor dem Einschalten
 [Stand 27.11.: DSE-Satz zu `muster_stimmen` laut Einschalthinweis drin
 (`ss/services/schalter_service.py:685`); Verzeichnis für V28 bis V31 noch offen, vor dem
-Einschalten nötig].
+Einschalten nötig] [Nachtrag: im Verzeichnis als T16 bis T19 ergänzt].
 Offen ❔: Mindestalter 16 für Stufe ≥2 (Art. 8, falls Mitglieder unter 16 die App nutzen).
 
 **Restrisiko gesamt:** kein hohes. Begründung: Jede Verarbeitung mit Profil- oder
