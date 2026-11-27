@@ -426,6 +426,10 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   (0.92), direct raw score above 0.82 to below `…_INHALTSTOR_DIREKT_BIS` (0.90). spaCy model
   of Gegenlesen; open without nouns or before the model is loaded. Measured in
   `tests/regression/SUCHTESTSET.md`, section Inhaltstor.
+- **Switch variables (`SEMANTIC_SEARCH_<NAME>_AKTIV`) below:** since the switch-over of 27.11.2026
+  only the 4 packages, the 7 single switches and the 4 emergency-off variables exist (see
+  "Schalter nach dem Umbau"). Entries below for other names describe the state before and have no
+  effect any more; for a former partial switch read its package.
 - `SEMANTIC_SEARCH_BESTANDSZAHL_ZUWACHS_AKTIV` - upper bound of the Schalter `bestandszahl_zuwachs` (growth next to the Bestandszahl in `/getMetrics`), default `true`
 - `SEMANTIC_SEARCH_HERKUNFT_PRUEFEN_AKTIV` - upper bound of the Schalter `herkunft_pruefen`
   (#759, default `true`: no personal data); takes effect only when an admin switches it on.
@@ -561,12 +565,12 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   after the sentences before the question (`shared/team-texte.ts`, `teamVertrauenssatz`): for a
   team named after a group both sentences, otherwise only the first. The page asks
   `/funktionen` only when the invitation carries a team.
-- `SEMANTIC_SEARCH_FEEDBACK_GESTOERT_AKTIV` - upper bound of the Schalter `feedback_gestoert`
-  (default `false`, group Grundfunktionen, public): the button „Was hat dich gestört?“ on the
+- `SEMANTIC_SEARCH_FEEDBACK_GESTOERT_AKTIV` - emergency off of the basic function `feedback_gestoert`
+  (default `true`, no admin value, reported by `/api/v1/funktionen`): the button „Was hat dich gestört?“ on the
   start page for the launch phase. It opens the Feedback form with category `gestoert`, free
   text only, no contact (`POST /api/v1/feedback/senden` with `kategorie: "gestoert"`; with a
-  contact 422, while the switch is off 409, never 404). Switch on only with the privacy policy
-  paragraph (legal package 27.11.). From 31.12.2026 (UTC) the switch is no longer effective and
+  contact 422, while the emergency off is set 409, never 404). From 31.12.2026 (UTC) a date check
+  stops the button regardless of the variable, and
   the feedback cleanup deletes all entries of the category (`domain/feedback_gestoert.py`).
 - `SEMANTIC_SEARCH_AUFRUFE_ZAEHLEN_AKTIV` - upper bound of the Schalter `aufrufe_zaehlen`
   (#761, default `false`, own switch-on hint: DPO answer on § 25 TDDDG and the DSFA line); takes

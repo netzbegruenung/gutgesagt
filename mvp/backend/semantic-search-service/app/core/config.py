@@ -181,8 +181,8 @@ class Settings(BaseSettings):
     generic_text_similarity_threshold: float = 0.975
     # Stimmenverfall bei geaendertem Text (#636): Stimmen verfallen, wenn die
     # passage/passage-Aehnlichkeit von altem und neuem Text darunter liegt
-    # (fassung.gleicher_text). Nutzt nur die Einbettung, kein NLI-Modell; wirkt nur mit
-    # dem Schalter stimmen_text_verfall und wie der Titel-Fall mit dieselbe_aussage_nli = an.
+    # (fassung.gleicher_text). Nutzt nur die Einbettung, kein NLI-Modell; wirkt (seit dem
+    # Schalter-Umbau ohne Schalter) wie der Titel-Fall nur mit dieselbe_aussage_nli = an.
     # Gemessen am Messset "Geaenderter Text" (tests/regression/MESSSET.md): Korrekturen,
     # Ergaenzungen, Kuerzungen, Links und Umformulierungen ab 0,915, ganz andere Texte
     # hoechstens 0,840. Ein ausgetauschter Text zum selben Thema kann darueber liegen

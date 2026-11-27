@@ -253,7 +253,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Gelöschte Beiträge (Zustand „gelöscht“, Qdrant) | 30 Tage, dann endgültig entfernt | Tag im Payload-Feld `geloescht_am` |
 | Sperren (`sperren`), aufgehoben, samt Widerspruch | 180 Tage | Aufhebung (`aufgehoben_am`) |
 | Sperren, aktiv | keine | — der Beitrag ist gesperrt |
-| Stimmen (`votes`) | solange der Beitrag besteht; trifft ein geänderter Titel eine andere Behauptung (NLI-Stufe, #427) oder ist der Text ein ganz anderer (#636, Schalter `stimmen_text_verfall`, Standard aus), sofort; widerruft die Person ihre Art.-9-Einwilligung, sofort alle ihre Stimmen (`Art9EinwilligungService.widerrufen`) | — gehen mit ihm |
+| Stimmen (`votes`) | solange der Beitrag besteht; trifft ein geänderter Titel eine andere Behauptung (NLI-Stufe, #427) oder ist der Text ein ganz anderer (#636, seit dem Schalter-Umbau 27.11.2026 ohne Schalter, nur mit `dieselbe_aussage_nli = an`), sofort; widerruft die Person ihre Art.-9-Einwilligung, sofort alle ihre Stimmen (`Art9EinwilligungService.widerrufen`) | — gehen mit ihm |
 | Prüfwerte der entdoppelten Nutzung (`nutzung_heute`) | ihr Tag | verworfen beim ersten Lauf nach Mitternacht (UTC) |
 | Paar-Prüfwerte der Muster-Hinweise (`muster_pruefwerte`) | 7 Tage | letzte Nutzung (mit Schalter `muster_stimmen` auch letzte Zustimmung) in dieser Richtung (`tag`) |
 | Prüfwerte „Ja, gepostet“ (`gepostet_pruefwerte`, #643) | ihre Kalenderwoche | zur Zahl der Woche verdichtet und gelöscht beim ersten täglichen Lauf nach Wochenende (Montag, UTC; derselbe Task wie für `nutzung_heute`, auch bei ausgeschaltetem Schalter), spätestens bei der nächsten Meldung; der Wochenschlüssel liegt nur im Arbeitsspeicher |
@@ -278,7 +278,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Admin-Einstellungen (`einstellungen`, etwa die aktuelle Saison): Wert, Zeitpunkt, Kennung des Admins | keine | — der Wert bleibt; die Kennung des Admins wird mit seinem Konto geleert (Schritt 2) |
 | Zustimmung zu den Nutzungsbedingungen in der App (`nutzungsbedingungen_zustimmungen`) | solange das Konto besteht | — Nachweis des Vertragsschlusses und des Stands, dem die Person zugestimmt hat (Art. 6 Abs. 1 lit. b DSGVO); geht mit dem Konto (Schritt 2) |
 | Archiv der Keycloak-Zeitpunkte der Zustimmung zu den Nutzungsbedingungen (bis 0.9.8): Kennung und Zeitpunkt | bis zur Löschung des Kontos (Entscheidung Maintainer 20.11.2026) | — am Rollout-Tag von 0.9.8 exportiert, zuletzt direkt vor dem Abschalten der Pflichtaktion, nach `/opt/gutgesagt-archiv/nb-zeitpunkte-keycloak.txt` auf dem Prod-Host (Verzeichnis 0700 root, nicht in einen Container gemountet und nicht Teil der Backups), Datei 0600 root (`mvp/scripts/manual/keycloak_nb_zeitpunkte.py --zeitpunkte`); danach wird das Attribut in Keycloak gelöscht. Mit dem Konto geht die Zeile (Schritt 4). Nachweis, wann die Person bis 0.9.8 zugestimmt hat |
-| Neue Antworten auf eigene Aussagen und „Meine Aussagen“ (#760, Schalter `antworten_hinweis`) | keine Speicherung | — beim Besuch bzw. Aufruf aus den Antwortvorschlägen der Aussagen berechnet |
+| Neue Antworten auf eigene Aussagen und „Meine Aussagen“ (#760, Basisfunktion) | keine Speicherung | — beim Besuch bzw. Aufruf aus den Antwortvorschlägen der Aussagen berechnet |
 | Meilenstein-Abzeichen am Anzeigenamen (#351) | keine Speicherung | — nur im Arbeitsspeicher, alle 15 Minuten neu berechnet, nach einem Neustart leer; nach dem Löschkommando (Schritt 2) höchstens noch bis zum nächsten Lauf |
 | Schalter (`schalter`) und ihr Verlauf (`schalter_verlauf`, #708): Admin-Wert, Zeitpunkt, Kennung des Admins | Verlauf: 12 Monate ab der Änderung, Bereinigungslauf (Task der Löschfristen, `SCHALTER_VERLAUF_TAGE` in `services/loeschfristen_service.py`, unabhängig vom abschaltbaren Bereinigungsjob; Entscheidung Maintainer 18.11.2026). Der aktuelle Stand in `schalter` bleibt. | Kennung des Admins: mit seinem Konto geleert (`person_loeschen.sql`), beim Umstellen der Kennungen mit umgeschrieben (#487) — betrifft nur Admins, nicht Nutzende; die Kennung steht nur dort, kein Klarname |
 | Herkunft prüfen (`herkunft_pruefung`, #759): Adresse einer Herkunft, Ergebnis, HTTP-Status, Weiterleitungsziel, Zeitpunkte | solange die Herkunft sichtbar ist | — kein Personenbezug (keine Kennung, kein Beitrag); jeder Lauf löscht die Zeilen zu gelöschten oder gesperrten Herkünften. Nur mit dem Schalter `herkunft_pruefen`; ohne ihn entsteht nichts, und nach dem Ausschalten leert der stündliche Takt die Tabelle (`services/herkunft_pruefen.py`) |
@@ -410,10 +410,10 @@ nicht.
   nicht am abschaltbaren Bereinigungsjob. Die Frist gilt für offenes wie für
   erledigtes Feedback; „erledigt“ ändert an ihr nichts.
 - **Frist „Was hat dich gestört?“:** Feedback mit der Kategorie `gestoert` (Knopf der
-  Startphase, Schalter `feedback_gestoert`) trägt nie einen Kontakt. Ab dem 31.12.2026
+  Startphase, Basisfunktion mit Not-Aus `SEMANTIC_SEARCH_FEEDBACK_GESTOERT_AKTIV`) trägt nie einen Kontakt. Ab dem 31.12.2026
   (UTC) löscht derselbe Task alle Zeilen dieser Kategorie, gleich wie alt
-  (`domain/feedback_gestoert.py`, `GESTOERT_GELOESCHT_AB`); ab demselben Tag wirkt der
-  Schalter nicht mehr, und der Dienst nimmt keine neuen an.
+  (`domain/feedback_gestoert.py`, `GESTOERT_GELOESCHT_AB`); ab demselben Tag nimmt der
+  Dienst keine neuen an (Datumsprüfung, unabhängig vom Not-Aus).
 - **Einzeln:** Ein Admin löscht ein einzelnes Feedback samt Kontakt in der
   Feedback-Karte des Admin-Dashboards („Löschen“, mit Rückfrage), etwa wenn es
   beantwortet ist und nicht bis zur Frist bleiben soll (#425). Nur Admins

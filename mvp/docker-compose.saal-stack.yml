@@ -1,7 +1,7 @@
 # Saal-Test gegen den echten Stack (e2e/tests/saal-*.spec.ts, "null 401/404 bei Seitenaufrufen"),
-# als zweiter Stack neben dem Dev-Stack: eigene Containernamen und Ports, alle Schalter-Obergrenzen
-# an (ausser herkunft_pruefen, das nach aussen ruft, und spielgefuehl_buehne, das das
-# Einwilligungsmodell wechselt: sonst prueft die Phase "alle an" das bisherige Modell nicht mehr). Die Admin-Werte schaltet die Spec selbst
+# als zweiter Stack neben dem Dev-Stack: eigene Containernamen und Ports, alle Obergrenzen der
+# Pakete und Einzelschalter an (Schalter-Umbau 27.11.; herkunft_pruefen ist ein Not-Aus und
+# bleibt im Teststack aus, weil es nach aussen ruft). Die Admin-Werte schaltet die Spec selbst
 # (E2E_SCHALTER_UMSCHALTEN=1), erst alle aus, dann alle an. Konten wie beim Teams-Stack, mit Admin.
 #
 #   docker compose -p gg-saal -f docker-compose.dev.yml -f docker-compose.saal-stack.yml up -d --build
@@ -35,6 +35,9 @@ services:
       - SEMANTIC_SEARCH_TEAM_QUESTS_AKTIV=true
       - SEMANTIC_SEARCH_K_BEGRUESSUNG_AKTIV=true
       - SEMANTIC_SEARCH_K_ANKUENFTE_AKTIV=true
+      - SEMANTIC_SEARCH_MUSTER_STIMMEN_AKTIV=true
+      - SEMANTIC_SEARCH_AUFRUFE_ZAEHLEN_AKTIV=true
+      - SEMANTIC_SEARCH_HERKUNFT_PRUEFEN_AKTIV=false
   gutgesagt-bff:
     container_name: gutgesagt-bff-saal
     restart: "no"

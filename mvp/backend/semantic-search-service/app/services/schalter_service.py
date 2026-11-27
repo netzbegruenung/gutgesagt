@@ -1,7 +1,7 @@
 """
 Schalter mit Obergrenze und Admin-Wert (#708, GLOSSARY.md "Schalter").
 
-Die Umgebungsvariable (``SEMANTIC_SEARCH_PUNKTE_AKTIV`` usw., ``core/config.py``) ist
+Die Umgebungsvariable (``SEMANTIC_SEARCH_TEAMS_AKTIV`` usw., ``core/config.py``) ist
 die Obergrenze, der Admin-Wert liegt in der Tabelle ``schalter``. Wirksam ist ein
 Schalter nur, wenn beide an sind; ohne Admin-Wert gilt aus. So kann auf Prod nichts
 angehen, was der Server nicht erlaubt (etwa Punkte ohne beschlossene DSFA), und ein

@@ -47,7 +47,11 @@ type Lage = 'aus' | 'an' | 'gemischt';
 async function lage(request: APIRequestContext): Promise<Lage> {
   const antwort = await request.get('/api/v1/funktionen');
   expect(antwort.status()).toBe(200);
-  const werte = Object.values((await antwort.json()).funktionen as Record<string, boolean>);
+  // Not-Aus der Basisfunktionen (Standard an, kein Admin-Wert) zählen nicht mit
+  const NOTAUS = ['gepostet_ohne_konto', 'null_treffer_anzahl', 'feedback_gestoert'];
+  const werte = Object.entries((await antwort.json()).funktionen as Record<string, boolean>)
+    .filter(([name]) => !NOTAUS.includes(name))
+    .map(([, wert]) => wert);
   if (werte.every((w) => w === false)) return 'aus';
   if (werte.every((w) => w === true)) return 'an';
   return 'gemischt';

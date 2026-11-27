@@ -178,8 +178,11 @@ your own address, then dismiss the Meldung in the moderation; both mails must ar
 `spielgefuehl_buehne`, `wirkungs_echo`, `k_begruessung`) and 7 single switches; the table is in
 `docs/ARCHITECTURE.md`, "Schalter nach dem Umbau". The variables of the removed switches have no
 effect any more and can be deleted from the server configuration. Admin values under former names
-are ignored: after the rollout each package is off until an admin switches the package name on,
-even if all its former parts were on. Four basic functions keep their variable as emergency off
+are ignored: for a package only the admin value under the package name counts. If it is not on,
+the whole package is off, even if all former parts were on; if it is already on (the package keeps
+the name of its former main switch), the whole package is on at once, including parts that were
+off before. Check the admin values of `teams`, `spielgefuehl_buehne`, `wirkungs_echo` and
+`k_begruessung` right after the rollout. Four basic functions keep their variable as emergency off
 without admin switch (`SEMANTIC_SEARCH_FEEDBACK_GESTOERT_AKTIV`, `..._GEPOSTET_OHNE_KONTO_AKTIV`,
 `..._NULL_TREFFER_ANZAHL_AKTIV`, `..._HERKUNFT_PRUEFEN_AKTIV`): default `true`, `false` turns the
 function off. The paragraphs below describe the state before the switch-over where they name a

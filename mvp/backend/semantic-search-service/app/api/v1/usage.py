@@ -622,9 +622,10 @@ class PunkteStatusResponse(BaseModel):
 @router.get("/punkte/status", response_model=PunkteStatusResponse)
 async def punkte_status(settings: Settings = Depends(get_settings)):
     """
-    Ob die Punkte wirksam sind (Obergrenze ``SEMANTIC_SEARCH_PUNKTE_AKTIV`` und
-    Admin-Wert, services/schalter_service.py) und ob andere Angemeldete Abzeichen sehen
-    koennen (beide Schalter wirksam).
+    Ob die Punkte wirksam sind (Paket ``spielgefuehl_buehne``: Obergrenze
+    ``SEMANTIC_SEARCH_SPIELGEFUEHL_BUEHNE_AKTIV`` und Admin-Wert,
+    services/schalter_service.py); ``abzeichen_sichtbar`` ist seit dem Schalter-Umbau
+    immer false.
     Ohne Anmeldung lesbar und ohne Personenbezug: Das Frontend fragt hier einmal und ruft
     punkte, meilensteine und abzeichen-sichtbarkeit nur bei eingeschaltetem Schalter auf,
     statt deren 404 abzuwarten (UX-Review B20, Entscheidung Maintainer 13.11.2026).
@@ -1104,7 +1105,7 @@ async def eigene_aussagen(
 ):
     """
     Die eigenen Aussagen der angemeldeten Person mit ihren Antworten, Ziel der Kachel
-    "neue Antworten auf deine Aussagen" (#760). Ohne Schalter antworten_hinweis 404.
+    "neue Antworten auf deine Aussagen" (#760, Basisfunktion seit dem Schalter-Umbau).
     Nichts zu anderen Personen: je Antwort nur "von dir" oder nicht.
     """
     seit = datetime.now(timezone.utc) - timedelta(days=BESUCH_ZEITRAUM_TAGE)
@@ -1234,9 +1235,9 @@ def _gepostet_dienst(
     settings: Settings = Depends(get_settings),
 ) -> GepostetService:
     """
-    Ohne ``gepostet_aktiv`` und fuer Startkonten 404: Die Rueckmeldung gibt es dann
-    nicht (#643). Vor der Art.-9-Pruefung, damit ein ausgeschalteter Schalter die
-    Datenbank nicht fragt.
+    Fuer Startkonten 404: Die Rueckmeldung gibt es dann nicht (#643; Basisfunktion
+    seit dem Schalter-Umbau). Vor der Art.-9-Pruefung, damit die Datenbank nicht
+    gefragt wird.
     """
     if settings.ist_startkonto(current_user):
         raise HTTPException(status_code=404, detail="Not found")
