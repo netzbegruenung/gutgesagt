@@ -47,8 +47,9 @@ export const DSE_SPIELGEFUEHL_SCHLUSS =
   'zur Löschung deines Kontos.';
 
 /**
- * Steht immer, auch ohne Schalter (Jura 26.11., Wortlaut nach der Sammelrunde 27.11.): Eine gespeicherte Wahl bleibt, wenn wir
- * die Funktion ausschalten, und lässt sich in den Datenschutz-Einstellungen ausschalten.
+ * Steht immer, auch ohne Schalter (Jura 26.11., Wortlaut nach der Sammelrunde 27.11.): Eine
+ * gespeicherte Wahl bleibt, wenn wir die Funktion ausschalten, und lässt sich in den
+ * Datenschutz-Einstellungen ausschalten.
  */
 export const DSE_SPIELGEFUEHL_SOCKEL =
   'Hast du beim Spielgefühl eine Stufe gewählt, speichern wir deine Wahl, deine Namenswahl, ' +

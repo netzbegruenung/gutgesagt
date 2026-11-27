@@ -1110,6 +1110,11 @@ describe('DatenschutzComponent: Spielgefühl', () => {
     expect(ohne.join(' ')).not.toContain('In der Saison-Rangliste mitspielen');
   });
 
+  it('mit Rangliste: kein Satz, dass wir die Stufe gerade nicht anbieten', () => {
+    const absatz = normalisiert(seiteMit(ALLE).querySelector('[data-testid="dse-spielgefuehl"]')!.textContent);
+    expect(absatz).not.toContain('bieten wir gerade nicht an');
+  });
+
   // Jura zum Gamification-Gegencheck (26.11.), Wortlaut nach der Sammelrunde 27.11.
   const SOCKEL =
     'Hast du beim Spielgefühl eine Stufe gewählt, speichern wir deine Wahl, deine Namenswahl, gegebenenfalls deinen ' +
