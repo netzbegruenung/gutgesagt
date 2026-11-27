@@ -310,7 +310,8 @@ export class WiderrufbarComponent implements OnInit {
     }
     const vorher = this.zeilen.length;
     this.zeilen = zeilen;
-    if (zeilen.length !== vorher || !this.zahlGemeldet) {
+    // Erst mit einem Stand vom Server (oder nach 401): vorher hört noch niemand zu, und 0 hieße nichts.
+    if ((this.geladen || this.sitzungAbgelaufen) && (zeilen.length !== vorher || !this.zahlGemeldet)) {
       this.zahlGemeldet = true;
       this.zeilenZahl.emit(zeilen.length);
     }

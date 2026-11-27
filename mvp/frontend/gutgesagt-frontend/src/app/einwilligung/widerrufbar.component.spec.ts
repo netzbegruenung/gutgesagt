@@ -329,11 +329,14 @@ describe('WiderrufbarComponent', () => {
       http = TestBed.inject(HttpTestingController);
       fixture.componentInstance.zeilenZahl.subscribe((n) => zahlen.push(n));
       fixture.detectChanges();
+      expect(zahlen).toEqual([]);
+      http.expectOne({ method: 'GET', url: URL }).flush(NICHTS);
+      fixture.componentInstance.neuLaden();
       http.expectOne({ method: 'GET', url: URL }).flush({ ...NICHTS, rangliste: ALLES.rangliste });
       fixture.componentInstance.neuLaden();
       http.expectOne({ method: 'GET', url: URL }).flush(NICHTS);
 
-      expect(zahlen.slice(-2)).toEqual([1, 0]);
+      expect(zahlen).toEqual([0, 1, 0]);
       fixture.destroy();
     });
 
