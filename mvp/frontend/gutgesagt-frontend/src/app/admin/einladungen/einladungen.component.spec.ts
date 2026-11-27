@@ -214,6 +214,8 @@ describe('EinladungenComponent', () => {
       expect(k.kannAnlegen).toBeFalse();
       k.teamSaison = '2026';
       expect(k.kannAnlegen).toBeTrue();
+      k.teamSaison = 'Winter 26/27';
+      expect(k.kannAnlegen).withContext('Saison mit / wie bei den Saisons').toBeTrue();
       k.teamName = 'a/b';
       expect(k.kannAnlegen).toBeFalse();
       k.anlegen();

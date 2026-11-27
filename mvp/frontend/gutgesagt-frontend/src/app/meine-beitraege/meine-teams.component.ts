@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  ElementRef,
+  Injector,
+  OnInit,
+  ViewChild,
+  afterNextRender,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -6,17 +17,20 @@ import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/sl
 import { RouterLink } from '@angular/router';
 import { Subject } from 'rxjs';
 import { filter } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { MeinTeam, MeineTeams, TeamsService } from '../services/teams.service';
 import { AUS_NACHLADEN_MS, NACHLADEN_MS, nachladeStrom, ohneRechte } from '../shared/selbst-nachladen';
 import { TeamPilleComponent } from '../shared/teams/team-pille.component';
 import {
   MEINE_TEAMS_TITEL,
+  TEAM_ERSTE_WOCHE,
   TEAM_VERLASSEN,
   TEAM_WAECHST_NOCH,
   teamQuestGeschafft,
   teamQuestZiel,
   teamWocheTitel,
+  wocheVorBeitritt,
 } from '../shared/team-texte';
 import {
   BestaetigungsDialogComponent,
@@ -76,11 +90,15 @@ export class MeineTeamsComponent implements OnInit {
   readonly questGeschafft = teamQuestGeschafft;
   readonly wocheTitel = teamWocheTitel;
   readonly questZiel = teamQuestZiel;
+  readonly ersteWoche = TEAM_ERSTE_WOCHE;
 
   private readonly teamsService = inject(TeamsService);
   private readonly dialog = inject(MatDialog);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  /** Ziel des Fokus, nachdem ein Team verlassen ist: Knopf und Eintrag sind dann weg (WCAG 2.4.3). */
+  @ViewChild('titelElement') private titelElement?: ElementRef<HTMLElement>;
   private readonly anstoss$ = new Subject<void>();
   private erstes = true;
 
@@ -104,6 +122,24 @@ export class MeineTeamsComponent implements OnInit {
       this.cdr.markForCheck();
     });
     this.destroyRef.onDestroy(() => abo.unsubscribe());
+  }
+
+  /** Die Woche ab ``montag`` endete vor dem eigenen Beitritt: dann „Eure erste gemeinsame Woche läuft.“ */
+  vorBeitritt(montag: string, team: MeinTeam): boolean {
+    return wocheVorBeitritt(montag, team.eingetreten_am);
+  }
+
+  /**
+   * Die Woche vor der Quest-Woche ``montag`` endete vor dem eigenen Beitritt: dann kein
+   * „Euer Wochenziel letzte Woche ist geschafft“ aus der Zeit vor einem selbst.
+   */
+  vorigeVorBeitritt(montag: string | null, team: MeinTeam): boolean {
+    const teile = /^(\d{4})-(\d{2})-(\d{2})$/.exec(montag ?? '');
+    if (!teile) {
+      return false;
+    }
+    const vorige = new Date(Date.UTC(+teile[1], +teile[2] - 1, +teile[3] - 7)).toISOString().slice(0, 10);
+    return wocheVorBeitritt(vorige, team.eingetreten_am);
   }
 
   /** Bei Schalter teams aus nur mit eigenen Teams, etwa nachdem das letzte verlassen wurde. */
@@ -136,7 +172,7 @@ export class MeineTeamsComponent implements OnInit {
         this.laeuft = true;
         this.fehler = null;
         this.cdr.markForCheck();
-        this.teamsService.verlassen(team.id).subscribe({
+        this.teamsService.verlassen(team.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: () => {
             this.laeuft = false;
             if (this.stand) {
@@ -144,6 +180,17 @@ export class MeineTeamsComponent implements OnInit {
             }
             this.ansage = `Team ${team.team_name} verlassen. Der Eintrag ist gelöscht.`;
             this.cdr.markForCheck();
+            // Der Knopf, der den Fokus hatte, ist mit dem Eintrag verschwunden; sonst fiele
+            // der Fokus auf <body>. Fehlt die ganze Karte (letztes Team, Schalter aus), bleibt er.
+            // Nur wenn der Fokus verloren ist: Hat die Person ihn inzwischen woanders hin gesetzt, bleibt er dort.
+            afterNextRender(
+              () => {
+                if (!document.activeElement || document.activeElement === document.body) {
+                  this.titelElement?.nativeElement.focus();
+                }
+              },
+              { injector: this.injector },
+            );
             this.anstoss$.next();
           },
           error: (fehler: { status?: number }) => {

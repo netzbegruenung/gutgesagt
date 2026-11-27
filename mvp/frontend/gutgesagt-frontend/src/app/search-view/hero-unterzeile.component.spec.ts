@@ -6,10 +6,12 @@ import { provideRouter } from '@angular/router';
 import {
   BESTAND_NACHLADEN_MS,
   HERO_UNTERZEILE,
+  FRISCH_GESAMMELT,
   HeroUnterzeileComponent,
   heuteInDeutschland,
   zuwachsText,
 } from './hero-unterzeile.component';
+import { abgerundet } from './bestandszahl';
 import { environment } from '../../environments/environment';
 import { STILLE_ABFRAGE } from '../shared/selbst-nachladen';
 
@@ -20,10 +22,25 @@ const BESTAND = { content_count: 1200, statement_count: 263, commentary_count: 8
 const JETZT = new Date('2026-11-26T09:00:00Z');
 
 describe('zuwachsText', () => {
-  it('ab 3 neuen die genaue Zahl', () => {
-    expect(zuwachsText({ neu_7_tage: 12, zuletzt_ergaenzt: null }, JETZT)).toBe('12 neu in 7 Tagen');
+  it('ab 3 neuen die Zahl, gerundet wie der Bestand', () => {
+    expect(zuwachsText({ neu_7_tage: 12, zuletzt_ergaenzt: null }, JETZT)).toBe('10 neu in 7 Tagen');
     expect(zuwachsText({ neu_7_tage: 3, zuletzt_ergaenzt: null }, JETZT)).toBe('3 neu in 7 Tagen');
     expect(zuwachsText({ neu_7_tage: 1200, zuletzt_ergaenzt: null }, JETZT)).toBe('1.200 neu in 7 Tagen');
+  });
+
+  it('nie mehr neu als Bestand; fast alles neu (Neustart): „frisch gesammelt“ (UX-Review 26.11.)', () => {
+    // Startbestand-Import: 98 Kommentare, alle neu; vorher „90 Antworten … – 98 neu“
+    expect(zuwachsText({ neu_7_tage: 98, zuletzt_ergaenzt: null }, JETZT, 98)).toBe(FRISCH_GESAMMELT);
+    expect(zuwachsText({ neu_7_tage: 80, zuletzt_ergaenzt: null }, JETZT, 98)).toBe(FRISCH_GESAMMELT);
+    expect(zuwachsText({ neu_7_tage: 78, zuletzt_ergaenzt: null }, JETZT, 98)).toBe('70 neu in 7 Tagen');
+    expect(zuwachsText({ neu_7_tage: 12, zuletzt_ergaenzt: null }, JETZT, 812)).toBe('10 neu in 7 Tagen');
+    // Gedeckelt auf den gerundeten Bestand, auch knapp unter der Schwelle
+    expect(zuwachsText({ neu_7_tage: 199, zuletzt_ergaenzt: null }, JETZT, 250)).toBe('150 neu in 7 Tagen');
+    for (const [neu, bestand] of [[3, 10], [9, 12], [55, 70], [790, 999], [4000, 5001]]) {
+      const text = zuwachsText({ neu_7_tage: neu, zuletzt_ergaenzt: null }, JETZT, bestand)!;
+      const zahl = Number(text.split(' ')[0].replace('.', ''));
+      expect(text === FRISCH_GESAMMELT || zahl <= abgerundet(bestand)).withContext(`${neu} von ${bestand}: ${text}`).toBeTrue();
+    }
   });
 
   it('nie „0 neu“ oder eine kleine Zahl, sondern der Tag', () => {
@@ -107,7 +124,7 @@ describe('HeroUnterzeileComponent', () => {
     anfrage.flush({ ...BESTAND, zuwachs: { neu_7_tage: 12, zuletzt_ergaenzt: null } });
     fixture.detectChanges();
 
-    expect(text()).toBe('800 Antworten auf 250 Sprüche – 12 neu in 7 Tagen 🌱');
+    expect(text()).toBe('800 Antworten auf 250 Sprüche – 10 neu in 7 Tagen 🌱');
     expect(text()).not.toContain('bewährte');
     const link = zuwachsLink()!;
     expect(link.getAttribute('href')).toBe('/search#recent-content');
@@ -115,6 +132,11 @@ describe('HeroUnterzeileComponent', () => {
     // Linkzweck für Screenreader (WCAG 2.4.4)
     expect(link.querySelector('.visually-hidden')!.textContent).toContain('Frisch aus der Community');
     expect(text()).not.toMatch(/Menschen|Personen|Konten|Nutzer|genutzt/);
+  });
+
+  it('nach dem Startbestand-Import „frisch gesammelt“ statt mehr neuer als insgesamt', () => {
+    laden({ content_count: 98, statement_count: 38, commentary_count: 98, reference_count: 0, zuwachs: { neu_7_tage: 98, zuletzt_ergaenzt: null } });
+    expect(text()).toBe('90 Antworten auf 30 Sprüche – frisch gesammelt 🌱');
   });
 
   it('unter 3 neuen der Tag, ohne Uhrzeit', () => {
@@ -140,7 +162,7 @@ describe('HeroUnterzeileComponent', () => {
     teile.forEach((t) => t.querySelectorAll('.visually-hidden').forEach((e) => e.remove()));
     expect(teile.map((t) => t.textContent!.replace(/\s+/g, ' ').trim())).toEqual([
       '800 Antworten auf 250 Sprüche –',
-      '12 neu in 7 Tagen 🌱',
+      '10 neu in 7 Tagen 🌱',
     ]);
     expect(teile.every((t) => getComputedStyle(t).whiteSpace === 'nowrap')).toBeTrue();
   });
@@ -184,15 +206,15 @@ describe('HeroUnterzeileComponent', () => {
     expect(nachladen.request.context.get(STILLE_ABFRAGE)).toBeTrue();
     nachladen.flush({ ...BESTAND, commentary_count: 0 });
     fixture.detectChanges();
-    expect(text()).toContain('800 Antworten auf 250 Sprüche – 12 neu in 7 Tagen');
+    expect(text()).toContain('800 Antworten auf 250 Sprüche – 10 neu in 7 Tagen');
     tick(BESTAND_NACHLADEN_MS);
     http.expectOne(METRICS).flush({ ...BESTAND, statement_count: 0 });
     fixture.detectChanges();
-    expect(text()).toContain('12 neu in 7 Tagen');
+    expect(text()).toContain('10 neu in 7 Tagen');
     tick(BESTAND_NACHLADEN_MS);
     http.expectOne(METRICS).flush('kaputt', { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
-    expect(text()).toContain('12 neu in 7 Tagen');
+    expect(text()).toContain('10 neu in 7 Tagen');
     fixture.destroy();
   }));
 

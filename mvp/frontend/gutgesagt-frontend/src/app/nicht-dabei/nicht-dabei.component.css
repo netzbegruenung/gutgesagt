@@ -74,11 +74,29 @@
     white-space: nowrap;
 }
 
+/* Unter der Aussage: vorhandene Antworten ansehen, dann selbst antworten; je mindestens 44 px hoch */
+.aehnliche-wege {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--spacing-md, 16px);
+}
+
 .antworten-zahl {
-    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 4px;
+    font-size: 0.9rem;
     font-family: PTSans-bold, Roboto, sans-serif;
     color: var(--akzent-schrift);
     white-space: nowrap;
+    text-decoration: underline;
+}
+
+.antworten-zahl:focus-visible {
+    outline: 2px solid var(--akzent-tanne);
+    outline-offset: 2px;
 }
 
 /* Textlink unter der Aussage, Ziel mindestens 44 px hoch */

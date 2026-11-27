@@ -212,7 +212,7 @@ export function eigenesNeuesSichtbar(stand: NeuesStand | null, erledigt: Readonl
 
 /**
  * Wer auf der Startseite die eine Stelle mit neuer Richtung bekommt (Review Spielgefühl
- * 25.11.): der Block „Seit deinem letzten Besuch“, die Karte „Heute im Saal gehört:“
+ * 25.11.): der Block „Seit deinem letzten Besuch“, die Karte „Heute im Netz zur BDK:“
  * („spruch“, Schalter saal_spruch) oder die Karte „Dein nächster Schritt“, nie zwei davon.
  * „offen“: Es fehlt noch eine der Antworten (Besuch, Vorschläge, Saal-Spruch), dann zeigt
  * keiner etwas, statt dass eine Karte erscheint und gleich wieder verschwindet.

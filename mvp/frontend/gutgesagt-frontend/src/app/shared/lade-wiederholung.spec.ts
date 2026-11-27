@@ -24,4 +24,30 @@ describe('LadeWiederholung', () => {
     ]);
     expect([400, 401, 403, 404].map((status) => lohntWiederholung({ status }))).toEqual([false, false, false, false]);
   });
+
+  it('streut die Abstaende auf Wunsch, ohne Streuung wie bisher fest', fakeAsync(() => {
+    const ende$ = new Subject<void>();
+    const laden = jasmine.createSpy('laden');
+    // zufall 0: 30 % frueher
+    const frueh = new LadeWiederholung(ende$, { streuung: 0.3, zufall: () => 0 });
+    frueh.fehlgeschlagen({ status: 503 }, laden);
+    tick(WIEDERHOLUNG_MS[0] * 0.7 - 1);
+    expect(laden).not.toHaveBeenCalled();
+    tick(1);
+    expect(laden).toHaveBeenCalledTimes(1);
+
+    // zufall 1: 30 % spaeter
+    const spaet = new LadeWiederholung(ende$, { streuung: 0.3, zufall: () => 1 });
+    spaet.fehlgeschlagen({ status: 503 }, laden);
+    tick(WIEDERHOLUNG_MS[0] * 1.3 - 1);
+    expect(laden).toHaveBeenCalledTimes(1);
+    tick(1);
+    expect(laden).toHaveBeenCalledTimes(2);
+
+    const fest = new LadeWiederholung(ende$);
+    fest.fehlgeschlagen({ status: 503 }, laden);
+    tick(WIEDERHOLUNG_MS[0]);
+    expect(laden).toHaveBeenCalledTimes(3);
+    ende$.next();
+  }));
 });

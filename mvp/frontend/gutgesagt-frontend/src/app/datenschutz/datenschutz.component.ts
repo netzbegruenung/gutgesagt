@@ -1,10 +1,11 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, DestroyRef, Injector, afterNextRender, computed, effect, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
+import { take } from 'rxjs/operators';
 import {
   DSE_SPIELGEFUEHL_ANFANG,
   DSE_SPIELGEFUEHL_OHNE_RANGLISTE,
@@ -93,6 +94,51 @@ export class DatenschutzComponent {
     ziel.focus({ preventScroll: true });
     history.replaceState(history.state, '', `${location.pathname}${location.search}#${anker}`);
   }
+  /**
+   * Anker hinter einem Schalter (etwa #spielgefuehl, #rangliste): Beim Aufruf mit Fragment
+   * steht der Absatz oft noch nicht, weil GET /api/v1/funktionen erst antworten muss; der
+   * Router scrollt dann ins Leere und die Person landet oben in der langen Erklärung.
+   * Fehlt das Ziel beim ersten Zeichnen, springt die Seite einmal dorthin, sobald die
+   * Schalter da sind.
+   */
+  private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+
+  constructor() {
+    const anker = inject(ActivatedRoute).snapshot.fragment;
+    if (!anker) {
+      return;
+    }
+    afterNextRender(
+      () => {
+        if (document.getElementById(anker)) {
+          return;
+        }
+        this.funktionen
+          .stand$('spielgefuehl_buehne')
+          .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+          .subscribe(() =>
+            afterNextRender(
+              () => {
+                const ziel = document.getElementById(anker);
+                if (!ziel) {
+                  return;
+                }
+                // Wie springen(): Fokus mit, damit Tab dort weitergeht (WCAG 2.4.3).
+                ziel.scrollIntoView({ block: 'start' });
+                if (!ziel.hasAttribute('tabindex')) {
+                  ziel.setAttribute('tabindex', '-1');
+                }
+                ziel.focus({ preventScroll: true });
+              },
+              { injector: this.injector },
+            ),
+          );
+      },
+      { injector: this.injector },
+    );
+  }
+
   /** Merker der Meilensteine im Browser; der Absatz dazu steht erst, wenn er an ist (§ 25 TDDDG). */
   readonly meilensteinMerker = inject(MEILENSTEIN_MERKER);
   /**

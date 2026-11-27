@@ -31,8 +31,9 @@ def get_current_user(x_user: Optional[str] = Header(None)) -> str:
 
 async def nur_sichtbarer_beitrag(
     content_id: uuid.UUID, laden: BeitragLader = Depends(get_beitrag_laden)
-) -> None:
+) -> Optional[str]:
     """
+
     Abstimmen nur auf einen Beitrag, den die Person sehen kann: Gesperrt, geloescht
     oder nie vorhanden gibt 404 und keine Stimme. Zuruecknehmen prueft das nicht,
     eine alte Stimme an einem inzwischen gesperrten Beitrag bleibt loszuwerden.
@@ -46,15 +47,33 @@ async def nur_sichtbarer_beitrag(
     try:
         beitrag = await laden(content_id)
     except BeitragUnlesbar:
-        return
+        return None
     except Exception as fehler:
         # Mit Stacktrace: Auch ein Programmierfehler landet hier und soll auffallen.
         logger.warning(
             f"Visibility check for vote skipped: {type(fehler).__name__}", exc_info=True
         )
-        return
+        return None
     if beitrag is None:
         raise HTTPException(status_code=404, detail="Content not found")
+    # Die Autorin, fuer den Team-Fortschritt (``_fuers_team_zaehlen``); None oben,
+    # wenn sich der Beitrag nicht lesen liess.
+    return getattr(beitrag, "original_author", None)
+
+
+def _fuers_team_zaehlen(
+    user_id: str, autorin: Optional[str], content_id: uuid.UUID
+) -> None:
+    """
+    Eine Stimme zaehlt fuer die Teams der Person (Team-Fortschritt, #784), aber nicht
+    die zu einem eigenen Beitrag: Sonst fuellten drei Klicks am eigenen Bestand die
+    Team-Quest (Gamification-Check 26.11., Befund 22), wie es ADR 0004 schon fuer die
+    Punkte fuers Bewerten ausschliesst. Ist die Autorin unbekannt (Beitrag unlesbar,
+    Suchindex weg), zaehlt die Stimme wie bisher. Fehler nur im Log.
+    """
+    if autorin is not None and autorin == user_id:
+        return
+    team_zaehlen(user_id, TeamArt.BEWERTUNG, str(content_id))
 
 
 @router.put(
@@ -65,7 +84,7 @@ async def nur_sichtbarer_beitrag(
 def set_like(
     content_id: uuid.UUID,
     user_id: str = Depends(get_current_user),
-    _: None = Depends(nur_sichtbarer_beitrag),
+    autorin: Optional[str] = Depends(nur_sichtbarer_beitrag),
     voting_service: VotingService = Depends(get_voting_service),
 ) -> VoteResponse:
     """
@@ -76,8 +95,7 @@ def set_like(
     logger.debug(f"Setting like for content {content_id}")
     try:
         result = voting_service.set_like(user_id, content_id)
-        # Zaehlt fuer die Teams der Person (Team-Fortschritt, #784); Fehler nur im Log.
-        team_zaehlen(user_id, TeamArt.BEWERTUNG, str(content_id))
+        _fuers_team_zaehlen(user_id, autorin, content_id)
         logger.debug("Like set successfully")
         return result
     except Validierungsfehler as e:
@@ -129,7 +147,7 @@ def remove_like(
 def set_dislike(
     content_id: uuid.UUID,
     user_id: str = Depends(get_current_user),
-    _: None = Depends(nur_sichtbarer_beitrag),
+    autorin: Optional[str] = Depends(nur_sichtbarer_beitrag),
     voting_service: VotingService = Depends(get_voting_service),
 ) -> VoteResponse:
     """
@@ -140,8 +158,7 @@ def set_dislike(
     logger.debug(f"Setting dislike for content {content_id}")
     try:
         result = voting_service.set_dislike(user_id, content_id)
-        # Zaehlt fuer die Teams der Person (Team-Fortschritt, #784); Fehler nur im Log.
-        team_zaehlen(user_id, TeamArt.BEWERTUNG, str(content_id))
+        _fuers_team_zaehlen(user_id, autorin, content_id)
         logger.debug("Dislike set successfully")
         return result
     except Validierungsfehler as e:

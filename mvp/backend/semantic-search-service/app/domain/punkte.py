@@ -56,6 +56,10 @@ class Punktestand:
     # False: Das Konto sammelt keine Punkte (Startkonto, keine geltende
     # Art.-9-Einwilligung). Dann gibt es keinen Punktestand, nicht nur 0 (#352).
     sammelt: bool = True
+    # False: Eine Quelle liess sich nicht lesen (etwa die Team-Quests), die Summe ist zu
+    # niedrig. Die eigene Anzeige zeigt sie trotzdem; die Rangliste merkt sie sich nicht
+    # und laesst die Person bis zum naechsten Abruf aus, statt sie zu tief einzureihen.
+    vollstaendig: bool = True
 
     @property
     def gesamt(self) -> int:
