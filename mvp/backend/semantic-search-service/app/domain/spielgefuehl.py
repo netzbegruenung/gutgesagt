@@ -21,8 +21,9 @@ legt eine neue Kennung an und laesst die alte stehen. Dieses Modul ist rein.
 """
 
 from dataclasses import dataclass, replace
+from datetime import datetime
 from enum import Enum
-from typing import Dict, FrozenSet, Optional, Tuple
+from typing import Dict, FrozenSet, Iterable, Optional, Tuple
 
 
 class Stufe(str, Enum):
@@ -35,15 +36,26 @@ class Stufe(str, Enum):
 # Knoepfe bleiben gleich gross und ohne Vorauswahl.
 REIHENFOLGE: Tuple[Stufe, ...] = (Stufe.RANGLISTE, Stufe.FUER_MICH, Stufe.AUS)
 
-AKTUELLER_WORTLAUT = "spielgefuehl-2026-11-26"
-"""Der Wortlaut, solange der Schalter ``muster_stimmen`` nicht wirkt."""
-
-STIMMEN_WORTLAUT = "spielgefuehl-2026-11-27"
+AKTUELLER_WORTLAUT = "spielgefuehl-2026-11-28"
 """
-Der Wortlaut mit gegenseitigen Zustimmungen im Schutz gegen Absprachen (Jura 27.11.):
-gefragt nur, solange der Schalter ``muster_stimmen`` wirkt (``aktueller_wortlaut``).
+Der Wortlaut, den die Frage zeigt, unabhaengig von den Schaltern (juristische Vorgabe
+vom 27.11.): eine Fassung mit Quest-Punkten und gegenseitigen Zustimmungen.
+"""
+
+STIMMEN_WORTLAUTE: FrozenSet[str] = frozenset(
+    {"spielgefuehl-2026-11-27", AKTUELLER_WORTLAUT}
+)
+"""
+Die Wortlaute, die gegenseitige Zustimmungen im Schutz gegen Absprachen nennen:
 Zustimmungen fliessen nur bei Paaren in die Muster-Hinweise ein, in denen beide Konten
-zu genau diesem Wortlaut ab ``fuer_mich`` eingewilligt haben (``stimmen_eingewilligt``).
+zu einem davon ab ``fuer_mich`` eingewilligt haben (``stimmen_eingewilligt``).
+"""
+
+QUEST_WORTLAUT = AKTUELLER_WORTLAUT
+"""
+Der einzige Wortlaut, der Quest-Punkte nennt: Quest-Punkte bekommt nur, wer zu ihm ab
+``fuer_mich`` eingewilligt hat, und nur fuer Beitraege ab dieser Einwilligung
+(``quest_einwilligung_seit``).
 """
 
 # Vorbelegung der Namenswahl in der Rangliste: None = keine, die Person waehlt aktiv.
@@ -150,8 +162,8 @@ WORTLAUTE: Dict[str, Wortlaut] = {
 
 # Jura 27.11.: Nur der Absatz zu Absprachen aendert sich, die Stufentexte bleiben
 # wortgleich.
-WORTLAUTE[STIMMEN_WORTLAUT] = replace(
-    WORTLAUTE[AKTUELLER_WORTLAUT],
+WORTLAUTE["spielgefuehl-2026-11-27"] = replace(
+    WORTLAUTE["spielgefuehl-2026-11-26"],
     absprachen=(
         "Für ‚Nur für mich‘ und ‚In der Saison-Rangliste mitspielen‘ willige ich "
         "außerdem ein: Damit Punkte nicht durch Absprachen entstehen, prüft Gut gesagt, "
@@ -161,13 +173,62 @@ WORTLAUTE[STIMMEN_WORTLAUT] = replace(
     ),
 )
 
+
+def _mit_quest_punkten(text: str) -> str:
+    alt = "dass aus meiner Mitwirkung Punkte und Meilensteine berechnet werden"
+    if alt not in text:
+        raise ValueError("Stufentext ohne den Satz zu Punkten und Meilensteinen")
+    return text.replace(
+        alt,
+        "dass aus meiner Mitwirkung, einschließlich Quest-Punkten, Punkte und "
+        "Meilensteine berechnet werden",
+    )
+
+
+# Juristische Vorgabe vom 27.11. (vorlaeufig): eine Fassung mit Quest-Punkten und
+# Zustimmungen. Neu sind der zweite Satz der Einleitung, die Quest-Punkte in den Stufen
+# "Nur für mich" und Rangliste und der Absatz zu Absprachen; der Rest ist wortgleich.
+_VORIGER = WORTLAUTE["spielgefuehl-2026-11-27"]
+WORTLAUTE[AKTUELLER_WORTLAUT] = replace(
+    _VORIGER,
+    einleitung=(
+        "Aus deiner Mitwirkung, also deinen Beiträgen, Einwürfen und Bewertungen "
+        "und wie andere deine Beiträge nutzen, können wir Punkte und Meilensteine "
+        "berechnen. Bist du in einem Team und speicherst in einer Woche selbst einen "
+        "Beitrag, bekommst du dafür auch Quest-Punkte, wenn dein Team sein Wochenziel "
+        "erreicht. Dafür zählt nur die Wochensumme des Teams, nicht, wer wie viel "
+        "beigetragen hat. Daraus lässt sich schließen, dass und wie stark du dich bei "
+        "Gut gesagt engagierst."
+    ),
+    stufen={
+        **_VORIGER.stufen,
+        Stufe.RANGLISTE: StufenText(
+            titel=_VORIGER.stufen[Stufe.RANGLISTE].titel,
+            text=_mit_quest_punkten(_VORIGER.stufen[Stufe.RANGLISTE].text),
+        ),
+        Stufe.FUER_MICH: StufenText(
+            titel=_VORIGER.stufen[Stufe.FUER_MICH].titel,
+            text=_mit_quest_punkten(_VORIGER.stufen[Stufe.FUER_MICH].text),
+        ),
+    },
+    absprachen=(
+        "Für ‚Nur für mich‘ und ‚In der Saison-Rangliste mitspielen‘ willige ich "
+        "außerdem ein: Damit Punkte nicht durch Absprachen entstehen, prüft Gut gesagt, "
+        "ob sich zwei Konten auffällig oft gegenseitig nutzen und, sobald diese Prüfung "
+        "eingeschaltet ist, auch ob sie einander zustimmen. Fällt das auf, sehen die "
+        "Administratorinnen und Administratoren einen Hinweis mit den Anzeigenamen und "
+        "Kennungen beider Konten; an Punkten und Rangliste ändert das nichts."
+    ),
+)
+
 # Zu welchen Wortlauten eine Antwort gilt; eine neue Fassung mit mehr Zwecken fragt
-# neu, indem sie die alte hier herausnimmt. ``spielgefuehl-2026-11-26`` bleibt mit dem
-# Schalter ``muster_stimmen`` gueltig fuer alles, was sie nennt (Punkte, Rangliste,
-# gegenseitige Nutzung); neu gefragt wird trotzdem (``neu_fragen``), damit die Person
-# den Zweck Zustimmungen sieht. Ohne Schalter gilt auch ``-27`` weiter: Sie umfasst
-# alles aus ``-26``, und niemand soll beim Ausschalten neu gefragt werden.
-GELTENDE_WORTLAUTE: FrozenSet[str] = frozenset({AKTUELLER_WORTLAUT, STIMMEN_WORTLAUT})
+# neu, indem sie die alte hier herausnimmt. Alle drei tragen Punkte, Meilensteine und
+# die Rangliste; neu gefragt wird trotzdem (``neu_fragen``), damit die Person die
+# Zwecke Quest-Punkte und Zustimmungen sieht. Bis zur neuen Antwort gilt die alte
+# Kennung fuer das, was sie nennt.
+GELTENDE_WORTLAUTE: FrozenSet[str] = frozenset(
+    {"spielgefuehl-2026-11-26", "spielgefuehl-2026-11-27", AKTUELLER_WORTLAUT}
+)
 
 
 class UnbekannterWortlaut(ValueError):
@@ -188,21 +249,36 @@ def in_rangliste(stufe: Optional[Stufe]) -> bool:
     return stufe is Stufe.RANGLISTE
 
 
-def aktueller_wortlaut(stimmen: bool) -> str:
-    """Der Wortlaut, den die Frage zeigt: mit wirksamem ``muster_stimmen`` der neue."""
-    return STIMMEN_WORTLAUT if stimmen else AKTUELLER_WORTLAUT
-
-
-def neu_fragen(wortlaut: str, stufe: Stufe, stimmen: bool) -> bool:
+def neu_fragen(wortlaut: str, stufe: Stufe) -> bool:
     """
-    Ob eine geltende Antwort trotzdem neu gefragt wird: mit wirksamem
-    ``muster_stimmen`` jede Stufe ueber ``aus`` zu einem anderen Wortlaut als dem
-    neuen (Jura 27.11.: Konten mit ``-26`` beim naechsten Besuch). ``aus`` willigt in
+    Ob eine geltende Antwort trotzdem neu gefragt wird: jede Stufe ueber ``aus`` zu
+    einem anderen Wortlaut als dem aktuellen, unabhaengig von den Schaltern (juristische
+    Vorgabe vom 27.11.: Konten mit ``-26`` oder ``-27`` einmal). ``aus`` willigt in
     nichts ein und wird nicht neu gefragt.
     """
-    return stimmen and punkte_wirksam(stufe) and wortlaut != STIMMEN_WORTLAUT
+    return punkte_wirksam(stufe) and wortlaut != AKTUELLER_WORTLAUT
 
 
 def stimmen_eingewilligt(wortlaut: str, stufe: Optional[Stufe]) -> bool:
     """Ob Zustimmungen der Person in die Muster-Hinweise einfliessen duerfen."""
-    return wortlaut == STIMMEN_WORTLAUT and punkte_wirksam(stufe)
+    return wortlaut in STIMMEN_WORTLAUTE and punkte_wirksam(stufe)
+
+
+def quest_einwilligung_seit(
+    antworten: Iterable[Tuple[str, Stufe, datetime]],
+) -> Optional[datetime]:
+    """
+    Seit wann die Person ohne Unterbrechung zu ``QUEST_WORTLAUT`` ab ``fuer_mich``
+    eingewilligt hat, oder None, wenn ihre juengste Antwort das nicht ist.
+    ``antworten``: alle Antworten der Person als (Wortlaut, Stufe, Zeitpunkt), die
+    juengste zuerst (wie ``SpielgefuehlRepository.lesen`` ordnet). Ein Wechsel zwischen ``fuer_mich`` und ``rangliste`` oder
+    ein neuer Zufallsname unterbricht nicht; ``aus`` oder eine Antwort zu einem anderen
+    Wortlaut schon. Quest-Punkte gibt es nur fuer Beitraege ab diesem Zeitpunkt, also
+    nicht rueckwirkend fuer Wochen davor.
+    """
+    seit: Optional[datetime] = None
+    for wortlaut, stufe, zeitpunkt in antworten:
+        if wortlaut != QUEST_WORTLAUT or not punkte_wirksam(stufe):
+            break
+        seit = zeitpunkt
+    return seit

@@ -9,7 +9,12 @@ from typing import Dict, Iterable, Optional, Set
 
 from sqlalchemy import func, insert, select
 
-from domain.spielgefuehl import GELTENDE_WORTLAUTE, STIMMEN_WORTLAUT, Stufe
+from domain.spielgefuehl import (
+    GELTENDE_WORTLAUTE,
+    STIMMEN_WORTLAUTE,
+    Stufe,
+    quest_einwilligung_seit,
+)
 from infrastructure.database.connection import AppDatabase, get_app_database
 from infrastructure.database.models import SpielgefuehlZeile
 from repositories.rangliste_einwilligung_repository import Teilnahme
@@ -151,8 +156,8 @@ class SpielgefuehlRepository:
 
     def stimmen_eingewilligte(self, kennungen: Iterable[str]) -> Set[str]:
         """
-        Die Kennungen, deren juengste Antwort eine Stufe ab ``fuer_mich`` zum Wortlaut
-        ``STIMMEN_WORTLAUT`` ist (domain/spielgefuehl.py ``stimmen_eingewilligt``), in
+        Die Kennungen, deren juengste Antwort eine Stufe ab ``fuer_mich`` zu einem
+        Wortlaut aus ``STIMMEN_WORTLAUTE`` ist (domain/spielgefuehl.py ``stimmen_eingewilligt``), in
         einer Abfrage.
         """
         liste = list(set(kennungen))
@@ -162,11 +167,35 @@ class SpielgefuehlRepository:
         abfrage = select(juengste.c.user_id).where(
             juengste.c.rang == 1,
             juengste.c.user_id.in_(liste),
-            juengste.c.wortlaut == STIMMEN_WORTLAUT,
+            juengste.c.wortlaut.in_(sorted(STIMMEN_WORTLAUTE)),
             juengste.c.stufe.in_([Stufe.FUER_MICH.value, Stufe.RANGLISTE.value]),
         )
         with self.db.get_session() as session:
             return set(session.execute(abfrage).scalars())
+
+    def quest_einwilligung_seit(self, user_id: str) -> Optional[datetime]:
+        """
+        Seit wann die Kennung ohne Unterbrechung zum Wortlaut mit Quest-Punkten ab
+        ``fuer_mich`` eingewilligt hat (domain/spielgefuehl.py
+        ``quest_einwilligung_seit``), oder None.
+        """
+        with self.db.get_session() as session:
+            zeilen = session.execute(
+                select(
+                    SpielgefuehlZeile.wortlaut,
+                    SpielgefuehlZeile.stufe,
+                    SpielgefuehlZeile.beantwortet_am,
+                )
+                .where(SpielgefuehlZeile.user_id == user_id)
+                .order_by(
+                    SpielgefuehlZeile.beantwortet_am.desc(),
+                    SpielgefuehlZeile.id.desc(),
+                )
+            ).all()
+        return quest_einwilligung_seit(
+            (wortlaut, _stufe(stufe), zeitpunkt)
+            for wortlaut, stufe, zeitpunkt in zeilen
+        )
 
     def teilnehmende(self) -> Dict[str, Teilnahme]:
         """

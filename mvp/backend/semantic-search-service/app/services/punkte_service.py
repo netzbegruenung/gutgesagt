@@ -21,7 +21,10 @@ Woher die drei Stufen kommen:
   erreichter Quest eines eigenen Teams mit deckender Einwilligung, wenn die Person in
   der Woche einen Beitrag gespeichert hat, der heute sichtbar und mindestens
   BEITRAG_WARTEZEIT alt ist; gezaehlt am Montag nach der Woche, je Tag gedeckelt. Nur
-  mit Schalter team_quests, sonst bleibt die Stufe 0.
+  mit Schalter team_quests, sonst bleibt die Stufe 0. Nur mit der Einwilligung zum
+  Spielgefuehl-Wortlaut mit Quest-Punkten (spielgefuehl-2026-11-28, juristische Vorgabe
+  vom 27.11.), und es zaehlen nur Beitraege ab dieser Einwilligung: keine rueckwirkende
+  Gutschrift fuer Wochen davor (``quest_einwilligung_seit``).
 
 Ein Startkonto sammelt keine Punkte, ein Konto ohne geltende Einwilligung "Punkte
 und Meilensteine" (nie erteilt oder widerrufen) auch nicht: Die
@@ -160,6 +163,7 @@ class PunkteService:
         quest_tage: Optional[
             Callable[[str, List[datetime], datetime], Dict[date, int]]
         ] = None,
+        quest_einwilligung_seit: Optional[Callable[[str], Optional[datetime]]] = None,
     ):
         self._sichtbare_beitraege = sichtbare_beitraege
         self._nutzung = nutzung
@@ -173,19 +177,31 @@ class PunkteService:
         )
         # Team-Quests (#792); ohne Angabe keine Quest-Punkte.
         self._quest_tage = quest_tage
+        # Seit wann die Einwilligung zum Wortlaut mit Quest-Punkten gilt (None: keine);
+        # ohne Angabe aus der Tabelle spielgefuehl, spaet geholt wie oben.
+        self._quest_einwilligung_seit = quest_einwilligung_seit or (
+            lambda user_id: spielgefuehl_service.quest_einwilligung_seit(user_id)
+        )
 
     async def _quests(self, user_id, beitraege, grenze) -> Tuple[Dict[date, int], bool]:
         """
         Quest-Punkte der Team-Quests und ob sie gelesen wurden. Scheitert das, fehlen
-        nur sie (Fehler im Log), und der Stand gilt als unvollstaendig.
+        nur sie (Fehler im Log), und der Stand gilt als unvollstaendig. Nur mit der
+        Einwilligung zum Wortlaut mit Quest-Punkten, und nur Beitraege ab ihr zaehlen:
+        Eine Quest-Woche vor der Einwilligung bringt nichts, auch nicht im Nachhinein.
         """
         if self._quest_tage is None:
             return {}, True
         try:
+            seit = await asyncio.to_thread(self._quest_einwilligung_seit, user_id)
+            if seit is None:
+                return {}, True
+            ab = seit.astimezone(timezone.utc)
+            erstellt = [
+                b.created for b in beitraege if b.created.astimezone(timezone.utc) >= ab
+            ]
             return (
-                await asyncio.to_thread(
-                    self._quest_tage, user_id, [b.created for b in beitraege], grenze
-                ),
+                await asyncio.to_thread(self._quest_tage, user_id, erstellt, grenze),
                 True,
             )
         except Exception as e:

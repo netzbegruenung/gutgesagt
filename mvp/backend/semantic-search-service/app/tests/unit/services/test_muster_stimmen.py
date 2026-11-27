@@ -1,9 +1,10 @@
 """
 Gegenseitige Zustimmungen in den Muster-Hinweisen (Schalter ``muster_stimmen``,
-Entscheidung Maintainer 27.11., Wortlaut spielgefuehl-2026-11-27 von Jura 27.11.).
+Entscheidung Maintainer 27.11., Wortlaut spielgefuehl-2026-11-27, seit der juristischen
+Vorgabe vom 27.11. in der Fassung spielgefuehl-2026-11-28).
 
-Geprueft: der neue Wortlaut und wann er gilt, wer neu gefragt wird, dass Zustimmungen
-nur bei Paaren mit beiderseitiger Einwilligung zum neuen Wortlaut gemeldet und gezeigt
+Geprueft: die Wortlaute und wann sie gelten, wer neu gefragt wird, dass Zustimmungen
+nur bei Paaren mit beiderseitiger Einwilligung zu -27 oder -28 gemeldet und gezeigt
 werden, dass Ablehnungen nicht zaehlen, der Schalter und der Widerruf. Das Erkennen
 im Fenster (Schwelle) pruefen tests/integration/test_muster_hinweise.py gegen
 PostgreSQL.
@@ -33,11 +34,10 @@ from domain.models.vote import VoteResponse
 from domain.spielgefuehl import (
     AKTUELLER_WORTLAUT,
     GELTENDE_WORTLAUTE,
-    STIMMEN_WORTLAUT,
+    STIMMEN_WORTLAUTE,
     WORTLAUTE,
     Stufe,
     UnbekannterWortlaut,
-    aktueller_wortlaut,
     neu_fragen,
     stimmen_eingewilligt,
 )
@@ -52,8 +52,9 @@ from services.spielgefuehl_service import (
 
 pytestmark = pytest.mark.unit
 
-ALT = AKTUELLER_WORTLAUT
-NEU = STIMMEN_WORTLAUT
+ALT = "spielgefuehl-2026-11-26"
+NEU = "spielgefuehl-2026-11-27"
+AKTUELL = AKTUELLER_WORTLAUT
 TAG = date(2026, 11, 27)
 ADMIN = {"X-User": "admin-1", "X-Is-Admin": "true"}
 
@@ -69,11 +70,11 @@ def _antwort(stufe: Stufe, wortlaut: str) -> SpielgefuehlAntwort:
 
 
 class TestWortlaut:
-    def test_kennung_von_jura(self):
-        assert NEU == "spielgefuehl-2026-11-27"
-        assert ALT == "spielgefuehl-2026-11-26"
+    def test_kennungen(self):
+        assert AKTUELL == "spielgefuehl-2026-11-28"
+        assert STIMMEN_WORTLAUTE == {NEU, AKTUELL}
 
-    def test_nur_der_absatz_zu_absprachen_aendert_sich(self):
+    def test_in_minus_27_aendert_sich_nur_der_absatz_zu_absprachen(self):
         alt, neu = WORTLAUTE[ALT], WORTLAUTE[NEU]
         assert neu.stufen == alt.stufen
         assert neu.einleitung == alt.einleitung
@@ -90,38 +91,38 @@ class TestWortlaut:
     def test_der_alte_wortlaut_bleibt_wortgleich(self):
         assert "einander zustimmen" not in WORTLAUTE[ALT].absprachen
 
-    def test_neuer_wortlaut_nur_mit_schalter(self):
-        assert aktueller_wortlaut(stimmen=False) == ALT
-        assert aktueller_wortlaut(stimmen=True) == NEU
-
-    def test_beide_gelten_fuer_das_was_sie_nennen(self):
-        """Ohne Schalter fragt niemand neu, auch nicht wer -27 hat."""
-        assert {ALT, NEU} <= GELTENDE_WORTLAUTE
+    def test_alle_drei_gelten_fuer_das_was_sie_nennen(self):
+        assert GELTENDE_WORTLAUTE == {ALT, NEU, AKTUELL}
 
     @pytest.mark.parametrize(
-        "wortlaut, stufe, stimmen, erwartet",
+        "wortlaut, stufe, erwartet",
         [
-            (ALT, Stufe.FUER_MICH, True, True),
-            (ALT, Stufe.RANGLISTE, True, True),
-            (ALT, Stufe.AUS, True, False),
-            (NEU, Stufe.FUER_MICH, True, False),
-            (ALT, Stufe.FUER_MICH, False, False),
-            (NEU, Stufe.RANGLISTE, False, False),
+            (ALT, Stufe.FUER_MICH, True),
+            (ALT, Stufe.RANGLISTE, True),
+            (NEU, Stufe.FUER_MICH, True),
+            (NEU, Stufe.RANGLISTE, True),
+            (ALT, Stufe.AUS, False),
+            (NEU, Stufe.AUS, False),
+            (AKTUELL, Stufe.FUER_MICH, False),
+            (AKTUELL, Stufe.RANGLISTE, False),
         ],
     )
-    def test_neu_fragen(self, wortlaut, stufe, stimmen, erwartet):
-        assert neu_fragen(wortlaut, stufe, stimmen) is erwartet
+    def test_neu_fragen_unabhaengig_vom_schalter(self, wortlaut, stufe, erwartet):
+        assert neu_fragen(wortlaut, stufe) is erwartet
 
     @pytest.mark.parametrize(
         "wortlaut, stufe, erwartet",
         [
             (NEU, Stufe.FUER_MICH, True),
             (NEU, Stufe.RANGLISTE, True),
+            (AKTUELL, Stufe.FUER_MICH, True),
+            (AKTUELL, Stufe.RANGLISTE, True),
             (NEU, Stufe.AUS, False),
+            (AKTUELL, Stufe.AUS, False),
             # Einwilligungen unter -26 reichen nicht
             (ALT, Stufe.RANGLISTE, False),
             (ALT, Stufe.FUER_MICH, False),
-            (NEU, None, False),
+            (AKTUELL, None, False),
         ],
     )
     def test_stimmen_eingewilligt(self, wortlaut, stufe, erwartet):
@@ -129,102 +130,71 @@ class TestWortlaut:
 
 
 class TestSpielgefuehlService:
-    def _dienst(self, antwort, stimmen: bool, **weitere):
+    def _dienst(self, antwort, **weitere):
         repository = MagicMock()
         repository.lesen.return_value = antwort
         dienst = SpielgefuehlService(
             repository,
             lambda: set(),
             lambda user_id: False,
-            stimmen=lambda: stimmen,
             **weitere,
         )
         return dienst, repository
 
-    def test_mit_schalter_wird_alt_neu_gefragt(self):
-        dienst, _ = self._dienst(_antwort(Stufe.FUER_MICH, ALT), stimmen=True)
+    @pytest.mark.parametrize("wortlaut", [ALT, NEU])
+    @pytest.mark.parametrize("stufe", [Stufe.FUER_MICH, Stufe.RANGLISTE])
+    def test_minus_26_und_27_werden_neu_gefragt(self, wortlaut, stufe):
+        dienst, _ = self._dienst(_antwort(stufe, wortlaut))
 
         assert dienst.stand("kim-1").stufe is None
 
-    def test_mit_schalter_bleibt_neu(self):
-        dienst, _ = self._dienst(_antwort(Stufe.RANGLISTE, NEU), stimmen=True)
+    def test_aktueller_wortlaut_bleibt(self):
+        dienst, _ = self._dienst(_antwort(Stufe.RANGLISTE, AKTUELL))
 
         assert dienst.stand("kim-1").stufe is Stufe.RANGLISTE
 
-    def test_aus_wird_nicht_neu_gefragt(self):
-        dienst, _ = self._dienst(_antwort(Stufe.AUS, ALT), stimmen=True)
+    @pytest.mark.parametrize("wortlaut", [ALT, NEU])
+    def test_aus_wird_nicht_neu_gefragt(self, wortlaut):
+        dienst, _ = self._dienst(_antwort(Stufe.AUS, wortlaut))
 
         assert dienst.stand("kim-1").stufe is Stufe.AUS
 
     @pytest.mark.parametrize("wortlaut", [ALT, NEU])
-    def test_ohne_schalter_fragt_niemand_neu(self, wortlaut):
-        dienst, _ = self._dienst(_antwort(Stufe.FUER_MICH, wortlaut), stimmen=False)
-
-        assert dienst.stand("kim-1").stufe is Stufe.FUER_MICH
-
-    def test_mit_schalter_nur_der_neue_wortlaut(self):
-        dienst, repository = self._dienst(None, stimmen=True)
+    def test_nur_der_aktuelle_wortlaut(self, wortlaut):
+        dienst, repository = self._dienst(None)
 
         with pytest.raises(UnbekannterWortlaut):
-            dienst.antworten("kim-1", Stufe.FUER_MICH, None, ALT)
-        dienst.antworten("kim-1", Stufe.FUER_MICH, None, NEU)
+            dienst.antworten("kim-1", Stufe.FUER_MICH, None, wortlaut)
+        dienst.antworten("kim-1", Stufe.FUER_MICH, None, AKTUELL)
 
         repository.antworten.assert_called_once_with(
-            "kim-1", Stufe.FUER_MICH, False, NEU, None
+            "kim-1", Stufe.FUER_MICH, False, AKTUELL, None
         )
 
-    def test_ohne_schalter_nur_der_alte_wortlaut(self):
-        dienst, _ = self._dienst(None, stimmen=False)
-
-        with pytest.raises(UnbekannterWortlaut):
-            dienst.antworten("kim-1", Stufe.FUER_MICH, None, NEU)
-        dienst.antworten("kim-1", Stufe.FUER_MICH, None, ALT)
-
     def test_aus_geht_zu_jedem_wortlaut(self):
-        dienst, _ = self._dienst(None, stimmen=True)
+        dienst, _ = self._dienst(None)
 
         dienst.antworten("kim-1", Stufe.AUS, None, ALT)
 
     def test_aus_loescht_alle_hinweise(self):
-        alle, stimmen = Mock(), Mock()
+        alle = Mock()
         dienst, _ = self._dienst(
-            _antwort(Stufe.FUER_MICH, NEU),
-            stimmen=True,
-            hinweise_vergessen=alle,
-            stimmen_hinweise_vergessen=stimmen,
+            _antwort(Stufe.FUER_MICH, NEU), hinweise_vergessen=alle
         )
 
-        dienst.antworten("kim-1", Stufe.AUS, None, NEU)
+        dienst.antworten("kim-1", Stufe.AUS, None, AKTUELL)
 
         alle.assert_called_once_with("kim-1")
-        stimmen.assert_not_called()
 
-    def test_ohne_zweck_zustimmungen_gehen_deren_hinweise(self):
-        """Schalter wieder aus, die Person waehlt "Nur fuer mich" zum alten Wortlaut."""
-        alle, stimmen = Mock(), Mock()
+    def test_herabstufen_behaelt_die_hinweise(self):
+        alle = Mock()
         dienst, _ = self._dienst(
-            _antwort(Stufe.RANGLISTE, NEU),
-            stimmen=False,
-            hinweise_vergessen=alle,
-            stimmen_hinweise_vergessen=stimmen,
+            _antwort(Stufe.RANGLISTE, AKTUELL), hinweise_vergessen=alle
         )
 
-        dienst.antworten("kim-1", Stufe.FUER_MICH, None, ALT)
+        dienst.antworten("kim-1", Stufe.FUER_MICH, None, AKTUELL)
 
-        stimmen.assert_called_once_with("kim-1")
         alle.assert_not_called()
-
-    def test_herabstufen_mit_neuem_wortlaut_behaelt_die_hinweise(self):
-        stimmen = Mock()
-        dienst, _ = self._dienst(
-            _antwort(Stufe.RANGLISTE, NEU),
-            stimmen=True,
-            stimmen_hinweise_vergessen=stimmen,
-        )
-
-        dienst.antworten("kim-1", Stufe.FUER_MICH, None, NEU)
-
-        stimmen.assert_not_called()
 
 
 def _hinweis(a: str, b: str, art: str = NUTZUNG) -> MusterHinweis:
@@ -674,25 +644,26 @@ class TestFrage:
             )
         )
 
-    def test_mit_schalter_neuer_wortlaut_und_neu_gefragt(
-        self, spielgefuehl_ohne_datenbank
+    @pytest.mark.parametrize(
+        "einstellungen",
+        [STIMMEN_AN, {**STIMMEN_AN, "muster_stimmen_aktiv": False}],
+        ids=["mit_schalter", "ohne_schalter"],
+    )
+    @pytest.mark.parametrize("wortlaut", [ALT, NEU])
+    def test_frage_zeigt_immer_minus_28_und_fragt_neu(
+        self, spielgefuehl_ohne_datenbank, einstellungen, wortlaut
     ):
-        spielgefuehl_ohne_datenbank.lesen.return_value = _antwort(Stufe.FUER_MICH, ALT)
+        spielgefuehl_ohne_datenbank.lesen.return_value = _antwort(
+            Stufe.FUER_MICH, wortlaut
+        )
 
-        stand = _spielgefuehl(Settings(**STIMMEN_AN))
+        stand = _spielgefuehl(Settings(**einstellungen))
 
-        assert stand["aktueller_wortlaut"]["kennung"] == NEU
-        assert "einander zustimmen" in stand["aktueller_wortlaut"]["absprachen"]
+        assert stand["aktueller_wortlaut"]["kennung"] == AKTUELL
+        assert (
+            stand["aktueller_wortlaut"]["absprachen"] == WORTLAUTE[AKTUELL].absprachen
+        )
         assert stand["stufe"] is None
-
-    def test_ohne_schalter_alles_wie_bisher(self, spielgefuehl_ohne_datenbank):
-        spielgefuehl_ohne_datenbank.lesen.return_value = _antwort(Stufe.FUER_MICH, ALT)
-
-        stand = _spielgefuehl(Settings(**{**STIMMEN_AN, "muster_stimmen_aktiv": False}))
-
-        assert stand["aktueller_wortlaut"]["kennung"] == ALT
-        assert stand["aktueller_wortlaut"]["absprachen"] == WORTLAUTE[ALT].absprachen
-        assert stand["stufe"] == "fuer_mich"
 
 
 def _seit(settings: Settings, name: str = "muster_stimmen"):

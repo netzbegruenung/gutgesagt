@@ -335,6 +335,9 @@ async def test_quest_punkte_zaehlen_fuer_die_saison_ihrer_quest_woche():
         jetzt=lambda: JETZT,
         eingewilligt=lambda user_id: True,
         quest_tage=quest_tage,
+        quest_einwilligung_seit=lambda user_id: datetime(
+            2026, 1, 1, tzinfo=timezone.utc
+        ),
     )
 
     # Nach dem Tag der Gutschrift waeren es 1 + 1 (5.10. und 19.10.)
@@ -358,6 +361,9 @@ async def test_scheitern_der_quests_macht_den_stand_unvollstaendig():
         jetzt=lambda: JETZT,
         eingewilligt=lambda user_id: True,
         quest_tage=kaputt,
+        quest_einwilligung_seit=lambda user_id: datetime(
+            2026, 1, 1, tzinfo=timezone.utc
+        ),
     )
 
     stand = await dienst.punkte(KIM)

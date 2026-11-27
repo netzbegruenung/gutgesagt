@@ -35,6 +35,7 @@ from core.fehler import INTERNER_FEHLER
 from core.logging import get_logger, log_pseudonym
 from dependencies import get_settings, require_user
 from domain.spielgefuehl import (
+    AKTUELLER_WORTLAUT,
     HINWEIS_ABZEICHEN_NUR_RANGLISTE,
     NAMENS_VORBELEGUNG,
     REIHENFOLGE,
@@ -42,7 +43,6 @@ from domain.spielgefuehl import (
     NamenswahlFehlt,
     Stufe,
     UnbekannterWortlaut,
-    aktueller_wortlaut,
 )
 from services.schalter_service import schalter_wirksam
 from services.spielgefuehl_service import (
@@ -51,7 +51,6 @@ from services.spielgefuehl_service import (
     ZuOftGewuerfelt,
     buehne_aktiv,
     get_spielgefuehl_service,
-    stimmen_aktiv,
 )
 
 logger = get_logger(__name__)
@@ -126,9 +125,9 @@ def _rangliste_angeboten(settings: Settings) -> bool:
     return schalter_wirksam("rangliste", settings)
 
 
-def _wortlaut(mit_rangliste: bool = True, stimmen: bool = False) -> WortlautResponse:
-    """Der Wortlaut der Frage; mit Schalter ``muster_stimmen`` der mit Zustimmungen."""
-    kennung = aktueller_wortlaut(stimmen)
+def _wortlaut(mit_rangliste: bool = True) -> WortlautResponse:
+    """Der Wortlaut der Frage, unabhaengig von den Schaltern immer der aktuelle."""
+    kennung = AKTUELLER_WORTLAUT
     wortlaut = WORTLAUTE[kennung]
     return WortlautResponse(
         kennung=kennung,
@@ -164,10 +163,9 @@ async def spielgefuehl(
         return SpielgefuehlResponse(aktiv=False, aktueller_wortlaut=_wortlaut())
     from services.anzeigename_service import get_anzeigename_service
 
-    stimmen = stimmen_aktiv(settings)
     try:
         stand, namen = await asyncio.gather(
-            asyncio.to_thread(get_spielgefuehl_service().stand, current_user, stimmen),
+            asyncio.to_thread(get_spielgefuehl_service().stand, current_user),
             asyncio.to_thread(get_anzeigename_service().namen, [current_user]),
         )
     except Exception as e:
@@ -184,7 +182,7 @@ async def spielgefuehl(
         abzeichen_hinweis=(
             HINWEIS_ABZEICHEN_NUR_RANGLISTE if stand.abzeichen_hinweis else None
         ),
-        aktueller_wortlaut=_wortlaut(_rangliste_angeboten(settings), stimmen),
+        aktueller_wortlaut=_wortlaut(_rangliste_angeboten(settings)),
     )
 
 
@@ -218,7 +216,6 @@ async def spielgefuehl_waehlen(
             request.stufe,
             request.mit_anzeigename,
             request.wortlaut,
-            stimmen_aktiv(settings),
         )
     except UnbekannterWortlaut:
         raise HTTPException(status_code=422, detail="Unbekannter Wortlaut")

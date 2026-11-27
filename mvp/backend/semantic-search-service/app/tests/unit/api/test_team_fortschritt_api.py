@@ -173,10 +173,14 @@ def test_team_ohne_deckende_einwilligung_ohne_wirkung():
     assert teams[TEAM[0]]["wirkung"] is not None
 
 
+# Einwilligung zu spielgefuehl-2026-11-28 vor dem Beitrag vom 17.11.
+EINWILLIGUNG_28 = datetime(2026, 11, 1, tzinfo=timezone.utc)
+
+
 class TestQuestPunkte:
     """Quest-Punkte fliessen in die Stufe Quests des Punktestands (ADR 0004)."""
 
-    def _punkte(self, quest_tage, eingewilligt=True):
+    def _punkte(self, quest_tage, eingewilligt=True, seit=EINWILLIGUNG_28):
         beitrag = Mock(
             id="b-1", created=datetime(2026, 11, 17, 12, tzinfo=timezone.utc)
         )
@@ -194,6 +198,7 @@ class TestQuestPunkte:
             jetzt=lambda: datetime(2026, 11, 25, 12, tzinfo=timezone.utc),
             eingewilligt=lambda k: eingewilligt,
             quest_tage=quest_tage,
+            quest_einwilligung_seit=lambda k: seit,
         )
         return asyncio.run(dienst.punkte("konto"))
 
@@ -225,6 +230,46 @@ class TestQuestPunkte:
 
         assert stand.sammelt
         assert stand.quests == 0
+
+    def test_ohne_einwilligung_zu_minus_28_keine_quest_punkte(self):
+        """Juristische Vorgabe vom 27.11.: Quest-Punkte nur mit spielgefuehl-2026-11-28."""
+        quest_tage = Mock(return_value={LAUFENDE: 1})
+
+        stand = self._punkte(quest_tage, seit=None)
+
+        assert stand.sammelt
+        assert stand.quests == 0
+        assert stand.vollstaendig is True
+        quest_tage.assert_not_called()
+
+    def test_keine_rueckwirkende_gutschrift(self):
+        """Der Beitrag vom 17.11. liegt vor der Einwilligung: Seine Woche zaehlt nicht."""
+        speicher = Speicher(_team(5))
+        speicher.mitglieder[0].konto = "konto"
+        speicher.quest_zeilen[(TEAM, VORIGE)] = Quest(*TEAM, VORIGE, "klima", 3)
+        speicher.zaehler[(TEAM, VORIGE)] = {"beitraege": 3}
+        fortschritt = TeamFortschrittService(
+            speicher, AN, heute=lambda: HEUTE, saison=lambda: "2026"
+        )
+        nach_dem_beitrag = datetime(2026, 11, 18, 9, tzinfo=timezone.utc)
+
+        stand = self._punkte(fortschritt.quest_tage, seit=nach_dem_beitrag)
+
+        assert stand.quests == 0
+
+    def test_einwilligung_kurz_vor_dem_beitrag_zaehlt(self):
+        gefragt = []
+
+        def quest_tage(konto, beitraege, grenze):
+            gefragt.append(beitraege)
+            return {LAUFENDE: 1}
+
+        stand = self._punkte(
+            quest_tage, seit=datetime(2026, 11, 17, 11, tzinfo=timezone.utc)
+        )
+
+        assert stand.quests == 4
+        assert gefragt == [[datetime(2026, 11, 17, 12, tzinfo=timezone.utc)]]
 
     def test_mit_echtem_dienst(self):
         speicher = Speicher(_team(5))

@@ -630,7 +630,9 @@ describe('DatenschutzComponent', () => {
         'Diese Anzeige am Namen ist noch nicht eingeschaltet. ' +
           'Mit derselben Einwilligung darf die Zahl deiner Beiträge, Bewertungen und Kommentare und deiner Meldungen „Ja, gepostet“ in eine Summe deines Teams eingehen. ' +
           'Diese Summe sehen nur Mitglieder des Teams, nur für abgeschlossene Wochen, erst wenn mindestens fünf ' +
-          'Mitglieder eingewilligt haben, gerundet und nie mit einzelnen Namen. Die Team-Summe ist noch nicht eingeschaltet.'
+          'Mitglieder eingewilligt haben, gerundet und nie mit einzelnen Namen. ' +
+          'Was schon in die Summe deines Teams eingegangen ist, bleibt nach ‚Team verlassen‘ als Zahl ohne Namen ' +
+          'stehen; wir können es dir dann nicht mehr zuordnen. Die Team-Summe ist noch nicht eingeschaltet.'
       );
     });
 
@@ -1446,6 +1448,27 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
       'nur zwei Zahlen: wie oft deine Beiträge insgesamt genutzt waren und wie viele Einwürfe anderer es im ' +
         'Fangkorb gab, als du zuletzt da warst.',
     );
+  });
+
+  // Juristische Vorgabe vom 27.11. (vorläufig): DSE-Satz 1, nur mit danke_knopf
+  const DANKE_EINWILLIGUNG =
+    'Wenn du selbst ‚Danke‘ sagst, verarbeiten wir das mit deiner Einwilligung nach Artikel 9 Absatz 2 ' +
+    'Buchstabe a DSGVO (siehe ‚Deine Zustimmung und deine Einwilligung‘); ohne diese Einwilligung gibt es den ' +
+    'Knopf nicht.';
+
+  it('danke_knopf: der Satz zur Einwilligung steht im Block Zweck/Rechtsgrundlage nach lit. f', () => {
+    const text = abschnittIn(seiteMit('danke_knopf'), 'Rückmeldung zur Nutzung deiner Beiträge');
+
+    expect(text).toContain(
+      'Rechtsgrundlage: Artikel 6 Absatz 1 Buchstabe f DSGVO — unser berechtigtes Interesse ist, Mitwirkende über ' +
+        'die Wirkung ihrer Beiträge zu informieren. ' + DANKE_EINWILLIGUNG,
+    );
+  });
+
+  it('ohne danke_knopf kein Satz zur Einwilligung ins Danke', () => {
+    const ganz = normalisiert(seiteMit('wirkungs_echo').textContent);
+
+    expect(ganz).not.toContain('Wenn du selbst ‚Danke‘ sagst');
   });
 
   it('nur wirkungs_echo: Zählerstand des Echos, keine Sätze zum Danke-Knopf', () => {

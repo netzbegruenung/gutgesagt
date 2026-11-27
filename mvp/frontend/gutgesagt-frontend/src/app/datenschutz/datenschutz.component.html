@@ -226,7 +226,7 @@
         Mit derselben Einwilligung darf die Zahl deiner Beiträge, Bewertungen und Kommentare und
         deiner Meldungen „Ja, gepostet“ in eine Summe deines Teams eingehen. Diese Summe sehen nur Mitglieder des Teams, nur für
         abgeschlossene Wochen, erst wenn mindestens fünf Mitglieder eingewilligt haben, gerundet
-        und nie mit einzelnen Namen.<ng-container *ngIf="!teamFortschritt()"> Die Team-Summe ist noch nicht eingeschaltet.</ng-container>
+        und nie mit einzelnen Namen.<!-- Juristische Vorgabe vom 27.11. (vorläufig) --><span data-testid="dse-team-summe-verlassen"> Was schon in die Summe deines Teams eingegangen ist, bleibt nach ‚Team verlassen‘ als Zahl ohne Namen stehen; wir können es dir dann nicht mehr zuordnen.</span><ng-container *ngIf="!teamFortschritt()"> Die Team-Summe ist noch nicht eingeschaltet.</ng-container>
       </p>
       <!-- Team-Quests (Schalter team_quests, wirkt nur mit team_fortschritt), Jura vorläufig 26.11. -->
       <p *ngIf="teamQuests()" data-testid="dse-team-quests">
@@ -744,7 +744,7 @@
         <strong>Zweck:</strong> dir zeigen, dass deine Beiträge anderen helfen.<br>
         <strong>Rechtsgrundlage:</strong> Artikel 6 Absatz 1 Buchstabe f DSGVO — unser
         berechtigtes Interesse ist, Mitwirkende über die Wirkung ihrer Beiträge zu
-        informieren.<br>
+        informieren.<!-- Danke als Art.-9-Datum, juristische Vorgabe vom 27.11. (vorläufig) --><span *ngIf="dankeKnopf()" data-testid="dse-danke-einwilligung"> Wenn du selbst ‚Danke‘ sagst, verarbeiten wir das mit deiner Einwilligung nach Artikel 9 Absatz 2 Buchstabe a DSGVO (siehe ‚Deine Zustimmung und deine Einwilligung‘); ohne diese Einwilligung gibt es den Knopf nicht.</span><br>
         <strong>Dauer:</strong> bis zur Löschung deines Kontos.
       </p>
 
