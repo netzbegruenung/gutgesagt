@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -50,6 +50,8 @@ export class DatenschutzComponent {
    * anchorScrolling des Routers kennt beides nicht.
    */
   private kastenAngesprungen = false;
+  /** Zeilen „Ausschalten“ im Kasten; -1: noch nicht geladen. */
+  readonly widerrufZeilen = signal(-1);
   private readonly zumKasten = effect(() => {
     if (this.angemeldet() === null || this.kastenAngesprungen || location.hash !== '#einwilligung-widerrufen') {
       return;

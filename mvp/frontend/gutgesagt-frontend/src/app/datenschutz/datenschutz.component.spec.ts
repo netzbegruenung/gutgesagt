@@ -1554,6 +1554,9 @@ describe('DatenschutzComponent: Einwilligung widerrufen', () => {
     expect(kasten.querySelector('h4[id^="widerrufbar-titel"]')).not.toBeNull();
     expect(kasten.querySelector('button')?.textContent?.trim()).toBe('Ausschalten');
     expect(kasten.querySelector('a[href="/einwilligung"]')?.textContent?.trim()).toBe('Datenschutz-Einstellungen');
+    expect(normalisiert(kasten.querySelector('[data-testid="dse-widerruf-einleitung"]')?.textContent ?? null)).toBe(
+      'Was du hier ausschaltest, wirkt sofort. Deine Einwilligung zur Mitwirkung widerrufst du unter Datenschutz-Einstellungen.'
+    );
     expect(el(fixture).querySelector('[data-testid="dse-widerruf-anmelden"]')).toBeNull();
     fixture.destroy();
   });
@@ -1564,7 +1567,13 @@ describe('DatenschutzComponent: Einwilligung widerrufen', () => {
     http.expectOne({ method: 'GET', url: WIDERRUFBAR }).flush({ spielgefuehl: null, punkte: null, rangliste: null, abzeichen: null });
     fixture.detectChanges();
 
-    expect(el(fixture).querySelector('[data-testid="widerrufbar-leer"]')?.textContent).toContain('nichts zu widerrufen');
+    // Wortlaut Jura 27.11.: ohne „am Namen“, und ohne den Satz „Was du hier ausschaltest, wirkt sofort.“
+    expect(normalisiert(el(fixture).querySelector('[data-testid="widerrufbar-leer"]')?.textContent ?? null)).toBe(
+      'Spielgefühl, Punkte, Rangliste und Abzeichen sind bei dir aus; hier gibt es nichts zu widerrufen.'
+    );
+    expect(normalisiert(el(fixture).querySelector('[data-testid="dse-widerruf-einleitung"]')?.textContent ?? null)).toBe(
+      'Deine Einwilligung zur Mitwirkung widerrufst du unter Datenschutz-Einstellungen.'
+    );
     fixture.destroy();
   });
 

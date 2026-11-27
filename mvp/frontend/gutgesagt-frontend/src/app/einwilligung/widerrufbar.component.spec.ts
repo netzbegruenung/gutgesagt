@@ -312,6 +312,31 @@ describe('WiderrufbarComponent', () => {
       http.expectNone({ method: 'GET', url: URL });
       fixture.destroy();
     }));
+    it('meldet die Zahl der Zeilen bei jeder Änderung, auch die erste „0“', () => {
+      const zahlen: number[] = [];
+      punkteStand = new BehaviorSubject<PunkteEinwilligungStand | null | undefined>(null);
+      TestBed.configureTestingModule({
+        imports: [WiderrufbarComponent],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: PunkteEinwilligungService, useValue: { stand$: punkteStand, laden: () => of(null) } },
+          { provide: SpielgefuehlService, useValue: { stand$: new BehaviorSubject(undefined), laden: () => of(null) } },
+          provideRouter([]),
+        ],
+      });
+      fixture = TestBed.createComponent(WiderrufbarComponent);
+      http = TestBed.inject(HttpTestingController);
+      fixture.componentInstance.zeilenZahl.subscribe((n) => zahlen.push(n));
+      fixture.detectChanges();
+      http.expectOne({ method: 'GET', url: URL }).flush({ ...NICHTS, rangliste: ALLES.rangliste });
+      fixture.componentInstance.neuLaden();
+      http.expectOne({ method: 'GET', url: URL }).flush(NICHTS);
+
+      expect(zahlen.slice(-2)).toEqual([1, 0]);
+      fixture.destroy();
+    });
+
     it('gibt jeder Instanz eine eigene Überschrift-id für aria-labelledby', () => {
       starten(ALLES);
 

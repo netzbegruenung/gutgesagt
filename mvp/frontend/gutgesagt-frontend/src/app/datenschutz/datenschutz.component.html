@@ -1614,12 +1614,13 @@
       <div class="widerruf-kasten" id="einwilligung-widerrufen" tabindex="-1" data-testid="dse-widerruf">
         <h3>Einwilligung widerrufen</h3>
         <ng-container *ngIf="angemeldet() === true">
-          <p>
-            Was du hier ausschaltest, wirkt sofort. Deine Einwilligung zur Mitwirkung widerrufst
-            du unter <a routerLink="/einwilligung">Datenschutz-Einstellungen</a>.
+          <!-- Jura 27.11.: der erste Satz nur, solange es etwas auszuschalten gibt -->
+          <p data-testid="dse-widerruf-einleitung">
+            <ng-container *ngIf="widerrufZeilen() > 0">Was du hier ausschaltest, wirkt sofort. </ng-container>Deine
+            Einwilligung zur Mitwirkung widerrufst du unter <a routerLink="/einwilligung">Datenschutz-Einstellungen</a>.
           </p>
-          <app-widerrufbar [ebene]="4" [punkteHaekchenDaneben]="false" anmeldeZiel="/datenschutz#einwilligung-widerrufen"
-            leerText="Spielgefühl, Punkte, Rangliste und Abzeichen am Namen sind bei dir aus; hier gibt es nichts zu widerrufen."></app-widerrufbar>
+          <app-widerrufbar [ebene]="4" [punkteHaekchenDaneben]="false" anmeldeZiel="/datenschutz#einwilligung-widerrufen" (zeilenZahl)="widerrufZeilen.set($event)"
+            leerText="Spielgefühl, Punkte, Rangliste und Abzeichen sind bei dir aus; hier gibt es nichts zu widerrufen."></app-widerrufbar>
         </ng-container>
         <p *ngIf="angemeldet() === false" data-testid="dse-widerruf-anmelden">
           Deine Einwilligungen siehst und widerrufst du hier, sobald du angemeldet bist.

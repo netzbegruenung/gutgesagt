@@ -4,8 +4,10 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  EventEmitter,
   Input,
   OnInit,
+  Output,
   ViewChild,
   inject,
 } from '@angular/core';
@@ -175,6 +177,8 @@ export class WiderrufbarComponent implements OnInit {
   @Input() leerText = '';
   /** Wohin es nach neuem Anmelden zurückgeht (Sitzung abgelaufen); leer: die jetzige Adresse. */
   @Input() anmeldeZiel = '';
+  /** Wie viele Zeilen „Ausschalten“ gerade stehen (bei jeder Änderung), etwa für Sätze der Seite drumherum. */
+  @Output() readonly zeilenZahl = new EventEmitter<number>();
 
   readonly titel = 'Spielgefühl und Punkte ausschalten';
   readonly titelId = `widerrufbar-titel-${++naechsteNummer}`;
@@ -197,6 +201,8 @@ export class WiderrufbarComponent implements OnInit {
    * wartet der Fokus einmal auf den nächsten Lauf (nachladeStrom holt ihn nach).
    */
   private fokusGewartet = false;
+  /** zeilenZahl einmal auch für „0“ gemeldet (der Anfangswert ist unbekannt). */
+  private zahlGemeldet = false;
   private readonly anstoss$ = new Subject<void>();
   zeilen: WiderrufZeile[] = [];
   laeuft: WiderrufArt | null = null;
@@ -302,7 +308,12 @@ export class WiderrufbarComponent implements OnInit {
     if (s?.abzeichen) {
       zeilen.push({ art: 'abzeichen', text: 'Abzeichen am Namen: sichtbar' });
     }
+    const vorher = this.zeilen.length;
     this.zeilen = zeilen;
+    if (zeilen.length !== vorher || !this.zahlGemeldet) {
+      this.zahlGemeldet = true;
+      this.zeilenZahl.emit(zeilen.length);
+    }
     this.cdr.markForCheck();
   }
 
