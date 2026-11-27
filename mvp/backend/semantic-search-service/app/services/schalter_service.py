@@ -12,17 +12,21 @@ Admin-Werte liest der Dienst mit kurzem Cache (``CACHE_SEKUNDEN``); eine Aenderu
 ueber ``setzen`` gilt in diesem Prozess sofort, in anderen nach dem Cache. Ist die
 Datenbank nicht erreichbar, gilt aus (wie ohne Eintrag), bis der naechste Versuch
 gelingt.
+
+Seit dem Schalter-Umbau (27.11.2026, docs/ARCHITECTURE.md "Schalter nach dem Umbau")
+gibt es nur noch vier Pakete (PAKET_SCHALTER) und sieben Einzelschalter
+(EINZEL_SCHALTER). Die frueheren Schalter der Basisfunktionen sind weg, der Code laeuft
+wie "an"; vier davon behalten als Not-Aus nur ihre Umgebungsvariable (NOTAUS,
+``notaus_wirksam``, ohne Admin-Wert).
 """
 
 import threading
 import time
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 
 from core.config import Settings, settings as globale_settings
 from core.logging import get_logger
-from domain.feedback_gestoert import gestoert_offen
-from utils.utc_tag import heute_utc
 
 logger = get_logger(__name__)
 
@@ -32,22 +36,16 @@ DSFA_HINWEIS = (
     "Vor dem Einschalten auf Prod: DSFA beschlossen (docs/DSFA.md Abschnitt 7)"
 )
 
-# Vorlaeufige juristische Einschaetzung vom 26.11.2026 fuer einen vereinsinternen Test
-# (Einladungen bis zum Go nur an Mitglieder): Diese Schalter duerfen dafuer an, ihr Absatz
-# steht in der Datenschutzerklaerung und haengt am Schalter. Rechtlich freigegeben sind
-# sie damit nicht; vor der Ausweitung auf Vorhut oder BDK bleibt das Go des Vorstands
-# noetig (Beschluss 25.11.).
-JURA_26_11 = "Jura vorläufig ok 26.11. (interner Test)"
-JURA_VORLAEUFIG = f"{JURA_26_11}, DSE-Absatz drin"
-GO_VOR_AUSWEITUNG = "vor Vorhut/BDK das Go des Vorstands"
+# Go des Vorstands und AV-Vertrag seit 27.11.2026 (Schalter-Umbau): Pakete und die
+# Einzelschalter, die danach freigegeben sind, tragen rechtlich_freigegeben. Ihr Hinweis
+# sagt nur noch, welche Schutzgrenze weiter gilt.
+GO_27_11 = "Rechtlich freigegeben (Go des Vorstands 27.11.)"
 
-# Gruppen der Admin-Seite "Schalter", in dieser Reihenfolge (Sebastian 25.11.: die
-# lange Liste gruppieren). Die Seite zeigt je Gruppe einen Abschnitt.
-GRUNDFUNKTIONEN = "Grundfunktionen"
-TEAMS = "Teams"
-SPIELGEFUEHL = "Spielgefühl"
-PUNKTE_ANERKENNUNG = "Punkte & Anerkennung"
-GRUPPEN = (GRUNDFUNKTIONEN, TEAMS, SPIELGEFUEHL, PUNKTE_ANERKENNUNG)
+# Abschnitte der Admin-Seite "Schalter", in dieser Reihenfolge (Schalter-Umbau 27.11.:
+# vier Pakete, daneben die Einzelschalter). Die Seite zeigt je Gruppe einen Abschnitt.
+PAKETE = "Pakete"
+EINZELSCHALTER = "Einzelschalter"
+GRUPPEN = (PAKETE, EINZELSCHALTER)
 
 
 @dataclass(frozen=True)
@@ -59,175 +57,200 @@ class Schalterart:
     erklaerung: str
     dsfa_hinweis: bool = False
     # Ob GET /api/v1/funktionen den wirksamen Wert ohne Anmeldung meldet (api/v1/
-    # funktionen.py): fuer Funktionen, die nur im Browser laufen und deshalb keinen
-    # eigenen Endpunkt haben, der mit 404 antworten koennte (etwa Teilen als Bild).
+    # funktionen.py): fuer Funktionen, die nur im Browser laufen oder die die App ohne
+    # eigenen Abruf ausblendet, und fuer Absaetze der Datenschutzerklaerung.
     oeffentlich: bool = False
     # Eigene Bedingung fuers Einschalten auf Prod, die die Admin-Seite statt des
     # allgemeinen DSFA-Hinweises zeigt (etwa ein DSFA-Nachtrag oder ein Jura-OK).
     einschalt_hinweis: Optional[str] = None
     # Abschnitt auf der Admin-Seite, einer aus GRUPPEN
-    gruppe: str = GRUNDFUNKTIONEN
+    gruppe: str = EINZELSCHALTER
     # Rechtlich freigegeben, obwohl ein Hinweis steht (der Hinweis sagt dann, was
     # weiter gilt): Die Admin-Seite zeigt den Schalter nicht als "wartet auf Recht".
     rechtlich_freigegeben: bool = False
+    # Nur bei Paketen: die frueheren Schalter, die das Paket ersetzt (Doku, Tests).
+    # Im Code fragt man den Paketnamen, nie einen Teil.
+    teile: Tuple[str, ...] = ()
 
     def __post_init__(self):
         # Beim Import auffallen statt mit 500 auf der Admin-Seite
         if self.gruppe not in GRUPPEN:
             raise ValueError(f"Unbekannte Gruppe {self.gruppe!r} fuer {self.name}")
+        if self.teile and self.gruppe != PAKETE:
+            raise ValueError(f"Nur Pakete haben Teile: {self.name}")
 
 
-# Spielgefuehl zur BDK (#782 bis #793, docs/ARCHITECTURE.md "Schalter fuer das
-# Spielgefuehl"): je Baustein ein Schalter, Obergrenze von Haus aus aus. Die Bausteine
-# selbst kommen in eigenen PRs; bis dahin schalten diese Schalter nichts.
-SPIEL_SCHALTER = (
+# Pakete (Schalter-Umbau 27.11., GLOSSARY.md "Paket"): je Paket ein Schalter, der die
+# frueheren Teil-Schalter ersetzt. Name, Feld und Umgebungsvariable sind die des
+# bisherigen Hauptschalters, damit in der Konfiguration nur Zeilen wegfallen. Der
+# Admin-Wert gilt unter dem Paketnamen; die Admin-Werte der frueheren Teile werden
+# ignoriert (nicht geloescht).
+PAKET_SCHALTER = (
     Schalterart(
-        name="saison_ziel",
-        gruppe=SPIELGEFUEHL,
-        feld="saison_ziel_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_SAISON_ZIEL_AKTIV",
+        name="teams",
+        gruppe=PAKETE,
+        teile=("teams", "team_fortschritt", "teamlink_vertrauenssatz"),
+        rechtlich_freigegeben=True,
+        feld="teams_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_TEAMS_AKTIV",
         erklaerung=(
-            "Saisons mit Gemeinschaftsziel und der Fortschrittsbalken auf der "
-            "Startseite; für alle erst ab der Schwelle, vorher nur im Admin."
-        ),
-        oeffentlich=True,
-    ),
-    Schalterart(
-        name="gartenansicht",
-        gruppe=SPIELGEFUEHL,
-        feld="gartenansicht_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_GARTENANSICHT_AKTIV",
-        erklaerung=(
-            "Gartenansicht für alle: je Thema die Zahl der Antworten und der "
-            "Aussagen ohne Antwort; Besucher sehen nur die Zahlen."
-        ),
-        oeffentlich=True,
-    ),
-    Schalterart(
-        name="kopiert_erfolg",
-        gruppe=SPIELGEFUEHL,
-        feld="kopiert_erfolg_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_KOPIERT_ERFOLG_AKTIV",
-        erklaerung=(
-            "Kurzer Erfolgstext nach dem Kopieren mit der Nutzung der Karte und "
-            "einem Hinweis auf andere Tonlagen; speichert und zählt nichts Neues."
-        ),
-        oeffentlich=True,
-    ),
-    Schalterart(
-        name="konter_probe",
-        gruppe=SPIELGEFUEHL,
-        feld="konter_probe_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_KONTER_PROBE_AKTIV",
-        erklaerung=(
-            "Spiel „Konter-Probe“: ein Spruch, drei echte Antworten, tippen, danach "
-            "die echte Nutzung sehen; ohne Konto, der Tipp wird nicht gespeichert."
-        ),
-        oeffentlich=True,
-    ),
-    Schalterart(
-        name="luecke_zu_gross",
-        gruppe=SPIELGEFUEHL,
-        feld="luecke_zu_gross_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_LUECKE_ZU_GROSS_AKTIV",
-        erklaerung=(
-            "„Lücke zu!“ nach dem Beantworten einer gesuchten Aussage als großer "
-            "Moment mit dem Knopf „Nächste Lücke“; aus: der kleine Satz wie bisher."
-        ),
-        oeffentlich=True,
-    ),
-    Schalterart(
-        name="einwilligung_im_gewinn",
-        gruppe=SPIELGEFUEHL,
-        feld="einwilligung_im_gewinn_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_EINWILLIGUNG_IM_GEWINN_AKTIV",
-        erklaerung=(
-            "Einwilligungsfragen im passenden Moment statt alle auf einmal: "
-            "höchstens eine neue Frage je Besuch und vier im ersten Monat; die "
-            "Wortlaute bleiben gleich."
-        ),
-        oeffentlich=True,
-    ),
-    Schalterart(
-        name="naechster_schritt",
-        gruppe=SPIELGEFUEHL,
-        feld="naechster_schritt_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_NAECHSTER_SCHRITT_AKTIV",
-        erklaerung=(
-            "Karte „Dein nächster Schritt“ auf der Startseite: ein Vorschlag aus den "
-            "eigenen Beiträgen, ohne Frist; speichert auf dem Server nichts zusätzlich."
-        ),
-        einschalt_hinweis=JURA_VORLAEUFIG,
-        oeffentlich=True,
-    ),
-    Schalterart(
-        name="saal_spruch",
-        gruppe=SPIELGEFUEHL,
-        feld="saal_spruch_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_SAAL_SPRUCH_AKTIV",
-        erklaerung=(
-            "Karte „Heute im Netz zur BDK:“ oben auf der Startseite mit dem heutigen "
-            "Saal-Spruch (Abschnitt Saal-Sprüche: ein Spruch, der gerade unter "
-            "BDK-Beiträgen im Netz kursiert) und dem Knopf „Antworten ansehen“; an "
-            "Tagen ohne Spruch nichts. Speichert nichts zur Person."
-        ),
-        oeffentlich=True,
-    ),
-    Schalterart(
-        name="null_treffer_anzahl",
-        gruppe=SPIELGEFUEHL,
-        feld="null_treffer_anzahl_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_NULL_TREFFER_ANZAHL_AKTIV",
-        erklaerung=(
-            "Seite ohne Treffer: „Danach wurde in den letzten vier Wochen schon "
-            "N-mal gesucht“ ab N ≥ 3, auch ohne Anmeldung; nur zu für alle sichtbaren "
-            "Aussagen, speichert nichts zusätzlich."
+            "Paket Teams: Teams über Einladungen (Teamfelder an der Einladung, Beitreten "
+            "mit eigener Einwilligung, „Meine Teams“), der Team-Fortschritt der letzten "
+            "Woche und der Vertrauenssatz beim Teambeitritt. Aus: Einladungen wie "
+            "bisher, Teamfelder werden ignoriert."
         ),
         einschalt_hinweis=(
-            f"{JURA_VORLAEUFIG}: Anzeige erst ab N ≥ 3, Wortlaut „N-mal gesucht“"
+            f"{GO_27_11}; Team-Summe erst ab 5 Mitgliedern mit Einwilligung. Die "
+            "Anzeige am Namen (teams_oeffentlich) bleibt ein eigener Schalter."
         ),
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="spielgefuehl_buehne",
+        gruppe=PAKETE,
+        teile=("punkte", "spielgefuehl_buehne", "rangliste"),
+        rechtlich_freigegeben=True,
+        feld="spielgefuehl_buehne_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_SPIELGEFUEHL_BUEHNE_AKTIV",
+        erklaerung=(
+            "Paket Spielgefühl: Punkte und Meilensteine, das Spielgefühl als eine Frage "
+            "(Aus, Nur für mich, in der Saison-Rangliste mitspielen) und die Rangliste "
+            "je Saison; Abzeichen gibt es nur in der Rangliste. Dazu die "
+            "Muster-Hinweise für Admins."
+        ),
+        einschalt_hinweis=f"{GO_27_11}; Rangliste sichtbar erst ab 10 Teilnehmenden",
         oeffentlich=True,
     ),
     Schalterart(
         name="wirkungs_echo",
-        gruppe=PUNKTE_ANERKENNUNG,
+        gruppe=PAKETE,
+        teile=("wirkungs_echo", "danke_knopf"),
+        rechtlich_freigegeben=True,
         feld="wirkungs_echo_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV",
         erklaerung=(
-            "Wer schreibt, sieht je Beitrag, wie oft er öffentlich gepostet wurde, "
-            "nur als Summe und nie, von wem; wirkt nur zusammen mit dem Danke-Knopf."
+            "Paket Wirkungs-Echo: Wer schreibt, sieht je Beitrag, wie oft er öffentlich "
+            "gepostet wurde und wie oft jemand Danke gesagt hat, nur als Summe und nie, "
+            "von wem; dazu der Knopf „Danke an die Autorin“ nach dem Kopieren für "
+            "Angemeldete. Bringt keine Punkte."
         ),
-        einschalt_hinweis=(
-            f"{JURA_VORLAEUFIG} (drei gespeicherte Zahlen, Zählerstand des Echos); "
-            "nur zusammen mit danke_knopf, der Absatz nennt beide Summen"
-        ),
-        # Die Datenschutzerklaerung blendet ihren Absatz danach ein (GET /api/v1/funktionen)
+        einschalt_hinweis=f"{GO_27_11}; der DSE-Absatz nennt beide Summen",
         oeffentlich=True,
     ),
     Schalterart(
-        name="danke_knopf",
-        gruppe=PUNKTE_ANERKENNUNG,
-        feld="danke_knopf_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV",
+        name="k_begruessung",
+        gruppe=PAKETE,
+        teile=("k_begruessung", "saal_spruch"),
+        rechtlich_freigegeben=True,
+        feld="k_begruessung_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_K_BEGRUESSUNG_AKTIV",
         erklaerung=(
-            "Knopf „Danke an die Autorin“ nach dem Kopieren, für Angemeldete; die "
-            "Autorin sieht nur die Summe je Beitrag. Bringt keine Punkte; wirkt nur "
-            "zusammen mit dem Wirkungs-Echo."
+            "Paket BDK-Begrüßung: Wer über ?k=sticker oder ?k=bdk kommt, liest eine "
+            "passende Begrüßung (mit ?k=bdk beim Anmelden dazu den Hinweis zum "
+            "Teamlink), und oben auf der Startseite steht die Karte „Heute im Netz zur "
+            "BDK:“ mit dem Saal-Spruch des Tages. Nur Anzeige, speichert nichts zur "
+            "Person."
         ),
+        einschalt_hinweis=f"{GO_27_11} (nur Anzeige, nichts gespeichert)",
+        oeffentlich=True,
+    ),
+)
+
+
+# Einzelschalter, von Haus aus aus. Die fuenf heiklen (teams_oeffentlich, merkliste,
+# aufrufe_zaehlen, danke_ohne_konto, k_ankuenfte) warten auf Recht; ihr Hinweis sagt,
+# was fehlt.
+EINZEL_SCHALTER = (
+    Schalterart(
+        name="team_quests",
+        rechtlich_freigegeben=True,
+        feld="team_quests_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_TEAM_QUESTS_AKTIV",
+        erklaerung=(
+            "Team-Quests: ein gemeinsames Wochenziel je Team aus dem Bedarf; "
+            "Quest-Punkte für Mitglieder, die beigetragen haben, nur mit dem Paket "
+            "Spielgefühl. Wirkt nur zusammen mit dem Paket Teams."
+        ),
+        dsfa_hinweis=True,
         einschalt_hinweis=(
-            f"{JURA_VORLAEUFIG}; nur zusammen mit wirkungs_echo, der Absatz nennt "
-            "beide Summen"
+            f"{GO_27_11}; Quest-Punkte nur mit Wortlaut -28 (spielgefuehl-2026-11-28) "
+            "und dem Paket Spielgefühl; an nur mit dem Paket Teams"
+        ),
+        # Die Datenschutzerklaerung blendet ihren Absatz danach ein
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="muster_stimmen",
+        rechtlich_freigegeben=True,
+        feld="muster_stimmen_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_MUSTER_STIMMEN_AKTIV",
+        erklaerung=(
+            "Muster-Hinweise auch, wenn zwei Konten einander innerhalb von sieben Tagen "
+            "zustimmen, nur bei Konten, die beide einem Wortlaut des Spielgefühls mit "
+            "Zustimmungen zugestimmt haben (die Frage zeigt ihn immer). "
+            "Nur ein Hinweis für Admins, keine Wirkung auf Punkte oder Rangliste; wirkt "
+            "nur zusammen mit dem Paket Spielgefühl."
+        ),
+        einschalt_hinweis=f"{GO_27_11}; Wortlaut spielgefuehl-2026-11-28, DSE-Satz drin",
+        # Die Datenschutzerklaerung zeigt ihren Satz danach
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="teams_oeffentlich",
+        feld="teams_oeffentlich_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV",
+        erklaerung=(
+            "Teams der aktuellen Saison am Anzeigenamen, die andere Angemeldete "
+            "sehen, nur mit eigener Einwilligung; wirkt nur zusammen mit dem Paket "
+            "Teams. Aus, bis die Datenschutzbeauftragte geraten hat."
+        ),
+        dsfa_hinweis=True,
+        einschalt_hinweis=(
+            "Aus lassen (Jura 26.11.): Art. 9, Wortlaut ungeprüft, Rat der "
+            "Datenschutzbeauftragten offen; kein DSE-Absatz. Die Vertrauenszeile vor "
+            "dem Anmelden stimmt nur, solange dieser Schalter aus ist"
         ),
         oeffentlich=True,
+    ),
+    Schalterart(
+        name="merkliste",
+        feld="merkliste_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_MERKLISTE_AKTIV",
+        erklaerung=(
+            "Merken an der Beitragskarte und der Reiter „Gemerkt“ in Meine "
+            "Beiträge, nur mit Art.-9-Einwilligung; der Widerruf löscht die "
+            "Merkliste. Nur die Person selbst sieht sie."
+        ),
+        einschalt_hinweis=(
+            "Aus lassen (Jura 26.11.): Zweck steht nicht im Wortlaut der "
+            "Einwilligung; braucht neuen Einwilligungswortlaut + DSFA-Abschnitt + "
+            "DSE-Absatz (neuer Zweck, politisches Interesse)"
+        ),
+        oeffentlich=True,
+    ),
+    Schalterart(
+        name="aufrufe_zaehlen",
+        feld="aufrufe_zaehlen_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_AUFRUFE_ZAEHLEN_AKTIV",
+        erklaerung=(
+            "Zählt Aufrufe und Besucher je Tag am Server aus den Abrufen von "
+            "Startseite, Suche, Thema und Beitrag, ohne eigene Anfrage aus dem "
+            "Browser und ohne Cookie; die IP-Adresse wird nicht gespeichert. "
+            "Zeigt sie unter Kennzahlen."
+        ),
+        dsfa_hinweis=True,
+        einschalt_hinweis=(
+            "Aus lassen (Jura 26.11.): erst nach DSB-Antwort (§ 25 TDDDG, #495) "
+            "und DSFA-Zeile V-Messung; kein DSE-Absatz"
+        ),
     ),
     Schalterart(
         name="danke_ohne_konto",
-        gruppe=PUNKTE_ANERKENNUNG,
         feld="danke_ohne_konto_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV",
         erklaerung=(
             "Danke-Knopf auch ohne Konto, entdoppelt über das Besuchermerkmal; wirkt "
-            "nur zusammen mit dem Danke-Knopf."
+            "nur zusammen mit dem Paket Wirkungs-Echo."
         ),
         einschalt_hinweis=(
             "Nicht einschalten (Jura 26.11.): erfüllt Variante B nicht, ohne Konto "
@@ -237,391 +260,7 @@ SPIEL_SCHALTER = (
         oeffentlich=True,
     ),
     Schalterart(
-        name="rangliste",
-        gruppe=PUNKTE_ANERKENNUNG,
-        feld="rangliste_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_RANGLISTE_AKTIV",
-        erklaerung=(
-            "Rangliste je Saison, sichtbar nur für Angemeldete, die selbst "
-            "eingewilligt haben; wirkt nur zusammen mit den Punkten."
-        ),
-        einschalt_hinweis=(
-            f"{JURA_VORLAEUFIG}; Wortlaut rangliste-2026-11-25 wortgleich, sichtbar "
-            f"erst ab 10 Teilnehmenden; {GO_VOR_AUSWEITUNG}"
-        ),
-        oeffentlich=True,
-    ),
-)
-
-
-SCHALTER: Dict[str, Schalterart] = {
-    s.name: s
-    for s in (
-        Schalterart(
-            name="punkte",
-            gruppe=PUNKTE_ANERKENNUNG,
-            feld="punkte_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_PUNKTE_AKTIV",
-            erklaerung=(
-                "Punkte, Meilensteine und die Einwilligung dazu für Mitwirkende, "
-                "dazu die Muster-Hinweise für Admins."
-            ),
-            dsfa_hinweis=True,
-            einschalt_hinweis=f"{JURA_VORLAEUFIG}; {GO_VOR_AUSWEITUNG} (mit DSFA)",
-            oeffentlich=True,
-        ),
-        Schalterart(
-            name="abzeichen_sichtbar",
-            gruppe=PUNKTE_ANERKENNUNG,
-            feld="abzeichen_sichtbar_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_ABZEICHEN_SICHTBAR_AKTIV",
-            erklaerung=(
-                "Meilenstein-Abzeichen am Anzeigenamen, die andere Angemeldete sehen; "
-                "wirkt nur zusammen mit den Punkten und nicht, solange das Spielgefühl "
-                "als eine Frage an ist (dann nur in der Rangliste); erscheint spätestens "
-                "nach 15 Minuten."
-            ),
-            dsfa_hinweis=True,
-            einschalt_hinweis=(
-                "Aus lassen (Jura 26.11.): nicht in der Ampel für den internen Test, "
-                "DSFA offen; die Vertrauenszeile stimmt nur ohne Abzeichen"
-            ),
-        ),
-        Schalterart(
-            name="gepostet",
-            feld="gepostet_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_GEPOSTET_AKTIV",
-            erklaerung=(
-                "Rückfrage „Ja, gepostet“ nach dem Kopieren und die Zahl je Woche "
-                "in der Übersicht."
-            ),
-        ),
-        Schalterart(
-            name="gepostet_ohne_konto",
-            feld="gepostet_ohne_konto_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_GEPOSTET_OHNE_KONTO_AKTIV",
-            erklaerung=(
-                "Rückfrage „Ja, gepostet“ auch ohne Konto, nur als Zahl je Woche "
-                "„Meldungen ohne Konto“, getrennt von den Menschen; wirkt nur "
-                "zusammen mit „gepostet“."
-            ),
-            einschalt_hinweis=f"{JURA_VORLAEUFIG} (Variante B)",
-            oeffentlich=True,
-        ),
-        Schalterart(
-            name="herkunft_pruefen",
-            feld="herkunft_pruefen_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_HERKUNFT_PRUEFEN_AKTIV",
-            erklaerung=(
-                "Prüft nachts die Links unter „Herkunft“ und listet tote oder "
-                "umgezogene in der Übersicht. Ruft dafür fremde Server ab."
-            ),
-        ),
-        Schalterart(
-            name="merkliste",
-            gruppe=GRUNDFUNKTIONEN,
-            feld="merkliste_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_MERKLISTE_AKTIV",
-            erklaerung=(
-                "Merken an der Beitragskarte und der Reiter „Gemerkt“ in Meine "
-                "Beiträge, nur mit Art.-9-Einwilligung; der Widerruf löscht die "
-                "Merkliste. Nur die Person selbst sieht sie."
-            ),
-            einschalt_hinweis=(
-                "Aus lassen (Jura 26.11.): Zweck steht nicht im Wortlaut der "
-                "Einwilligung; braucht neuen Einwilligungswortlaut + DSFA-Abschnitt + "
-                "DSE-Absatz (neuer Zweck, politisches Interesse)"
-            ),
-            oeffentlich=True,
-        ),
-        Schalterart(
-            name="aufrufe_zaehlen",
-            gruppe=GRUNDFUNKTIONEN,
-            feld="aufrufe_zaehlen_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_AUFRUFE_ZAEHLEN_AKTIV",
-            erklaerung=(
-                "Zählt Aufrufe und Besucher je Tag am Server aus den Abrufen von "
-                "Startseite, Suche, Thema und Beitrag, ohne eigene Anfrage aus dem "
-                "Browser und ohne Cookie; die IP-Adresse wird nicht gespeichert. "
-                "Zeigt sie unter Kennzahlen."
-            ),
-            dsfa_hinweis=True,
-            einschalt_hinweis=(
-                "Aus lassen (Jura 26.11.): erst nach DSB-Antwort (§ 25 TDDDG, #495) "
-                "und DSFA-Zeile V-Messung; kein DSE-Absatz"
-            ),
-        ),
-        Schalterart(
-            name="abkuerzungen",
-            feld="abkuerzungen_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_ABKUERZUNGEN_AKTIV",
-            erklaerung=(
-                "App-Abkürzungen Einwerfen, Suchen und Fangkorb beim langen Drücken "
-                "aufs App-Symbol. Aus: Sie öffnen die Startseite. Das Gerät zeigt sie "
-                "trotzdem an, weil das Manifest fest ist."
-            ),
-            oeffentlich=True,
-        ),
-        Schalterart(
-            name="antworten_hinweis",
-            feld="antworten_hinweis_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_ANTWORTEN_HINWEIS_AKTIV",
-            erklaerung=(
-                "Kachel „neue Antworten auf deine Aussagen“ auf der Startseite und "
-                "der Reiter „Meine Aussagen“; speichert nichts Neues."
-            ),
-            # Die Datenschutzerklaerung blendet ihren Absatz danach ein
-            oeffentlich=True,
-        ),
-        Schalterart(
-            name="sharepic",
-            feld="sharepic_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_SHAREPIC_AKTIV",
-            erklaerung=(
-                "„Als Bild teilen“ im Menü der Beitragskarte: Das Bild entsteht im "
-                "Browser und verlässt das Gerät nur über dessen Teilen-Menü."
-            ),
-            oeffentlich=True,
-        ),
-        Schalterart(
-            name="meldeweg_sichtbar",
-            feld="meldeweg_sichtbar_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_MELDEWEG_SICHTBAR_AKTIV",
-            erklaerung=(
-                "„Melden“ klein in der Meta-Zeile jeder Beitragskarte statt nur im "
-                "⋮-Menü, dazu „Melden & Kontakt“ mit der Funktionsadresse im Fuß; "
-                "speichert und zählt nichts Neues."
-            ),
-            oeffentlich=True,
-        ),
-        Schalterart(
-            name="bestandszahl_zuwachs",
-            feld="bestandszahl_zuwachs_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_BESTANDSZAHL_ZUWACHS_AKTIV",
-            erklaerung=(
-                "Zuwachs in der Unterzeile der Startseite: neue Antworten der letzten "
-                "7 Tage, unter 3 nur der Tag der letzten; zählt nur öffentliche Inhalte."
-            ),
-            # Die Datenschutzerklaerung blendet ihren Absatz danach ein
-            oeffentlich=True,
-        ),
-        Schalterart(
-            name="feedback_gestoert",
-            feld="feedback_gestoert_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_FEEDBACK_GESTOERT_AKTIV",
-            erklaerung=(
-                "Knopf „Was hat dich gestört?“ auf der Startseite für die Startphase: "
-                "dasselbe Feedback-Formular, nur Freitext ohne Kontakt; alle Einträge "
-                "werden am 31.12.2026 gelöscht, danach wirkt der Schalter nicht mehr."
-            ),
-            einschalt_hinweis=(
-                f"{JURA_VORLAEUFIG}; ohne Kennung, der Löschlauf löscht alle am "
-                "31.12.2026"
-            ),
-            oeffentlich=True,
-        ),
-        Schalterart(
-            name="dse_kurzfassung",
-            feld="dse_kurzfassung_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_DSE_KURZFASSUNG_AKTIV",
-            erklaerung=(
-                "Kasten „Kurz gesagt“ oben in der Datenschutzerklärung: wer "
-                "verantwortlich ist, was gespeichert wird, wie man löscht und "
-                "widerruft, je mit Sprunglink auf den Absatz im Volltext. Bleibt "
-                "unsichtbar, solange ein Satz noch Platzhalter ist."
-            ),
-            einschalt_hinweis=(
-                f"{JURA_26_11}, Wortlaut drin; Name des "
-                "Verantwortlichen wie im Abschnitt „Verantwortlicher“"
-            ),
-            oeffentlich=True,
-        ),
-        Schalterart(
-            name="stimmen_text_verfall",
-            gruppe=GRUNDFUNKTIONEN,
-            feld="stimmen_text_verfall_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_STIMMEN_TEXT_VERFALL_AKTIV",
-            erklaerung=(
-                "Stimmen verfallen auch, wenn die Autorin oder der Autor den Text durch "
-                "einen ganz anderen ersetzt (#636). Gelöschte Stimmen kommen nicht "
-                "zurück; wirkt nur, wenn die Prüfung auf dieselbe Aussage an ist."
-            ),
-            einschalt_hinweis=f"{JURA_VORLAEUFIG} (Halbsatz „Bewertungen“)",
-            oeffentlich=True,
-        ),
-        Schalterart(
-            name="teams",
-            gruppe=TEAMS,
-            rechtlich_freigegeben=True,
-            feld="teams_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_TEAMS_AKTIV",
-            erklaerung=(
-                "Teams über Einladungen: Teamfelder an der Einladung, Beitreten mit "
-                "eigener Einwilligung und „Meine Teams“. Aus: Einladungen wie bisher, "
-                "Teamfelder werden ignoriert."
-            ),
-            einschalt_hinweis=(
-                "Rechtlich freigegeben (25.11.): darf vor dem Beschluss der DSFA "
-                "eingeschaltet werden. Die Anzeige am Namen (teams_oeffentlich) "
-                "bleibt aus."
-            ),
-            oeffentlich=True,
-        ),
-        Schalterart(
-            name="teams_oeffentlich",
-            gruppe=TEAMS,
-            feld="teams_oeffentlich_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV",
-            erklaerung=(
-                "Teams der aktuellen Saison am Anzeigenamen, die andere Angemeldete "
-                "sehen, nur mit eigener Einwilligung; wirkt nur zusammen mit „teams“. "
-                "Aus, bis die Datenschutzbeauftragte geraten hat."
-            ),
-            dsfa_hinweis=True,
-            einschalt_hinweis=(
-                "Aus lassen (Jura 26.11.): Art. 9, Wortlaut ungeprüft, Rat der "
-                "Datenschutzbeauftragten offen; kein DSE-Absatz"
-            ),
-            oeffentlich=True,
-        ),
-        Schalterart(
-            name="teamlink_vertrauenssatz",
-            gruppe=TEAMS,
-            feld="teamlink_vertrauenssatz_aktiv",
-            umgebungsvariable="SEMANTIC_SEARCH_TEAMLINK_VERTRAUENSSATZ_AKTIV",
-            erklaerung=(
-                "Vertrauenssatz vor der Frage beim Teambeitritt: „Beitreten heißt: Du "
-                "zählst zu diesem Team und trägst zu seiner Summe bei.“, bei einem Team "
-                "nach Gruppe dazu, dass die Gruppe keine Daten bekommt. Speichert "
-                "nichts; wirkt nur zusammen mit dem Team-Fortschritt, weil der Satz "
-                "dessen Summe verspricht."
-            ),
-            einschalt_hinweis=(
-                f"{JURA_26_11}, Wortlaut drin; nennt die "
-                "Team-Summe, also zusammen mit team_fortschritt einschalten"
-            ),
-            oeffentlich=True,
-        ),
-        *SPIEL_SCHALTER,
-    )
-}
-
-
-# Team-Fortschritt (#784) und Team-Quests (#792): eigene Obergrenzen, von Haus aus
-# aus. Beide zaehlen und zeigen nur mit Teams; die Quests nur mit dem Team-Fortschritt,
-# weil sie dessen Wochenzaehler nutzen (services/team_fortschritt_service.py).
-TEAM_SCHALTER = (
-    Schalterart(
-        name="team_fortschritt",
-        gruppe=TEAMS,
-        feld="team_fortschritt_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_TEAM_FORTSCHRITT_AKTIV",
-        erklaerung=(
-            "Team-Fortschritt in „Meine Teams“: Mitglieder sehen, was ihr Team in der "
-            "letzten abgeschlossenen Woche gemeinsam bewirkt hat, gerundet und erst ab "
-            "5 Mitgliedern mit Einwilligung. Zählt dafür je Team und Woche ohne "
-            "Kennung; wirkt nur zusammen mit „teams“."
-        ),
-        dsfa_hinweis=True,
-        einschalt_hinweis=(
-            f"{JURA_VORLAEUFIG}; Summe erst ab 5 Mitgliedern mit Einwilligung; "
-            f"{GO_VOR_AUSWEITUNG}"
-        ),
-        # Die Datenschutzerklaerung nimmt danach den Satz „noch nicht eingeschaltet“ weg
-        oeffentlich=True,
-    ),
-    Schalterart(
-        name="team_quests",
-        gruppe=TEAMS,
-        feld="team_quests_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_TEAM_QUESTS_AKTIV",
-        erklaerung=(
-            "Team-Quests: ein gemeinsames Wochenziel je Team aus dem Bedarf, mit "
-            "Quest-Punkten für Mitglieder, die beigetragen haben; wirkt nur zusammen "
-            "mit dem Team-Fortschritt."
-        ),
-        dsfa_hinweis=True,
-        einschalt_hinweis=(
-            f"{JURA_VORLAEUFIG}; Quest-Punkte erst ab Wortlaut -28 (spielgefuehl-2026-11-28); "
-            f"an nur mit team_fortschritt; {GO_VOR_AUSWEITUNG}"
-        ),
-        # Die Datenschutzerklaerung blendet ihren Absatz danach ein
-        oeffentlich=True,
-    ),
-)
-SCHALTER.update({s.name: s for s in TEAM_SCHALTER})
-
-
-# Vertrauenszeile vor dem Anmelden (vorlaeufige juristische Einschaetzung 26.11.2026):
-# Neues hinter einem Schalter, Obergrenze von Haus aus aus. Der Wortlaut nennt Team-Summe
-# und Rangliste als die einzigen Wege, auf denen andere mehr als die Beitraege sehen;
-# die Bedingung dafuer steht als Hinweis auf der Admin-Seite.
-SCHALTER["vertrauenszeile"] = Schalterart(
-    name="vertrauenszeile",
-    gruppe=GRUNDFUNKTIONEN,
-    feld="vertrauenszeile_aktiv",
-    umgebungsvariable="SEMANTIC_SEARCH_VERTRAUENSZEILE_AKTIV",
-    erklaerung=(
-        "Zeile über den Anmeldewegen: Was man beiträgt, erscheint unter dem "
-        "Anzeigenamen, wie viel man sonst mitmacht, sehen andere nicht, außer als "
-        "Teil der Team-Summe und, selbst gewählt, in der Rangliste; mit Link "
-        "„Datenschutz“. Speichert und zählt nichts."
-    ),
-    einschalt_hinweis=(
-        f"{JURA_26_11}, Wortlaut mit Team-Summe und "
-        "Rangliste drin; stimmt nur, solange teams_oeffentlich und "
-        "abzeichen_sichtbar aus sind"
-    ),
-    oeffentlich=True,
-)
-
-
-# Kurze Hinweiszeile unter dem Suchknopf (Designwichtel Nr. 5): eine Zeile "Wie wir
-# Suchen speichern · Datenschutz" statt des abgestimmten Wortlauts vom 16.11.; der Satz
-# zur Veroeffentlichung klappt auf. Nur im Browser, deshalb oeffentlich. Nicht "Ohne
-# Namen gespeichert" (Jura 26.11.): Suchvorgaenge Angemeldeter tragen bis Tagesende ein
-# Tagespseudonym aus der Kennung (services/search_tracking_service.py).
-HINWEIS_SCHALTER = (
-    Schalterart(
-        name="hinweiszeile_kurz",
-        gruppe=GRUNDFUNKTIONEN,
-        feld="hinweiszeile_kurz_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_HINWEISZEILE_KURZ_AKTIV",
-        erklaerung=(
-            "Unter dem Suchknopf eine Zeile „Wie wir Suchen speichern · Datenschutz“ "
-            "statt zwei; „Nach Prüfung können Suchtexte öffentlich werden“ steht "
-            "aufklappbar dahinter. Speichert nichts Neues."
-        ),
-        einschalt_hinweis=(
-            f"{JURA_26_11}: Wortlaut „Wie wir Suchen "
-            "speichern“, weil Suchvorgänge Angemeldeter an der Kennung hängen"
-        ),
-        oeffentlich=True,
-    ),
-)
-SCHALTER.update({s.name: s for s in HINWEIS_SCHALTER})
-
-
-# Kampagnenwort ?k= (GLOSSARY.md "Kampagnenwort"): vorlaeufige Jura-Einschaetzung
-# 26.11.2026, Grundsatz Maintainer: alles hinter einem Schalter, Standard aus. Beide
-# Obergrenzen von Haus aus aus. k_begruessung darf fuer den internen Test an (Jura
-# vorlaeufig 26.11.), k_ankuenfte bleibt aus.
-K_SCHALTER = (
-    Schalterart(
-        name="k_begruessung",
-        gruppe=GRUNDFUNKTIONEN,
-        feld="k_begruessung_aktiv",
-        umgebungsvariable="SEMANTIC_SEARCH_K_BEGRUESSUNG_AKTIV",
-        erklaerung=(
-            "Wer über ?k=sticker oder ?k=bdk kommt, liest in der Rundgang-Zeile eine "
-            "passende Begrüßung statt der allgemeinen; nur Anzeige, speichert nichts."
-        ),
-        einschalt_hinweis=f"{JURA_VORLAEUFIG} (nur Anzeige, nichts gespeichert)",
-        oeffentlich=True,
-    ),
-    Schalterart(
         name="k_ankuenfte",
-        gruppe=GRUNDFUNKTIONEN,
         feld="k_ankuenfte_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_K_ANKUENFTE_AKTIV",
         erklaerung=(
@@ -636,60 +275,22 @@ K_SCHALTER = (
         oeffentlich=True,
     ),
 )
-SCHALTER.update({s.name: s for s in K_SCHALTER})
 
 
-# Spielgefuehl als eine Einstellung in drei Stufen (domain/spielgefuehl.py,
-# services/spielgefuehl_service.py): waehlt das Einwilligungsmodell, Obergrenze von
-# Haus aus aus. Wirkt nur zusammen mit punkte: Die Frage stellt der Dienst nur mit
-# Punkten (api/v1/spielgefuehl.py), ohne sie saehen Nutzer nichts. Die Stufe Rangliste
-# haengt weiter an rangliste.
-SCHALTER["spielgefuehl_buehne"] = Schalterart(
-    name="spielgefuehl_buehne",
-    gruppe=PUNKTE_ANERKENNUNG,
-    # Jura vorlaeufig ok 26.11. fuer den internen Test: nicht "wartet auf Recht"
-    rechtlich_freigegeben=True,
-    feld="spielgefuehl_buehne_aktiv",
-    umgebungsvariable="SEMANTIC_SEARCH_SPIELGEFUEHL_BUEHNE_AKTIV",
-    erklaerung=(
-        "Spielgefühl als eine Frage (Aus, Nur für mich, in der "
-        "Saison-Rangliste mitspielen) statt der Einwilligungen Punkte, Abzeichen am "
-        "Namen und Rangliste; Abzeichen erscheinen dann nur in der Rangliste. Wirkt "
-        "nur zusammen mit den Punkten."
-    ),
-    einschalt_hinweis=(
-        "Jura vorläufig ok 26.11., interner Test; Go vor Vorhut/BDK; braucht "
-        "Salt-Obergrenze"
-    ),
-    oeffentlich=True,
-)
+SCHALTER: Dict[str, Schalterart] = {
+    s.name: s for s in (*PAKET_SCHALTER, *EINZEL_SCHALTER)
+}
 
 
-# Gegenseitige Zustimmungen in den Muster-Hinweisen (Entscheidung Maintainer 27.11.,
-# Wortlaut spielgefuehl-2026-11-27, seit der juristischen Vorgabe vom 27.11. die Fassung
-# spielgefuehl-2026-11-28): Obergrenze von Haus aus aus. Wirkt nur mit
-# spielgefuehl_buehne, weil der Zweck im Wortlaut des Spielgefuehls steht
-# (domain/spielgefuehl.py STIMMEN_WORTLAUTE). Oeffentlich, weil die
-# Datenschutzerklaerung ihren Satz danach zeigt.
-SCHALTER["muster_stimmen"] = Schalterart(
-    name="muster_stimmen",
-    gruppe=PUNKTE_ANERKENNUNG,
-    feld="muster_stimmen_aktiv",
-    umgebungsvariable="SEMANTIC_SEARCH_MUSTER_STIMMEN_AKTIV",
-    erklaerung=(
-        "Muster-Hinweise auch, wenn zwei Konten einander innerhalb von sieben Tagen "
-        "zustimmen, nur bei Konten, die beide einem Wortlaut des Spielgefühls mit "
-        "Zustimmungen zugestimmt haben (die Frage zeigt ihn immer). "
-        "Nur ein Hinweis für Admins, keine Wirkung auf Punkte oder Rangliste; wirkt "
-        "nur zusammen mit dem Spielgefühl als eine Frage."
-    ),
-    einschalt_hinweis=(
-        "Wortlaut spielgefuehl-2026-11-28 (juristische Vorgabe vom 27.11.), "
-        "DSE-Satz drin; "
-        f"{GO_VOR_AUSWEITUNG}"
-    ),
-    oeffentlich=True,
-)
+# Not-Aus (Entscheidung Maintainer 27.11.): Basisfunktionen ohne Admin-Wert, die nur die
+# Umgebungsvariable SEMANTIC_SEARCH_<NAME>_AKTIV noch abschalten kann. Standard an;
+# "=false" schaltet ab. Keine Zeile auf der Admin-Seite. Name -> Feld in Settings.
+NOTAUS: Dict[str, str] = {
+    "feedback_gestoert": "feedback_gestoert_aktiv",
+    "gepostet_ohne_konto": "gepostet_ohne_konto_aktiv",
+    "null_treffer_anzahl": "null_treffer_anzahl_aktiv",
+    "herkunft_pruefen": "herkunft_pruefen_aktiv",
+}
 
 
 class UnbekannterSchalter(KeyError):
@@ -821,62 +422,42 @@ def _an(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool:
     return bool(getattr(einstellungen, art.feld)) and bool(werte.get(name, False))
 
 
-# Schalter, die laut Jura nur zusammen wirken duerfen (beide Absaetze der
-# Datenschutzerklaerung nennen beide Summen): einer wirkt nur, wenn der andere auch an ist.
-NUR_ZUSAMMEN = {"wirkungs_echo": "danke_knopf", "danke_knopf": "wirkungs_echo"}
+# Einzelschalter, die nur zusammen mit einem Paket wirken: Name -> Paket.
+VORAUSSETZUNG: Dict[str, str] = {
+    # Der Zweck Zustimmungen steht im Wortlaut des Spielgefuehls (domain/spielgefuehl.py)
+    "muster_stimmen": "spielgefuehl_buehne",
+    # Ohne Teams keine Teams am Namen und keine Quests
+    "teams_oeffentlich": "teams",
+    "team_quests": "teams",
+    # Ohne Danke-Knopf (Paket Wirkungs-Echo) kein Danke ohne Konto
+    "danke_ohne_konto": "wirkungs_echo",
+}
 
 
 def _wirksam(name: str, einstellungen: Settings, werte: Dict[str, bool]) -> bool:
     an = _an(name, einstellungen, werte)
-    if name in NUR_ZUSAMMEN:
-        # Gegenseitig: nur den Partner selbst pruefen, sonst liefe es im Kreis
-        return an and _an(NUR_ZUSAMMEN[name], einstellungen, werte)
-    if name == "spielgefuehl_buehne":
-        # Die Frage gibt es nur mit Punkten (api/v1/spielgefuehl.py); ohne sie sieht
-        # niemand etwas, und alles, was das Modell umschaltet, haengt an den Punkten.
-        return an and _wirksam("punkte", einstellungen, werte)
-    if name == "muster_stimmen":
-        # Der Zweck steht im Wortlaut des Spielgefuehls (domain/spielgefuehl.py)
-        return an and _wirksam("spielgefuehl_buehne", einstellungen, werte)
-    if name == "team_fortschritt":
-        # Ohne Teams keine Summe des Teams
-        return an and _wirksam("teams", einstellungen, werte)
-    if name == "team_quests":
-        # Die Quests zaehlen mit dem Wochenzaehler des Team-Fortschritts
-        return an and _wirksam("team_fortschritt", einstellungen, werte)
-    if name == "abzeichen_sichtbar":
-        # Ohne Punkte keine sichtbaren Abzeichen (wie Settings.abzeichen_sichtbar); im
-        # Spielgefuehl-Modell nie am Namen, nur in der Rangliste (services/abzeichen_service.py)
-        return (
-            an
-            and _wirksam("punkte", einstellungen, werte)
-            and not _wirksam("spielgefuehl_buehne", einstellungen, werte)
-        )
-    if name == "teams_oeffentlich":
-        # Ohne Teams keine Teams am Namen
-        return an and _wirksam("teams", einstellungen, werte)
-    if name == "teamlink_vertrauenssatz":
-        # Der Satz verspricht eine Team-Summe: nur mit dem Team-Fortschritt (und damit
-        # mit Teams, ohne die es keine Frage zum Teambeitritt gibt)
-        return an and _wirksam("team_fortschritt", einstellungen, werte)
-    if name == "gepostet_ohne_konto":
-        # Unterschalter: ohne "Ja, gepostet" keine Meldungen ohne Konto
-        return an and _wirksam("gepostet", einstellungen, werte)
-    if name == "danke_ohne_konto":
-        # Unterschalter: ohne Danke-Knopf kein Danke ohne Konto
-        return an and _wirksam("danke_knopf", einstellungen, werte)
-    if name == "rangliste":
-        # Rangliste aus Punkten (ADR 0004): ohne Punkte keine Rangliste
-        return an and _wirksam("punkte", einstellungen, werte)
-    if name == "feedback_gestoert":
-        # Nur in der Startphase: ab dem Loeschtag nimmt der Knopf nichts mehr an
-        return an and gestoert_offen(heute_utc())
-    return an
+    paket = VORAUSSETZUNG.get(name)
+    if paket is None:
+        return an
+    return an and _wirksam(paket, einstellungen, werte)
 
 
 def oeffentliche_schalter() -> List[str]:
     """Namen der Schalter, deren wirksamen Wert GET /api/v1/funktionen meldet."""
     return [art.name for art in SCHALTER.values() if art.oeffentlich]
+
+
+def notaus_wirksam(name: str, einstellungen: Optional[Settings] = None) -> bool:
+    """
+    Ob eine Basisfunktion mit Not-Aus (NOTAUS) laeuft: an, solange ihre
+    Umgebungsvariable nicht auf false steht. Kein Admin-Wert, keine Datenbank.
+    """
+    try:
+        feld = NOTAUS[name]
+    except KeyError:
+        raise UnbekannterSchalter(name)
+    e = einstellungen if einstellungen is not None else globale_settings
+    return bool(getattr(e, feld))
 
 
 def _art(name: str) -> Schalterart:

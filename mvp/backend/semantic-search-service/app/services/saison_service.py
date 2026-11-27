@@ -93,9 +93,9 @@ class AdminStand:
 
 
 def _wirksam(einstellungen: Settings) -> bool:
-    from services.schalter_service import schalter_wirksam
-
-    return schalter_wirksam(SCHALTER, einstellungen)
+    # Basisfunktion seit dem Schalter-Umbau (27.11.): immer an. Fuer alle sichtbar ist
+    # der Balken weiter erst ab der Schwelle (schwelle_erreicht).
+    return True
 
 
 class SaisonService:

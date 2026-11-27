@@ -15,10 +15,11 @@ Zustimmenden alle 15 Minuten neu, eine Antwort auf die Frage sofort. Ein Nein un
 Widerruf der Art.-9-Einwilligung nehmen das Abzeichen sofort weg (``vergessen``).
 Nach einem Neustart fehlen die Abzeichen bis zum ersten Lauf, der beim Start beginnt.
 
-Mit Schalter ``spielgefuehl_buehne`` (domain/spielgefuehl.py) gibt es keine Abzeichen am
-Anzeigenamen (``abzeichen`` bleibt leer): Gerechnet wird dann fuer alle, die in der
-Rangliste mitspielen, und die Zahl erscheint nur dort (``in_rangliste``), solange der
-Schalter ``rangliste`` wirkt. Ein Herabstufen nimmt sie sofort weg (``vergessen``).
+Seit dem Schalter-Umbau (27.11.2026) gibt es keine Abzeichen am Anzeigenamen mehr
+(``abzeichen`` bleibt leer, Schalter abzeichen_sichtbar entfallen): Mit dem Paket
+``spielgefuehl_buehne`` (domain/spielgefuehl.py) wird fuer alle gerechnet, die in der
+Rangliste mitspielen, und die Zahl erscheint nur dort (``in_rangliste``). Ein
+Herabstufen nimmt sie sofort weg (``vergessen``).
 """
 
 import asyncio
@@ -149,11 +150,17 @@ class AbzeichenService:
             await self._neu_berechnen(kennung)
 
     def _wirksam(self) -> bool:
-        """Beide Schalter wirksam (Obergrenze und Admin-Wert, #708)."""
-        return schalter_wirksam("abzeichen_sichtbar", self._settings)
+        """
+        Abzeichen am Anzeigenamen (bisheriges Modell): seit dem Schalter-Umbau 27.11.
+        nie. Der Schalter abzeichen_sichtbar ist weg, Abzeichen gibt es nur noch in der
+        Rangliste des Pakets Spielgefuehl. Der Pfad bleibt stehen, bis das alte
+        Einwilligungsmodell ganz entfernt wird.
+        """
+        return False
 
     def _rangliste_wirksam(self) -> bool:
-        return schalter_wirksam("rangliste", self._settings)
+        # Die Rangliste gehoert zum Paket Spielgefuehl
+        return schalter_wirksam("spielgefuehl_buehne", self._settings)
 
     def _rechnen_wirksam(self, buehne: bool) -> bool:
         """Ob gerechnet wird: fuer den Namen (bisher) oder fuer die Rangliste (Spielgefuehl)."""

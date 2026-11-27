@@ -31,7 +31,8 @@ from services.schalter_service import schalter_wirksam
 
 logger = get_logger(__name__)
 
-SCHALTER = "saal_spruch"
+# Der Saal-Spruch gehoert seit dem Schalter-Umbau zum Paket k_begruessung
+SCHALTER = "k_begruessung"
 
 router = APIRouter()
 admin_router = APIRouter()

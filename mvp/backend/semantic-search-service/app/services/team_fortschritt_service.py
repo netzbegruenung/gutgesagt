@@ -222,7 +222,8 @@ class TeamFortschrittService:
     # --- Schalter --------------------------------------------------------------
 
     def zaehlt(self) -> bool:
-        return schalter_wirksam("team_fortschritt", self._settings)
+        # Der Team-Fortschritt gehoert seit dem Schalter-Umbau zum Paket Teams
+        return schalter_wirksam("teams", self._settings)
 
     def quests_wirksam(self) -> bool:
         return schalter_wirksam("team_quests", self._settings)

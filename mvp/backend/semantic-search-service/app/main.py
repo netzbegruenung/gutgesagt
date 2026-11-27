@@ -254,19 +254,14 @@ async def lifespan(app: FastAPI):
         )
         logger.info("✅ Check value and pattern note cleanup tasks started")
 
-        # Meilenstein-Abzeichen am Anzeigenamen (#351): der Dienst immer, damit ein
-        # Widerruf der Art.-9-Einwilligung ein frueheres Ja auch bei ausgeschalteten
-        # Abzeichen zuruecknimmt; Frage und Rechnen im Takt nur mit beiden Schaltern
-        # (services/abzeichen_service.py). Der Takt laeuft, wenn die Obergrenze es
-        # erlaubt; ob er rechnet, entscheidet je Lauf der Admin-Wert (#708).
+        # Meilenstein-Abzeichen (#351): der Dienst immer, damit ein Widerruf der
+        # Art.-9-Einwilligung ein frueheres Ja zuruecknimmt (services/abzeichen_service.py).
+        # Abzeichen gibt es seit dem Schalter-Umbau nur noch in der Rangliste des Pakets
+        # Spielgefuehl: Der Takt laeuft, wenn dessen Obergrenze es erlaubt; ob er
+        # rechnet, entscheidet je Lauf der Admin-Wert (#708).
         abzeichen = abzeichen_service_bauen(settings)
         abzeichen_service_setzen(abzeichen)
-        # Im Spielgefuehl-Modell rechnet er fuer die Rangliste (spielgefuehl_buehne).
-        if settings.abzeichen_sichtbar or (
-            settings.spielgefuehl_buehne_aktiv
-            and settings.punkte_aktiv
-            and settings.rangliste_aktiv
-        ):
+        if settings.spielgefuehl_buehne_aktiv:
             app.state.abzeichen_rechnen = asyncio.create_task(
                 abzeichen_im_takt(abzeichen)
             )

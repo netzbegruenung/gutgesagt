@@ -238,12 +238,13 @@ def herkunft_pruefen_bauen() -> HerkunftPruefenService:
     from repositories.herkunft_pruefung_repository import (
         get_herkunft_pruefung_repository,
     )
-    from services.schalter_service import schalter_wirksam
+    from services.schalter_service import notaus_wirksam
 
     service = HerkunftPruefenService(
         get_herkunft_pruefung_repository(),
         herkuenfte_aus_index(get_reference_service()),
-        lambda: schalter_wirksam(SCHALTER),
+        # Not-Aus SEMANTIC_SEARCH_HERKUNFT_PRUEFEN_AKTIV, Standard an (Schalter-Umbau)
+        lambda: notaus_wirksam(SCHALTER),
     )
     herkunft_pruefen_service_setzen(service)
     return service

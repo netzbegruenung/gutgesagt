@@ -1,6 +1,8 @@
 """
 Welche Funktionen hinter einem Schalter gerade an sind (#756), ohne Anmeldung und ohne
-Personenbezug. Nur fuer Schalter mit ``oeffentlich`` (services/schalter_service.py):
+Personenbezug. Fuer Schalter mit ``oeffentlich`` (services/schalter_service.py) und
+die Basisfunktionen mit Not-Aus, die das Frontend ausblendet (NOTAUS_OEFFENTLICH,
+feedback_gestoert). Basisfunktionen ohne Not-Aus meldet er nicht, die App zeigt sie immer.
 Funktionen, die allein im Browser laufen (Teilen als Bild), haben keinen Endpunkt, der
 mit 404 antworten koennte; das Frontend fragt hier und zeigt sie nur, wenn sie an sind.
 Die Admin-Seite der Schalter liegt unter /api/v1/moderation/schalter.
@@ -23,7 +25,12 @@ from pydantic import BaseModel
 from core.config import Settings
 from core.logging import get_logger
 from dependencies import get_settings
-from services.schalter_service import oeffentliche_schalter, schalter_wirksam
+from services.feedback_service import gestoert_knopf_an
+from services.schalter_service import (
+    notaus_wirksam,
+    oeffentliche_schalter,
+    schalter_wirksam,
+)
 
 logger = get_logger(__name__)
 
@@ -38,13 +45,20 @@ class FunktionenResponse(BaseModel):
     funktionen: Dict[str, bool]
 
 
+# Basisfunktionen mit Not-Aus, die das Frontend ausblendet, wenn der Not-Aus greift
+# (services/schalter_service.py NOTAUS; herkunft_pruefen ist nur fuer Admins).
+NOTAUS_OEFFENTLICH = ("gepostet_ohne_konto", "null_treffer_anzahl")
+
+
 @router.get("", response_model=FunktionenResponse)
 def funktionen(settings: Settings = Depends(get_settings)) -> FunktionenResponse:
-    return FunktionenResponse(
-        funktionen={
-            name: schalter_wirksam(name, settings) for name in oeffentliche_schalter()
-        }
-    )
+    gemeldet = {
+        name: schalter_wirksam(name, settings) for name in oeffentliche_schalter()
+    }
+    gemeldet.update({name: notaus_wirksam(name, settings) for name in NOTAUS_OEFFENTLICH})
+    # Not-Aus und Ende der Startphase am 31.12.2026
+    gemeldet["feedback_gestoert"] = gestoert_knopf_an(settings)
+    return FunktionenResponse(funktionen=gemeldet)
 
 
 class SeitResponse(BaseModel):

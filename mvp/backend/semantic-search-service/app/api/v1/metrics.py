@@ -41,7 +41,7 @@ from services.suchen_ohne_treffer_service import (
     SuchenOhneTrefferService,
 )
 from core.config import Settings
-from services.schalter_service import schalter_wirksam
+from services.schalter_service import notaus_wirksam, schalter_wirksam
 from services.spielgefuehl_service import (
     punkte_eingewilligte,
     stimmen_aktiv,
@@ -524,14 +524,12 @@ async def get_gepostet(
     """
     Der Nordstern (#643): je Kalenderwoche, wie viele verschiedene Personen nach dem
     Kopieren "Ja, gepostet" gemeldet haben. Nur Zahlen, keine Kennungen
-    (services/gepostet_service.py). Ohne ``gepostet_aktiv`` entstehen keine Meldungen;
-    ``aktiv`` sagt das.
+    (services/gepostet_service.py). Basisfunktion seit dem Schalter-Umbau: ``aktiv``
+    ist immer true und bleibt fuer aeltere Frontends.
 
     Daneben getrennt die Meldungen ohne Konto (#799): Klicks je Woche, keine Menschen,
     deshalb ein eigenes Feld und nie in ``personen``.
     """
-    if not schalter_wirksam("gepostet", settings):
-        return GepostetResponse(aktiv=False, woechentlich=[])
     try:
         zeilen = await asyncio.to_thread(dienst.wochen, wochen)
         ohne = {
@@ -543,7 +541,7 @@ async def get_gepostet(
         raise HTTPException(status_code=500, detail=INTERNER_FEHLER)
     return GepostetResponse(
         aktiv=True,
-        ohne_konto_aktiv=schalter_wirksam("gepostet_ohne_konto", settings),
+        ohne_konto_aktiv=notaus_wirksam("gepostet_ohne_konto", settings),
         woechentlich=[
             GepostetWocheResponse(
                 woche=z.woche,
@@ -616,14 +614,14 @@ async def get_muster_hinweise(
     """
     Muster-Hinweise (#352): Kontenpaare, die sich innerhalb von sieben Tagen gegenseitig
     genutzt haben, zuletzt aufgefallene zuerst. Nur ein Hinweis fuer Admins, keine
-    Automatik (services/muster_hinweise_service.py). Ohne ``punkte_aktiv`` entstehen
+    Automatik (services/muster_hinweise_service.py). Ohne Paket Spielgefuehl entstehen
     keine Hinweise; ``aktiv`` sagt das dem Dashboard. Gezeigt werden nur Paare, bei
     denen beide Konten aktuell eingewilligt haben ("Punkte und Meilensteine" bzw. im
     Spielgefuehl-Modell ab Stufe ``fuer_mich``): Nach einem Widerruf erscheint die
     Person hier nicht mehr (Art. 7 Abs. 3 DSGVO), und gelesene Hinweise ohne
     Einwilligung beider loescht der Abruf nebenbei (wie der Loeschlauf).
     """
-    if not schalter_wirksam("punkte", settings):
+    if not schalter_wirksam("spielgefuehl_buehne", settings):
         return MusterHinweiseResponse(
             aktiv=False, frist_tage=MUSTER_FRIST_TAGE, hinweise=[]
         )

@@ -118,10 +118,10 @@ async def search_content(
                 {**eintrag, "nutzung_je_fassung": None} for eintrag in mit_nutzung
             ]
 
-        # Wirkungs-Echo und Danke (#790, #791), je nur mit Schalter; fehlen die Zahlen,
-        # zeigt die Karte sie nicht.
+        # Wirkungs-Echo und Danke (#790, #791), beide im Paket wirkungs_echo; fehlen die
+        # Zahlen, zeigt die Karte sie nicht.
         mit_gepostet = schalter_wirksam("wirkungs_echo", settings)
-        mit_danke = schalter_wirksam("danke_knopf", settings)
+        mit_danke = mit_gepostet
         try:
             if mit_gepostet or mit_danke:
                 mit_nutzung = get_wirkung_service().nachtragen(

@@ -154,7 +154,8 @@ async def _oder_none(aufruf: Awaitable[T], was: str) -> Optional[T]:
 
 
 def _schalter_an(settings: Settings = Depends(get_settings)) -> bool:
-    return schalter_wirksam(SCHALTER, settings)
+    # Basisfunktion seit dem Schalter-Umbau (27.11.): immer an
+    return True
 
 
 @router.get("/users/me/naechster-schritt", response_model=NaechsterSchrittResponse)

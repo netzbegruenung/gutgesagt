@@ -54,7 +54,7 @@ from services.suchen_ohne_treffer_service import (
     NULL_TREFFER_ANZAHL,
     SuchenOhneTrefferService,
 )
-from services.schalter_service import schalter_wirksam
+from services.schalter_service import notaus_wirksam
 from services.embeddings.qdrant_embeddings_manager import einbettungen_geteilt
 from services.search.search_query_statement import (
     SearchQueryStatementRecorder,
@@ -548,7 +548,7 @@ async def search_by_text(
             and gezaehlt
             and antwort_id is not None
             and not statement_was_new
-            and schalter_wirksam(NULL_TREFFER_ANZAHL)
+            and notaus_wirksam(NULL_TREFFER_ANZAHL)
         ):
             try:
                 response.schon_gesucht_anzahl = await suchen_ohne_treffer.schon_gesucht(

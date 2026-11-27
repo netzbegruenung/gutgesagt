@@ -96,9 +96,6 @@ async def konter_proben(
     Bis zu zehn Proben in zufaelliger Reihenfolge, die Antworten je Probe gemischt.
     Leer, wenn keine Aussage passt; dann zeigt die App keinen Einstieg.
     """
-    if not schalter_wirksam("konter_probe", settings):
-        return KonterProbenResponse(proben=[], aktiv=False)
-
     try:
         # Im try gebaut: Scheitert ein Repository, antwortet der Endpunkt mit 500 und Log.
         service = get_konter_probe_service(settings, get_reference_service())

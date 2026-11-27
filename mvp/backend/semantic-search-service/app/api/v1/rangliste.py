@@ -109,15 +109,19 @@ class EinwilligungRequest(BaseModel):
 
 
 def _frage_angeboten(settings: Settings) -> bool:
-    # Im Spielgefuehl-Modell gibt es die eigene Frage zur Rangliste nicht mehr.
-    return schalter_wirksam("rangliste", settings) and not buehne_aktiv(settings)
+    # Im Spielgefuehl-Modell gibt es die eigene Frage zur Rangliste nicht mehr. Seit
+    # dem Schalter-Umbau (27.11.) ist die Rangliste Teil des Pakets Spielgefuehl: Die
+    # Frage wird nie mehr angeboten (totes altes Modell, bleibt bis zum Entfernen).
+    return schalter_wirksam("spielgefuehl_buehne", settings) and not buehne_aktiv(
+        settings
+    )
 
 
 def _dienst_oder_aus(
     settings: Settings = Depends(get_settings),
 ) -> Optional[RanglisteService]:
-    """Fuer den Abruf: ohne Schalter None statt 404."""
-    if not schalter_wirksam("rangliste", settings):
+    """Fuer den Abruf: ohne Paket Spielgefuehl None statt 404."""
+    if not schalter_wirksam("spielgefuehl_buehne", settings):
         return None
     return get_rangliste_service()
 

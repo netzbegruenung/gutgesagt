@@ -113,7 +113,8 @@ class RanglistennameResponse(BaseModel):
 
 
 def _angeboten(settings: Settings) -> bool:
-    return buehne_aktiv(settings) and schalter_wirksam("punkte", settings)
+    # Punkte und Spielgefuehl sind ein Paket (spielgefuehl_buehne)
+    return buehne_aktiv(settings)
 
 
 def _dienst(settings: Settings = Depends(get_settings)) -> SpielgefuehlService:
@@ -123,7 +124,8 @@ def _dienst(settings: Settings = Depends(get_settings)) -> SpielgefuehlService:
 
 
 def _rangliste_angeboten(settings: Settings) -> bool:
-    return schalter_wirksam("rangliste", settings)
+    # Die Rangliste gehoert zum Paket Spielgefuehl
+    return buehne_aktiv(settings)
 
 
 def _wortlaut(mit_rangliste: bool = True) -> WortlautResponse:

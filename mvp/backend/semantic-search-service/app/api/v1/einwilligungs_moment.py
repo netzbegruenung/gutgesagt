@@ -43,8 +43,12 @@ class EinwilligungsMomentResponse(BaseModel):
 
 
 def _angeboten(settings: Settings = Depends(get_settings)) -> bool:
-    """Ob der Schalter wirkt; geprueft vor jeder Datenbankabfrage."""
-    return schalter_wirksam(SCHALTER, settings)
+    """
+    Basisfunktion seit dem Schalter-Umbau (27.11.): immer angeboten. Die Grenzen
+    (hoechstens eine neue Frage je Besuch, vier im ersten Monat) setzt das Frontend
+    (shared/einwilligungs-budget), unabhaengig von einem Schalter.
+    """
+    return True
 
 
 @router.get(

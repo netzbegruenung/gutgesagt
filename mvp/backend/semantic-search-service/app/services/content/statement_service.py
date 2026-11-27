@@ -472,14 +472,12 @@ class StatementService(
     async def gleicher_text(self, alt: str, neu: str) -> Optional[bool]:
         """
         Ob ein geaenderter Text unter gleichem Titel noch derselbe ist (#636,
-        fassung.gleicher_text): False nur bei einem ganz anderen Text. Nur mit dem
-        Schalter stimmen_text_verfall (Standard aus) und wie beim Titel mit
-        dieselbe_aussage_nli = an; sonst oder bei einem Fehler None, und die Stimmen
-        bleiben.
+        fassung.gleicher_text): False nur bei einem ganz anderen Text. Basisfunktion
+        seit dem Schalter-Umbau (27.11., frueher Schalter stimmen_text_verfall), aber
+        weiter nur wie beim Titel mit dieselbe_aussage_nli = an (Prüfung auf dieselbe
+        Aussage); sonst oder bei einem Fehler None, und die Stimmen bleiben.
         """
-        if self.settings.dieselbe_aussage_nli != "an" or not schalter_wirksam(
-            "stimmen_text_verfall", self.settings
-        ):
+        if self.settings.dieselbe_aussage_nli != "an":
             return None
         try:
             return await fassung.gleicher_text(
