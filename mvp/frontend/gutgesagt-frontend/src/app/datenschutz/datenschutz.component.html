@@ -644,14 +644,28 @@
       </p>
       <p>
         Um die erste Kopie zu erkennen, speichern wir <strong>bis zum Ende des Tages einen
-        Prüfwert</strong>: einen Kurzwert, berechnet aus deiner Kennung (ohne Anmeldung aus
-        deiner IP-Adresse, bei IPv6 nur ihrem vorderen Teil, wie bei den Suchvorgängen), dem
-        Beitrag und dem Datum. Der Server bildet ihn
+        Prüfwert</strong>: einen Kurzwert, berechnet aus deiner Kennung, dem Beitrag und dem
+        Datum.
+        <!-- Jura 27.11. (vorläufig), ersetzt die Klammer „ohne Anmeldung aus deiner IP-Adresse“;
+             steht vor dem Satz zum Neustart (Review). Prüfwert aus Anschluss und Tagesschlüssel (utils/besucher_pseudonym.py,
+             services/entdoppelung.py), Deckel aus #857 (deckel_pruefwerte) -->
+        <span data-testid="dse-entdoppelung-ohne-anmeldung">Ohne Anmeldung erkennen wir dich dabei
+        nur für einen Tag an deinem Anschluss: Daraus bilden wir mit einem täglich wechselnden
+        Schlüssel einen Prüfwert, den wir nach dem Tageswechsel verwerfen; deine Adresse speichern
+        wir nicht. So zählt ohne Anmeldung höchstens eine erste Kopie je Anschluss, Beitrag und Tag,
+        und insgesamt höchstens drei je Beitrag und Tag, egal von wem.</span> Der Server bildet ihn
         mit einem geheimen Schlüssel, den er <strong>jeden Tag neu zufällig erzeugt, nur im
-        Arbeitsspeicher hält und nirgends speichert</strong>. Auch wer die gespeicherten Daten
-        hat, kann deshalb einen Prüfwert weder auf dich noch auf den Beitrag zurückführen.
-        Nach Mitternacht (UTC) verwirft der Server die Prüfwerte des Vortags; startet er neu,
-        passt keiner mehr, und eine weitere Kopie am selben Tag zählt noch einmal. Kopien
+        Arbeitsspeicher hält und nirgends speichert</strong>.
+        <!-- Jura 27.11. (vorläufig), Deckel-Plätze ohne Schlüssel, über Neustart erhalten
+             (deckel_pruefwerte in services/entdoppelung.py; verworfen mit den Prüfwerten in
+             nutzung_heute, vergangene_tage_verwerfen) -->
+        Auch wer die gespeicherten Daten hat, kann deshalb einen solchen Prüfwert weder auf dich
+        noch auf den Beitrag zurückführen. Für den Deckel ohne Anmeldung merken wir uns
+        zusätzlich bis zu drei Plätze je Beitrag und Tag; sie bestehen nur aus Beitrag, Tag und
+        Platznummer und sagen nichts darüber, wer kopiert hat. Nach Mitternacht (UTC) verwirft
+        der Server alle Prüfwerte und Plätze des Vortags. Startet er am selben Tag neu, passen
+        die Prüfwerte nicht mehr und eine weitere Kopie zählt noch einmal; belegte Plätze
+        bleiben belegt. Kopien
         angemeldeter Konten ohne Einwilligung (siehe „Rückschlüsse auf deine politische
         Haltung“) bekommen keinen Prüfwert. Sie zählen deshalb nur bei allen Kopien des
         Beitrags mit, nicht für „Diese Woche oft genutzt“ und nicht für Punkte.
@@ -798,14 +812,20 @@
         was gilt, sobald wir sie einschalten. Bis dahin entsteht nichts von dem, was hier
         steht.
       </p>
-      <!-- Spielgefuehl in drei Stufen (Schalter spielgefuehl_buehne, dse-spielgefuehl.ts): ersetzt
+      <!-- Spielgefuehl als eine Frage (Schalter spielgefuehl_buehne, dse-spielgefuehl.ts): ersetzt
            die Einwilligungsteile zu Punkten, Abzeichen und Rangliste; die Rechenregeln bleiben. -->
-      <!-- Jura 26.11.: nur mit spielgefuehl_buehne und punkte (die Frage braucht beide); der Teil
-           zur Rangliste nur mit rangliste. Der Sockelsatz steht immer. -->
-      <p *ngIf="spielgefuehlBuehne() && punkte()" id="spielgefuehl" data-testid="dse-spielgefuehl">
-        <strong>{{ spielgefuehlTitel }}</strong> {{ spielgefuehlAnfang }}
-        {{ rangliste() ? spielgefuehlRangliste : spielgefuehlOhneRangliste }} {{ spielgefuehlSchluss }}
-      </p>
+      <!-- Jura 26.11.: nur mit spielgefuehl_buehne und punkte (die Frage braucht beide); die Stufe
+           Rangliste nur mit rangliste (wirksam laut GET /api/v1/funktionen), sonst der Satz, dass
+           wir sie gerade nicht anbieten. Einleitung als Liste: Jura 27.11. Der Sockelsatz steht immer. -->
+      <div *ngIf="spielgefuehlBuehne() && punkte()" id="spielgefuehl" data-testid="dse-spielgefuehl">
+        <p><strong>{{ spielgefuehlTitel }}</strong> {{ spielgefuehlEinleitung }}</p>
+        <ul>
+          <li>{{ spielgefuehlAus }}</li>
+          <li>{{ spielgefuehlNurFuerMich }}</li>
+          <li *ngIf="rangliste()" data-testid="dse-spielgefuehl-stufe-rangliste">{{ spielgefuehlRangliste }}</li>
+        </ul>
+        <p><ng-container *ngIf="!rangliste()">{{ spielgefuehlOhneRangliste }} </ng-container>{{ spielgefuehlSchluss }}</p>
+      </div>
       <p data-testid="dse-spielgefuehl-sockel">{{ spielgefuehlSockel }}</p>
       <p>
         Mit Punkten zeigen wir dir, wie deine Mitwirkung wirkt: wenige Punkte für deine
@@ -1634,7 +1654,7 @@
     </section>
 
     <div class="update-notice">
-      <p><strong>Stand:</strong> 26. November 2026</p>
+      <p><strong>Stand:</strong> 27. November 2026</p>
     </div>
   </div>
 </div>

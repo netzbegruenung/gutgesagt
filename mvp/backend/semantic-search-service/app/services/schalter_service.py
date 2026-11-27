@@ -278,7 +278,7 @@ SCHALTER: Dict[str, Schalterart] = {
             erklaerung=(
                 "Meilenstein-Abzeichen am Anzeigenamen, die andere Angemeldete sehen; "
                 "wirkt nur zusammen mit den Punkten und nicht, solange das Spielgefühl "
-                "in drei Stufen an ist (dann nur in der Rangliste); erscheint spätestens "
+                "als eine Frage an ist (dann nur in der Rangliste); erscheint spätestens "
                 "nach 15 Minuten."
             ),
             dsfa_hinweis=True,
@@ -651,7 +651,7 @@ SCHALTER["spielgefuehl_buehne"] = Schalterart(
     feld="spielgefuehl_buehne_aktiv",
     umgebungsvariable="SEMANTIC_SEARCH_SPIELGEFUEHL_BUEHNE_AKTIV",
     erklaerung=(
-        "Spielgefühl als eine Frage in drei Stufen (Aus, Nur für mich, in der "
+        "Spielgefühl als eine Frage (Aus, Nur für mich, in der "
         "Saison-Rangliste mitspielen) statt der Einwilligungen Punkte, Abzeichen am "
         "Namen und Rangliste; Abzeichen erscheinen dann nur in der Rangliste. Wirkt "
         "nur zusammen mit den Punkten."
@@ -679,7 +679,7 @@ SCHALTER["muster_stimmen"] = Schalterart(
         "zustimmen, nur bei Konten, die beide dem neuen Wortlaut des Spielgefühls "
         "zugestimmt haben; die Frage zeigt dann diesen Wortlaut und fragt alle neu. "
         "Nur ein Hinweis für Admins, keine Wirkung auf Punkte oder Rangliste; wirkt "
-        "nur zusammen mit dem Spielgefühl in drei Stufen."
+        "nur zusammen mit dem Spielgefühl als eine Frage."
     ),
     einschalt_hinweis=(
         "Wortlaut spielgefuehl-2026-11-27 von Jura 27.11., DSE-Satz drin; "
