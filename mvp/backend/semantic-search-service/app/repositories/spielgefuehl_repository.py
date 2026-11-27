@@ -9,7 +9,7 @@ from typing import Dict, Iterable, Optional, Set
 
 from sqlalchemy import func, insert, select
 
-from domain.spielgefuehl import GELTENDE_WORTLAUTE, Stufe
+from domain.spielgefuehl import GELTENDE_WORTLAUTE, STIMMEN_WORTLAUT, Stufe
 from infrastructure.database.connection import AppDatabase, get_app_database
 from infrastructure.database.models import SpielgefuehlZeile
 from repositories.rangliste_einwilligung_repository import Teilnahme
@@ -148,6 +148,25 @@ class SpielgefuehlRepository:
                 )
                 for kennung, stufe, wortlaut in session.execute(abfrage)
             }
+
+    def stimmen_eingewilligte(self, kennungen: Iterable[str]) -> Set[str]:
+        """
+        Die Kennungen, deren juengste Antwort eine Stufe ab ``fuer_mich`` zum Wortlaut
+        ``STIMMEN_WORTLAUT`` ist (domain/spielgefuehl.py ``stimmen_eingewilligt``), in
+        einer Abfrage.
+        """
+        liste = list(set(kennungen))
+        if not liste:
+            return set()
+        juengste = self._juengste()
+        abfrage = select(juengste.c.user_id).where(
+            juengste.c.rang == 1,
+            juengste.c.user_id.in_(liste),
+            juengste.c.wortlaut == STIMMEN_WORTLAUT,
+            juengste.c.stufe.in_([Stufe.FUER_MICH.value, Stufe.RANGLISTE.value]),
+        )
+        with self.db.get_session() as session:
+            return set(session.execute(abfrage).scalars())
 
     def teilnehmende(self) -> Dict[str, Teilnahme]:
         """

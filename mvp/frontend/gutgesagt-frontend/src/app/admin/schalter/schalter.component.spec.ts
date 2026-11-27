@@ -328,16 +328,30 @@ describe('SchalterComponent', () => {
     const zustand = (k: HTMLElement) => (k.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim();
     const kopplung = (k: HTMLElement) => k.querySelector('[data-testid="kopplung"]')?.textContent!.trim() ?? null;
 
-    it('Spielgefühl in drei Stufen: wirkt nicht ohne Punkte und sagt warum', () => {
+    it('Spielgefühl als eine Frage: wirkt nicht ohne Punkte und sagt warum', () => {
       laden([
         schalter({ name: 'punkte', admin_wert: false, wirksam: false }),
         schalter({ name: 'spielgefuehl_buehne', admin_wert: true, wirksam: false }),
       ]);
 
       const buehne = karten()[1];
+      expect(buehne.querySelector('h4')!.textContent).toBe('Spielgefühl als eine Frage');
       expect(zustand(buehne)).toBe('Admin: an · wirksam: aus, weil Punkte aus');
       expect((buehne.querySelector('[data-testid="status"]') as HTMLElement).textContent!.trim()).toBe('frei einschaltbar');
       expect(kopplung(buehne)).toBe('Wirkt nur zusammen mit: Punkte.');
+    });
+
+    it('Muster-Hinweise aus Zustimmungen: Name und Kette Punkte → Spielgefühl', () => {
+      laden([
+        schalter({ name: 'punkte', admin_wert: true, wirksam: true }),
+        schalter({ name: 'spielgefuehl_buehne', admin_wert: false, wirksam: false }),
+        schalter({ name: 'muster_stimmen', admin_wert: true, wirksam: false }),
+      ]);
+
+      const stimmen = karten()[2];
+      expect(stimmen.querySelector('h4')!.textContent).toBe('Muster-Hinweise aus Zustimmungen');
+      expect(zustand(stimmen)).toBe('Admin: an · wirksam: aus, weil Spielgefühl als eine Frage aus');
+      expect(kopplung(stimmen)).toBe('Wirkt nur zusammen mit: Punkte, Spielgefühl als eine Frage.');
     });
 
     it('Abzeichen am Namen: wirkt nicht, solange das Spielgefühl an ist', () => {
@@ -349,11 +363,11 @@ describe('SchalterComponent', () => {
 
       const abzeichen = karten()[2];
       expect(zustand(abzeichen)).toBe(
-        'Admin: an · wirksam: aus, weil Spielgefühl in drei Stufen an (Abzeichen dann nur in der Rangliste)',
+        'Admin: an · wirksam: aus, weil Spielgefühl als eine Frage an (Abzeichen dann nur in der Rangliste)',
       );
       expect((abzeichen.querySelector('[data-testid="zustand"]') as HTMLElement).hidden).toBeFalse();
       expect(kopplung(abzeichen)).toBe(
-        'Wirkt nur zusammen mit: Punkte. Wirkt nicht, solange Spielgefühl in drei Stufen an ist (Abzeichen dann nur in der Rangliste).',
+        'Wirkt nur zusammen mit: Punkte. Wirkt nicht, solange Spielgefühl als eine Frage an ist (Abzeichen dann nur in der Rangliste).',
       );
     });
 

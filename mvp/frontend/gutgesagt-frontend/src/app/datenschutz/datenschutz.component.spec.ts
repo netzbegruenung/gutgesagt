@@ -1,6 +1,11 @@
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ActivatedRoute, provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { BehaviorSubject, Subject } from 'rxjs';
+import { AuthService, UserInfo } from '../auth/auth.service';
+import { environment } from '../../environments/environment';
 
 import { abschnitt as abschnittIn, istTagesdatum, normalisiert, stand } from '../testing/rechtstext';
 import { DatenschutzComponent } from './datenschutz.component';
@@ -8,6 +13,7 @@ import { SUCHANFRAGEN_ABSCHNITT } from '../search/search.component';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
 import { FEIER_TON_SCHLUESSEL } from '../shared/feier/feier-ton.service';
 import { FunktionenService } from '../services/funktionen.service';
+import { dseDatum, dseMusterStimmen } from './dse-muster-stimmen';
 
 /** Der Satz zu Widerrufen vor dem Einspielen: mit Platzhalter oder mit Datum („1. Dezember 2026“). */
 const WIDERRUF_VOR_DEM_EINSPIELEN = new RegExp(
@@ -28,7 +34,7 @@ describe('DatenschutzComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(DatenschutzComponent);
@@ -251,6 +257,33 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('bis zum Ende des Tages einen Prüfwert');
       expect(text).toContain('jeden Tag neu zufällig erzeugt, nur im Arbeitsspeicher hält und nirgends speichert');
       expect(text).toContain('Prüfwerte bleiben nur bis zum Ende ihres Tages');
+    });
+
+    it('Verwendung: ohne Anmeldung Prüfwert aus dem Anschluss für einen Tag, Deckel drei je Beitrag (Jura 27.11.)', () => {
+      const text = abschnitt('Verwendung von Beiträgen');
+
+      expect(text).toContain(
+        'Ohne Anmeldung erkennen wir dich dabei nur für einen Tag an deinem Anschluss: Daraus bilden wir mit einem ' +
+          'täglich wechselnden Schlüssel einen Prüfwert, den wir nach dem Tageswechsel verwerfen; deine Adresse ' +
+          'speichern wir nicht. So zählt ohne Anmeldung höchstens eine erste Kopie je Anschluss, Beitrag und Tag, und ' +
+          'insgesamt höchstens drei je Beitrag und Tag, egal von wem.',
+      );
+      expect(text).toContain('berechnet aus deiner Kennung, dem Beitrag und dem Datum.');
+      expect(text).not.toContain('ohne Anmeldung aus deiner IP-Adresse');
+    });
+
+    it('Verwendung: Deckel-Plätze ohne Schlüssel, verworfen nach Mitternacht, über Neustart erhalten (Jura 27.11.)', () => {
+      const text = abschnitt('Verwendung von Beiträgen');
+
+      expect(text).toContain(
+        'Auch wer die gespeicherten Daten hat, kann deshalb einen solchen Prüfwert weder auf dich noch auf den ' +
+          'Beitrag zurückführen. Für den Deckel ohne Anmeldung merken wir uns zusätzlich bis zu drei Plätze je ' +
+          'Beitrag und Tag; sie bestehen nur aus Beitrag, Tag und Platznummer und sagen nichts darüber, wer kopiert ' +
+          'hat. Nach Mitternacht (UTC) verwirft der Server alle Prüfwerte und Plätze des Vortags. Startet er am ' +
+          'selben Tag neu, passen die Prüfwerte nicht mehr und eine weitere Kopie zählt noch einmal; belegte Plätze ' +
+          'bleiben belegt.',
+      );
+      expect(text).not.toContain('startet er neu, passt keiner mehr');
     });
 
     it('Verwendung: Kopien durch Startkonten zählen nicht', () => {
@@ -970,7 +1003,7 @@ describe('DatenschutzComponent', () => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
         imports: [DatenschutzComponent],
-        providers: [provideRouter([]), { provide: MEILENSTEIN_MERKER, useValue: aktiv }],
+        providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: MEILENSTEIN_MERKER, useValue: aktiv }],
       });
       const fixture = TestBed.createComponent(DatenschutzComponent);
       fixture.detectChanges();
@@ -1007,7 +1040,7 @@ describe('DatenschutzComponent', () => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
         imports: [DatenschutzComponent],
-        providers: [provideRouter([]), { provide: HOME_HINWEIS_MERKER, useValue: aktiv }],
+        providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: HOME_HINWEIS_MERKER, useValue: aktiv }],
       });
       const fixture = TestBed.createComponent(DatenschutzComponent);
       fixture.detectChanges();
@@ -1031,7 +1064,7 @@ describe('DatenschutzComponent', () => {
     it('steht immer unter „Speicherung auf deinem Gerät“, unabhängig von Schalter und Browserzustand', () => {
       localStorage.removeItem(FEIER_TON_SCHLUESSEL);
       TestBed.resetTestingModule();
-      TestBed.configureTestingModule({ imports: [DatenschutzComponent], providers: [provideRouter([])] });
+      TestBed.configureTestingModule({ imports: [DatenschutzComponent], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
       const fixture = TestBed.createComponent(DatenschutzComponent);
       fixture.detectChanges();
       const text = abschnittIn(fixture.nativeElement as HTMLElement, 'Weitere Einträge');
@@ -1043,7 +1076,7 @@ describe('DatenschutzComponent', () => {
   });
 });
 
-/** Spielgefühl in drei Stufen (Schalter spielgefuehl_buehne): ersetzt die Einwilligungsteile. */
+/** Spielgefühl als eine Frage (Schalter spielgefuehl_buehne): ersetzt die Einwilligungsteile. */
 describe('DatenschutzComponent: Spielgefühl', () => {
   const ALLE = ['spielgefuehl_buehne', 'punkte', 'rangliste'];
   function seiteMit(an: boolean | string[]): HTMLElement {
@@ -1051,7 +1084,7 @@ describe('DatenschutzComponent: Spielgefühl', () => {
     TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
         { provide: FunktionenService, useValue: { an: (name: string) => signal(namen.includes(name)) } },
       ],
     });
@@ -1075,7 +1108,8 @@ describe('DatenschutzComponent: Spielgefühl', () => {
     const punkte = abschnittIn(seite, 'Punkte');
 
     expect(seite.querySelector('#spielgefuehl')).not.toBeNull();
-    expect(punkte).toContain('entscheidest du mit einer Frage in drei Stufen');
+    expect(punkte).toContain('Spielgefühl. Du wählst selbst, ob und wie du mitspielst:');
+    expect(punkte).not.toContain('in drei Stufen');
     expect(punkte).toContain('also deinem Anzeigenamen oder einem zufällig vergebenen Ranglistennamen');
     expect(punkte).toContain('Abzeichen zeigen wir nirgends sonst');
     expect(punkte).toContain('Rechtsgrundlage: siehe „Spielgefühl“ oben');
@@ -1093,10 +1127,32 @@ describe('DatenschutzComponent: Spielgefühl', () => {
     expect(punkte).toContain('Paar-Prüfwert');
   });
 
-  // Jura zum Gamification-Gegencheck (26.11.)
+  it('Schalter an: die angebotenen Stufen als Liste, Rangliste nur mit Schalter rangliste', () => {
+    const stufen = (an: string[]) =>
+      Array.from(seiteMit(an).querySelectorAll('[data-testid="dse-spielgefuehl"] li')).map((li) => normalisiert(li.textContent));
+
+    const mit = stufen(ALLE);
+    expect(mit.length).toBe(3);
+    expect(mit[0]).toBe('‚Aus‘: Wir berechnen nichts.');
+    expect(mit[1]).toContain('‚Nur für mich‘: Wir berechnen Punkte und Meilensteine, die nur du siehst');
+    expect(mit[2]).toContain('‚In der Saison-Rangliste mitspielen‘: Zusätzlich stehst du in der Rangliste');
+
+    TestBed.resetTestingModule();
+    const ohne = stufen(['spielgefuehl_buehne', 'punkte']);
+    expect(ohne.length).toBe(2);
+    expect(ohne.join(' ')).not.toContain('In der Saison-Rangliste mitspielen');
+  });
+
+  it('mit Rangliste: kein Satz, dass wir die Stufe gerade nicht anbieten', () => {
+    const absatz = normalisiert(seiteMit(ALLE).querySelector('[data-testid="dse-spielgefuehl"]')!.textContent);
+    expect(absatz).not.toContain('bieten wir gerade nicht an');
+  });
+
+  // Jura zum Gamification-Gegencheck (26.11.), Wortlaut nach der Sammelrunde 27.11.
   const SOCKEL =
-    'Hast du beim Spielgefühl eine Stufe gewählt, speichern wir deine Wahl und den Zeitpunkt. Ausschalten kannst du das ' +
-    'jederzeit in deinen Datenschutz-Einstellungen, auch wenn wir die Funktion gerade nicht anbieten.';
+    'Hast du beim Spielgefühl eine Stufe gewählt, speichern wir deine Wahl, deine Namenswahl, gegebenenfalls deinen ' +
+    'Zufallsnamen, die Fassung des Einwilligungstexts und den Zeitpunkt. Ausschalten kannst du das jederzeit in deinen ' +
+    'Datenschutz-Einstellungen, auch wenn wir die Funktion gerade nicht anbieten.';
 
   it('der Sockelsatz steht immer, auch ohne Schalter', () => {
     for (const namen of [[], ['spielgefuehl_buehne'], ALLE]) {
@@ -1138,7 +1194,7 @@ describe('DatenschutzComponent: Suchen ohne Treffer, Anzahl auf der Ergebnisseit
     TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
         { provide: FunktionenService, useValue: { an: (name: string) => signal(an && name === 'null_treffer_anzahl') } },
       ],
     });
@@ -1183,7 +1239,7 @@ describe('DatenschutzComponent - Stimmenverfall bei ganz anderem Text (#636)', (
     await TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
         {
           provide: FunktionenService,
           useValue: { an: (name: string) => (name === 'stimmen_text_verfall' ? schalter : signal(false)) },
@@ -1283,7 +1339,7 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
         { provide: FunktionenService, useValue: { an: (name: string) => signal(namen.includes(name)) } },
       ],
     });
@@ -1459,5 +1515,284 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
 
   it('bestandszahl_zuwachs: eigener Unterabschnitt „Startseite“', () => {
     expect(abschnittIn(seiteMit('bestandszahl_zuwachs'), 'Startseite')).toBe(BESTANDSZAHL);
+  });
+});
+
+/**
+ * Weg zum Widerruf (Art. 7 Abs. 3 DSGVO, Go-Bedingung Jura): Sprunglink beim Sockelsatz zum
+ * Kasten „Einwilligung widerrufen“; Angemeldete sehen die Knöpfe, alle anderen den Weg zur
+ * Anmeldung. Das gilt auch, wenn die Schalter aus sind.
+ */
+describe('DatenschutzComponent: Einwilligung widerrufen', () => {
+  const WIDERRUFBAR = `${environment.baseUrl}/api/v1/usage/users/me/widerrufbar`;
+  let info: BehaviorSubject<UserInfo | null>;
+  let http: HttpTestingController;
+
+  function anmeldung(angemeldet: boolean): UserInfo {
+    return { isAuthenticated: angemeldet, userId: angemeldet ? 'u1' : null, userName: null, claims: null };
+  }
+
+  function seite(stand: UserInfo | null) {
+    info = new BehaviorSubject<UserInfo | null>(stand);
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        // Alle Schalter aus: der Weg zum Widerruf steht trotzdem.
+        { provide: FunktionenService, useValue: { an: () => signal(false) } },
+        { provide: AuthService, useValue: { userInfo$: info } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  function el(fixture: { nativeElement: unknown }): HTMLElement {
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  afterEach(() => http.verify());
+
+  it('verweist beim Sockelsatz zum Spielgefühl mit „Einwilligung widerrufen“ auf den Kasten', () => {
+    const fixture = seite(null);
+
+    const sockel = el(fixture).querySelector('[data-testid="dse-spielgefuehl-sockel"]') as HTMLElement;
+    const verweis = sockel.nextElementSibling as HTMLElement;
+    expect(verweis.getAttribute('data-testid')).toBe('dse-widerruf-verweis');
+    const link = verweis.querySelector('a') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('Einwilligung widerrufen');
+    expect(link.getAttribute('href')).toBe('#einwilligung-widerrufen');
+    const kasten = el(fixture).querySelector('#einwilligung-widerrufen') as HTMLElement;
+    expect(kasten.querySelector('h3')?.textContent?.trim()).toBe('Einwilligung widerrufen');
+    // Fokusziel des Sprungs (WCAG 2.4.3)
+    expect(kasten.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('steht unter „Deine Rechte“', () => {
+    const fixture = seite(null);
+
+    const kasten = el(fixture).querySelector('#einwilligung-widerrufen') as HTMLElement;
+    expect(kasten.closest('#deine-rechte')).not.toBeNull();
+  });
+
+  it('zeigt nicht Angemeldeten den Weg zur Anmeldung, zurück zum Kasten, und fragt nichts', () => {
+    const fixture = seite(anmeldung(false));
+
+    const hinweis = el(fixture).querySelector('[data-testid="dse-widerruf-anmelden"]') as HTMLElement;
+    expect(hinweis.textContent).toContain('sobald du angemeldet bist');
+    const link = hinweis.querySelector('a') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('Anmelden');
+    expect(link.getAttribute('href')).toBe('/login?returnUrl=%2Fdatenschutz%23einwilligung-widerrufen');
+    expect(el(fixture).querySelector('app-widerrufbar')).toBeNull();
+    http.expectNone(WIDERRUFBAR);
+  });
+
+  it('zeigt Angemeldeten die Knöpfe direkt, auch bei ausgeschalteten Schaltern', () => {
+    const fixture = seite(anmeldung(true));
+
+    http.expectOne({ method: 'GET', url: WIDERRUFBAR }).flush({
+      spielgefuehl: { stufe: 'fuer_mich', titel: 'Nur für mich', wortlaut: 'spielgefuehl-2026-11-26' },
+      punkte: null,
+      rangliste: null,
+      abzeichen: null,
+    });
+    fixture.detectChanges();
+
+    const kasten = el(fixture).querySelector('#einwilligung-widerrufen') as HTMLElement;
+    expect(kasten.querySelector('[data-testid="widerruf-spielgefuehl"]')?.textContent).toContain('Spielgefühl: Nur für mich');
+    expect(kasten.querySelector('h4[id^="widerrufbar-titel"]')).not.toBeNull();
+    expect(kasten.querySelector('button')?.textContent?.trim()).toBe('Ausschalten');
+    expect(kasten.querySelector('a[href="/einwilligung"]')?.textContent?.trim()).toBe('Datenschutz-Einstellungen');
+    expect(normalisiert(kasten.querySelector('[data-testid="dse-widerruf-einleitung"]')?.textContent ?? null)).toBe(
+      'Was du hier ausschaltest, wirkt sofort. Deine Einwilligung zur Mitwirkung widerrufst du unter Datenschutz-Einstellungen.'
+    );
+    expect(el(fixture).querySelector('[data-testid="dse-widerruf-anmelden"]')).toBeNull();
+    fixture.destroy();
+  });
+
+  it('sagt Angemeldeten ohne gespeichertes Ja, dass nichts zu widerrufen ist', () => {
+    const fixture = seite(anmeldung(true));
+
+    http.expectOne({ method: 'GET', url: WIDERRUFBAR }).flush({ spielgefuehl: null, punkte: null, rangliste: null, abzeichen: null });
+    fixture.detectChanges();
+
+    // Wortlaut Jura 27.11.: ohne „am Namen“, und ohne den Satz „Was du hier ausschaltest, wirkt sofort.“
+    expect(normalisiert(el(fixture).querySelector('[data-testid="widerrufbar-leer"]')?.textContent ?? null)).toBe(
+      'Spielgefühl, Punkte, Rangliste und Abzeichen sind bei dir aus; hier gibt es nichts zu widerrufen.'
+    );
+    expect(normalisiert(el(fixture).querySelector('[data-testid="dse-widerruf-einleitung"]')?.textContent ?? null)).toBe(
+      'Deine Einwilligung zur Mitwirkung widerrufst du unter Datenschutz-Einstellungen.'
+    );
+    fixture.destroy();
+  });
+
+  it('zeigt weder Knöpfe noch Anmeldehinweis, solange die Anmeldung unbekannt ist', () => {
+    const fixture = seite(null);
+
+    expect(el(fixture).querySelector('app-widerrufbar')).toBeNull();
+    expect(el(fixture).querySelector('[data-testid="dse-widerruf-anmelden"]')).toBeNull();
+  });
+
+  it('folgt der Anmeldung ohne Neuladen der Seite', () => {
+    const fixture = seite(anmeldung(false));
+
+    info.next(anmeldung(true));
+    fixture.detectChanges();
+
+    expect(el(fixture).querySelector('[data-testid="dse-widerruf-anmelden"]')).toBeNull();
+    http.expectOne({ method: 'GET', url: WIDERRUFBAR }).flush({ spielgefuehl: null, punkte: null, rangliste: null, abzeichen: null });
+    fixture.destroy();
+  });
+  it('springt nach der Rückkehr vom Anmelden auf den Kasten und setzt den Fokus dorthin', fakeAsync(() => {
+    const vorher = `${location.pathname}${location.search}${location.hash}`;
+    history.replaceState(history.state, '', `${location.pathname}${location.search}#einwilligung-widerrufen`);
+    try {
+      const fixture = seite(anmeldung(false));
+      document.body.appendChild(el(fixture));
+      tick();
+
+      expect(document.activeElement?.id).toBe('einwilligung-widerrufen');
+      el(fixture).remove();
+    } finally {
+      history.replaceState(history.state, '', vorher);
+    }
+  }));
+});
+
+/** Anker hinter einem Schalter (Gamification-Check 26.11., Befund 19): Sprung, sobald die Schalter da sind. */
+describe('DatenschutzComponent: Anker hinter einem Schalter', () => {
+  it('springt zu #spielgefuehl, wenn der Absatz erst nach GET /api/v1/funktionen erscheint', async () => {
+    const spielgefuehl = signal(false);
+    const antwort = new Subject<boolean | null>();
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { fragment: 'spielgefuehl' } } },
+        {
+          provide: FunktionenService,
+          useValue: {
+            // Den Absatz gibt es nur mit Punkten (#855): Punkte an, Bühne kommt erst mit der Antwort.
+            an: (name: string) =>
+              name === 'spielgefuehl_buehne' ? spielgefuehl : signal(name === 'punkte'),
+            stand$: () => antwort.asObservable(),
+          },
+        },
+      ],
+    });
+    const springen = spyOn(Element.prototype, 'scrollIntoView');
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(springen).not.toHaveBeenCalled();
+
+    spielgefuehl.set(true);
+    antwort.next(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(springen).toHaveBeenCalledTimes(1);
+    expect(springen.calls.mostRecent().object).toBe(fixture.nativeElement.querySelector('#spielgefuehl'));
+  });
+
+  it('wirft nichts, wenn die Seite vor der Antwort verlassen wird (Review, NG0911)', async () => {
+    const antwort = new Subject<boolean | null>();
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { fragment: 'spielgefuehl' } } },
+        { provide: FunktionenService, useValue: { an: () => signal(false), stand$: () => antwort.asObservable() } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.destroy();
+
+    expect(() => antwort.next(true)).not.toThrow();
+    expect(antwort.observed).toBeFalse();
+  });
+
+  it('fragt nichts nach, wenn der Anker schon beim ersten Zeichnen steht', async () => {
+    const stand$ = jasmine.createSpy('stand$').and.returnValue(new Subject<boolean | null>());
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { fragment: 'spielgefuehl' } } },
+        { provide: FunktionenService, useValue: { an: (name: string) => signal(name === 'spielgefuehl_buehne' || name === 'punkte'), stand$ } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(stand$).not.toHaveBeenCalled();
+  });
+});
+
+/** Zustimmungen in den Muster-Hinweisen (Schalter muster_stimmen, Wortlaut Jura 27.11.). */
+describe('DatenschutzComponent: Zustimmungen in den Muster-Hinweisen', () => {
+  const SEIT = `${environment.baseUrl}/api/v1/funktionen/muster_stimmen/seit`;
+  let http: HttpTestingController | undefined;
+
+  beforeEach(() => (http = undefined));
+
+  function seiteMit(an: boolean) {
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: FunktionenService, useValue: { an: (name: string) => signal(an && name === 'muster_stimmen') } },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  const satz = (f: { nativeElement: HTMLElement }) =>
+    f.nativeElement.querySelector('[data-testid="dse-muster-stimmen"]')?.textContent?.trim() ?? null;
+
+  afterEach(() => http?.verify());
+
+  it('Schalter aus: kein Satz und keine Abfrage', () => {
+    const fixture = seiteMit(false);
+
+    expect(satz(fixture)).toBeNull();
+    http!.expectNone(SEIT);
+  });
+
+  it('Schalter an: der Satz von Jura mit dem Tag des Einschaltens', () => {
+    const fixture = seiteMit(true);
+    http!.expectOne(SEIT).flush({ seit: '2026-11-28' });
+    fixture.detectChanges();
+
+    expect(satz(fixture)).toBe(
+      'Seit dem 28. November 2026 fließt auch ein, wessen Beiträgen du zustimmst, wenn du dafür ' +
+        'eingewilligt hast. Die Hinweise bleiben höchstens 56 Tage und werden gelöscht, sobald einer ' +
+        'von euch widerruft.',
+    );
+  });
+
+  it('ohne lesbaren Tag: „Seit dem Einschalten“', () => {
+    const fixture = seiteMit(true);
+    http!.expectOne(SEIT).flush('weg', { status: 500, statusText: 'Fehler' });
+    fixture.detectChanges();
+
+    expect(satz(fixture)).toMatch(/^Seit dem Einschalten fließt auch ein, wessen Beiträgen du zustimmst/);
+  });
+
+  it('Datum: nur echte Tage', () => {
+    expect(dseDatum('2026-01-05')).toBe('5. Januar 2026');
+    expect(dseDatum('2026-13-01')).toBeNull();
+    expect(dseDatum(null)).toBeNull();
+    expect(dseMusterStimmen('kein Datum')).toContain('Seit dem Einschalten');
   });
 });

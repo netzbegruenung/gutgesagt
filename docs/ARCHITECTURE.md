@@ -93,7 +93,7 @@ visit at most one card that points the person somewhere new (review Spielgefühl
 |---|------|-------------|------------|
 | 1 | Hero and search; the subtitle carries the Bestandszahl (`app-hero-unterzeile`, `/getMetrics`, no Schalter) and its growth (Schalter `bestandszahl_zuwachs`, links to card 6 „Frisch aus der Community“) | everyone | always; without a number the plain subtitle |
 | 2 | Rundgang line (`app-rundgang-band`, Willkommen) | everyone | until answered; signed in without „Ein Konto brauchst du nicht“ (`WILLKOMMEN_ANGEMELDET`) |
-| 2a | „Heute im Saal gehört:“ (`app-saal-spruch`) | everyone, Schalter `saal_spruch` | an admin has set a Saal-Spruch for today (Europe/Berlin); not while a Rundgang offer (`imInhalt`: Willkommen, home screen, app install) is on the start page; signed in only when card 3 shows no own news and card 4 has no suggestion |
+| 2a | „Heute im Netz zur BDK:“ (`app-saal-spruch`) | everyone, Schalter `saal_spruch` | an admin has set a Saal-Spruch for today (Europe/Berlin); not while a Rundgang offer (`imInhalt`: Willkommen, home screen, app install) is on the start page, except the slim Willkommen line („Neu hier?“, or its Kampagnenwort greeting such as „Von der BDK?“); signed in only when card 3 shows no own news and card 4 has no suggestion |
 | 3 | „Seit deinem letzten Besuch“ | signed in | not on the very first visit (`erster_besuch` from `POST /users/me/besuch`); next to a suggestion of card 4 only with news about the person's own Beiträge (`EIGENES_NEUES`: answers, uses, Wirkungs-Echo, ausformulierte Einwürfe) |
 | 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion and card 3 shows no own news |
 | 5 | Saison goal | everyone, Schalter `saison_ziel` | from the threshold (#782) |
@@ -285,6 +285,7 @@ reported off reload every 5 minutes instead of every 30 seconds (`AUS_NACHLADEN_
 | `GET /api/v1/usage/users/me/einwilligungs-moment` | Meine Beiträge | `aktiv: false` |
 | `GET /api/v1/teams/meine` | Meine Beiträge, every 30 s | `teams: []`, `teams_aktiv: false` |
 | `GET /api/v1/rangliste` | Meine Beiträge, every 30 s | `aktiv: false`, nothing asked |
+| `GET /api/v1/funktionen/muster_stimmen/seit` | privacy policy page, only while `muster_stimmen` is reported on | `seit: null` (also on a read error); 404 only for names other than `muster_stimmen` |
 | `GET /api/v1/usage/users/me/punkte`, `/meilensteine`, `/abzeichen-sichtbarkeit`, `/punkte-einwilligung` | Meine Beiträge, Einwilligungen | `aktiv: false` |
 | `GET /api/v1/usage/users/me/gepostet` | after a copy, once per signed-in person until reload | `angeboten: false`; consent checked (403) only while on |
 | `POST /api/v1/ankunft` | app start with `?k=<word>`, once per page load, only while `k_ankuenfte` is not surely off | `gezaehlt: false` (switch off or word not on the allow list); 429 above the throttle |
@@ -610,9 +611,12 @@ officer has advised.
 | `danke_ohne_konto` | `SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV` | off | yes | V31 and visitor marker (#495); works only with `danke_knopf` |
 | `rangliste` | `SEMANTIC_SEARCH_RANGLISTE_AKTIV` | off | yes | legal OK (wording, DSFA V28, privacy policy) and Punkte on (#793); works only with `punkte` |
 | `saal_spruch` | `SEMANTIC_SEARCH_SAAL_SPRUCH_AKTIV` | off | yes | none: public text only, nothing about the person (see "Saal-Spruch" below) |
+| `muster_stimmen` | `SEMANTIC_SEARCH_MUSTER_STIMMEN_AKTIV` | off | yes | wording `spielgefuehl-2026-11-27` by the legal review 27.11. (in the code), privacy policy sentence shown while on, DSFA V11 addendum; works only with `spielgefuehl_buehne` (see "Spielgefühl as one setting") |
 
 #### Saal-Spruch
 
+On BDK days an admin picks each morning the saying currently circulating under BDK posts
+online (card „Heute im Netz zur BDK:“; the name Saal-Spruch stays for switch, paths and table).
 Table `saal_sprueche` (day in Europe/Berlin, text up to 200 characters, time of the last change;
 no personal data, not even which admin set it), `repositories/saal_spruch_repository.py`,
 `services/saal_spruch_service.py` (today's text cached 60 s; a read error means no Saal-Spruch).
@@ -716,7 +720,9 @@ the cleanup job runs), approvals by the day of their last change, Tun and rating
 Team-Quest points by their quest week (its Monday within the season, not the Monday they are
 credited, so a quest of the last season week still counts for that season).
 A season used with the Rangliste should therefore not be longer than that retention, otherwise
-usage from its first days drops out near its end. Season points of all participants are cached
+usage from its first days drops out near its end. Points that miss a source (Team-Quests not
+readable, `Punktestand.vollstaendig`) are used for that request only and not cached, so nobody
+sits too low for 120 s. Season points of all participants are cached
 in memory once per season for 120 s; one request recomputes (at most 8 people in parallel), the
 others wait for it. Neither points nor places are stored.
 
@@ -755,6 +761,28 @@ when the switch goes off), below `rangliste` the Rangliste, at `aus` the points 
 the old points consent records a level above `aus` as `aus`, a no to the old Rangliste caps the
 level at `fuer_mich`.
 
+Mutual approvals (switch `muster_stimmen`, upper bound `SEMANTIC_SEARCH_MUSTER_STIMMEN_AKTIV`,
+default off, effective only with `spielgefuehl_buehne`; decision of the maintainer 27.11., wording
+by the legal review 27.11.): while effective, the question shows the wording
+`spielgefuehl-2026-11-27` (same levels, the sentence on Absprachen adds "oder einander
+zustimmen"), and an answer above `aus` to `-26` is reported as level null, so the app asks again
+(`domain/spielgefuehl.py` `neu_fragen`); until then `-26` keeps counting for points, Rangliste and
+mutual usage. Both wordings stay valid, so switching off asks nobody again. A Zustimmung (`PUT
+…/like`, not a dislike) reports a pair check value of its own kind (`zustimmung|…`, same window
+key, same table `muster_pruefwerte`) only if both accounts' newest answer is `-27` at level
+`fuer_mich` or above, checked on every report; mutual approvals within seven days give a
+Muster-Hinweis of kind `zustimmung` (column `art` of `muster_hinweise`), with the same 56-day
+retention. The admin dashboard shows those only while the switch is effective and both accounts
+still have `-27` and a valid Art. 9 consent. The daily retention run (`loeschen_im_takt`) also
+deletes every Muster-Hinweis whose two accounts no longer both consent (usage: points consent or
+Spielgefühl ≥ `fuer_mich`; approvals: `-27` ≥ `fuer_mich` plus Art. 9), so a hint written during a
+withdrawal goes within one run; the dashboard request cleans up the rows it reads the same way.
+No effect on points or the Rangliste. An answer without the purpose after one
+with it (e.g. `fuer_mich` to `-26` after the switch went off) deletes only the hints of kind
+`zustimmung`; `aus` deletes all. `GET /api/v1/funktionen/muster_stimmen/seit` (no sign-in, always
+200) gives the day (German time) the admin value was last switched on, for the sentence in the
+privacy policy; `seit: null` while not effective.
+
 - `GET /api/v1/usage/users/me/spielgefuehl`: level (null = not asked yet), name choice,
   Ranglistenname, wording in button order (community first), one-time badge note; 200 with
   `aktiv: false` without the switches `spielgefuehl_buehne` and `punkte`.
@@ -765,8 +793,10 @@ level at `fuer_mich`.
   Muster-Hinweise naming the person. Withdrawing Art. 9 records a level above `aus` as `aus`.
 - `GET /api/v1/usage/users/me/widerrufbar` (signed in, always 200, no switch): the stored
   answers above no/`aus` (Spielgefühl level with its title, old points, Rangliste and badge
-  consents) with their wording; the privacy settings page shows one "Ausschalten" line each and
-  sends the no to the `PUT` endpoints above (`einwilligung/widerrufbar.component.ts`).
+  consents, „Team öffentlich am Namen zeigen" via `PUT /api/v1/teams/oeffentlich`) with their
+  wording; the privacy settings page, the privacy policy (box `#einwilligung-widerrufen`, signed
+  in only) and „Meine Beiträge" show one "Ausschalten" line each and send the no to the `PUT`
+  endpoints above (`einwilligung/widerrufbar.component.ts`, reloads itself with silent requests).
 - `POST …/spielgefuehl/ranglistenname`: rolls a new random name (only with level `rangliste`, else
   409), a new proof row.
 

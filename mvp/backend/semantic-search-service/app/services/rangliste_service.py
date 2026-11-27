@@ -73,8 +73,19 @@ VERGANGENE_MAX = 3
 
 SaisonPunkte = Callable[[str, Tuple[date, date]], Awaitable[Punktestand]]
 
-# Ergebnis einer Berechnung: Punkte, None (sammelt keine) oder _FEHLER
+# Ergebnis einer Berechnung: Punkte, None (sammelt keine), _Unvollstaendig oder _FEHLER
 _FEHLER = object()
+
+
+@dataclass(frozen=True)
+class _Unvollstaendig:
+    """
+    Punkte ohne eine Quelle (etwa die Team-Quests, Punktestand.vollstaendig): fuer
+    diesen Abruf verwendet, aber nicht gemerkt. Sonst hielte der Cache einen zu tiefen
+    Platz CACHE_SEKUNDEN lang; ganz weglassen liesse die fragende Person ohne Liste.
+    """
+
+    punkte: int
 
 
 class EigenePunkteFehlen(RuntimeError):
@@ -270,6 +281,7 @@ class RanglisteService:
             if eintrag is not None and jetzt - eintrag[0] >= self._cache_sekunden:
                 eintrag = None
             bekannt: Dict[str, Optional[int]] = dict(eintrag[1]) if eintrag else {}
+            nur_jetzt: Dict[str, Optional[int]] = {}
             fehlend = [k for k in kennungen if k not in bekannt]
             if fehlend:
                 begrenzung = asyncio.Semaphore(PARALLEL)
@@ -281,17 +293,20 @@ class RanglisteService:
                 for kennung, ergebnis in await asyncio.gather(
                     *(rechnen(k) for k in fehlend)
                 ):
-                    if ergebnis is not _FEHLER:
+                    if isinstance(ergebnis, _Unvollstaendig):
+                        nur_jetzt[kennung] = ergebnis.punkte
+                    elif ergebnis is not _FEHLER:
                         bekannt[kennung] = ergebnis
                 # Nur der Eintrag dieser Saison und dieses Tages bleibt; neu
                 # Hinzugekommene laufen mit ihm ab.
                 self._liste = {schluessel: (eintrag[0] if eintrag else jetzt, bekannt)}
-        return {k: bekannt[k] for k in kennungen if k in bekannt}
+        alle = {**bekannt, **nur_jetzt}
+        return {k: alle[k] for k in kennungen if k in alle}
 
     async def _saisonpunkte_eines(
         self, saison: Saison, kennung: str
     ) -> Union[int, None, object]:
-        """Punkte, None (sammelt keine) oder _FEHLER (nicht merken)."""
+        """Punkte, None (sammelt keine), _Unvollstaendig oder _FEHLER (beide nicht merken)."""
         try:
             stand = await self._saisonpunkte(kennung, (saison.beginn, saison.ende))
         except Exception as e:
@@ -301,7 +316,11 @@ class RanglisteService:
                 exc_info=True,
             )
             return _FEHLER
-        return stand.gesamt if stand.sammelt else None
+        if not stand.sammelt:
+            return None
+        if not stand.vollstaendig:
+            return _Unvollstaendig(stand.gesamt)
+        return stand.gesamt
 
     async def _vergangene(
         self, saisons: List[Saison], user_id: str, heute: date
@@ -339,6 +358,8 @@ class RanglisteService:
             if treffer is not None and jetzt - treffer[0] < self._cache_sekunden:
                 return treffer[1]
         ergebnis = await self._saisonpunkte_eines(saison, kennung)
+        if isinstance(ergebnis, _Unvollstaendig):
+            return ergebnis.punkte
         if not isinstance(ergebnis, int):
             return None
         with self._sperre:

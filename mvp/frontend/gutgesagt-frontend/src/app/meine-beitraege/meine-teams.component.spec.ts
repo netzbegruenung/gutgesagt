@@ -175,6 +175,23 @@ describe('MeineTeamsComponent', () => {
     http.expectOne(`${URL}/meine`).flush(stand({ teams: [stand().teams[1]] }));
   });
 
+  it('setzt den Fokus nach „Team verlassen“ auf die Überschrift, nicht auf <body> (WCAG 2.4.3)', async () => {
+    document.body.appendChild(fixture.nativeElement);
+    laden(stand());
+    dialog.open.and.returnValue({ afterClosed: () => of(true) } as never);
+    const knopf = el().querySelector('[data-testid="verlassen"]') as HTMLButtonElement;
+    knopf.focus();
+
+    knopf.click();
+    http.expectOne(`${URL}/meine/m1`).flush(null, { status: 204, statusText: 'No Content' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(el().querySelector('#meine-teams-titel'));
+    http.expectOne(`${URL}/meine`).flush(stand({ teams: [stand().teams[1]] }));
+    fixture.nativeElement.remove();
+  });
+
   it('verlässt kein Team, wenn die Rückfrage abgebrochen wird', () => {
     laden(stand());
     dialog.open.and.returnValue({ afterClosed: () => of(false) } as never);
@@ -210,9 +227,37 @@ describe('MeineTeamsComponent', () => {
       vorige_thema_name: null,
     };
 
+    /** Vor der gezeigten Woche beigetreten, wenn nicht anders gesagt. */
     function mit(teil: Partial<MeinTeam>): MeineTeams {
-      return stand({ teams: [team({ id: 'm1', ...teil })] });
+      return stand({ teams: [team({ id: 'm1', eingetreten_am: '2026-11-10', ...teil })] });
     }
+
+    it('zeigt statt einer Woche vor dem eigenen Beitritt „Eure erste gemeinsame Woche läuft“ (UX-Review 26.11.)', () => {
+      // Beigetreten am Donnerstag der BDK; gezeigt würde die Vorwoche 16.11. bis 22.11.
+      laden(mit({ wirkung, quest: { ...quest, vorige_geschafft: true, vorige_thema_name: 'Klima' }, eingetreten_am: '2026-11-26' }));
+
+      expect(el().querySelector('[data-testid="team-erste-woche"]')!.textContent).toContain(
+        'Eure erste gemeinsame Woche läuft. Am Montag seht ihr hier, was ihr zusammen geschafft habt.',
+      );
+      expect(el().querySelector('[data-testid="team-zahlen"]')).toBeNull();
+      expect(el().textContent).not.toContain('Letzte Woche gemeinsam');
+      expect(el().textContent).not.toContain('weniger als 10');
+      // Die Quest: das Ziel der laufenden Woche ja, ein „geschafft“ aus der Zeit davor nicht
+      expect(el().querySelector('[data-testid="quest-ziel"]')).not.toBeNull();
+      expect(el().querySelector('[data-testid="quest-geschafft"]')).toBeNull();
+    });
+
+    it('zeigt die Woche, wenn der Beitritt in ihr lag (bis Sonntag)', () => {
+      laden(mit({ wirkung, eingetreten_am: '2026-11-22' }));
+      expect(el().querySelector('[data-testid="team-zahlen"]')).not.toBeNull();
+      expect(el().querySelector('[data-testid="team-erste-woche"]')).toBeNull();
+    });
+
+    it('unter 5 Mitgliedern bleibt „wächst noch“, auch in der ersten Woche', () => {
+      laden(mit({ wirkung: { ...wirkung, waechst_noch: true }, eingetreten_am: '2026-11-26' }));
+      expect(el().querySelector('[data-testid="team-waechst"]')).not.toBeNull();
+      expect(el().querySelector('[data-testid="team-erste-woche"]')).toBeNull();
+    });
 
     it('zeigt die abgeschlossene Woche mit den gerundeten Texten des Servers', () => {
       laden(mit({ wirkung }));

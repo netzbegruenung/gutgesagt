@@ -54,6 +54,7 @@ def test_muster_hinweise_mit_kennung_und_anzeigename(
                 "name_a": None,
                 "konto_b": "kim-1",
                 "name_b": "Kim A.",
+                "art": "nutzung",
                 "tage": 3,
                 "erster_tag": "2026-10-20",
                 "letzter_tag": "2026-10-29",

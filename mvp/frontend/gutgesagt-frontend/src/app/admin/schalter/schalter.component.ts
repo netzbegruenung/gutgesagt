@@ -43,7 +43,7 @@ const TITEL: Record<string, string> = {
   gartenansicht: 'Gartenansicht',
   kopiert_erfolg: 'Erfolgstext nach dem Kopieren',
   konter_probe: 'Konter-Probe',
-  saal_spruch: 'Saal-Spruch „Heute im Saal gehört:“',
+  saal_spruch: 'Saal-Spruch „Heute im Netz zur BDK:“',
   luecke_zu_gross: '„Lücke zu!“ als großer Moment',
   einwilligung_im_gewinn: 'Einwilligung im passenden Moment',
   naechster_schritt: '„Dein nächster Schritt“',
@@ -52,7 +52,8 @@ const TITEL: Record<string, string> = {
   danke_knopf: 'Danke-Knopf',
   danke_ohne_konto: 'Danke-Knopf ohne Konto',
   rangliste: 'Rangliste je Saison',
-  spielgefuehl_buehne: 'Spielgefühl in drei Stufen',
+  spielgefuehl_buehne: 'Spielgefühl als eine Frage',
+  muster_stimmen: 'Muster-Hinweise aus Zustimmungen',
 };
 
 /**
@@ -75,11 +76,13 @@ const VORAUSSETZUNG: Record<string, [string, string][]> = {
   rangliste: [['punkte', 'Punkte']],
   // Die Spielgefühl-Frage gibt es nur mit Punkten
   spielgefuehl_buehne: [['punkte', 'Punkte']],
+  // Der Zweck Zustimmungen steht im Wortlaut des Spielgefühls
+  muster_stimmen: [['punkte', 'Punkte'], ['spielgefuehl_buehne', 'Spielgefühl als eine Frage']],
 };
 
 /** Schalter, die nicht wirken, solange ein anderer wirkt: Name → [anderer, Anzeige, Folge]. */
 const AUSSCHLUSS: Record<string, [string, string, string]> = {
-  abzeichen_sichtbar: ['spielgefuehl_buehne', 'Spielgefühl in drei Stufen', 'Abzeichen dann nur in der Rangliste'],
+  abzeichen_sichtbar: ['spielgefuehl_buehne', 'Spielgefühl als eine Frage', 'Abzeichen dann nur in der Rangliste'],
 };
 
 /** Status je Schalter für Pille und Filter (siehe status()). */

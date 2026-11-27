@@ -42,7 +42,7 @@ def _unlesbar() -> ValidationError:
 @pytest.fixture
 def repository():
     repo = MagicMock()
-    repo.get = AsyncMock(return_value=object())
+    repo.get = AsyncMock(return_value=MagicMock(original_author="kennung-2"))
     return repo
 
 
@@ -161,3 +161,40 @@ class TestAbstimmen:
 
         assert antwort.status_code == 200
         getattr(dienst, f"remove_{art}").assert_called_once()
+
+
+@pytest.mark.parametrize("art", ["like", "dislike"])
+class TestTeamZaehler:
+    """
+    Stimmen zu eigenen Beitraegen zaehlen nicht fuer den Team-Fortschritt
+    (Gamification-Check 26.11., Befund 22), wie bei den Punkten fuers Bewerten.
+    """
+
+    def _abstimmen(self, client, repository, art, autorin):
+        beitrag = MagicMock()
+        beitrag.original_author = autorin
+        repository.get = AsyncMock(return_value=beitrag)
+        with patch("api.v1.voting.team_zaehlen") as zaehlen:
+            antwort = client.put(
+                f"/api/v1/voting/content/{BEITRAG}/{art}", headers=ANGEMELDET
+            )
+        assert antwort.status_code == 200
+        return zaehlen
+
+    def test_stimme_zu_fremdem_beitrag_zaehlt(self, client, repository, art):
+        zaehlen = self._abstimmen(client, repository, art, "kennung-2")
+        zaehlen.assert_called_once()
+        assert zaehlen.call_args.args[0] == "kennung-1"
+
+    def test_stimme_zu_eigenem_beitrag_zaehlt_nicht(self, client, repository, art):
+        zaehlen = self._abstimmen(client, repository, art, "kennung-1")
+        zaehlen.assert_not_called()
+
+    def test_unlesbarer_beitrag_zaehlt_wie_bisher(self, client, repository, art):
+        repository.get = AsyncMock(side_effect=_unlesbar())
+        with patch("api.v1.voting.team_zaehlen") as zaehlen:
+            antwort = client.put(
+                f"/api/v1/voting/content/{BEITRAG}/{art}", headers=ANGEMELDET
+            )
+        assert antwort.status_code == 200
+        zaehlen.assert_called_once()

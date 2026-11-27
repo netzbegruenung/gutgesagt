@@ -13,6 +13,7 @@ from sqlalchemy import text
 from core.config import Settings
 from infrastructure.database.models import (
     Base,
+    EinladungZeile,
     GepostetOhneKontoWoche,
     GepostetPruefwert,
     GepostetWoche,
@@ -27,7 +28,10 @@ from services.saison_service import SaisonService
 pytestmark = pytest.mark.integration
 
 MO = date(2026, 11, 30)
+# einladungen: Saison anlegen gibt Teamlinks mit ihrem Namen die ID (#858,
+# repositories/saison_repository.py)
 TABELLEN = [
+    EinladungZeile.__table__,
     GepostetOhneKontoWoche.__table__,
     GepostetPruefwert.__table__,
     GepostetWoche.__table__,

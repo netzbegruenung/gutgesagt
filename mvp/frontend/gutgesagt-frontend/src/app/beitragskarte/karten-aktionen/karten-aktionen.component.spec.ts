@@ -6,7 +6,7 @@ import { By } from '@angular/platform-browser';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Router } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 
 import { KOPIERT_DAUER_MS, KartenAktionenComponent } from './karten-aktionen.component';
@@ -78,13 +78,16 @@ describe('KartenAktionenComponent - Abstimmen', () => {
         { provide: UsageTrackingService, useValue: usageTrackingSpy },
         { provide: AuthService, useValue: authServiceSpy },
         { provide: MatDialog, useValue: jasmine.createSpyObj('MatDialog', ['open']) },
-        { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate']) },
+        // Echter Router, navigate als Spion: Der Erfolgskasten verlinkt nach „Ja, gepostet“
+        // mit routerLink („Spruch suchen“), und routerLink braucht ActivatedRoute.
+        provideRouter([]),
         { provide: TEILEN_NAVIGATOR, useFactory: () => nav },
         { provide: MeilensteinHinweisService, useValue: jasmine.createSpyObj('MeilensteinHinweisService', ['bestaetigen']) },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 
+    spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     fixture = TestBed.createComponent(KartenAktionenComponent);
     component = fixture.componentInstance;
     meilensteinHinweis = TestBed.inject(MeilensteinHinweisService) as jasmine.SpyObj<MeilensteinHinweisService>;

@@ -1,10 +1,18 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, DestroyRef, Injector, afterNextRender, computed, effect, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { of } from 'rxjs';
+import { catchError, map, switchMap, take } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
+import { dseMusterStimmen } from './dse-muster-stimmen';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import {
-  DSE_SPIELGEFUEHL_ANFANG,
+  DSE_SPIELGEFUEHL_AUS,
+  DSE_SPIELGEFUEHL_EINLEITUNG,
+  DSE_SPIELGEFUEHL_NUR_FUER_MICH,
   DSE_SPIELGEFUEHL_OHNE_RANGLISTE,
   DSE_SPIELGEFUEHL_RANGLISTE,
   DSE_SPIELGEFUEHL_SCHLUSS,
@@ -14,6 +22,8 @@ import {
 import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
 import { FunktionenService } from '../services/funktionen.service';
+import { AuthService } from '../auth/auth.service';
+import { WiderrufbarComponent } from '../einwilligung/widerrufbar.component';
 import { KURZFASSUNG, KURZFASSUNG_SCHLUSS, KurzfassungSatz, kurzfassungFertig } from './dse-kurzfassung';
 
 @Component({
@@ -23,7 +33,8 @@ import { KURZFASSUNG, KURZFASSUNG_SCHLUSS, KurzfassungSatz, kurzfassungFertig } 
     CommonModule,
     MatCardModule,
     MatDividerModule,
-    RouterModule
+    RouterModule,
+    WiderrufbarComponent
   ],
   templateUrl: './datenschutz.component.html',
   styleUrls: ['./datenschutz.component.scss']
@@ -31,6 +42,33 @@ import { KURZFASSUNG, KURZFASSUNG_SCHLUSS, KurzfassungSatz, kurzfassungFertig } 
 export class DatenschutzComponent {
   readonly VEREIN = LEGAL_ENTITY;
   private readonly funktionen = inject(FunktionenService);
+  /**
+   * Angemeldet? null, solange die App es noch nicht weiß: dann steht im Kasten
+   * „Einwilligung widerrufen“ weder Knopf noch Anmeldehinweis. Folgt dem Stand, ohne Neuladen.
+   */
+  readonly angemeldet = toSignal(
+    inject(AuthService).userInfo$.pipe(map((info) => (info ? info.isAuthenticated : null))),
+    { initialValue: null }
+  );
+  /**
+   * Zurück vom Anmelden (returnUrl …#einwilligung-widerrufen): Sobald der Anmeldestand da ist,
+   * einmal wie ein Sprunglink zum Kasten, mit scroll-padding und Fokus (WCAG 2.4.3); das
+   * anchorScrolling des Routers kennt beides nicht.
+   */
+  private kastenAngesprungen = false;
+  /** Zeilen „Ausschalten“ im Kasten; -1: noch nicht geladen. */
+  readonly widerrufZeilen = signal(-1);
+  private readonly zumKasten = effect(() => {
+    if (this.angemeldet() === null || this.kastenAngesprungen || location.hash !== '#einwilligung-widerrufen') {
+      return;
+    }
+    this.kastenAngesprungen = true;
+    setTimeout(() => {
+      const ziel = document.getElementById('einwilligung-widerrufen');
+      ziel?.scrollIntoView({ block: 'start' });
+      ziel?.focus({ preventScroll: true });
+    });
+  });
   /** Sätze des Kastens „Kurz gesagt“ (dse-kurzfassung.ts). */
   readonly kurzfassungSaetze: readonly KurzfassungSatz[] = inject(KURZFASSUNG);
   /** Schlusssatz unter den drei Sätzen des Kastens (Wortlaut Jura). */
@@ -61,15 +99,62 @@ export class DatenschutzComponent {
     ziel.focus({ preventScroll: true });
     history.replaceState(history.state, '', `${location.pathname}${location.search}#${anker}`);
   }
+  /**
+   * Anker hinter einem Schalter (etwa #spielgefuehl, #rangliste): Beim Aufruf mit Fragment
+   * steht der Absatz oft noch nicht, weil GET /api/v1/funktionen erst antworten muss; der
+   * Router scrollt dann ins Leere und die Person landet oben in der langen Erklärung.
+   * Fehlt das Ziel beim ersten Zeichnen, springt die Seite einmal dorthin, sobald die
+   * Schalter da sind.
+   */
+  private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+
+  constructor() {
+    const anker = inject(ActivatedRoute).snapshot.fragment;
+    if (!anker) {
+      return;
+    }
+    afterNextRender(
+      () => {
+        if (document.getElementById(anker)) {
+          return;
+        }
+        this.funktionen
+          .stand$('spielgefuehl_buehne')
+          .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+          .subscribe(() =>
+            afterNextRender(
+              () => {
+                const ziel = document.getElementById(anker);
+                if (!ziel) {
+                  return;
+                }
+                // Wie springen(): Fokus mit, damit Tab dort weitergeht (WCAG 2.4.3).
+                ziel.scrollIntoView({ block: 'start' });
+                if (!ziel.hasAttribute('tabindex')) {
+                  ziel.setAttribute('tabindex', '-1');
+                }
+                ziel.focus({ preventScroll: true });
+              },
+              { injector: this.injector },
+            ),
+          );
+      },
+      { injector: this.injector },
+    );
+  }
+
   /** Merker der Meilensteine im Browser; der Absatz dazu steht erst, wenn er an ist (§ 25 TDDDG). */
   readonly meilensteinMerker = inject(MEILENSTEIN_MERKER);
   /**
-   * Spielgefühl in drei Stufen (Schalter spielgefuehl_buehne): der Absatz „Spielgefühl“
+   * Spielgefühl als eine Frage (Schalter spielgefuehl_buehne): der Absatz „Spielgefühl“
    * ersetzt unter „Punkte“ die Einwilligungsteile zu Punkten, Abzeichen und Rangliste.
    */
   readonly spielgefuehlBuehne = this.funktionen.an('spielgefuehl_buehne');
   readonly spielgefuehlTitel = DSE_SPIELGEFUEHL_TITEL;
-  readonly spielgefuehlAnfang = DSE_SPIELGEFUEHL_ANFANG;
+  readonly spielgefuehlEinleitung = DSE_SPIELGEFUEHL_EINLEITUNG;
+  readonly spielgefuehlAus = DSE_SPIELGEFUEHL_AUS;
+  readonly spielgefuehlNurFuerMich = DSE_SPIELGEFUEHL_NUR_FUER_MICH;
   readonly spielgefuehlRangliste = DSE_SPIELGEFUEHL_RANGLISTE;
   readonly spielgefuehlOhneRangliste = DSE_SPIELGEFUEHL_OHNE_RANGLISTE;
   readonly spielgefuehlSchluss = DSE_SPIELGEFUEHL_SCHLUSS;
@@ -98,6 +183,28 @@ export class DatenschutzComponent {
    */
   /** Punkte: der Vorbehalt „noch nicht eingeschaltet“ entfällt, die Muster-Hinweise gelten. */
   readonly punkte = this.funktionen.an('punkte');
+  /**
+   * Zustimmungen in den Muster-Hinweisen (Schalter muster_stimmen): ein Satz unter
+   * „Muster-Hinweise“ mit dem Einschalttag, den die Seite erst fragt, wenn der Schalter an ist.
+   */
+  readonly musterStimmen = this.funktionen.an('muster_stimmen');
+  private readonly http = inject(HttpClient, { optional: true });
+  private readonly musterStimmenSeit = toSignal(
+    toObservable(this.musterStimmen).pipe(
+      switchMap((an) =>
+        an && this.http
+          ? this.http
+              .get<{ seit: string | null }>(`${environment.baseUrl}/api/v1/funktionen/muster_stimmen/seit`)
+              .pipe(
+                map((antwort) => antwort?.seit ?? null),
+                catchError(() => of(null)),
+              )
+          : of(null),
+      ),
+    ),
+    { initialValue: null },
+  );
+  readonly musterStimmenSatz = computed(() => dseMusterStimmen(this.musterStimmenSeit()));
   /** Rangliste (#793): Absatz statt des Hinweises „noch nicht eingeschaltet“. */
   readonly rangliste = this.funktionen.an('rangliste');
   /** Team-Summe (#784): der Satz „noch nicht eingeschaltet“ entfällt. */

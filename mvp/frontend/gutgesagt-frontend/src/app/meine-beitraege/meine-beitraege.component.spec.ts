@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { Component, Input, signal } from '@angular/core';
 import { MerklisteService } from '../services/merkliste.service';
 import { ContentService } from '../services/content.service';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
@@ -27,6 +27,16 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { VotingService } from '../services/voting.service';
 import { LoggingService } from '../services/logging.service';
 import { PUNKTE_EINWILLIGUNG_AUS } from '../shared/punkte-einwilligung/punkte-einwilligung.testing';
+import { WiderrufbarComponent } from '../einwilligung/widerrufbar.component';
+
+/** Platzhalter für die Widerrufszeilen; widerrufbar.component.spec.ts prüft sie selbst. */
+@Component({ selector: 'app-widerrufbar', standalone: true, template: '' })
+class WiderrufbarAttrappe {
+  @Input() ebene = 3;
+  @Input() karte = false;
+  @Input() spielgefuehlKarteDaneben = false;
+  @Input() punkteHaekchenDaneben = true;
+}
 
 describe('MeineBeitraegeComponent', () => {
   let fixture: ComponentFixture<MeineBeitraegeComponent>;
@@ -130,6 +140,10 @@ describe('MeineBeitraegeComponent', () => {
         },
         ...weitere,
       ],
+    });
+    TestBed.overrideComponent(MeineBeitraegeComponent, {
+      remove: { imports: [WiderrufbarComponent] },
+      add: { imports: [WiderrufbarAttrappe] },
     });
 
     router = TestBed.inject(Router);
@@ -316,6 +330,25 @@ describe('MeineBeitraegeComponent', () => {
     await erstellen([beitrag()]);
 
     expect(album().naechsterMeilenstein?.kennung).toBe('b');
+  });
+
+  // Jura 27.11.: Der Fußsatz der Spielgefühl-Frage verweist auf „Meine Beiträge“; der Weg zum
+  // Widerruf muss dort auch stehen, wenn die Karte leer ist (Schalter aus).
+  it('bietet unter der Spielgefühl-Karte die Widerrufszeilen an, als eigene Karte', async () => {
+    await erstellen([beitrag()]);
+
+    const bereich = fixture.nativeElement.querySelector('#meine-bereich-beitraege') as HTMLElement;
+    const reihenfolge = Array.from(bereich.querySelectorAll('app-spielgefuehl, app-widerrufbar')).map((e) =>
+      e.tagName.toLowerCase(),
+    );
+    expect(reihenfolge).toEqual(['app-spielgefuehl', 'app-widerrufbar']);
+    const zeilen = fixture.debugElement.query((d) => d.componentInstance instanceof WiderrufbarAttrappe)
+      .componentInstance as WiderrufbarAttrappe;
+    expect(zeilen.ebene).toBe(2);
+    expect(zeilen.karte).toBeTrue();
+    expect(zeilen.spielgefuehlKarteDaneben).toBeTrue();
+    // Hier steht kein Häkchen, das selbst den Widerruf anbietet.
+    expect(zeilen.punkteHaekchenDaneben).toBeFalse();
   });
 
   it('stellt das Album vor Punkte und Meilensteine', async () => {

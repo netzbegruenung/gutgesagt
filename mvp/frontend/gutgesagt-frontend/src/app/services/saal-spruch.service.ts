@@ -23,7 +23,7 @@ export interface SaalSpruchListe {
   /** Ab heute, nach Datum */
   sprueche: SaalSpruch[];
   schalter_wirksam: boolean;
-  /** Der heutige Tag im Saal (ISO-Datum), früher lässt sich nichts festlegen */
+  /** Der heutige Tag in deutscher Zeit (ISO-Datum), früher lässt sich nichts festlegen */
   heute: string;
   text_max: number;
 }

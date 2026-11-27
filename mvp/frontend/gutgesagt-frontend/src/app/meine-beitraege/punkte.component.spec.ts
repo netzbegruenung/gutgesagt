@@ -183,4 +183,21 @@ describe('PunkteComponent (#352)', () => {
     fixture.destroy();
     discardPeriodicTasks();
   }));
+  it('sagt nach einem Fehler „gerade nicht abrufbar“ statt endlos „wird berechnet“ und lädt weiter nach', fakeAsync(() => {
+    const element = erstellen(PUNKTE_NICHT_GELADEN, stand());
+
+    tick(PUNKTE_PLATZHALTER_MS);
+    fixture.detectChanges();
+    const hinweis = element.querySelector('[data-testid="punkte-nicht-abrufbar"]');
+    expect(hinweis?.textContent).toContain('gerade nicht abrufbar');
+    expect(element.textContent).not.toContain('Punkte werden berechnet');
+
+    tick(PUNKTE_NACHLADEN_MS);
+    fixture.detectChanges();
+    expect(element.querySelector('.punkte-platzhalter')).toBeNull();
+    expect(titel(element)).toContain('32');
+
+    fixture.destroy();
+    discardPeriodicTasks();
+  }));
 });

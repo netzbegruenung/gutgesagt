@@ -8,7 +8,7 @@ Einwilligungs-Moment nach dem neuen Modell. Wegwerf-Schema aus der Fixture
 import pytest
 from sqlalchemy import text
 
-from domain.spielgefuehl import AKTUELLER_WORTLAUT, Stufe
+from domain.spielgefuehl import AKTUELLER_WORTLAUT, STIMMEN_WORTLAUT, Stufe
 from repositories.einwilligungs_moment_repository import EinwilligungsMomentRepository
 from repositories.spielgefuehl_repository import SpielgefuehlRepository
 from tests.integration.test_loeschkommando import datenbank  # noqa: F401
@@ -62,6 +62,29 @@ class TestSpielgefuehlRepository:
             "d": Stufe.AUS,
         }
         assert repo.vergebene_namen() == {"Name A", "Name B", "Name D"}
+
+    def test_stimmen_eingewilligte_nur_neuer_wortlaut_ab_fuer_mich(
+        self, datenbank  # noqa: F811
+    ):
+        """Zustimmungen zaehlen nur mit dem Wortlaut -27; -26 reicht nicht."""
+        repo = SpielgefuehlRepository(datenbank)
+        repo.antworten("neu-r", Stufe.RANGLISTE, False, STIMMEN_WORTLAUT, "Name")
+        repo.antworten("neu-f", Stufe.FUER_MICH, False, STIMMEN_WORTLAUT)
+        repo.antworten("neu-aus", Stufe.AUS, False, STIMMEN_WORTLAUT)
+        repo.antworten("alt", Stufe.RANGLISTE, False, AKTUELLER_WORTLAUT, "Alt")
+        # Erst -27, dann wieder -26: die juengste Antwort zaehlt
+        repo.antworten("zurueck", Stufe.FUER_MICH, False, STIMMEN_WORTLAUT)
+        repo.antworten("zurueck", Stufe.RANGLISTE, False, AKTUELLER_WORTLAUT, "Z")
+
+        assert repo.stimmen_eingewilligte(
+            ["neu-r", "neu-f", "neu-aus", "alt", "zurueck", "nie"]
+        ) == {"neu-r", "neu-f"}
+        assert repo.stimmen_eingewilligte([]) == set()
+        # Beide Wortlaute gelten fuer Punkte und Rangliste
+        assert repo.wirksame_stufen(["neu-f", "alt"]) == {
+            "neu-f": Stufe.FUER_MICH,
+            "alt": Stufe.RANGLISTE,
+        }
 
 
 class TestEinwilligungsMomentImNeuenModell:

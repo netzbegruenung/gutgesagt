@@ -13,6 +13,17 @@ export const WIEDERHOLUNG_MS: readonly number[] = [2000, 5000, 15000, 30000, 600
  */
 export const LADE_TIMEOUT_MS = 20000;
 
+/** Optionen der Wiederholung; ohne sie wie bisher feste Abstaende. */
+export interface WiederholungOptionen {
+  /**
+   * Streuung der Abstaende als Anteil (0,3 = bis zu 30 % frueher oder spaeter), damit nach
+   * einer Stoerung im Saal-WLAN nicht alle Geraete in derselben Sekunde wiederkommen.
+   */
+  streuung?: number;
+  /** Zufallsquelle zwischen 0 und 1, fuer Tests. */
+  zufall?: () => number;
+}
+
 /**
  * Ob sich ein neuer Versuch von selbst lohnt: ohne Antwort (Netz weg, Status 0 oder
  * kein HTTP-Fehler), Timeout (408), gebremst (429) oder Serverfehler (5xx). Andere
@@ -43,7 +54,10 @@ export class LadeWiederholung {
   /** Gesetzt, solange ein Fehler offen ist: was ``online``/sichtbar ausloest. */
   private offen: (() => void) | null = null;
 
-  constructor(private readonly ende$: Observable<unknown>) {
+  constructor(
+    private readonly ende$: Observable<unknown>,
+    private readonly optionen: WiederholungOptionen = {},
+  ) {
     merge(
       fromEvent(window, 'online'),
       fromEvent(document, 'visibilitychange').pipe(filter(() => document.visibilityState === 'visible')),
@@ -59,10 +73,19 @@ export class LadeWiederholung {
     if (!lohntWiederholung(fehler)) {
       return false;
     }
-    const abstand = WIEDERHOLUNG_MS[Math.min(this.fehlversuche, WIEDERHOLUNG_MS.length - 1)];
+    const abstand = this.gestreut(WIEDERHOLUNG_MS[Math.min(this.fehlversuche, WIEDERHOLUNG_MS.length - 1)]);
     this.fehlversuche++;
     this.geplant = timer(abstand).pipe(takeUntil(this.ende$)).subscribe(() => laden());
     return true;
+  }
+
+  private gestreut(abstand: number): number {
+    const streuung = Math.min(Math.max(this.optionen.streuung ?? 0, 0), 1);
+    if (!streuung) {
+      return abstand;
+    }
+    const zufall = (this.optionen.zufall ?? Math.random)();
+    return Math.round(abstand * (1 + streuung * (2 * zufall - 1)));
   }
 
   abbrechen(): void {

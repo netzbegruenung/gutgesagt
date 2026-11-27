@@ -103,7 +103,8 @@ def test_hinweise_mit_filter_lesen_vorrat_und_kuerzen():
 
     hinweise = MusterHinweiseService(repository).hinweise(lambda ks: set(ks))
 
-    repository.hinweise.assert_called_once_with(150)
+    # Ohne Filter fuer Zustimmungen nur Nutzungen (muster_stimmen)
+    repository.hinweise.assert_called_once_with(150, art="nutzung")
     assert len(hinweise) == 50
 
 

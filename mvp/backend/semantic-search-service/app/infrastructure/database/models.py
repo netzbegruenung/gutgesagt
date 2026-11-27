@@ -282,7 +282,8 @@ class WirkungJeBeitrag(Base):
 class MusterHinweisZeile(Base):
     """
     Ein auffaelliges Muster fuer Admins (ADR 0004, #352): zwei Konten, die innerhalb
-    von sieben Tagen jeweils einen Beitrag des anderen genutzt haben. Ein Hinweis,
+    von sieben Tagen jeweils einen Beitrag des anderen genutzt (oder, mit dem Schalter
+    muster_stimmen, einem Beitrag des anderen zugestimmt) haben. Ein Hinweis,
     keine Automatik; niemand verliert dadurch Punkte.
 
     konto_a ist die kleinere Kennung, konto_b die groessere. tage zaehlt die Tage, an
@@ -294,6 +295,12 @@ class MusterHinweisZeile(Base):
 
     konto_a = Column(String(255), primary_key=True)
     konto_b = Column(String(255), primary_key=True)
+    # Woran das Muster auffiel: "nutzung" (gegenseitig genutzt) oder "zustimmung"
+    # (einander zugestimmt, Schalter muster_stimmen); je Art ein eigener Hinweis
+    # (Migration 2026-11-27-muster-stimmen.sql)
+    art = Column(
+        String(16), primary_key=True, default="nutzung", server_default="nutzung"
+    )
     tage = Column(Integer, nullable=False)
     erster_tag = Column(Date, nullable=False)
     letzter_tag = Column(Date, nullable=False)
@@ -1281,8 +1288,8 @@ SAAL_SPRUCH_MAX = 200
 class SaalSpruchZeile(Base):
     """
     Der Saal-Spruch eines Tages (services/saal_spruch_service.py): ein oeffentlicher
-    Spruch, den ein Admin vorab fuer einen Tag (Europe/Berlin) festlegt, etwa fuer die
-    Tage der BDK. Je Tag hoechstens einer. Nichts zur Person, auch nicht, welcher Admin
+    Spruch, den ein Admin fuer einen Tag (Europe/Berlin) festlegt, an BDK-Tagen jeden
+    Morgen den, der gerade unter BDK-Beitraegen im Netz kursiert. Je Tag hoechstens einer. Nichts zur Person, auch nicht, welcher Admin
     ihn festgelegt hat.
 
     Neue Tabelle: create_all legt sie beim Start an. Das Skript

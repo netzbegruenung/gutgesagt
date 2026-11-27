@@ -37,6 +37,11 @@ export class PunkteComponent implements OnInit, OnDestroy {
   punkte: Punktestand | null = null;
   /** Stand noch unbekannt und schon eine Weile gewartet: Platzhalter zeigen. */
   platzhalter = false;
+  /**
+   * Noch nie geladen und die letzte Anfrage scheiterte (502, Zeitüberschreitung): statt
+   * „wird berechnet …“ ohne Ende ehrlich „gerade nicht abrufbar“. Der Takt versucht es weiter.
+   */
+  nichtAbrufbar = false;
   private bekannt = false;
   /** Stufe des Spielgefühls (Schalter spielgefuehl_buehne); null ohne Schalter oder Antwort. */
   stufe: SpielgefuehlStufe | null | undefined = undefined;
@@ -60,11 +65,17 @@ export class PunkteComponent implements OnInit, OnDestroy {
       )
       .subscribe((antwort) => {
         if (antwort === PUNKTE_NICHT_GELADEN) {
+          // Ein bekannter Stand bleibt stehen; ohne ihn kein endloses „wird berechnet …“.
+          if (!this.bekannt) {
+            this.nichtAbrufbar = true;
+            this.cdr.markForCheck();
+          }
           return;
         }
         this.punkte = antwort?.sammelt === false ? null : antwort;
         this.bekannt = true;
         this.platzhalter = false;
+        this.nichtAbrufbar = false;
         this.cdr.markForCheck();
       });
     // Takte laufen ausserhalb der Angular-Zone, sonst wird die Anwendung nie
