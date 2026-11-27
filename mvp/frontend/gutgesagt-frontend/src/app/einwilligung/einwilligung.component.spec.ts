@@ -87,9 +87,12 @@ describe('EinwilligungComponent', () => {
     // "Ohne Einwilligung weiter" geht als POST an den Server (B2); nur der eigene Test prueft ihn.
     http.match({ method: 'POST', url: `${URL}/ohne` }).forEach((r) => r.flush(null, { status: 204, statusText: 'No Content' }));
     // Die Widerrufszeilen fragen beim Öffnen (widerrufbar.component.spec.ts prüft sie).
-    http
-      .match({ method: 'GET', url: `${environment.baseUrl}/api/v1/usage/users/me/widerrufbar` })
-      .forEach((r) => r.flush({ spielgefuehl: null, punkte: null, rangliste: null, abzeichen: null }));
+    // Ein Anstoß während einer laufenden Abfrage fragt danach noch einmal (nachladeStrom).
+    for (let runde = 0; runde < 5; runde++) {
+      const offen = http.match({ method: 'GET', url: `${environment.baseUrl}/api/v1/usage/users/me/widerrufbar` });
+      if (!offen.length) break;
+      offen.forEach((r) => r.flush({ spielgefuehl: null, punkte: null, rangliste: null, abzeichen: null }));
+    }
     http.verify();
   });
 

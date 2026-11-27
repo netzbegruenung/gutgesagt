@@ -1,10 +1,13 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { BehaviorSubject, of } from 'rxjs';
+import { provideRouter } from '@angular/router';
 
 import { environment } from '../../environments/environment';
 import { PunkteEinwilligungService, PunkteEinwilligungStand } from '../shared/punkte-einwilligung/punkte-einwilligung.service';
+import { SpielgefuehlService, SpielgefuehlStand } from '../services/spielgefuehl.service';
+import { NACHLADEN_MS, STILLE_ABFRAGE } from '../shared/selbst-nachladen';
 import { Widerrufbar, WiderrufbarComponent } from './widerrufbar.component';
 
 const BASIS = `${environment.baseUrl}/api/v1`;
@@ -24,19 +27,27 @@ describe('WiderrufbarComponent', () => {
   let http: HttpTestingController;
   let punkteStand: BehaviorSubject<PunkteEinwilligungStand | null | undefined>;
   let punkteLaden: jasmine.Spy;
+  /** Stand der Spielgefühl-Karte (SpielgefuehlService); undefined: noch nicht geladen. */
+  let spielStand: BehaviorSubject<SpielgefuehlStand | null | undefined>;
+  let spielLaden: jasmine.Spy;
 
-  function starten(stand: Widerrufbar) {
+  function starten(stand: Widerrufbar, eingaben: Partial<WiderrufbarComponent> = {}) {
     punkteStand = new BehaviorSubject<PunkteEinwilligungStand | null | undefined>(null);
     punkteLaden = jasmine.createSpy('laden').and.returnValue(of(null));
+    spielStand = new BehaviorSubject<SpielgefuehlStand | null | undefined>(undefined);
+    spielLaden = jasmine.createSpy('spielLaden').and.returnValue(of(null));
     TestBed.configureTestingModule({
       imports: [WiderrufbarComponent],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: PunkteEinwilligungService, useValue: { stand$: punkteStand, laden: punkteLaden } },
+        { provide: SpielgefuehlService, useValue: { stand$: spielStand, laden: spielLaden } },
+        provideRouter([]),
       ],
     });
     fixture = TestBed.createComponent(WiderrufbarComponent);
+    Object.assign(fixture.componentInstance, eingaben);
     http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
     http.expectOne({ method: 'GET', url: URL }).flush(stand);
@@ -68,7 +79,7 @@ describe('WiderrufbarComponent', () => {
     expect(zeile('abzeichen')?.textContent).toContain('Abzeichen am Namen: sichtbar');
     expect(zeile('team_oeffentlich')?.textContent).toContain('Teams am Namen: sichtbar');
     // Jura 27.11.: neutral, weil darunter auch die Teams stehen
-    expect(el().querySelector('#widerrufbar-titel')?.textContent?.trim()).toBe('Einwilligungen ausschalten');
+    expect(el().querySelector('[id^="widerrufbar-titel"]')?.textContent?.trim()).toBe('Einwilligungen ausschalten');
     const knoepfe = Array.from(el().querySelectorAll('button')).map((b) => b.textContent?.trim());
     expect(knoepfe).toEqual(['Ausschalten', 'Ausschalten', 'Ausschalten', 'Ausschalten', 'Ausschalten']);
   });
@@ -190,6 +201,7 @@ describe('WiderrufbarComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: PunkteEinwilligungService, useValue: { stand$: punkteStand, laden: () => of(null) } },
+        provideRouter([]),
       ],
     });
     fixture = TestBed.createComponent(WiderrufbarComponent);
@@ -199,6 +211,178 @@ describe('WiderrufbarComponent', () => {
     fixture.detectChanges();
 
     expect(el().querySelector('[data-testid="widerrufbar"]')).toBeNull();
+  });
+
+  describe('Einbindung auf anderen Seiten (Datenschutzseite, „Meine Beiträge“)', () => {
+    function karte(stufe: SpielgefuehlStand['stufe']): SpielgefuehlStand {
+      return { stufe, aktueller_wortlaut: {} } as unknown as SpielgefuehlStand;
+    }
+
+    it('nimmt die Ebene der Überschrift von der Seite', () => {
+      starten(ALLES, { ebene: 4 });
+
+      expect(el().querySelector('h4[id^="widerrufbar-titel"]')?.textContent).toContain('Einwilligungen ausschalten');
+      expect(el().querySelector('h3')).toBeNull();
+    });
+
+    it('zeigt den Satz für „nichts zu widerrufen“ erst nach dem Laden', () => {
+      punkteStand = new BehaviorSubject<PunkteEinwilligungStand | null | undefined>(null);
+      TestBed.configureTestingModule({
+        imports: [WiderrufbarComponent],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: PunkteEinwilligungService, useValue: { stand$: punkteStand, laden: () => of(null) } },
+          { provide: SpielgefuehlService, useValue: { stand$: new BehaviorSubject(undefined), laden: () => of(null) } },
+          provideRouter([]),
+        ],
+      });
+      fixture = TestBed.createComponent(WiderrufbarComponent);
+      fixture.componentInstance.leerText = 'Nichts zu widerrufen.';
+      http = TestBed.inject(HttpTestingController);
+      fixture.detectChanges();
+      expect(el().querySelector('[data-testid="widerrufbar-leer"]')).toBeNull();
+
+      http.expectOne({ method: 'GET', url: URL }).flush(NICHTS);
+      fixture.detectChanges();
+      expect(el().querySelector('[data-testid="widerrufbar-leer"]')?.textContent).toContain('Nichts zu widerrufen.');
+    });
+
+    it('zeigt ohne Häkchen daneben die Punkte-Zeile, auch wenn der gemeinsame Stand eingewilligt hat', () => {
+      starten(ALLES, { punkteHaekchenDaneben: false });
+
+      punkteStand.next({ eingewilligt: true, wortlaut: '2026-11-13', aktueller_wortlaut: { kennung: '2026-11-13', text: '' } });
+      fixture.detectChanges();
+
+      expect(zeile('punkte')).not.toBeNull();
+    });
+
+    it('lässt neben der Spielgefühl-Karte die Spielgefühl-Zeile weg, solange die Karte die Stufe zeigt', () => {
+      starten(ALLES, { spielgefuehlKarteDaneben: true });
+      // Stand der Karte noch unbekannt: lieber doppelt als kein Weg.
+      expect(zeile('spielgefuehl')).not.toBeNull();
+
+      spielStand.next(karte('rangliste'));
+      fixture.detectChanges();
+      expect(zeile('spielgefuehl')).toBeNull();
+      expect(zeile('rangliste')).not.toBeNull();
+    });
+
+    it('zeigt die Spielgefühl-Zeile, wenn die Karte leer ist (Schalter aus)', () => {
+      starten(ALLES, { spielgefuehlKarteDaneben: true });
+
+      spielStand.next(null);
+      fixture.detectChanges();
+
+      expect(zeile('spielgefuehl')?.textContent).toContain('Spielgefühl: In der Saison-Rangliste mitspielen');
+    });
+
+    it('fragt neu, wenn die Stufe auf der Karte wechselt', () => {
+      starten(ALLES, { spielgefuehlKarteDaneben: true });
+      spielStand.next(karte('rangliste'));
+
+      spielStand.next(karte('aus'));
+      http.expectOne({ method: 'GET', url: URL }).flush({ ...ALLES, spielgefuehl: null, rangliste: null });
+      fixture.detectChanges();
+
+      expect(zeile('rangliste')).toBeNull();
+    });
+
+    it('lädt im Takt selbst nach, ohne Neuladen der Seite (Widerruf in einem anderen Tab)', fakeAsync(() => {
+      starten(ALLES);
+
+      tick(NACHLADEN_MS);
+      const anfrage = http.expectOne({ method: 'GET', url: URL });
+      anfrage.flush({ ...ALLES, abzeichen: null });
+      fixture.detectChanges();
+
+      expect(zeile('abzeichen')).toBeNull();
+      fixture.destroy();
+    }));
+
+    it('fragt still: nach abgelaufener Sitzung keine Umleitung, keine Knöpfe, kein Weiterfragen', fakeAsync(() => {
+      starten(ALLES);
+
+      tick(NACHLADEN_MS);
+      const anfrage = http.expectOne({ method: 'GET', url: URL });
+      expect(anfrage.request.context.get(STILLE_ABFRAGE)).toBeTrue();
+      anfrage.flush(null, { status: 401, statusText: 'Unauthorized' });
+      fixture.detectChanges();
+
+      expect(el().querySelector('[data-testid="widerrufbar"]')).toBeNull();
+      // Der Weg zum Widerruf bleibt sichtbar: neu anmelden, zurück an diese Stelle.
+      const link = el().querySelector('[data-testid="widerrufbar-sitzung"] a') as HTMLAnchorElement;
+      expect(link.textContent?.trim()).toBe('Sitzung abgelaufen – Anmelden');
+      expect(link.getAttribute('href')).toContain('/login?returnUrl=');
+      tick(NACHLADEN_MS * 8);
+      http.expectNone({ method: 'GET', url: URL });
+      fixture.destroy();
+    }));
+    it('meldet die Zahl der Zeilen bei jeder Änderung, auch die erste „0“', () => {
+      const zahlen: number[] = [];
+      punkteStand = new BehaviorSubject<PunkteEinwilligungStand | null | undefined>(null);
+      TestBed.configureTestingModule({
+        imports: [WiderrufbarComponent],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: PunkteEinwilligungService, useValue: { stand$: punkteStand, laden: () => of(null) } },
+          { provide: SpielgefuehlService, useValue: { stand$: new BehaviorSubject(undefined), laden: () => of(null) } },
+          provideRouter([]),
+        ],
+      });
+      fixture = TestBed.createComponent(WiderrufbarComponent);
+      http = TestBed.inject(HttpTestingController);
+      fixture.componentInstance.zeilenZahl.subscribe((n) => zahlen.push(n));
+      fixture.detectChanges();
+      expect(zahlen).toEqual([]);
+      http.expectOne({ method: 'GET', url: URL }).flush(NICHTS);
+      fixture.componentInstance.neuLaden();
+      http.expectOne({ method: 'GET', url: URL }).flush({ ...NICHTS, rangliste: ALLES.rangliste });
+      fixture.componentInstance.neuLaden();
+      http.expectOne({ method: 'GET', url: URL }).flush(NICHTS);
+
+      expect(zahlen).toEqual([0, 1, 0]);
+      fixture.destroy();
+    });
+
+    it('gibt jeder Instanz eine eigene Überschrift-id für aria-labelledby', () => {
+      starten(ALLES);
+
+      const abschnitt = el().querySelector('[data-testid="widerrufbar"]') as HTMLElement;
+      const id = abschnitt.getAttribute('aria-labelledby') as string;
+      expect(id).toMatch(/^widerrufbar-titel-\d+$/);
+      expect(el().querySelector(`#${id}`)?.textContent).toContain('Einwilligungen ausschalten');
+    });
+
+    it('frischt nach dem Ausschalten von Spielgefühl oder Punkten die Spielgefühl-Karte auf', () => {
+      starten(ALLES, { punkteHaekchenDaneben: false });
+
+      (zeile('punkte')?.querySelector('button') as HTMLButtonElement).click();
+      http.expectOne({ method: 'PUT', url: `${BASIS}/usage/users/me/punkte-einwilligung` }).flush(null, { status: 204, statusText: 'No Content' });
+      http.expectOne({ method: 'GET', url: URL }).flush({ ...ALLES, punkte: null, spielgefuehl: null });
+
+      expect(spielLaden).toHaveBeenCalledWith(true);
+    });
+
+    it('Fokus nach dem Ausschalten auch dann richtig, wenn ein älteres Nachladen noch unterwegs war', fakeAsync(() => {
+      starten({ ...NICHTS, rangliste: ALLES.rangliste, abzeichen: ALLES.abzeichen });
+      document.body.appendChild(el());
+
+      tick(NACHLADEN_MS);
+      const alt = http.expectOne({ method: 'GET', url: URL });
+      (zeile('rangliste')?.querySelector('button') as HTMLButtonElement).click();
+      http.expectOne({ method: 'PUT', url: `${BASIS}/rangliste/einwilligung` }).flush(null, { status: 204, statusText: 'No Content' });
+      // Der alte Lauf kommt mit der Zeile von vor dem Ausschalten zurück.
+      alt.flush({ ...NICHTS, rangliste: ALLES.rangliste, abzeichen: ALLES.abzeichen });
+      http.expectOne({ method: 'GET', url: URL }).flush({ ...NICHTS, abzeichen: ALLES.abzeichen });
+      fixture.detectChanges();
+
+      expect(zeile('rangliste')).toBeNull();
+      expect(document.activeElement).toBe(zeile('abzeichen')?.querySelector('button') ?? null);
+      el().remove();
+      fixture.destroy();
+    }));
   });
 
   it('kommt mit einem älteren Backend ohne team_oeffentlich zurecht', () => {

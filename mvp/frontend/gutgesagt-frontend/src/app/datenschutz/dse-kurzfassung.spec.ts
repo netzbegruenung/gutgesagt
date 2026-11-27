@@ -1,6 +1,8 @@
 import { Signal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { FunktionenService } from '../services/funktionen.service';
 import { LEGAL_ENTITY } from '../shared/legal-entity';
@@ -34,7 +36,7 @@ describe('Kurzfassung der Datenschutzerklärung (dse_kurzfassung)', () => {
     TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
         { provide: FunktionenService, useValue: funktionen },
         ...(saetze ? [{ provide: KURZFASSUNG, useValue: saetze }] : []),
       ],

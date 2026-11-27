@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Injector, afterNextRender, computed, inject } from '@angular/core';
+import { Component, DestroyRef, Injector, afterNextRender, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -22,6 +22,8 @@ import {
 import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
 import { FunktionenService } from '../services/funktionen.service';
+import { AuthService } from '../auth/auth.service';
+import { WiderrufbarComponent } from '../einwilligung/widerrufbar.component';
 import { KURZFASSUNG, KURZFASSUNG_SCHLUSS, KurzfassungSatz, kurzfassungFertig } from './dse-kurzfassung';
 
 @Component({
@@ -31,7 +33,8 @@ import { KURZFASSUNG, KURZFASSUNG_SCHLUSS, KurzfassungSatz, kurzfassungFertig } 
     CommonModule,
     MatCardModule,
     MatDividerModule,
-    RouterModule
+    RouterModule,
+    WiderrufbarComponent
   ],
   templateUrl: './datenschutz.component.html',
   styleUrls: ['./datenschutz.component.scss']
@@ -39,6 +42,33 @@ import { KURZFASSUNG, KURZFASSUNG_SCHLUSS, KurzfassungSatz, kurzfassungFertig } 
 export class DatenschutzComponent {
   readonly VEREIN = LEGAL_ENTITY;
   private readonly funktionen = inject(FunktionenService);
+  /**
+   * Angemeldet? null, solange die App es noch nicht weiß: dann steht im Kasten
+   * „Einwilligung widerrufen“ weder Knopf noch Anmeldehinweis. Folgt dem Stand, ohne Neuladen.
+   */
+  readonly angemeldet = toSignal(
+    inject(AuthService).userInfo$.pipe(map((info) => (info ? info.isAuthenticated : null))),
+    { initialValue: null }
+  );
+  /**
+   * Zurück vom Anmelden (returnUrl …#einwilligung-widerrufen): Sobald der Anmeldestand da ist,
+   * einmal wie ein Sprunglink zum Kasten, mit scroll-padding und Fokus (WCAG 2.4.3); das
+   * anchorScrolling des Routers kennt beides nicht.
+   */
+  private kastenAngesprungen = false;
+  /** Zeilen „Ausschalten“ im Kasten; -1: noch nicht geladen. */
+  readonly widerrufZeilen = signal(-1);
+  private readonly zumKasten = effect(() => {
+    if (this.angemeldet() === null || this.kastenAngesprungen || location.hash !== '#einwilligung-widerrufen') {
+      return;
+    }
+    this.kastenAngesprungen = true;
+    setTimeout(() => {
+      const ziel = document.getElementById('einwilligung-widerrufen');
+      ziel?.scrollIntoView({ block: 'start' });
+      ziel?.focus({ preventScroll: true });
+    });
+  });
   /** Sätze des Kastens „Kurz gesagt“ (dse-kurzfassung.ts). */
   readonly kurzfassungSaetze: readonly KurzfassungSatz[] = inject(KURZFASSUNG);
   /** Schlusssatz unter den drei Sätzen des Kastens (Wortlaut Jura). */

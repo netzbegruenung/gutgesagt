@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { abschnitt } from '../testing/rechtstext';
 import { DatenschutzComponent } from '../datenschutz/datenschutz.component';
@@ -17,7 +19,7 @@ describe('Datenschutzerklärung zu „Dein nächster Schritt“ (#789)', () => {
   function seite(an: boolean): HTMLElement {
     TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
-      providers: [provideRouter([]), { provide: FunktionenService, useValue: { an: () => signal(an) } }],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: FunktionenService, useValue: { an: () => signal(an) } }],
     });
     const fixture = TestBed.createComponent(DatenschutzComponent);
     fixture.detectChanges();
