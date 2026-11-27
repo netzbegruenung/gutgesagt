@@ -4,6 +4,12 @@
     <img class="hero-logo" src="marke/logo-v2.svg" alt="" width="96" height="96">
     <h1 class="hero-title">Über Gut gesagt</h1>
     <p class="subtitle">Antworten, die Unentschiedene mitnehmen. Gesammelt und verbessert von vielen.</p>
+    <!-- Traegerin ganz oben, die Geschichte von Sebastian bleibt darunter (Startseite zur BDK, 27.11.) -->
+    <p class="traeger">
+      Gut gesagt ist ein Projekt der
+      <a [href]="organisation.url" target="_blank" rel="noopener">{{ organisation.vereinsname }}<span class="visually-hidden"> (öffnet in neuem Tab)</span></a>,
+      {{ organisation.beschreibung }}.
+    </p>
   </section>
 
   <!-- Wofuer: warum es Gut gesagt gibt; wie man es bedient, steht in der Hilfe (Designrunde 17.11.) -->
@@ -166,7 +172,7 @@
   </section>
 
   <!-- Menschen hinter Gut gesagt: Sebastian, Aila, Dank an alle Helfenden -->
-  <section class="inhalt-spalte inhalt-spalte--lesen content-section menschen">
+  <section class="inhalt-spalte inhalt-spalte--lesen content-section menschen" id="menschen">
     <h2>Die Menschen hinter Gut gesagt</h2>
     <div class="personal-intro">
       <div class="profile-image-container">
