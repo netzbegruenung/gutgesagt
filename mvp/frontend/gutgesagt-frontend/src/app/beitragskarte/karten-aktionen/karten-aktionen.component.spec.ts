@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA, SimpleChange, WritableSignal, signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, SimpleChange, signal } from '@angular/core';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { By } from '@angular/platform-browser';
@@ -9,13 +9,12 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 
-import { KOPIERT_DAUER_MS, KartenAktionenComponent } from './karten-aktionen.component';
+import { KartenAktionenComponent } from './karten-aktionen.component';
 import { AuthService } from '../../auth/auth.service';
 import { LoggingService } from '../../services/logging.service';
 import { UsageTrackingService } from '../../services/usage-tracking.service';
 import { VotingService } from '../../services/voting.service';
 import { FunktionenService } from '../../services/funktionen.service';
-import { KOPIERT } from '../../shared/vorlagen-luecke';
 import { TEILEN_LINK_KOPIERT, TEILEN_NAVIGATOR, TeilenNavigator } from '../../shared/teilen.service';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
 import { GEPOSTET_FRAGE, GEPOSTET_GEMELDET, GEPOSTET_NICHT_GEZAEHLT, JA_GEPOSTET } from './gepostet-texte';
@@ -596,7 +595,8 @@ describe('KartenAktionenComponent - Abstimmen', () => {
       fixture.detectChanges();
 
       const eintraege = Array.from(document.querySelectorAll('.mat-mdc-menu-item-text')).map((eintrag) => eintrag.textContent!.trim());
-      expect(eintraege[0]).toBe('Mit Herkunft kopieren');
+      // „Als Bild teilen“ (Basisfunktion) steht wie bisher mit Schalter davor
+      expect(eintraege.slice(0, 2)).toEqual(['Als Bild teilen', 'Mit Herkunft kopieren']);
       expect(eintraege).not.toContain('Link kopieren');
       expect(fixture.nativeElement.querySelectorAll('.kopieren button').length).toBe(1);
     });
@@ -634,10 +634,11 @@ describe('KartenAktionenComponent - Abstimmen', () => {
       expect(usage.trackContentUsage).toHaveBeenCalledTimes(1);
     });
 
-    it('meldet "Kopiert – jetzt unter dem Post einfügen." ohne Luecke', () => {
+    it('meldet ohne Luecke im Erfolgskasten statt mit der Snackbar (#785, Basisfunktion)', () => {
       component.kopieren();
 
-      expect(snackBar.open).toHaveBeenCalledWith('Kopiert – jetzt unter dem Post einfügen.', 'Schließen', { duration: KOPIERT_DAUER_MS });
+      expect(snackBar.open).not.toHaveBeenCalled();
+      expect(component.kopiertErfolg()).toBeTrue();
     });
 
     describe('mit Platzhalter (Persona-Test Dennis)', () => {
@@ -679,7 +680,7 @@ describe('KartenAktionenComponent - Abstimmen', () => {
         expect(snackBar.open).not.toHaveBeenCalled();
       });
 
-      it('zaehlt den gefuellten Text wie normales Kopieren und meldet es wie dort (KOPIERT)', () => {
+      it('zaehlt den gefuellten Text wie normales Kopieren und meldet es wie dort (Erfolgskasten)', () => {
         const kopiert = jasmine.createSpy('kopiert');
         component.kopiert.subscribe(kopiert);
         dialogSchliesstMit({ text: 'Gut. Mein Satz. Ende.' });
@@ -688,7 +689,8 @@ describe('KartenAktionenComponent - Abstimmen', () => {
 
         expect(usage.trackContentUsage).toHaveBeenCalledOnceWith(INHALT_ID, undefined);
         expect(kopiert).toHaveBeenCalledTimes(1);
-        expect(snackBar.open).toHaveBeenCalledWith(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
+        expect(snackBar.open).not.toHaveBeenCalled();
+        expect(component.kopiertErfolg()).toBeTrue();
       });
 
       it('fragt auch bei "Mit Herkunft kopieren" aus dem Menue', () => {
@@ -719,14 +721,11 @@ describe('KartenAktionenComponent - Abstimmen', () => {
     });
   });
 
-  describe('Rückmeldung „Gepostet?“ (#643), Schalter kopiert_erfolg aus', () => {
+  describe('Rückmeldung „Gepostet?“ (#643) im Erfolgskasten (kopiert_erfolg ist Basisfunktion)', () => {
     let usage: jasmine.SpyObj<UsageTrackingService>;
-    let kopiertHinweis: jasmine.SpyObj<{ dismiss: () => void }>;
 
     beforeEach(() => {
       usage = TestBed.inject(UsageTrackingService) as jasmine.SpyObj<UsageTrackingService>;
-      kopiertHinweis = jasmine.createSpyObj('MatSnackBarRef', ['dismiss']);
-      snackBar.open.and.returnValue(kopiertHinweis as any);
       fixture.detectChanges();
     });
 
@@ -753,23 +752,20 @@ describe('KartenAktionenComponent - Abstimmen', () => {
 
       kopieren();
 
-      expect(snackBar.open).toHaveBeenCalledOnceWith(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
+      expect(snackBar.open).not.toHaveBeenCalled();
+      expect(kasten()!.textContent).toContain(KOPIERT_ERFOLG);
       expect(usage.gepostetAngeboten).toHaveBeenCalledWith('test-user');
       expect(jaKnopf()).toBeNull();
 
       antwort.next(true);
       fixture.detectChanges();
 
-      // „Kopiert“ nicht doppelt: Der Kasten löst die Snackbar ab und sagt es selbst.
-      expect(kopiertHinweis.dismiss).toHaveBeenCalled();
-      expect(kasten()!.textContent).toContain(KOPIERT);
       expect(kasten()!.textContent).toContain(GEPOSTET_FRAGE);
-      expect(kasten()!.textContent).not.toContain(KOPIERT_ERFOLG);
       expect(jaKnopf()!.textContent!.trim()).toBe(JA_GEPOSTET);
       expect(usage.gepostetMelden).not.toHaveBeenCalled();
     });
 
-    it('fragt sofort im Kasten, ohne Snackbar, wenn das Angebot schon bekannt ist', () => {
+    it('fragt sofort im Kasten, wenn das Angebot schon bekannt ist', () => {
       usage.gepostetBekannt.and.returnValue(true);
 
       kopieren();
@@ -798,9 +794,10 @@ describe('KartenAktionenComponent - Abstimmen', () => {
 
       kopieren();
 
-      expect(snackBar.open).toHaveBeenCalledOnceWith(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
+      expect(snackBar.open).not.toHaveBeenCalled();
       expect(usage.gepostetAngeboten).not.toHaveBeenCalled();
-      expect(kasten()).toBeNull();
+      expect(kasten()).not.toBeNull();
+      expect(jaKnopf()).toBeNull();
     });
 
     it('dankt nicht und nimmt die Frage weg, wenn der Server sie inzwischen nicht mehr anbietet', () => {
@@ -909,23 +906,11 @@ describe('KartenAktionenComponent - Abstimmen', () => {
 
       kopieren();
 
-      // Der alte Kasten geht zu, sonst stünde „Kopiert“ doppelt da (Snackbar und Kasten).
-      expect(kasten()).toBeNull();
-      expect(jaKnopf()).toBeNull();
-      expect(snackBar.open).toHaveBeenCalledOnceWith(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
-      expect(usage.gepostetMelden).toHaveBeenCalledTimes(1);
-    });
-
-    it('kopiert eine andere Karte über die Snackbar, geht der Kasten dieser Karte zu', () => {
-      usage.gepostetBekannt.and.returnValue(true);
-      kopieren();
+      // Der Kasten steht neu, ohne Frage
       expect(kasten()).not.toBeNull();
-
-      // Eine andere Karte meldet ihr Kopieren per Snackbar.
-      TestBed.inject(KopiertErfolgStelle).ohneKasten({});
-      fixture.detectChanges();
-
-      expect(kasten()).toBeNull();
+      expect(jaKnopf()).toBeNull();
+      expect(snackBar.open).not.toHaveBeenCalled();
+      expect(usage.gepostetMelden).toHaveBeenCalledTimes(1);
     });
 
     it('eine späte Antwort holt den Kasten nicht zurück, wenn inzwischen eine andere Karte kopiert wurde', () => {
@@ -938,7 +923,6 @@ describe('KartenAktionenComponent - Abstimmen', () => {
       antwort.next(true);
       fixture.detectChanges();
 
-      expect(kopiertHinweis.dismiss).not.toHaveBeenCalled();
       expect(TestBed.inject(KopiertErfolgStelle).aktiv()).toBe(andere);
       expect(kasten()).toBeNull();
     });
@@ -955,10 +939,11 @@ describe('KartenAktionenComponent - Abstimmen', () => {
       expect(jaKnopf()).toBeNull();
     });
 
-    it('bleibt ohne Angebot beim Kopier-Hinweis', () => {
+    it('bleibt ohne Angebot beim Erfolgstext, ohne Frage', () => {
       kopieren();
 
-      expect(snackBar.open).toHaveBeenCalledWith(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
+      expect(snackBar.open).not.toHaveBeenCalled();
+      expect(kasten()).not.toBeNull();
       expect(usage.gepostetMelden).not.toHaveBeenCalled();
       expect(jaKnopf()).toBeNull();
     });
@@ -982,7 +967,8 @@ describe('KartenAktionenComponent - Abstimmen', () => {
       kopieren();
 
       expect(usage.gepostetAngeboten).not.toHaveBeenCalled();
-      expect(snackBar.open).toHaveBeenCalledWith(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
+      expect(snackBar.open).not.toHaveBeenCalled();
+      expect(kasten()).not.toBeNull();
       expect(jaKnopf()).toBeNull();
     });
   });
@@ -1339,8 +1325,8 @@ describe('KartenAktionenComponent - Abstimmen', () => {
       expect(leiste.querySelector('.teilen-knopf')).toBeNull();
     });
 
-    it('fuehrt im Menue Kopieren, Oeffnen, Als Vorlage und Loeschen, ohne Melden', () => {
-      expect(menue()).toEqual(['Kopieren', 'Beitrag öffnen', 'Als Vorlage nehmen', 'Beitrag löschen']);
+    it('fuehrt im Menue Als Bild teilen, Kopieren, Oeffnen, Als Vorlage und Loeschen, ohne Melden', () => {
+      expect(menue()).toEqual(['Als Bild teilen', 'Kopieren', 'Beitrag öffnen', 'Als Vorlage nehmen', 'Beitrag löschen']);
     });
 
     it('meldet Ändern und Löschen nach aussen', () => {
@@ -1366,23 +1352,16 @@ describe('KartenAktionenComponent - Abstimmen', () => {
       expect(fixture.nativeElement.querySelector('.teilen-haupt')).not.toBeNull();
     });
   });
-
-  it('laesst „Kopiert“ 4 s stehen, lang genug fuer den Wechsel in die andere App (P10)', () => {
-    expect(KOPIERT_DAUER_MS).toBe(4000);
-  });
 });
 
-/** Teilen als Bild (#756): nur mit eingeschaltetem Schalter, Standard aus. */
+/** Teilen als Bild (#756): Basisfunktion seit dem Schalter-Umbau 27.11. */
 describe('KartenAktionenComponent - Als Bild teilen', () => {
   const INHALT_ID = '123e4567-e89b-12d3-a456-426614174000';
   let fixture: ComponentFixture<KartenAktionenComponent>;
   let component: KartenAktionenComponent;
   let dialog: jasmine.SpyObj<MatDialog>;
   let usage: jasmine.SpyObj<UsageTrackingService>;
-  let sharepic: WritableSignal<boolean>;
-
   beforeEach(async () => {
-    sharepic = signal(false);
     dialog = jasmine.createSpyObj('MatDialog', ['open']);
     usage = jasmine.createSpyObj('UsageTrackingService', ['trackContentUsage', 'gepostetAngeboten', 'gepostetBekannt']);
     const auth = jasmine.createSpyObj('AuthService', ['getUserInfo']);
@@ -1400,7 +1379,8 @@ describe('KartenAktionenComponent - Als Bild teilen', () => {
         { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate']) },
         { provide: TEILEN_NAVIGATOR, useValue: {} },
         { provide: MeilensteinHinweisService, useValue: jasmine.createSpyObj('MeilensteinHinweisService', ['bestaetigen']) },
-        { provide: FunktionenService, useValue: { an: () => sharepic.asReadonly() } },
+        // Alle Schalter aus: Teilen als Bild braucht keinen
+        { provide: FunktionenService, useValue: { an: () => signal(false).asReadonly() } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(KartenAktionenComponent);
@@ -1425,27 +1405,17 @@ describe('KartenAktionenComponent - Als Bild teilen', () => {
 
   afterEach(() => document.querySelectorAll('.cdk-overlay-container').forEach((c) => (c.innerHTML = '')));
 
-  it('zeigt bei ausgeschaltetem Schalter keinen Eintrag', async () => {
-    expect(component.sharepicSichtbar).toBeFalse();
-    expect(await menueEintraege()).toEqual([]);
-  });
-
-  it('zeigt bei eingeschaltetem Schalter „Als Bild teilen“ mit Symbol und Text', async () => {
-    sharepic.set(true);
-    fixture.detectChanges();
-
+  it('zeigt ohne Schalter „Als Bild teilen“ mit Symbol und Text', async () => {
+    expect(component.sharepicSichtbar).toBeTrue();
     expect(await menueEintraege()).toEqual(['imageAls Bild teilen']);
   });
 
   it('nicht in der Formular-Vorschau', () => {
-    sharepic.set(true);
     component.vorschau = true;
     expect(component.sharepicSichtbar).toBeFalse();
   });
 
   it('oeffnet den Dialog mit Fassung, Aussage, Thema und Link und zaehlt nichts', () => {
-    sharepic.set(true);
-
     component.alsBildTeilen();
 
     const daten = dialog.open.calls.mostRecent().args[1]!.data as any;
@@ -1462,13 +1432,13 @@ describe('KartenAktionenComponent - Als Bild teilen', () => {
   });
 
   it('nicht bei einer Vorlage mit Platzhalter', () => {
-    sharepic.set(true);
     component.bildText = 'Wir wollen [Hier dein Ort] besser machen.';
 
     expect(component.sharepicSichtbar).toBeFalse();
   });
 
-  it('oeffnet bei ausgeschaltetem Schalter nichts', () => {
+  it('oeffnet bei einer Vorlage mit Platzhalter nichts', () => {
+    component.bildText = 'Wir wollen [Hier dein Ort] besser machen.';
     component.alsBildTeilen();
     expect(dialog.open).not.toHaveBeenCalled();
   });

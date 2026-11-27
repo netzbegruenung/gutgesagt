@@ -15,7 +15,6 @@ import { VotingService } from '../../services/voting.service';
 import { FunktionenService } from '../../services/funktionen.service';
 import { TEILEN_NAVIGATOR } from '../../shared/teilen.service';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
-import { KOPIERT } from '../../shared/vorlagen-luecke';
 import {
   GEPOSTET_FRAGE,
   GEPOSTET_FRAGE_OHNE_KONTO,
@@ -99,11 +98,12 @@ describe('KartenAktionenComponent - Ja, gepostet ohne Konto', () => {
     return (fixture.nativeElement.querySelector('.erfolg-gepostet-dank')?.textContent ?? '').trim();
   }
 
-  it('Schalter aus: keine Rückfrage ohne Konto, nur die gewohnte Bestätigung', () => {
+  it('Not-Aus greift: keine Rückfrage ohne Konto, nur der Erfolgstext', () => {
     kopieren();
 
     expect(jaKnopf()).toBeNull();
-    expect(snackBar.open).toHaveBeenCalledWith(KOPIERT, 'Schließen', jasmine.any(Object));
+    expect(fixture.nativeElement.querySelector('.kopiert-erfolg')).not.toBeNull();
+    expect(snackBar.open).not.toHaveBeenCalled();
     expect(usage.gepostetOhneKontoMelden).not.toHaveBeenCalled();
     expect(usage.gepostetAngeboten).not.toHaveBeenCalled();
   });
@@ -140,7 +140,7 @@ describe('KartenAktionenComponent - Ja, gepostet ohne Konto', () => {
     kopieren();
 
     expect(jaKnopf()).toBeNull();
-    expect(snackBar.open).toHaveBeenCalledWith(KOPIERT, 'Schließen', jasmine.any(Object));
+    expect(snackBar.open).not.toHaveBeenCalled();
     expect(usage.gepostetOhneKontoMelden).toHaveBeenCalledTimes(1);
   });
 

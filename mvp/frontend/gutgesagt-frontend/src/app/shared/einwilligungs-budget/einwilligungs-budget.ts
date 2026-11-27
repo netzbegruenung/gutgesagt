@@ -1,7 +1,7 @@
 /**
  * Das Einwilligungs-Budget (#788, GLOSSARY.md „Einwilligungs-Budget“): die eine Stelle,
- * die entscheidet, ob die App jetzt eine Einwilligungsfrage stellen darf. Nur mit dem
- * Schalter `einwilligung_im_gewinn`; ohne ihn fragt die App wie bisher.
+ * die entscheidet, ob die App jetzt eine Einwilligungsfrage stellen darf. Seit dem
+ * Schalter-Umbau (27.11.) eine Basisfunktion ohne Schalter: Die Grenzen gelten immer.
  *
  * - Höchstens eine Frage je Besuch. Ein Besuch ist ein Laden der App in diesem Tab: Die
  *   App merkt sich nur im Arbeitsspeicher, was sie schon gefragt hat, nicht im Browser

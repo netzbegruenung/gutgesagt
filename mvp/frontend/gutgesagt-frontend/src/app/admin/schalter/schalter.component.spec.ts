@@ -19,7 +19,7 @@ function schalter(teil: Partial<Schalter> & { name: string }): Schalter {
     admin_wert: false,
     wirksam: false,
     dsfa_hinweis: null,
-    gruppe: 'Grundfunktionen',
+    gruppe: 'Einzelschalter',
     wartet_auf_recht: false,
     ...teil,
   };
@@ -75,28 +75,28 @@ describe('SchalterComponent', () => {
 
   it('zeigt je Schalter Name, Erklärung, Obergrenze und den DSFA-Hinweis', () => {
     laden([
-      schalter({ name: 'punkte', dsfa_hinweis: DSFA }),
-      schalter({ name: 'gepostet', obergrenze: false }),
+      schalter({ name: 'spielgefuehl_buehne', gruppe: 'Pakete', dsfa_hinweis: DSFA }),
+      schalter({ name: 'merkliste', gruppe: 'Einzelschalter', obergrenze: false }),
     ]);
 
-    const [punkte, gepostet] = karten();
-    expect(punkte.textContent).toContain('Punkte und Meilensteine');
-    expect(punkte.textContent).toContain('Was er tut.');
-    expect(punkte.textContent).toContain('Server erlaubt: ja');
-    expect(punkte.querySelector('[data-testid="dsfa-hinweis"]')!.textContent).toContain('DSFA beschlossen');
-    expect(knopf(punkte).disabled).toBeFalse();
+    const [spiel, merkliste] = karten();
+    expect(spiel.textContent).toContain('Paket Spielgefühl');
+    expect(spiel.textContent).toContain('Was er tut.');
+    expect(spiel.textContent).toContain('Server erlaubt: ja');
+    expect(spiel.querySelector('[data-testid="dsfa-hinweis"]')!.textContent).toContain('DSFA beschlossen');
+    expect(knopf(spiel).disabled).toBeFalse();
 
-    expect(gepostet.textContent).toContain('Server erlaubt: nein');
-    expect(gepostet.querySelector('[data-testid="gesperrt"]')).not.toBeNull();
-    expect(gepostet.querySelector('[data-testid="dsfa-hinweis"]')).toBeNull();
-    expect(knopf(gepostet).disabled).toBeTrue();
+    expect(merkliste.textContent).toContain('Server erlaubt: nein');
+    expect(merkliste.querySelector('[data-testid="gesperrt"]')).not.toBeNull();
+    expect(merkliste.querySelector('[data-testid="dsfa-hinweis"]')).toBeNull();
+    expect(knopf(merkliste).disabled).toBeTrue();
   });
 
   it('zeigt einen eigenen Einschalt-Hinweis des Servers statt des allgemeinen DSFA-Hinweises', () => {
-    const teams = 'Rechtlich freigegeben (25.11.): darf vor dem Beschluss der DSFA eingeschaltet werden. Die Anzeige am Namen (teams_oeffentlich) bleibt aus.';
+    const teams = 'Rechtlich freigegeben (Go des Vorstands 27.11.); Team-Summe erst ab 5 Mitgliedern mit Einwilligung.';
     laden([
-      schalter({ name: 'teams', dsfa_hinweis: teams }),
-      schalter({ name: 'teams_oeffentlich', dsfa_hinweis: DSFA }),
+      schalter({ name: 'teams', gruppe: 'Pakete', dsfa_hinweis: teams }),
+      schalter({ name: 'teams_oeffentlich', gruppe: 'Einzelschalter', dsfa_hinweis: DSFA }),
     ]);
 
     const [t, oeffentlich] = karten();
@@ -105,13 +105,51 @@ describe('SchalterComponent', () => {
     expect(oeffentlich.querySelector('[data-testid="dsfa-hinweis"]')!.textContent).toContain('DSFA beschlossen');
   });
 
+  // Schalter-Umbau 27.11.: vier Pakete, sieben Einzelschalter, Gruppen vom Server
+  it('zeigt die vier Pakete und die sieben Einzelschalter mit Namen', () => {
+    laden([
+      schalter({ name: 'teams', gruppe: 'Pakete' }),
+      schalter({ name: 'spielgefuehl_buehne', gruppe: 'Pakete' }),
+      schalter({ name: 'wirkungs_echo', gruppe: 'Pakete' }),
+      schalter({ name: 'k_begruessung', gruppe: 'Pakete' }),
+      schalter({ name: 'team_quests', gruppe: 'Einzelschalter' }),
+      schalter({ name: 'muster_stimmen', gruppe: 'Einzelschalter' }),
+      schalter({ name: 'teams_oeffentlich', gruppe: 'Einzelschalter' }),
+      schalter({ name: 'merkliste', gruppe: 'Einzelschalter' }),
+      schalter({ name: 'aufrufe_zaehlen', gruppe: 'Einzelschalter' }),
+      schalter({ name: 'danke_ohne_konto', gruppe: 'Einzelschalter' }),
+      schalter({ name: 'k_ankuenfte', gruppe: 'Einzelschalter' }),
+    ]);
+
+    expect(karten().map((k) => k.querySelector('h4')!.textContent)).toEqual([
+      'Paket Teams',
+      'Paket Spielgefühl',
+      'Paket Wirkungs-Echo',
+      'Paket BDK-Begrüßung',
+      'Team-Quests',
+      'Muster-Hinweise aus Zustimmungen',
+      'Teams am Anzeigenamen',
+      'Merkliste',
+      'Aufrufe und Besucher pro Tag',
+      'Danke-Knopf ohne Konto',
+      'Ankünfte je Kampagnenwort und Tag',
+    ]);
+    const gruppen = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="gruppe"] h3 span:first-child'));
+    expect(gruppen.map((g) => g.textContent!.trim())).toEqual(['Pakete', 'Einzelschalter']);
+  });
+
+  it('zeigt einen früheren Schalter, den ein älterer Server noch meldet, mit seinem technischen Namen', () => {
+    laden([schalter({ name: 'sharepic' })]);
+    expect(karten()[0].querySelector('h4')!.textContent).toBe('sharepic');
+  });
+
   describe('Gruppen, Status und Filter (25.11.)', () => {
     const LISTE = (): Schalter[] => [
-      schalter({ name: 'sharepic', admin_wert: true, wirksam: true }),
-      schalter({ name: 'gepostet' }),
-      schalter({ name: 'teams', gruppe: 'Teams', obergrenze: false, dsfa_hinweis: 'Rechtlich freigegeben (25.11.)' }),
-      schalter({ name: 'teams_oeffentlich', gruppe: 'Teams', obergrenze: false, dsfa_hinweis: DSFA, wartet_auf_recht: true }),
-      schalter({ name: 'punkte', gruppe: 'Punkte & Anerkennung', dsfa_hinweis: DSFA, wartet_auf_recht: true }),
+      schalter({ name: 'wirkungs_echo', gruppe: 'Pakete', admin_wert: true, wirksam: true }),
+      schalter({ name: 'k_begruessung', gruppe: 'Pakete' }),
+      schalter({ name: 'team_quests', gruppe: 'Einzelschalter', obergrenze: false, dsfa_hinweis: 'Rechtlich freigegeben (Go des Vorstands 27.11.)' }),
+      schalter({ name: 'teams_oeffentlich', gruppe: 'Einzelschalter', obergrenze: false, dsfa_hinweis: DSFA, wartet_auf_recht: true }),
+      schalter({ name: 'merkliste', gruppe: 'Einzelschalter', dsfa_hinweis: 'Aus lassen (Jura 26.11.)', wartet_auf_recht: true }),
     ];
 
     function gruppen(): HTMLElement[] {
@@ -129,13 +167,9 @@ describe('SchalterComponent', () => {
       laden(LISTE());
 
       const g = gruppen();
-      expect(g.map((x) => x.querySelector('h3 span')!.textContent!.trim())).toEqual([
-        'Grundfunktionen',
-        'Teams',
-        'Punkte & Anerkennung',
-      ]);
+      expect(g.map((x) => x.querySelector('h3 span')!.textContent!.trim())).toEqual(['Pakete', 'Einzelschalter']);
       expect(g[0].querySelector('[data-testid="gruppe-zaehler"]')!.textContent!.trim()).toBe('1 von 2 an');
-      expect(g[1].querySelector('[data-testid="gruppe-zaehler"]')!.textContent!.trim()).toBe('0 von 2 an');
+      expect(g[1].querySelector('[data-testid="gruppe-zaehler"]')!.textContent!.trim()).toBe('0 von 3 an');
       // Überschriften-Hierarchie: Seite h2, Gruppe h3, Schalter h4; Abschnitt nach seiner Überschrift benannt
       expect(g[0].getAttribute('aria-labelledby')).toBe(g[0].querySelector('h3')!.id);
       expect(g[0].querySelectorAll('h4').length).toBe(2);
@@ -145,12 +179,26 @@ describe('SchalterComponent', () => {
       laden(LISTE());
 
       const pillen = karten().map((k) => k.querySelector('[data-testid="status"]')!.textContent!.trim());
-      // teams: Hinweis steht, aber rechtlich freigegeben, und der Server sperrt ihn
+      // team_quests: Hinweis steht, aber rechtlich freigegeben, und der Server sperrt ihn
       expect(pillen).toEqual(['an', 'frei einschaltbar', 'gesperrt (Server)', 'wartet auf Recht', 'wartet auf Recht']);
     });
 
+    // Wartet auf Recht nur bei den fünf heiklen Einzelschaltern (schalter_service.EINZEL_SCHALTER)
+    it('„wartet auf Recht“ folgt dem Server: die fünf heiklen ja, Pakete und freigegebene Einzelschalter nein', () => {
+      const heikel = ['teams_oeffentlich', 'merkliste', 'aufrufe_zaehlen', 'danke_ohne_konto', 'k_ankuenfte'];
+      const frei = ['teams', 'spielgefuehl_buehne', 'wirkungs_echo', 'k_begruessung', 'team_quests', 'muster_stimmen'];
+      laden([
+        ...frei.map((name) => schalter({ name, dsfa_hinweis: 'Rechtlich freigegeben (Go des Vorstands 27.11.)' })),
+        ...heikel.map((name) => schalter({ name, dsfa_hinweis: 'Aus lassen (Jura 26.11.)', wartet_auf_recht: true })),
+      ]);
+
+      const pillen = karten().map((k) => k.querySelector('[data-testid="status"]')!.textContent!.trim());
+      expect(pillen.slice(0, frei.length)).toEqual(frei.map(() => 'frei einschaltbar'));
+      expect(pillen.slice(frei.length)).toEqual(heikel.map(() => 'wartet auf Recht'));
+    });
+
     it('sagt bei einem wirksamen Schalter mit offenem Recht „an, Recht offen“', () => {
-      laden([schalter({ name: 'punkte', admin_wert: true, wirksam: true, dsfa_hinweis: DSFA, wartet_auf_recht: true })]);
+      laden([schalter({ name: 'merkliste', admin_wert: true, wirksam: true, dsfa_hinweis: DSFA, wartet_auf_recht: true })]);
 
       const pille = karten()[0].querySelector('[data-testid="status"]') as HTMLElement;
       expect(pille.textContent!.trim()).toBe('an, Recht offen');
@@ -159,7 +207,7 @@ describe('SchalterComponent', () => {
     });
 
     it('fasst Schalter ohne Gruppe vom Server unter „Weitere“', () => {
-      laden([schalter({ name: 'gepostet', gruppe: '' })]);
+      laden([schalter({ name: 'merkliste', gruppe: '' })]);
       expect(gruppen()[0].querySelector('h3 span')!.textContent!.trim()).toBe('Weitere');
     });
 
@@ -173,17 +221,14 @@ describe('SchalterComponent', () => {
 
       expect(chip('Wartet auf Recht').getAttribute('aria-pressed')).toBe('true');
       expect(chip('Alle').getAttribute('aria-pressed')).toBe('false');
-      expect(karten().map((k) => k.querySelector('h4')!.textContent)).toEqual([
-        'Teams am Anzeigenamen',
-        'Punkte und Meilensteine',
-      ]);
-      expect(gruppen().length).toBe(2);
+      expect(karten().map((k) => k.querySelector('h4')!.textContent)).toEqual(['Teams am Anzeigenamen', 'Merkliste']);
+      expect(gruppen().length).toBe(1);
       // Der Zähler gilt für die ganze Gruppe, nicht nur für die gefilterten
-      expect(gruppen()[0].querySelector('[data-testid="gruppe-zaehler"]')!.textContent!.trim()).toBe('0 von 2 an');
+      expect(gruppen()[0].querySelector('[data-testid="gruppe-zaehler"]')!.textContent!.trim()).toBe('0 von 3 an');
     });
 
     it('sagt, wenn kein Schalter zum Filter passt', () => {
-      laden([schalter({ name: 'gepostet' })]);
+      laden([schalter({ name: 'merkliste' })]);
       chip('Gesperrt').click();
       fixture.detectChanges();
 
@@ -200,7 +245,7 @@ describe('SchalterComponent', () => {
       const details = karte.querySelector('[data-testid="details"]') as HTMLElement;
       expect(knopfAuf.getAttribute('aria-expanded')).toBe('false');
       expect(knopfAuf.getAttribute('aria-controls')).toBe(details.id);
-      expect(knopfAuf.getAttribute('aria-label')).toBe('Details zu Rückfrage „Ja, gepostet“');
+      expect(knopfAuf.getAttribute('aria-label')).toBe('Details zu Paket BDK-Begrüßung');
       expect(details.hidden).toBeTrue();
 
       knopfAuf.focus();
@@ -224,38 +269,57 @@ describe('SchalterComponent', () => {
 
     it('zeigt den Zustand auch zugeklappt, wenn der Admin-Wert an ist, aber nicht wirkt', () => {
       laden([
-        schalter({ name: 'punkte', admin_wert: true, wirksam: true }),
-        schalter({ name: 'gepostet', obergrenze: false, admin_wert: true, wirksam: false }),
+        schalter({ name: 'teams', admin_wert: true, wirksam: true }),
+        schalter({ name: 'merkliste', obergrenze: false, admin_wert: true, wirksam: false }),
       ]);
 
-      const [punkte, gepostet] = karten().map((k) => k.querySelector('[data-testid="zustand"]') as HTMLElement);
-      expect(punkte.hidden).toBeTrue();
-      expect(gepostet.hidden).toBeFalse();
+      const [teams, merkliste] = karten().map((k) => k.querySelector('[data-testid="zustand"]') as HTMLElement);
+      expect(teams.hidden).toBeTrue();
+      expect(merkliste.hidden).toBeFalse();
     });
   });
 
-  it('setzt beim Umschalten den Admin-Wert und zeigt den neuen Stand ohne Neuladen', () => {
-    laden([schalter({ name: 'punkte' })]);
+  describe('Pakete an und aus', () => {
+    it('schaltet ein Paket ein und zeigt den neuen Stand ohne Neuladen', () => {
+      laden([schalter({ name: 'teams', gruppe: 'Pakete' })]);
+      expect(karten()[0].querySelector('[data-testid="status"]')!.textContent!.trim()).toBe('frei einschaltbar');
 
-    knopf(karten()[0]).click();
-    fixture.detectChanges();
+      knopf(karten()[0]).click();
+      fixture.detectChanges();
 
-    const anfrage = http.expectOne(`${URL}/punkte`);
-    expect(anfrage.request.method).toBe('PUT');
-    expect(anfrage.request.body).toEqual({ an: true });
-    anfrage.flush({ schalter: [schalter({ name: 'punkte', admin_wert: true, wirksam: true })] });
-    fixture.detectChanges();
+      const anfrage = http.expectOne(`${URL}/teams`);
+      expect(anfrage.request.method).toBe('PUT');
+      expect(anfrage.request.body).toEqual({ an: true });
+      anfrage.flush({ schalter: [schalter({ name: 'teams', gruppe: 'Pakete', admin_wert: true, wirksam: true })] });
+      fixture.detectChanges();
 
-    expect(karten()[0].textContent).toContain('Admin: an · wirksam: an');
-    expect(knopf(karten()[0]).getAttribute('aria-checked')).toBe('true');
+      expect(karten()[0].textContent).toContain('Admin: an · wirksam: an');
+      expect(karten()[0].querySelector('[data-testid="status"]')!.textContent!.trim()).toBe('an');
+      expect(knopf(karten()[0]).getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('schaltet ein Paket aus', () => {
+      laden([schalter({ name: 'spielgefuehl_buehne', gruppe: 'Pakete', admin_wert: true, wirksam: true })]);
+
+      knopf(karten()[0]).click();
+      fixture.detectChanges();
+
+      const anfrage = http.expectOne(`${URL}/spielgefuehl_buehne`);
+      expect(anfrage.request.body).toEqual({ an: false });
+      anfrage.flush({ schalter: [schalter({ name: 'spielgefuehl_buehne', gruppe: 'Pakete' })] });
+      fixture.detectChanges();
+
+      expect(karten()[0].textContent).toContain('Admin: aus · wirksam: aus');
+      expect(knopf(karten()[0]).getAttribute('aria-checked')).toBe('false');
+    });
   });
 
   it('nennt dem Screenreader den Schalter und beschreibt den Zustand', () => {
-    laden([schalter({ name: 'punkte', admin_wert: true, wirksam: true })]);
+    laden([schalter({ name: 'spielgefuehl_buehne', admin_wert: true, wirksam: true })]);
 
     const karte = karten()[0];
     const button = knopf(karte);
-    expect(button.getAttribute('aria-label')).toBe('Punkte und Meilensteine, Admin');
+    expect(button.getAttribute('aria-label')).toBe('Paket Spielgefühl, Admin');
     // Sichtbarer Text des Umschalters steckt im Namen (WCAG 2.5.3)
     expect(karte.querySelector('mat-slide-toggle')!.textContent!.trim()).toBe('Admin');
     const beschreibung = button.getAttribute('aria-describedby')!.split(' ');
@@ -266,27 +330,27 @@ describe('SchalterComponent', () => {
 
   it('erklärt, warum ein eingeschalteter Admin-Wert nicht wirkt', () => {
     laden([
-      schalter({ name: 'punkte', admin_wert: false, wirksam: false }),
-      schalter({ name: 'abzeichen_sichtbar', admin_wert: true, wirksam: false }),
-      schalter({ name: 'gepostet', obergrenze: false, admin_wert: true, wirksam: false }),
+      schalter({ name: 'wirkungs_echo', admin_wert: false, wirksam: false }),
+      schalter({ name: 'danke_ohne_konto', admin_wert: true, wirksam: false }),
+      schalter({ name: 'merkliste', obergrenze: false, admin_wert: true, wirksam: false }),
     ]);
 
-    const [punkte, abzeichen, gepostet] = karten().map(
+    const [echo, ohneKonto, merkliste] = karten().map(
       (k) => (k.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim(),
     );
-    expect(punkte).toBe('Admin: aus · wirksam: aus');
-    expect(abzeichen).toBe('Admin: an · wirksam: aus, weil Punkte aus');
-    expect(gepostet).toBe('Admin: an · wirksam: aus (Server erlaubt nicht)');
+    expect(echo).toBe('Admin: aus · wirksam: aus');
+    expect(ohneKonto).toBe('Admin: an · wirksam: aus, weil Paket Wirkungs-Echo aus');
+    expect(merkliste).toBe('Admin: an · wirksam: aus (Server erlaubt nicht)');
     expect(knopf(karten()[2]).getAttribute('aria-checked')).toBe('true');
   });
 
   it('nimmt den Umschalter bei 409 zurück und zeigt die Erklärung', () => {
-    laden([schalter({ name: 'gepostet' })]);
+    laden([schalter({ name: 'merkliste' })]);
 
     knopf(karten()[0]).click();
     fixture.detectChanges();
     http
-      .expectOne(`${URL}/gepostet`)
+      .expectOne(`${URL}/merkliste`)
       .flush({ detail: 'Der Server erlaubt diesen Schalter nicht.' }, { status: 409, statusText: 'Conflict' });
     fixture.detectChanges();
 
@@ -294,111 +358,50 @@ describe('SchalterComponent', () => {
     expect(document.body.textContent).toContain('Der Server erlaubt diesen Schalter nicht.');
   });
 
-  it('zeigt die Schalter des Spielgefühls mit Namen und erklärt die Unterschalter', () => {
-    laden([
-      schalter({ name: 'kopiert_erfolg' }),
-      schalter({ name: 'danke_knopf', admin_wert: false, wirksam: false }),
-      schalter({ name: 'danke_ohne_konto', admin_wert: true, wirksam: false }),
-      schalter({ name: 'punkte', admin_wert: false, wirksam: false }),
-      schalter({ name: 'rangliste', admin_wert: true, wirksam: false }),
-    ]);
-
-    const [kopiert, , ohneKonto, , rangliste] = karten();
-    expect(kopiert.querySelector('h4')!.textContent).toBe('Erfolgstext nach dem Kopieren');
-    expect(ohneKonto.querySelector('h4')!.textContent).toBe('Danke-Knopf ohne Konto');
-    const zustand = (k: HTMLElement) => (k.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim();
-    expect(zustand(ohneKonto)).toBe('Admin: an · wirksam: aus, weil Danke-Knopf aus');
-    expect(zustand(rangliste)).toBe('Admin: an · wirksam: aus, weil Punkte aus');
-  });
-
-  it('„Ja, gepostet“ ohne Konto: Name und Voraussetzung (#799)', () => {
-    laden([
-      schalter({ name: 'gepostet', admin_wert: false, wirksam: false }),
-      schalter({ name: 'gepostet_ohne_konto', admin_wert: true, wirksam: false }),
-    ]);
-
-    const ohneKonto = karten()[1];
-    expect(ohneKonto.querySelector('h4')!.textContent).toBe('„Ja, gepostet“ ohne Konto');
-    expect((ohneKonto.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim()).toBe(
-      'Admin: an · wirksam: aus, weil Rückfrage „Ja, gepostet“ aus',
-    );
-  });
-
-  describe('Kopplungen (Gamification-Check 26.11.)', () => {
+  describe('Kopplungen (Schalter-Umbau 27.11.: Einzelschalter an Paketen)', () => {
     const zustand = (k: HTMLElement) => (k.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim();
     const kopplung = (k: HTMLElement) => k.querySelector('[data-testid="kopplung"]')?.textContent!.trim() ?? null;
 
-    it('Spielgefühl als eine Frage: wirkt nicht ohne Punkte und sagt warum', () => {
+    for (const [einzel, paket, anzeige] of [
+      ['team_quests', 'teams', 'Paket Teams'],
+      ['teams_oeffentlich', 'teams', 'Paket Teams'],
+      ['muster_stimmen', 'spielgefuehl_buehne', 'Paket Spielgefühl'],
+      ['danke_ohne_konto', 'wirkungs_echo', 'Paket Wirkungs-Echo'],
+    ] as const) {
+      it(`${einzel}: wirkt nur mit ${anzeige} und sagt warum`, () => {
+        laden([
+          schalter({ name: paket, gruppe: 'Pakete', admin_wert: false, wirksam: false }),
+          schalter({ name: einzel, gruppe: 'Einzelschalter', admin_wert: true, wirksam: false }),
+        ]);
+
+        const karte = karten()[1];
+        expect(zustand(karte)).toBe(`Admin: an · wirksam: aus, weil ${anzeige} aus`);
+        expect((karte.querySelector('[data-testid="zustand"]') as HTMLElement).hidden).toBeFalse();
+        expect(kopplung(karte)).toBe(`Wirkt nur zusammen mit: ${anzeige}.`);
+      });
+    }
+
+    it('wirkt das Paket, nennt die Zeile keinen Grund aus der Kopplung', () => {
       laden([
-        schalter({ name: 'punkte', admin_wert: false, wirksam: false }),
-        schalter({ name: 'spielgefuehl_buehne', admin_wert: true, wirksam: false }),
+        schalter({ name: 'teams', gruppe: 'Pakete', admin_wert: true, wirksam: true }),
+        schalter({ name: 'team_quests', gruppe: 'Einzelschalter', admin_wert: true, wirksam: true }),
       ]);
 
-      const buehne = karten()[1];
-      expect(buehne.querySelector('h4')!.textContent).toBe('Spielgefühl als eine Frage');
-      expect(zustand(buehne)).toBe('Admin: an · wirksam: aus, weil Punkte aus');
-      expect((buehne.querySelector('[data-testid="status"]') as HTMLElement).textContent!.trim()).toBe('frei einschaltbar');
-      expect(kopplung(buehne)).toBe('Wirkt nur zusammen mit: Punkte.');
+      expect(zustand(karten()[1])).toBe('Admin: an · wirksam: an');
     });
 
-    it('Muster-Hinweise aus Zustimmungen: Name und Kette Punkte → Spielgefühl', () => {
+    it('Pakete und Einzelschalter ohne Paket haben keine Kopplung, auch keinen Ausschluss mehr', () => {
       laden([
-        schalter({ name: 'punkte', admin_wert: true, wirksam: true }),
-        schalter({ name: 'spielgefuehl_buehne', admin_wert: false, wirksam: false }),
-        schalter({ name: 'muster_stimmen', admin_wert: true, wirksam: false }),
+        schalter({ name: 'teams' }),
+        schalter({ name: 'spielgefuehl_buehne' }),
+        schalter({ name: 'wirkungs_echo' }),
+        schalter({ name: 'k_begruessung' }),
+        schalter({ name: 'merkliste' }),
+        schalter({ name: 'aufrufe_zaehlen' }),
+        schalter({ name: 'k_ankuenfte' }),
       ]);
 
-      const stimmen = karten()[2];
-      expect(stimmen.querySelector('h4')!.textContent).toBe('Muster-Hinweise aus Zustimmungen');
-      expect(zustand(stimmen)).toBe('Admin: an · wirksam: aus, weil Spielgefühl als eine Frage aus');
-      expect(kopplung(stimmen)).toBe('Wirkt nur zusammen mit: Punkte, Spielgefühl als eine Frage.');
-    });
-
-    it('Abzeichen am Namen: wirkt nicht, solange das Spielgefühl an ist', () => {
-      laden([
-        schalter({ name: 'punkte', admin_wert: true, wirksam: true }),
-        schalter({ name: 'spielgefuehl_buehne', admin_wert: true, wirksam: true }),
-        schalter({ name: 'abzeichen_sichtbar', admin_wert: true, wirksam: false }),
-      ]);
-
-      const abzeichen = karten()[2];
-      expect(zustand(abzeichen)).toBe(
-        'Admin: an · wirksam: aus, weil Spielgefühl als eine Frage an (Abzeichen dann nur in der Rangliste)',
-      );
-      expect((abzeichen.querySelector('[data-testid="zustand"]') as HTMLElement).hidden).toBeFalse();
-      expect(kopplung(abzeichen)).toBe(
-        'Wirkt nur zusammen mit: Punkte. Wirkt nicht, solange Spielgefühl als eine Frage an ist (Abzeichen dann nur in der Rangliste).',
-      );
-    });
-
-    it('Wirkungs-Echo und Danke-Knopf: nur zusammen, je mit Grund', () => {
-      laden([
-        schalter({ name: 'wirkungs_echo', admin_wert: true, wirksam: false }),
-        schalter({ name: 'danke_knopf', admin_wert: false, wirksam: false }),
-      ]);
-
-      const [echo, danke] = karten();
-      expect(zustand(echo)).toBe('Admin: an · wirksam: aus, weil Danke-Knopf aus');
-      expect(kopplung(echo)).toBe('Wirkt nur zusammen mit: Danke-Knopf.');
-      expect(kopplung(danke)).toBe('Wirkt nur zusammen mit: Wirkungs-Echo.');
-    });
-
-    it('Vertrauenssatz beim Teambeitritt: braucht den Team-Fortschritt', () => {
-      laden([
-        schalter({ name: 'teams', admin_wert: true, wirksam: true }),
-        schalter({ name: 'team_fortschritt', admin_wert: false, wirksam: false }),
-        schalter({ name: 'teamlink_vertrauenssatz', admin_wert: true, wirksam: false }),
-      ]);
-
-      const satz = karten()[2];
-      expect(zustand(satz)).toBe('Admin: an · wirksam: aus, weil Team-Fortschritt aus');
-      expect(kopplung(satz)).toBe('Wirkt nur zusammen mit: Teams, Team-Fortschritt.');
-    });
-
-    it('ohne Kopplung keine Zeile dazu', () => {
-      laden([schalter({ name: 'gartenansicht' })]);
-
-      expect(kopplung(karten()[0])).toBeNull();
+      expect(karten().map((k) => kopplung(k))).toEqual([null, null, null, null, null, null, null]);
     });
   });
 
@@ -420,37 +423,23 @@ describe('SchalterComponent', () => {
       return (fixture.nativeElement as HTMLElement).querySelector('[data-testid="einstellung"]') as HTMLElement;
     }
 
-    it('zeigt die Schalter teams und teams_oeffentlich mit Namen', () => {
+    it('zeigt das Paket teams und den Einzelschalter teams_oeffentlich mit Namen', () => {
       mitEinstellungen([schalter({ name: 'teams' }), schalter({ name: 'teams_oeffentlich' })]);
 
       const [teams, oeffentlich] = karten();
-      expect(teams.querySelector('h4')!.textContent).toBe('Teams über Einladungen');
+      expect(teams.querySelector('h4')!.textContent).toBe('Paket Teams');
       expect(oeffentlich.querySelector('h4')!.textContent).toBe('Teams am Anzeigenamen');
     });
 
-    it('erklärt, warum teams_oeffentlich ohne Teams nicht wirkt', () => {
+    it('erklärt, warum teams_oeffentlich ohne das Paket Teams nicht wirkt', () => {
       mitEinstellungen([
         schalter({ name: 'teams', admin_wert: false, wirksam: false }),
         schalter({ name: 'teams_oeffentlich', admin_wert: true, wirksam: false }),
       ]);
 
       expect((karten()[1].querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim()).toBe(
-        'Admin: an · wirksam: aus, weil Teams aus',
+        'Admin: an · wirksam: aus, weil Paket Teams aus',
       );
-    });
-
-    it('erklärt die Kette Teams → Team-Fortschritt → Team-Quests', () => {
-      mitEinstellungen([
-        schalter({ name: 'teams', admin_wert: false, wirksam: false }),
-        schalter({ name: 'team_fortschritt', admin_wert: true, wirksam: false }),
-        schalter({ name: 'team_quests', admin_wert: true, wirksam: false }),
-      ]);
-
-      const [, fortschritt, quests] = karten().map((k) =>
-        (k.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim(),
-      );
-      expect(fortschritt).toBe('Admin: an · wirksam: aus, weil Teams aus');
-      expect(quests).toBe('Admin: an · wirksam: aus, weil Team-Fortschritt aus');
     });
 
     it('sagt, wenn eine laufende Saison die Einstellung ersetzt (#782)', () => {

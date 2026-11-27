@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { BDK_KONTO_HINWEIS, LoginSelectorComponent, VERTRAUENSZEILE, VERTRAUENSZEILE_SCHALTER, WARTELISTE_TEXT } from './login-selector.component';
+import { BDK_KONTO_HINWEIS, LoginSelectorComponent, VERTRAUENSZEILE, WARTELISTE_TEXT } from './login-selector.component';
 import { FunktionenService } from '../services/funktionen.service';
 import { KampagnenwortService } from '../shared/kampagnenwort.service';
 import { ORGANISATION } from '../shared/organisation';
@@ -9,9 +9,16 @@ import { environment } from '../../environments/environment';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { Router, ActivatedRoute } from '@angular/router';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { FeedbackDialogComponent } from '../shared/feedback/feedback-dialog.component';
+
+/** Was routerLink vom Router braucht, wenn ein Test den Router durch ein Objekt ersetzt. */
+const ROUTER_FUER_LINKS = {
+  events: new Subject<unknown>(),
+  createUrlTree: () => ({}),
+  serializeUrl: () => '/datenschutz',
+};
 
 describe('LoginSelectorComponent', () => {
   let component: LoginSelectorComponent;
@@ -28,7 +35,9 @@ describe('LoginSelectorComponent', () => {
         { provide: Router, useValue: {
           navigate: jasmine.createSpy('navigate'),
           navigateByUrl: jasmine.createSpy('navigateByUrl'),
-          url: '/login'
+          url: '/login',
+          // Für den routerLink „Datenschutz“ der Vertrauenszeile (Basisfunktion, steht immer)
+          ...ROUTER_FUER_LINKS,
         } },
         { provide: ActivatedRoute, useValue: {
           snapshot: {
@@ -37,7 +46,7 @@ describe('LoginSelectorComponent', () => {
           params: of({}),
           queryParams: of({})
         } },
-        // Schalter aus wie von Haus aus; die Vertrauenszeile prüft ihr eigener Block unten
+        // Schalter aus wie von Haus aus
         { provide: FunktionenService, useValue: { an: () => signal(false).asReadonly() } }
       ]
     })
@@ -213,7 +222,7 @@ describe('LoginSelectorComponent nach "Antworten" (#600)', () => {
     await TestBed.configureTestingModule({
       imports: [LoginSelectorComponent, HttpClientTestingModule, BrowserAnimationsModule],
       providers: [
-        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), url: '/login' } },
+        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), url: '/login', ...ROUTER_FUER_LINKS } },
         { provide: ActivatedRoute, useValue: {
           snapshot: { queryParams: { returnUrl: '/workflow/add-commentary?aussage=f6efb534-ee3a-4969-b8b8-2f1f9b9bb95d' } },
           params: of({}),
@@ -234,20 +243,19 @@ describe('LoginSelectorComponent nach "Antworten" (#600)', () => {
 
 // Vorläufige juristische Einschätzung 26.11.2026, Punkt a: hinter dem Schalter, Standard aus.
 // Mit echtem Router, damit der Link „Datenschutz“ seine Adresse bekommt.
-describe('LoginSelectorComponent: Vertrauenszeile', () => {
+describe('LoginSelectorComponent: Vertrauenszeile (Basisfunktion)', () => {
   let fixture: ComponentFixture<LoginSelectorComponent>;
-  let vertrauenszeile: WritableSignal<boolean>;
   let gefragt: string[];
 
   beforeEach(async () => {
-    vertrauenszeile = signal(false);
     gefragt = [];
     await TestBed.configureTestingModule({
       imports: [LoginSelectorComponent, HttpClientTestingModule, BrowserAnimationsModule],
       providers: [
         provideRouter([]),
+        // Alle Schalter aus: die Vertrauenszeile steht trotzdem
         { provide: FunktionenService, useValue: {
-          an: (name: string) => { gefragt.push(name); return vertrauenszeile.asReadonly(); }
+          an: (name: string) => { gefragt.push(name); return signal(false).asReadonly(); }
         } }
       ]
     }).compileComponents();
@@ -260,20 +268,11 @@ describe('LoginSelectorComponent: Vertrauenszeile', () => {
     return fixture.nativeElement.querySelector('[data-testid="vertrauenszeile"]');
   }
 
-  it('fragt den Schalter vertrauenszeile', () => {
-    expect(gefragt).toEqual([VERTRAUENSZEILE_SCHALTER]);
-    expect(VERTRAUENSZEILE_SCHALTER).toBe('vertrauenszeile');
+  it('fragt keinen Schalter dafür', () => {
+    expect(gefragt).toEqual([]);
   });
 
-  it('ist bei ausgeschaltetem Schalter unsichtbar', () => {
-    expect(zeile()).toBeNull();
-    expect(fixture.nativeElement.textContent).not.toContain('Anzeigenamen');
-  });
-
-  it('steht mit eingeschaltetem Schalter wörtlich da, mit Link „Datenschutz“', () => {
-    vertrauenszeile.set(true);
-    fixture.detectChanges();
-
+  it('steht ohne Schalter wörtlich da, mit Link „Datenschutz“', () => {
     const el = zeile()!;
     const link = el.querySelector('a') as HTMLAnchorElement;
     expect(VERTRAUENSZEILE).toBe(
@@ -287,9 +286,6 @@ describe('LoginSelectorComponent: Vertrauenszeile', () => {
   });
 
   it('gibt dem Link mindestens 24 px Zielfläche', () => {
-    vertrauenszeile.set(true);
-    fixture.detectChanges();
-
     const link = zeile()!.querySelector('a') as HTMLAnchorElement;
     const rahmen = link.getBoundingClientRect();
     expect(rahmen.height).toBeGreaterThanOrEqual(24);
@@ -297,32 +293,16 @@ describe('LoginSelectorComponent: Vertrauenszeile', () => {
   });
 
   it('unterstreicht den Link, damit er nicht nur an der Farbe erkennbar ist (WCAG 1.4.1)', () => {
-    vertrauenszeile.set(true);
-    fixture.detectChanges();
-
     const link = zeile()!.querySelector('a') as HTMLAnchorElement;
     expect(getComputedStyle(link).textDecorationLine).toBe('underline');
   });
 
   it('steht über den Anmeldewegen, auch solange sie laden', () => {
-    vertrauenszeile.set(true);
-    fixture.detectChanges();
-
     const box: HTMLElement = fixture.nativeElement.querySelector('.component-box');
     const kinder = Array.from(box.children);
     expect(fixture.componentInstance.isLoading).toBeTrue();
     expect(kinder.indexOf(zeile()!)).toBeLessThan(kinder.indexOf(box.querySelector('.loading-container')!));
     expect(kinder.indexOf(zeile()!)).toBeLessThan(kinder.indexOf(box.querySelector('.konto-weg')!));
-  });
-
-  it('kommt nach dem Umschalten ohne Neuladen und geht wieder', () => {
-    vertrauenszeile.set(true);
-    fixture.detectChanges();
-    expect(zeile()).not.toBeNull();
-
-    vertrauenszeile.set(false);
-    fixture.detectChanges();
-    expect(zeile()).toBeNull();
   });
 });
 

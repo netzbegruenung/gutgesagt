@@ -35,9 +35,6 @@ describe('EinwilligungComponent', () => {
   let dialog: jasmine.SpyObj<MatDialog>;
   /** Was die Rueckfrage vor dem Widerruf antwortet (B3). */
   let rueckfrage: boolean | undefined;
-  /** Schalter einwilligung_im_gewinn (#788). */
-  const imGewinn = signal(false);
-  afterEach(() => imGewinn.set(false));
 
   function starten(returnUrl: string | null = '/einwerfen') {
     rueckfrage = true;
@@ -50,7 +47,8 @@ describe('EinwilligungComponent', () => {
         provideHttpClientTesting(),
         provideNoopAnimations(),
         PUNKTE_EINWILLIGUNG_AUS,
-        { provide: FunktionenService, useValue: { frisch: () => of(imGewinn()) } },
+        // Alle Schalter aus: Einwilligung im Moment des Gewinns ist Basisfunktion (#788, Umbau 27.11.)
+        { provide: FunktionenService, useValue: { an: () => signal(false), frisch: () => of(false), stand$: () => of(false) } },
         provideRouter([]),
         {
           provide: ActivatedRoute,
@@ -573,15 +571,7 @@ describe('EinwilligungComponent', () => {
   });
 
   describe('Einwilligung im Moment des Gewinns (#788)', () => {
-    it('ohne Schalter steht das Häkchen „Punkte und Meilensteine“ auch neben der Frage', () => {
-      starten();
-      standLiefern(stand());
-
-      expect(el().querySelector('app-punkte-einwilligung')).not.toBeNull();
-    });
-
-    it('mit Schalter keine zweite Frage neben der Art.-9-Einwilligung, und der Besuch ist verbraucht', () => {
-      imGewinn.set(true);
+    it('ohne Schalter keine zweite Frage neben der Art.-9-Einwilligung, und der Besuch ist verbraucht', () => {
       starten();
       const budget = TestBed.inject(EinwilligungsBudgetService);
       spyOn(budget, 'gezeigt');
@@ -591,8 +581,7 @@ describe('EinwilligungComponent', () => {
       expect(budget.gezeigt).toHaveBeenCalledWith('art9');
     });
 
-    it('mit Schalter bleibt das Häkchen in der Übersicht nach der Einwilligung', () => {
-      imGewinn.set(true);
+    it('ohne Schalter bleibt das Häkchen in der Übersicht nach der Einwilligung', () => {
       starten();
       standLiefern(stand({ eingewilligt: true, wortlaut: WORTLAUT.kennung, eingewilligt_am: '2026-11-20T10:00:00Z' }));
 

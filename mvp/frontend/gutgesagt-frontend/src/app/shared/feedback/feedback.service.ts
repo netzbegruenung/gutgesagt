@@ -11,14 +11,25 @@ export const FEEDBACK_KONTAKT_MAX = 200;
 export const FEEDBACK_AUFBEWAHRUNG_TAGE = 180;
 
 /**
- * Kategorie des Knopfs „Was hat dich gestört?“ für die Startphase (Schalter
- * feedback_gestoert): nur Freitext, kein Kontakt, gelöscht am Tag aus
+ * Kategorie des Knopfs „Was hat dich gestört?“ für die Startphase (Basisfunktion mit
+ * Not-Aus feedback_gestoert): nur Freitext, kein Kontakt, gelöscht am Tag aus
  * domain/feedback_gestoert.py (GESTOERT_GELOESCHT_AB).
  */
 export const FEEDBACK_GESTOERT = 'gestoert';
 export type FeedbackKategorie = typeof FEEDBACK_GESTOERT;
 export const FEEDBACK_GESTOERT_SCHALTER = 'feedback_gestoert';
 export const FEEDBACK_GESTOERT_GELOESCHT_AM = '31.12.2026';
+/**
+ * Ab diesem Zeitpunkt (UTC-Tag 31.12.2026, wie GESTOERT_GELOESCHT_AB in
+ * domain/feedback_gestoert.py) zeigt die App den Knopf nicht mehr, auch wenn ein älterer
+ * Stand von GET /api/v1/funktionen ihn noch als an meldet.
+ */
+export const FEEDBACK_GESTOERT_ENDE_MS = Date.UTC(2026, 11, 31);
+
+/** Ob die Startphase des Knopfs „Was hat dich gestört?“ zu diesem Zeitpunkt noch läuft. */
+export function gestoertOffen(jetzt: number): boolean {
+  return jetzt < FEEDBACK_GESTOERT_ENDE_MS;
+}
 
 /** Feedback, wie Admins es im Admin-Dashboard sehen. */
 export interface FeedbackEintrag {

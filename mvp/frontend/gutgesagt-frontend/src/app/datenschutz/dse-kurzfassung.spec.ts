@@ -25,14 +25,14 @@ const TESTSAETZE: readonly KurzfassungSatz[] = [
 ];
 
 /**
- * Kasten „Kurz gesagt“ (Schalter dse_kurzfassung, Jura b): oben in der Erklärung, nur mit
- * Schalter und nie mit Platzhaltertext; jeder Satz springt auf einen Absatz im Volltext.
+ * Kasten „Kurz gesagt“ (Jura b, Basisfunktion seit dem Schalter-Umbau 27.11.): oben in der
+ * Erklärung, ohne Schalter, aber nie mit Platzhaltertext (Schutzgrenze kurzfassungFertig);
+ * jeder Satz springt auf einen Absatz im Volltext.
  */
 describe('Kurzfassung der Datenschutzerklärung (dse_kurzfassung)', () => {
-  function seite(schalterAn: boolean, saetze?: readonly KurzfassungSatz[]) {
-    const funktionen = {
-      an: (name: string): Signal<boolean> => signal(schalterAn && name === 'dse_kurzfassung'),
-    };
+  function seite(saetze?: readonly KurzfassungSatz[]) {
+    // Alle Schalter aus: der Kasten hängt an keinem
+    const funktionen = { an: (): Signal<boolean> => signal(false) };
     TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
       providers: [
@@ -50,24 +50,20 @@ describe('Kurzfassung der Datenschutzerklärung (dse_kurzfassung)', () => {
     return element.querySelector('[data-testid="dse-kurzfassung"]');
   }
 
-  it('Schalter aus: kein Kasten, auch mit fertigen Sätzen', () => {
-    expect(kasten(seite(false, TESTSAETZE))).toBeNull();
-  });
-
-  it('Schalter an, aber ein Satz trägt noch den Platzhalter: kein Kasten, kein Platzhaltertext', () => {
+  it('ohne Schalter, aber ein Satz trägt noch den Platzhalter: kein Kasten, kein Platzhaltertext', () => {
     const mitPlatzhalter = [
       TESTSAETZE[0],
       { ...TESTSAETZE[1], text: `${KURZFASSUNG_PLATZHALTER} Was gespeichert wird` },
       TESTSAETZE[2],
     ];
-    const element = seite(true, mitPlatzhalter);
+    const element = seite(mitPlatzhalter);
 
     expect(kasten(element)).toBeNull();
     expect(element.textContent).not.toContain(KURZFASSUNG_PLATZHALTER);
   });
 
-  it('Schalter an mit den Sätzen im Code: nie Platzhaltertext auf der Seite', () => {
-    const element = seite(true);
+  it('mit den Sätzen im Code: nie Platzhaltertext auf der Seite', () => {
+    const element = seite();
 
     expect(element.textContent).not.toContain(KURZFASSUNG_PLATZHALTER);
     expect(kasten(element) !== null).toBe(kurzfassungFertig(KURZFASSUNG_SAETZE));
@@ -85,7 +81,7 @@ describe('Kurzfassung der Datenschutzerklärung (dse_kurzfassung)', () => {
         'löschen. Alle Einzelheiten stehen unten.',
     );
 
-    const element = seite(true);
+    const element = seite();
     const verantwortlich = element.querySelector('#verantwortlicher .contact-info strong')!;
     expect(verantwortlich.textContent!.trim()).toBe(LEGAL_ENTITY.NAME);
     const box = kasten(element)!;
@@ -94,8 +90,8 @@ describe('Kurzfassung der Datenschutzerklärung (dse_kurzfassung)', () => {
     expect(box.textContent).not.toContain('..');
   });
 
-  it('Schalter an mit fertigen Sätzen: Kasten oben mit drei Sätzen und je einem Sprunglink', () => {
-    const element = seite(true, TESTSAETZE);
+  it('ohne Schalter mit fertigen Sätzen: Kasten oben mit drei Sätzen und je einem Sprunglink', () => {
+    const element = seite(TESTSAETZE);
     const box = kasten(element);
 
     expect(box).not.toBeNull();
@@ -113,7 +109,7 @@ describe('Kurzfassung der Datenschutzerklärung (dse_kurzfassung)', () => {
   });
 
   it('Sprunglink scrollt zum Absatz (unter dem klebenden Kopf) und setzt den Anker in die Adresse', () => {
-    const element = seite(true, TESTSAETZE);
+    const element = seite(TESTSAETZE);
     document.body.appendChild(element);
     const vorher = location.href;
     try {
@@ -136,7 +132,7 @@ describe('Kurzfassung der Datenschutzerklärung (dse_kurzfassung)', () => {
   });
 
   it('jeder Anker zeigt auf einen Absatz, den es im Volltext gibt', () => {
-    const element = seite(false);
+    const element = seite();
 
     for (const satz of KURZFASSUNG_SAETZE) {
       const absatz = element.querySelector(`section#${satz.anker}`);

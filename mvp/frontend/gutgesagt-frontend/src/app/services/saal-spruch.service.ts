@@ -7,8 +7,8 @@ import { environment } from '../../environments/environment';
 import { stillerKontext } from '../shared/selbst-nachladen';
 import { FunktionenService } from './funktionen.service';
 
-/** Name des Schalters (services/schalter_service.py, SPIEL_SCHALTER). */
-export const SAAL_SPRUCH_SCHALTER = 'saal_spruch';
+/** Der Saal-Spruch gehört zum Paket BDK-Begrüßung (services/schalter_service.py, PAKET_SCHALTER). */
+export const SAAL_SPRUCH_SCHALTER = 'k_begruessung';
 
 export const SAAL_SPRUCH_HEUTE_URL = `${environment.baseUrl}/api/v1/saal-spruch/heute`;
 
@@ -29,7 +29,7 @@ export interface SaalSpruchListe {
 }
 
 /**
- * Saal-Spruch (Schalter „saal_spruch“, Glossar „Saal-Spruch“): der Spruch für
+ * Saal-Spruch (Paket „k_begruessung“, Glossar „Saal-Spruch“): der Spruch für
  * die Startseite und die Pflege für Admins (Seite „Schalter“).
  */
 @Injectable({ providedIn: 'root' })

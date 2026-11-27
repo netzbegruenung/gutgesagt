@@ -76,7 +76,7 @@
             <mat-icon>share</mat-icon>
             <span>Teilen</span>
         </button>
-        <!-- Teilen als Bild (#756), nur mit eingeschaltetem Schalter -->
+        <!-- Teilen als Bild (#756, Basisfunktion) -->
         <button mat-menu-item type="button" class="sharepic-eintrag" *ngIf="sharepicSichtbar" (click)="alsBildTeilen()">
             <mat-icon>image</mat-icon>
             <span>Als Bild teilen</span>
@@ -168,11 +168,11 @@
 </div>
 
 <!--
-    Erfolgstext nach dem Kopieren (#785, Schalter kopiert_erfolg) mit der Frage „Gepostet?“ (#643, #799):
+    Erfolgstext nach dem Kopieren (#785, Basisfunktion) mit der Frage „Gepostet?“ (#643, #799):
     auch im Album, nie in der Vorschau. Steht immer bereit (leer), damit die Status-Region schon da ist,
     wenn ohne Erfolgstext nur die Frage erscheint.
 -->
-<app-kopiert-erfolg *ngIf="!vorschau" [sichtbar]="kopiertErfolg()" [erfolgstext]="kopiertErfolgAn()"
+<app-kopiert-erfolg *ngIf="!vorschau" [sichtbar]="kopiertErfolg()"
                     [nutzung]="nutzungBeimKopieren" [eigen]="!eigeneStimmeImZaehler" [andereTonlage]="andereTonlage"
                     [gepostet]="gepostetStand" [gepostetDank]="gepostetDankText"
                     [kopierLauf]="erfolgLauf" [ohneKonto]="gepostetOhneKonto"

@@ -81,7 +81,7 @@ describe('EinladungComponent im vollen Saal (Neuversuch)', () => {
 
   function mitTeamAntworten() {
     pruefenAnfrage().flush({ einloesbar: true, team: TEAM });
-    http.match(FUNKTIONEN).forEach((r) => r.flush({ funktionen: { teams: true, teamlink_vertrauenssatz: false } }));
+    http.match(FUNKTIONEN).forEach((r) => r.flush({ funktionen: { teams: false } }));
     fixture.detectChanges();
   }
 

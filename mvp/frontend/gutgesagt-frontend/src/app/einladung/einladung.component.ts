@@ -237,7 +237,7 @@ export class EinladungComponent implements OnInit {
   }
 
   /**
-   * Vertrauenssatz beim Teambeitritt, nur mit wirksamem Schalter teamlink_vertrauenssatz,
+   * Vertrauenssatz beim Teambeitritt, nur mit wirksamem Paket teams (früher eigener Schalter),
    * sonst null. Bei einem Team nach Gruppe mit dem Satz, dass die Gruppe keine Daten
    * bekommt; ein Team nach Anlass, Ort oder Saison ist nach keiner Gruppe benannt.
    */
@@ -282,7 +282,7 @@ export class EinladungComponent implements OnInit {
   /** Das Team der Einladung aus /pruefen; null ohne Team oder bei Schalter aus. */
   team: TeamBeimPruefen | null = null;
   /**
-   * Schalter teamlink_vertrauenssatz; erst gefragt, wenn eine Einladung ein Team trägt,
+   * Paket teams (Vertrauenssatz); erst gefragt, wenn eine Einladung ein Team trägt,
    * damit Einladungen ohne Team keinen Abruf mehr auslösen. Bis zur Antwort aus.
    */
   private vertrauenssatzAn: Signal<boolean> | null = null;
@@ -419,7 +419,7 @@ export class EinladungComponent implements OnInit {
     if (this.team) {
       // Signal aus dem geteilten Stand: Ein Umschalten auf der Admin-Seite kommt ohne Neuladen
       // an, spätestens mit dem nächsten Abruf nach FUNKTIONEN_NACHLADEN_MS (5 Minuten).
-      this.vertrauenssatzAn = this.funktionen.an('teamlink_vertrauenssatz');
+      this.vertrauenssatzAn = this.funktionen.an('teams');
     }
     if (!angemeldet) {
       this.stand = 'formular';

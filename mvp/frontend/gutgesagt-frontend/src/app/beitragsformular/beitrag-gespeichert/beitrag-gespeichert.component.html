@@ -1,5 +1,5 @@
 <div class="gespeichert">
-    <!-- "Luecke zu!" als grosser Moment (#787, Schalter luecke_zu_gross). Der Fokus geht auf die
+    <!-- "Luecke zu!" als grosser Moment (#787, Basisfunktion). Der Fokus geht auf die
          Ueberschrift; den Satz sagt die Live-Region an, die schon vor dem Moment steht. -->
     <p class="cdk-visually-hidden luecke-zu-ansage" aria-live="polite">{{ momentAnsage() }}</p>
     <section *ngIf="lueckeZuGross; else kopf" class="luecke-zu-moment" aria-labelledby="luecke-zu-moment-titel">
@@ -16,9 +16,8 @@
         <app-feier-ton-schalter class="luecke-zu-moment-ton"></app-feier-ton-schalter>
     </section>
 
-    <!-- Solange der Schalter nicht feststeht, bleibt der Kopf leer: kein Sprung vom kleinen zum grossen -->
     <ng-template #kopf>
-    <div *ngIf="!lueckeZuOffen" class="gespeichert-kopf" role="status">
+    <div class="gespeichert-kopf" role="status">
         <mat-icon class="gespeichert-icon" aria-hidden="true">check_circle</mat-icon>
         <!-- Aus "Hier fehlt eine Antwort": die Luecke ist zu, mit der Nachfrage (Nutzerfuehrung 13.11.) -->
         <p *ngIf="lueckeZu; else allgemein" class="gespeichert-satz luecke-zu">
@@ -76,7 +75,7 @@
         </button>
         <!-- Im grossen Moment steht "Naechste Luecke" schon oben -->
         <ng-container *ngSwitchDefault>
-            <ng-container *ngIf="!lueckeZuGross && !lueckeZuOffen">
+            <ng-container *ngIf="!lueckeZuGross">
             <button *ngIf="lueckeZu; else nochEinerKnopf" mat-raised-button type="button" class="primaer naechste-luecke"
                     (click)="naechsteLuecke()">
                 {{ naechsteLueckeText }}

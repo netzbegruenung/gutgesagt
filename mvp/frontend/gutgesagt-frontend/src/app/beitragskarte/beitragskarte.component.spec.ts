@@ -1045,7 +1045,7 @@ describe('BeitragskarteComponent', () => {
       auth.getUserInfo.and.returnValue(null);
       zeigen(ausSuchergebnis(paket('commentary_result', { usage_count: 1 })), { schlank: true });
 
-      expect(element('.karte-meta').textContent!.trim()).toBe('1× genutzt');
+      expect(element('.karte-meta-text').textContent!.trim()).toBe('1× genutzt');
     });
 
     it('zeichnet die gewaehlte Fassung wie die Tabs: Tanne-Text auf --primaer-tint (#512)', () => {
