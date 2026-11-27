@@ -5,8 +5,9 @@
       Muster-Hinweise
     </mat-card-title>
     <mat-card-subtitle>
-      Konten, die innerhalb von sieben Tagen jeweils einen Beitrag des anderen genutzt haben. Nur ein
-      Hinweis zum Prüfen; niemand verliert dadurch automatisch Punkte.
+      Konten, die innerhalb von sieben Tagen jeweils einen Beitrag des anderen genutzt (oder, wenn
+      eingeschaltet, einem Beitrag des anderen zugestimmt) haben. Nur ein Hinweis zum Prüfen; niemand
+      verliert dadurch automatisch Punkte.
     </mat-card-subtitle>
   </mat-card-header>
   <mat-card-content>
@@ -22,6 +23,7 @@
             <tr>
               <th scope="col">Konto</th>
               <th scope="col">Konto</th>
+              <th scope="col">Art</th>
               <th scope="col" class="anzahl">Tage</th>
               <th scope="col">Zeitraum</th>
             </tr>
@@ -30,6 +32,7 @@
             <tr *ngFor="let h of daten.hinweise" data-testid="muster-hinweis">
               <td>{{ konto(h.konto_a, h.name_a) }}</td>
               <td>{{ konto(h.konto_b, h.name_b) }}</td>
+              <td data-testid="art">{{ art(h) }}</td>
               <td class="anzahl">{{ h.tage }}</td>
               <td>{{ zeitraum(h) }}</td>
             </tr>

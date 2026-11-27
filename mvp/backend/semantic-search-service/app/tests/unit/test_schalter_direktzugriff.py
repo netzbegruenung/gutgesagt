@@ -246,6 +246,62 @@ class TestObergrenzeAnAdminAus:
         assert not STELLEN[stelle][0](client, muster, abzeichen)
 
 
+class TestZustimmungFuerMusterAdminAus:
+    """
+    Muster-Hinweise aus Zustimmungen (muster_stimmen): Obergrenzen an, je ein
+    Admin-Wert der Kette punkte -> spielgefuehl_buehne -> muster_stimmen aus, keine
+    Meldung. Eigener Client, weil das Spielgefuehl-Modell die anderen Stellen oben
+    umschaltet.
+    """
+
+    @pytest.fixture
+    def abstimmen(self, admin_werte, spielgefuehl_ohne_datenbank):
+        import api.v1.voting as voting_module
+        from domain.models.vote import VoteResponse
+        from dependencies import get_voting_service
+
+        dienst = Mock()
+        dienst.set_like.return_value = VoteResponse(
+            content_id=BEITRAG_ID, vote_type=None, message="ok"
+        )
+
+        async def laden(content_id):
+            return SimpleNamespace(id=content_id, original_author="kim-1")
+
+        app = FastAPI()
+        app.include_router(voting_module.router, prefix="/api/v1/voting")
+        app.dependency_overrides[get_settings] = lambda: Settings(
+            punkte_aktiv=True, spielgefuehl_buehne_aktiv=True, muster_stimmen_aktiv=True
+        )
+        app.dependency_overrides[get_beitrag_laden] = lambda: laden
+        app.dependency_overrides[get_voting_service] = lambda: dienst
+        spielgefuehl_ohne_datenbank.stimmen_eingewilligte.side_effect = set
+        muster = Mock()
+        with patch.object(
+            voting_module, "get_muster_hinweise_service", return_value=muster
+        ):
+            yield TestClient(app), muster
+
+    def _gemeldet(self, abstimmen) -> bool:
+        client, muster = abstimmen
+        antwort = client.put(
+            f"/api/v1/voting/content/{BEITRAG_ID}/like", headers=PERSON
+        )
+        assert antwort.status_code == 200
+        return muster.zustimmung_melden.called
+
+    @pytest.mark.parametrize(
+        "schalter", ["muster_stimmen", "spielgefuehl_buehne", "punkte"]
+    )
+    def test_aus(self, schalter, admin_werte, abstimmen):
+        admin_werte[schalter] = False
+
+        assert not self._gemeldet(abstimmen)
+
+    def test_gegenprobe_alle_admin_werte_an(self, abstimmen):
+        assert self._gemeldet(abstimmen)
+
+
 # Felder der Obergrenze in Settings (und die Property, die zwei davon verknuepft).
 FELDER = {schalter.feld for schalter in SCHALTER.values()}
 OBERGRENZE = FELDER | {"abzeichen_sichtbar"}

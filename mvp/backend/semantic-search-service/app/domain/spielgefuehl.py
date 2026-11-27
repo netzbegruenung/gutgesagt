@@ -20,7 +20,7 @@ Der Wortlaut traegt eine Kennung wie die anderen Einwilligungen; wer ihn aendert
 legt eine neue Kennung an und laesst die alte stehen. Dieses Modul ist rein.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Dict, FrozenSet, Optional, Tuple
 
@@ -36,6 +36,15 @@ class Stufe(str, Enum):
 REIHENFOLGE: Tuple[Stufe, ...] = (Stufe.RANGLISTE, Stufe.FUER_MICH, Stufe.AUS)
 
 AKTUELLER_WORTLAUT = "spielgefuehl-2026-11-26"
+"""Der Wortlaut, solange der Schalter ``muster_stimmen`` nicht wirkt."""
+
+STIMMEN_WORTLAUT = "spielgefuehl-2026-11-27"
+"""
+Der Wortlaut mit gegenseitigen Zustimmungen im Schutz gegen Absprachen (Jura 27.11.):
+gefragt nur, solange der Schalter ``muster_stimmen`` wirkt (``aktueller_wortlaut``).
+Zustimmungen fliessen nur bei Paaren in die Muster-Hinweise ein, in denen beide Konten
+zu genau diesem Wortlaut ab ``fuer_mich`` eingewilligt haben (``stimmen_eingewilligt``).
+"""
 
 # Vorbelegung der Namenswahl in der Rangliste: None = keine, die Person waehlt aktiv.
 # Eine Vorbelegung "Anzeigename" ist unzulaessig (Jura 26.11.: ErwGr 32, Planet49,
@@ -139,9 +148,26 @@ WORTLAUTE: Dict[str, Wortlaut] = {
     ),
 }
 
+# Jura 27.11.: Nur der Absatz zu Absprachen aendert sich, die Stufentexte bleiben
+# wortgleich.
+WORTLAUTE[STIMMEN_WORTLAUT] = replace(
+    WORTLAUTE[AKTUELLER_WORTLAUT],
+    absprachen=(
+        "Für ‚Nur für mich‘ und ‚In der Saison-Rangliste mitspielen‘ willige ich "
+        "außerdem ein: Damit Punkte nicht durch Absprachen entstehen, prüft Gut gesagt, "
+        "ob sich zwei Konten auffällig oft gegenseitig nutzen oder einander zustimmen. "
+        "Fällt das auf, sehen die Administratorinnen und Administratoren einen Hinweis "
+        "mit den Kennungen beider Konten; an Punkten und Rangliste ändert das nichts."
+    ),
+)
+
 # Zu welchen Wortlauten eine Antwort gilt; eine neue Fassung mit mehr Zwecken fragt
-# neu, indem sie die alte hier herausnimmt.
-GELTENDE_WORTLAUTE: FrozenSet[str] = frozenset({"spielgefuehl-2026-11-26"})
+# neu, indem sie die alte hier herausnimmt. ``spielgefuehl-2026-11-26`` bleibt mit dem
+# Schalter ``muster_stimmen`` gueltig fuer alles, was sie nennt (Punkte, Rangliste,
+# gegenseitige Nutzung); neu gefragt wird trotzdem (``neu_fragen``), damit die Person
+# den Zweck Zustimmungen sieht. Ohne Schalter gilt auch ``-27`` weiter: Sie umfasst
+# alles aus ``-26``, und niemand soll beim Ausschalten neu gefragt werden.
+GELTENDE_WORTLAUTE: FrozenSet[str] = frozenset({AKTUELLER_WORTLAUT, STIMMEN_WORTLAUT})
 
 
 class UnbekannterWortlaut(ValueError):
@@ -160,3 +186,23 @@ def punkte_wirksam(stufe: Optional[Stufe]) -> bool:
 def in_rangliste(stufe: Optional[Stufe]) -> bool:
     """Die Person spielt in der Saison-Rangliste mit."""
     return stufe is Stufe.RANGLISTE
+
+
+def aktueller_wortlaut(stimmen: bool) -> str:
+    """Der Wortlaut, den die Frage zeigt: mit wirksamem ``muster_stimmen`` der neue."""
+    return STIMMEN_WORTLAUT if stimmen else AKTUELLER_WORTLAUT
+
+
+def neu_fragen(wortlaut: str, stufe: Stufe, stimmen: bool) -> bool:
+    """
+    Ob eine geltende Antwort trotzdem neu gefragt wird: mit wirksamem
+    ``muster_stimmen`` jede Stufe ueber ``aus`` zu einem anderen Wortlaut als dem
+    neuen (Jura 27.11.: Konten mit ``-26`` beim naechsten Besuch). ``aus`` willigt in
+    nichts ein und wird nicht neu gefragt.
+    """
+    return stimmen and punkte_wirksam(stufe) and wortlaut != STIMMEN_WORTLAUT
+
+
+def stimmen_eingewilligt(wortlaut: str, stufe: Optional[Stufe]) -> bool:
+    """Ob Zustimmungen der Person in die Muster-Hinweise einfliessen duerfen."""
+    return wortlaut == STIMMEN_WORTLAUT and punkte_wirksam(stufe)

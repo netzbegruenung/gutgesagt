@@ -42,7 +42,11 @@ from services.suchen_ohne_treffer_service import (
 )
 from core.config import Settings
 from services.schalter_service import schalter_wirksam
-from services.spielgefuehl_service import punkte_eingewilligte
+from services.spielgefuehl_service import (
+    punkte_eingewilligte,
+    stimmen_aktiv,
+    stimmen_eingewilligte,
+)
 from core.logging import get_logger
 from core.fehler import INTERNER_FEHLER
 
@@ -590,6 +594,8 @@ class MusterHinweisEintrag(BaseModel):
     name_a: Optional[str]
     konto_b: str
     name_b: Optional[str]
+    # "nutzung" (gegenseitig genutzt) oder "zustimmung" (einander zugestimmt)
+    art: str = "nutzung"
     tage: int
     erster_tag: date
     letzter_tag: date
@@ -614,16 +620,21 @@ async def get_muster_hinweise(
     keine Hinweise; ``aktiv`` sagt das dem Dashboard. Gezeigt werden nur Paare, bei
     denen beide Konten aktuell eingewilligt haben ("Punkte und Meilensteine" bzw. im
     Spielgefuehl-Modell ab Stufe ``fuer_mich``): Nach einem Widerruf erscheint die
-    Person hier nicht mehr (Art. 7 Abs. 3 DSGVO).
+    Person hier nicht mehr (Art. 7 Abs. 3 DSGVO), und gelesene Hinweise ohne
+    Einwilligung beider loescht der Abruf nebenbei (wie der Loeschlauf).
     """
     if not schalter_wirksam("punkte", settings):
         return MusterHinweiseResponse(
             aktiv=False, frist_tage=MUSTER_FRIST_TAGE, hinweise=[]
         )
     try:
+        # Hinweise aus Zustimmungen nur mit wirksamem muster_stimmen und nur, wenn
+        # beide Konten aktuell zum Wortlaut mit Zustimmungen eingewilligt haben.
+        mit_stimmen = stimmen_aktiv(settings)
         hinweise = await asyncio.to_thread(
             service.hinweise,
             lambda kennungen: punkte_eingewilligte(kennungen, settings),
+            stimmen_eingewilligte if mit_stimmen else None,
         )
         namen = await asyncio.to_thread(
             get_anzeigename_service().namen,
@@ -641,6 +652,7 @@ async def get_muster_hinweise(
                 name_a=namen.get(h.konto_a),
                 konto_b=h.konto_b,
                 name_b=namen.get(h.konto_b),
+                art=h.art,
                 tage=h.tage,
                 erster_tag=h.erster_tag,
                 letzter_tag=h.letzter_tag,

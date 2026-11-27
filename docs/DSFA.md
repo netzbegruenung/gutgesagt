@@ -593,6 +593,13 @@ Empfänger und Ort“.
   in `punkte_einwilligung` (Kennung, ja/nein, Wortlaut, Zeitpunkt; Nachweis nach Art. 7 Abs. 1).
 - **Frist:** Paar-Prüfwert 7 Tage, Muster-Hinweis 56 Tage (`LK:162-163`); Antworten auf die
   Einwilligung bis zur Kontolöschung (LK Schritt 2).
+- **Zustimmungen (Schalter `muster_stimmen`, Standard aus):** Gegenseitige Zustimmungen als
+  weiteres Merkmal der Muster-Hinweise, mit denselben Garantien: Paar-Prüfwerte ohne
+  Kontozuordnung, Schlüssel nur im Arbeitsspeicher, 7 Tage; Hinweis 56 Tage. Ausgewertet nur bei
+  Paaren, die beide dem Spielgefühl-Wortlaut `spielgefuehl-2026-11-27` zugestimmt haben (Jura
+  27.11.), geprüft beim Erzeugen und beim Zeigen; Ablehnungen zählen nicht. Kein Einfluss auf
+  Punkte oder Rangliste. Nachtrag in Abschnitt 3 (Nutzungsnetz) vor dem Einschalten auf Prod:
+  **offen**.
 - **Risiko und Maßnahmen:** Abschnitt 3 (Sichtbarkeit, Nutzungsnetz, Zweckentfremdung),
   Rechtsgrundlage Abschnitt 4. Schalter `punkte_aktiv`, Standard aus (`ss/core/config.py:238-244`).
 - **Meilensteine, nur für die Person selbst (#615, gemergt am 09.11.2026):** hinter

@@ -13,6 +13,7 @@ from services.schalter_service import (
     ObergrenzeAus,
     SchalterService,
     UnbekannterSchalter,
+    oeffentliche_schalter,
     schalter_service_setzen,
     schalter_wirksam,
 )
@@ -83,6 +84,26 @@ def test_spielgefuehl_nur_mit_wirksamen_punkten():
     assert dienst.wirksam("spielgefuehl_buehne", settings) is True
     ohne_punkte_obergrenze = Settings(spielgefuehl_buehne_aktiv=True)
     assert dienst.wirksam("spielgefuehl_buehne", ohne_punkte_obergrenze) is False
+
+
+def test_muster_stimmen_nur_mit_wirksamem_spielgefuehl():
+    """Der Zweck Zustimmungen steht im Wortlaut des Spielgefuehls (Jura 27.11.)."""
+    settings = Settings(
+        punkte_aktiv=True, spielgefuehl_buehne_aktiv=True, muster_stimmen_aktiv=True
+    )
+    werte = {"muster_stimmen": True, "spielgefuehl_buehne": True, "punkte": True}
+
+    dienst, _, _ = _dienst(werte)
+    assert dienst.wirksam("muster_stimmen", settings) is True
+    for aus in ("spielgefuehl_buehne", "punkte", "muster_stimmen"):
+        dienst, _, _ = _dienst({**werte, aus: False})
+        assert dienst.wirksam("muster_stimmen", settings) is False, aus
+    dienst, _, _ = _dienst(werte)
+    ohne_obergrenze = Settings(punkte_aktiv=True, spielgefuehl_buehne_aktiv=True)
+    assert dienst.wirksam("muster_stimmen", ohne_obergrenze) is False
+    # Standard aus, und die Datenschutzerklaerung fragt den Stand ohne Anmeldung
+    assert Settings().muster_stimmen_aktiv is False
+    assert "muster_stimmen" in oeffentliche_schalter()
 
 
 def test_abzeichen_am_namen_nicht_mit_spielgefuehl():

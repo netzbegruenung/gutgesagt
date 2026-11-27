@@ -53,6 +53,7 @@ const TITEL: Record<string, string> = {
   danke_ohne_konto: 'Danke-Knopf ohne Konto',
   rangliste: 'Rangliste je Saison',
   spielgefuehl_buehne: 'Spielgefühl als eine Frage',
+  muster_stimmen: 'Muster-Hinweise aus Zustimmungen',
 };
 
 /**
@@ -75,6 +76,8 @@ const VORAUSSETZUNG: Record<string, [string, string][]> = {
   rangliste: [['punkte', 'Punkte']],
   // Die Spielgefühl-Frage gibt es nur mit Punkten
   spielgefuehl_buehne: [['punkte', 'Punkte']],
+  // Der Zweck Zustimmungen steht im Wortlaut des Spielgefühls
+  muster_stimmen: [['punkte', 'Punkte'], ['spielgefuehl_buehne', 'Spielgefühl als eine Frage']],
 };
 
 /** Schalter, die nicht wirken, solange ein anderer wirkt: Name → [anderer, Anzeige, Folge]. */

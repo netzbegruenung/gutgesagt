@@ -24,8 +24,24 @@ class SchalterRepository:
             zeilen = session.execute(select(SchalterZeile.name, SchalterZeile.an)).all()
             return {zeile.name: zeile.an for zeile in zeilen}
 
+    def eingeschaltet_am(self, name: str) -> Optional[datetime]:
+        """Wann ein Admin den Schalter zuletzt eingeschaltet hat; None, wenn er aus ist."""
+        with self.db.get_session() as session:
+            zeile = session.execute(
+                select(SchalterZeile.an, SchalterZeile.geaendert_am).where(
+                    SchalterZeile.name == name
+                )
+            ).first()
+            if zeile is None or not zeile.an:
+                return None
+            return zeile.geaendert_am
+
     def setzen(self, name: str, an: bool, admin: str) -> None:
-        """Admin-Wert setzen und die Aenderung im Verlauf festhalten, in einer Transaktion."""
+        """
+        Admin-Wert setzen und die Aenderung im Verlauf festhalten, in einer Transaktion.
+        Ist der Wert schon so, bleibt die Zeile in ``schalter`` (samt Zeitpunkt) stehen;
+        der Verlauf bekommt den Eintrag trotzdem.
+        """
         with self.db.get_session() as session:
             einfuegen = pg_insert(SchalterZeile).values(
                 name=name, an=an, geaendert_am=func.now(), geaendert_von=admin
@@ -38,6 +54,9 @@ class SchalterRepository:
                         "geaendert_am": einfuegen.excluded.geaendert_am,
                         "geaendert_von": einfuegen.excluded.geaendert_von,
                     },
+                    # Nur bei einem Wechsel: Ein erneutes "an" verschiebt den Tag des
+                    # Einschaltens nicht (eingeschaltet_am, Datenschutzerklaerung).
+                    where=SchalterZeile.an != einfuegen.excluded.an,
                 )
             )
             session.execute(
