@@ -1,10 +1,12 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { BehaviorSubject, of } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import { PunkteEinwilligungService, PunkteEinwilligungStand } from '../shared/punkte-einwilligung/punkte-einwilligung.service';
+import { SpielgefuehlService, SpielgefuehlStand } from '../services/spielgefuehl.service';
+import { NACHLADEN_MS, STILLE_ABFRAGE } from '../shared/selbst-nachladen';
 import { Widerrufbar, WiderrufbarComponent } from './widerrufbar.component';
 
 const BASIS = `${environment.baseUrl}/api/v1`;
@@ -23,19 +25,24 @@ describe('WiderrufbarComponent', () => {
   let http: HttpTestingController;
   let punkteStand: BehaviorSubject<PunkteEinwilligungStand | null | undefined>;
   let punkteLaden: jasmine.Spy;
+  /** Stand der Spielgefühl-Karte (SpielgefuehlService); undefined: noch nicht geladen. */
+  let spielStand: BehaviorSubject<SpielgefuehlStand | null | undefined>;
 
-  function starten(stand: Widerrufbar) {
+  function starten(stand: Widerrufbar, eingaben: Partial<WiderrufbarComponent> = {}) {
     punkteStand = new BehaviorSubject<PunkteEinwilligungStand | null | undefined>(null);
     punkteLaden = jasmine.createSpy('laden').and.returnValue(of(null));
+    spielStand = new BehaviorSubject<SpielgefuehlStand | null | undefined>(undefined);
     TestBed.configureTestingModule({
       imports: [WiderrufbarComponent],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: PunkteEinwilligungService, useValue: { stand$: punkteStand, laden: punkteLaden } },
+        { provide: SpielgefuehlService, useValue: { stand$: spielStand } },
       ],
     });
     fixture = TestBed.createComponent(WiderrufbarComponent);
+    Object.assign(fixture.componentInstance, eingaben);
     http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
     http.expectOne({ method: 'GET', url: URL }).flush(stand);
@@ -193,5 +200,107 @@ describe('WiderrufbarComponent', () => {
     fixture.detectChanges();
 
     expect(el().querySelector('[data-testid="widerrufbar"]')).toBeNull();
+  });
+
+  describe('Einbindung auf anderen Seiten (Datenschutzseite, „Meine Beiträge“)', () => {
+    function karte(stufe: SpielgefuehlStand['stufe']): SpielgefuehlStand {
+      return { stufe, aktueller_wortlaut: {} } as unknown as SpielgefuehlStand;
+    }
+
+    it('nimmt die Ebene der Überschrift von der Seite', () => {
+      starten(ALLES, { ebene: 4 });
+
+      expect(el().querySelector('h4#widerrufbar-titel')?.textContent).toContain('Spielgefühl und Punkte ausschalten');
+      expect(el().querySelector('h3')).toBeNull();
+    });
+
+    it('zeigt den Satz für „nichts zu widerrufen“ erst nach dem Laden', () => {
+      punkteStand = new BehaviorSubject<PunkteEinwilligungStand | null | undefined>(null);
+      TestBed.configureTestingModule({
+        imports: [WiderrufbarComponent],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: PunkteEinwilligungService, useValue: { stand$: punkteStand, laden: () => of(null) } },
+          { provide: SpielgefuehlService, useValue: { stand$: new BehaviorSubject(undefined) } },
+        ],
+      });
+      fixture = TestBed.createComponent(WiderrufbarComponent);
+      fixture.componentInstance.leerText = 'Nichts zu widerrufen.';
+      http = TestBed.inject(HttpTestingController);
+      fixture.detectChanges();
+      expect(el().querySelector('[data-testid="widerrufbar-leer"]')).toBeNull();
+
+      http.expectOne({ method: 'GET', url: URL }).flush(NICHTS);
+      fixture.detectChanges();
+      expect(el().querySelector('[data-testid="widerrufbar-leer"]')?.textContent).toContain('Nichts zu widerrufen.');
+    });
+
+    it('zeigt ohne Häkchen daneben die Punkte-Zeile, auch wenn der gemeinsame Stand eingewilligt hat', () => {
+      starten(ALLES, { punkteHaekchenDaneben: false });
+
+      punkteStand.next({ eingewilligt: true, wortlaut: '2026-11-13', aktueller_wortlaut: { kennung: '2026-11-13', text: '' } });
+      fixture.detectChanges();
+
+      expect(zeile('punkte')).not.toBeNull();
+    });
+
+    it('lässt neben der Spielgefühl-Karte die Spielgefühl-Zeile weg, solange die Karte die Stufe zeigt', () => {
+      starten(ALLES, { spielgefuehlKarteDaneben: true });
+      // Stand der Karte noch unbekannt: lieber doppelt als kein Weg.
+      expect(zeile('spielgefuehl')).not.toBeNull();
+
+      spielStand.next(karte('rangliste'));
+      fixture.detectChanges();
+      expect(zeile('spielgefuehl')).toBeNull();
+      expect(zeile('rangliste')).not.toBeNull();
+    });
+
+    it('zeigt die Spielgefühl-Zeile, wenn die Karte leer ist (Schalter aus)', () => {
+      starten(ALLES, { spielgefuehlKarteDaneben: true });
+
+      spielStand.next(null);
+      fixture.detectChanges();
+
+      expect(zeile('spielgefuehl')?.textContent).toContain('Spielgefühl: In der Saison-Rangliste mitspielen');
+    });
+
+    it('fragt neu, wenn die Stufe auf der Karte wechselt', () => {
+      starten(ALLES, { spielgefuehlKarteDaneben: true });
+      spielStand.next(karte('rangliste'));
+
+      spielStand.next(karte('aus'));
+      http.expectOne({ method: 'GET', url: URL }).flush({ ...ALLES, spielgefuehl: null, rangliste: null });
+      fixture.detectChanges();
+
+      expect(zeile('rangliste')).toBeNull();
+    });
+
+    it('lädt im Takt selbst nach, ohne Neuladen der Seite (Widerruf in einem anderen Tab)', fakeAsync(() => {
+      starten(ALLES);
+
+      tick(NACHLADEN_MS);
+      const anfrage = http.expectOne({ method: 'GET', url: URL });
+      anfrage.flush({ ...ALLES, abzeichen: null });
+      fixture.detectChanges();
+
+      expect(zeile('abzeichen')).toBeNull();
+      fixture.destroy();
+    }));
+
+    it('fragt still: nach abgelaufener Sitzung keine Umleitung, keine Knöpfe, kein Weiterfragen', fakeAsync(() => {
+      starten(ALLES);
+
+      tick(NACHLADEN_MS);
+      const anfrage = http.expectOne({ method: 'GET', url: URL });
+      expect(anfrage.request.context.get(STILLE_ABFRAGE)).toBeTrue();
+      anfrage.flush(null, { status: 401, statusText: 'Unauthorized' });
+      fixture.detectChanges();
+
+      expect(el().querySelector('[data-testid="widerrufbar"]')).toBeNull();
+      tick(NACHLADEN_MS * 8);
+      http.expectNone({ method: 'GET', url: URL });
+      fixture.destroy();
+    }));
   });
 });

@@ -45,3 +45,20 @@
 .legal-section[tabindex='-1']:focus {
   outline: none;
 }
+
+// Kasten „Einwilligung widerrufen“ unter „Deine Rechte“: hervorgehoben wie die Kurzfassung
+.widerruf-kasten {
+  background-color: var(--primaer-tint);
+  border-left: 4px solid var(--linie-tanne);
+  border-radius: 4px;
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin: var(--spacing-md) 0 var(--spacing-lg);
+
+  h3 {
+    margin-top: 0;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}

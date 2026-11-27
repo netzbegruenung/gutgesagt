@@ -1,4 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
@@ -14,6 +16,8 @@ import {
 import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
 import { FunktionenService } from '../services/funktionen.service';
+import { AuthService } from '../auth/auth.service';
+import { WiderrufbarComponent } from '../einwilligung/widerrufbar.component';
 import { KURZFASSUNG, KURZFASSUNG_SCHLUSS, KurzfassungSatz, kurzfassungFertig } from './dse-kurzfassung';
 
 @Component({
@@ -23,7 +27,8 @@ import { KURZFASSUNG, KURZFASSUNG_SCHLUSS, KurzfassungSatz, kurzfassungFertig } 
     CommonModule,
     MatCardModule,
     MatDividerModule,
-    RouterModule
+    RouterModule,
+    WiderrufbarComponent
   ],
   templateUrl: './datenschutz.component.html',
   styleUrls: ['./datenschutz.component.scss']
@@ -31,6 +36,14 @@ import { KURZFASSUNG, KURZFASSUNG_SCHLUSS, KurzfassungSatz, kurzfassungFertig } 
 export class DatenschutzComponent {
   readonly VEREIN = LEGAL_ENTITY;
   private readonly funktionen = inject(FunktionenService);
+  /**
+   * Angemeldet? null, solange die App es noch nicht weiß: dann steht im Kasten
+   * „Einwilligung widerrufen“ weder Knopf noch Anmeldehinweis. Folgt dem Stand, ohne Neuladen.
+   */
+  readonly angemeldet = toSignal(
+    inject(AuthService).userInfo$.pipe(map((info) => (info ? info.isAuthenticated : null))),
+    { initialValue: null }
+  );
   /** Sätze des Kastens „Kurz gesagt“ (dse-kurzfassung.ts). */
   readonly kurzfassungSaetze: readonly KurzfassungSatz[] = inject(KURZFASSUNG);
   /** Schlusssatz unter den drei Sätzen des Kastens (Wortlaut Jura). */

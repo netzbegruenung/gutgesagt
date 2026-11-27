@@ -61,6 +61,10 @@
         <!-- Spielgefuehl als eine Einstellung in drei Stufen; ohne Schalter spielgefuehl_buehne leer -->
         <app-spielgefuehl></app-spielgefuehl>
 
+        <!-- Widerruf jederzeit (Art. 7 Abs. 3 DSGVO), auch wenn die Spielgefühl-Karte leer ist (Schalter aus):
+             je gespeicherter Einwilligung eine Zeile „Ausschalten“; ohne gespeichertes Ja leer -->
+        <app-widerrufbar [ebene]="2" [karte]="true" [spielgefuehlKarteDaneben]="true" [punkteHaekchenDaneben]="false"></app-widerrufbar>
+
         <!-- Nur fuer die Person selbst; bei ausgeschalteten Punkten leer (#352) -->
         <app-punkte></app-punkte>
 

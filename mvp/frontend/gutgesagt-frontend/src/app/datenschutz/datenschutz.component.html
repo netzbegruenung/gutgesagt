@@ -807,6 +807,10 @@
         {{ rangliste() ? spielgefuehlRangliste : spielgefuehlOhneRangliste }} {{ spielgefuehlSchluss }}
       </p>
       <p data-testid="dse-spielgefuehl-sockel">{{ spielgefuehlSockel }}</p>
+      <!-- Weg zum Widerruf (Art. 7 Abs. 3 DSGVO), auch ohne Schalter: Sprung zum Kasten unter „Deine Rechte“ -->
+      <p data-testid="dse-widerruf-verweis">
+        <a href="#einwilligung-widerrufen" (click)="springen($event, 'einwilligung-widerrufen')">Einwilligung widerrufen</a>
+      </p>
       <p>
         Mit Punkten zeigen wir dir, wie deine Mitwirkung wirkt: wenige Punkte für deine
         Beiträge und ausformulierten Einwürfe und einen kleinen Punkt je Bewertung eines
@@ -1603,6 +1607,23 @@
           Für einen Widerspruch genügt eine formlose Nachricht an
           <a href="mailto:{{ KONTAKT_MAIL }}">{{ KONTAKT_MAIL }}</a>. Eine Begründung hilft
           uns, ist aber keine Voraussetzung dafür, dass wir deinen Widerspruch prüfen.
+        </p>
+      </div>
+      <!-- Widerruf so einfach wie die Einwilligung (Art. 7 Abs. 3 DSGVO): die Knöpfe direkt hier,
+           auch wenn die Schalter aus sind (einwilligung/widerrufbar.component.ts) -->
+      <div class="widerruf-kasten" id="einwilligung-widerrufen" tabindex="-1" data-testid="dse-widerruf">
+        <h3>Einwilligung widerrufen</h3>
+        <ng-container *ngIf="angemeldet() === true">
+          <p>
+            Was du hier ausschaltest, wirkt sofort. Deine Einwilligung zur Mitwirkung widerrufst
+            du unter <a routerLink="/einwilligung">Datenschutz-Einstellungen</a>.
+          </p>
+          <app-widerrufbar [ebene]="4" [punkteHaekchenDaneben]="false"
+            leerText="Spielgefühl, Punkte, Rangliste und Abzeichen am Namen sind bei dir aus; hier gibt es nichts zu widerrufen."></app-widerrufbar>
+        </ng-container>
+        <p *ngIf="angemeldet() === false" data-testid="dse-widerruf-anmelden">
+          Deine Einwilligungen siehst und widerrufst du hier, sobald du angemeldet bist.
+          <a routerLink="/login" [queryParams]="{ returnUrl: '/datenschutz#einwilligung-widerrufen' }">Anmelden</a>
         </p>
       </div>
     </section>

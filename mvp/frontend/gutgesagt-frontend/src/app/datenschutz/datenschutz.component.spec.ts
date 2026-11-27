@@ -1,6 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { BehaviorSubject } from 'rxjs';
+import { AuthService, UserInfo } from '../auth/auth.service';
+import { environment } from '../../environments/environment';
 
 import { abschnitt as abschnittIn, istTagesdatum, normalisiert, stand } from '../testing/rechtstext';
 import { DatenschutzComponent } from './datenschutz.component';
@@ -28,7 +33,7 @@ describe('DatenschutzComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(DatenschutzComponent);
@@ -970,7 +975,7 @@ describe('DatenschutzComponent', () => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
         imports: [DatenschutzComponent],
-        providers: [provideRouter([]), { provide: MEILENSTEIN_MERKER, useValue: aktiv }],
+        providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: MEILENSTEIN_MERKER, useValue: aktiv }],
       });
       const fixture = TestBed.createComponent(DatenschutzComponent);
       fixture.detectChanges();
@@ -1007,7 +1012,7 @@ describe('DatenschutzComponent', () => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
         imports: [DatenschutzComponent],
-        providers: [provideRouter([]), { provide: HOME_HINWEIS_MERKER, useValue: aktiv }],
+        providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: HOME_HINWEIS_MERKER, useValue: aktiv }],
       });
       const fixture = TestBed.createComponent(DatenschutzComponent);
       fixture.detectChanges();
@@ -1031,7 +1036,7 @@ describe('DatenschutzComponent', () => {
     it('steht immer unter „Speicherung auf deinem Gerät“, unabhängig von Schalter und Browserzustand', () => {
       localStorage.removeItem(FEIER_TON_SCHLUESSEL);
       TestBed.resetTestingModule();
-      TestBed.configureTestingModule({ imports: [DatenschutzComponent], providers: [provideRouter([])] });
+      TestBed.configureTestingModule({ imports: [DatenschutzComponent], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
       const fixture = TestBed.createComponent(DatenschutzComponent);
       fixture.detectChanges();
       const text = abschnittIn(fixture.nativeElement as HTMLElement, 'Weitere Einträge');
@@ -1051,7 +1056,7 @@ describe('DatenschutzComponent: Spielgefühl', () => {
     TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
         { provide: FunktionenService, useValue: { an: (name: string) => signal(namen.includes(name)) } },
       ],
     });
@@ -1138,7 +1143,7 @@ describe('DatenschutzComponent: Suchen ohne Treffer, Anzahl auf der Ergebnisseit
     TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
         { provide: FunktionenService, useValue: { an: (name: string) => signal(an && name === 'null_treffer_anzahl') } },
       ],
     });
@@ -1183,7 +1188,7 @@ describe('DatenschutzComponent - Stimmenverfall bei ganz anderem Text (#636)', (
     await TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
         {
           provide: FunktionenService,
           useValue: { an: (name: string) => (name === 'stimmen_text_verfall' ? schalter : signal(false)) },
@@ -1283,7 +1288,7 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
         { provide: FunktionenService, useValue: { an: (name: string) => signal(namen.includes(name)) } },
       ],
     });
@@ -1459,5 +1464,125 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
 
   it('bestandszahl_zuwachs: eigener Unterabschnitt „Startseite“', () => {
     expect(abschnittIn(seiteMit('bestandszahl_zuwachs'), 'Startseite')).toBe(BESTANDSZAHL);
+  });
+});
+
+/**
+ * Weg zum Widerruf (Art. 7 Abs. 3 DSGVO, Go-Bedingung Jura): Sprunglink beim Sockelsatz zum
+ * Kasten „Einwilligung widerrufen“; Angemeldete sehen die Knöpfe, alle anderen den Weg zur
+ * Anmeldung. Das gilt auch, wenn die Schalter aus sind.
+ */
+describe('DatenschutzComponent: Einwilligung widerrufen', () => {
+  const WIDERRUFBAR = `${environment.baseUrl}/api/v1/usage/users/me/widerrufbar`;
+  let info: BehaviorSubject<UserInfo | null>;
+  let http: HttpTestingController;
+
+  function anmeldung(angemeldet: boolean): UserInfo {
+    return { isAuthenticated: angemeldet, userId: angemeldet ? 'u1' : null, userName: null, claims: null };
+  }
+
+  function seite(stand: UserInfo | null) {
+    info = new BehaviorSubject<UserInfo | null>(stand);
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        // Alle Schalter aus: der Weg zum Widerruf steht trotzdem.
+        { provide: FunktionenService, useValue: { an: () => signal(false) } },
+        { provide: AuthService, useValue: { userInfo$: info } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  function el(fixture: { nativeElement: unknown }): HTMLElement {
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  afterEach(() => http.verify());
+
+  it('verweist beim Sockelsatz zum Spielgefühl mit „Einwilligung widerrufen“ auf den Kasten', () => {
+    const fixture = seite(null);
+
+    const sockel = el(fixture).querySelector('[data-testid="dse-spielgefuehl-sockel"]') as HTMLElement;
+    const verweis = sockel.nextElementSibling as HTMLElement;
+    expect(verweis.getAttribute('data-testid')).toBe('dse-widerruf-verweis');
+    const link = verweis.querySelector('a') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('Einwilligung widerrufen');
+    expect(link.getAttribute('href')).toBe('#einwilligung-widerrufen');
+    const kasten = el(fixture).querySelector('#einwilligung-widerrufen') as HTMLElement;
+    expect(kasten.querySelector('h3')?.textContent?.trim()).toBe('Einwilligung widerrufen');
+    // Fokusziel des Sprungs (WCAG 2.4.3)
+    expect(kasten.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('steht unter „Deine Rechte“', () => {
+    const fixture = seite(null);
+
+    const kasten = el(fixture).querySelector('#einwilligung-widerrufen') as HTMLElement;
+    expect(kasten.closest('#deine-rechte')).not.toBeNull();
+  });
+
+  it('zeigt nicht Angemeldeten den Weg zur Anmeldung, zurück zum Kasten, und fragt nichts', () => {
+    const fixture = seite(anmeldung(false));
+
+    const hinweis = el(fixture).querySelector('[data-testid="dse-widerruf-anmelden"]') as HTMLElement;
+    expect(hinweis.textContent).toContain('sobald du angemeldet bist');
+    const link = hinweis.querySelector('a') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('Anmelden');
+    expect(link.getAttribute('href')).toBe('/login?returnUrl=%2Fdatenschutz%23einwilligung-widerrufen');
+    expect(el(fixture).querySelector('app-widerrufbar')).toBeNull();
+    http.expectNone(WIDERRUFBAR);
+  });
+
+  it('zeigt Angemeldeten die Knöpfe direkt, auch bei ausgeschalteten Schaltern', () => {
+    const fixture = seite(anmeldung(true));
+
+    http.expectOne({ method: 'GET', url: WIDERRUFBAR }).flush({
+      spielgefuehl: { stufe: 'fuer_mich', titel: 'Nur für mich', wortlaut: 'spielgefuehl-2026-11-26' },
+      punkte: null,
+      rangliste: null,
+      abzeichen: null,
+    });
+    fixture.detectChanges();
+
+    const kasten = el(fixture).querySelector('#einwilligung-widerrufen') as HTMLElement;
+    expect(kasten.querySelector('[data-testid="widerruf-spielgefuehl"]')?.textContent).toContain('Spielgefühl: Nur für mich');
+    expect(kasten.querySelector('h4#widerrufbar-titel')).not.toBeNull();
+    expect(kasten.querySelector('button')?.textContent?.trim()).toBe('Ausschalten');
+    expect(kasten.querySelector('a[href="/einwilligung"]')?.textContent?.trim()).toBe('Datenschutz-Einstellungen');
+    expect(el(fixture).querySelector('[data-testid="dse-widerruf-anmelden"]')).toBeNull();
+    fixture.destroy();
+  });
+
+  it('sagt Angemeldeten ohne gespeichertes Ja, dass nichts zu widerrufen ist', () => {
+    const fixture = seite(anmeldung(true));
+
+    http.expectOne({ method: 'GET', url: WIDERRUFBAR }).flush({ spielgefuehl: null, punkte: null, rangliste: null, abzeichen: null });
+    fixture.detectChanges();
+
+    expect(el(fixture).querySelector('[data-testid="widerrufbar-leer"]')?.textContent).toContain('nichts zu widerrufen');
+    fixture.destroy();
+  });
+
+  it('zeigt weder Knöpfe noch Anmeldehinweis, solange die Anmeldung unbekannt ist', () => {
+    const fixture = seite(null);
+
+    expect(el(fixture).querySelector('app-widerrufbar')).toBeNull();
+    expect(el(fixture).querySelector('[data-testid="dse-widerruf-anmelden"]')).toBeNull();
+  });
+
+  it('folgt der Anmeldung ohne Neuladen der Seite', () => {
+    const fixture = seite(anmeldung(false));
+
+    info.next(anmeldung(true));
+    fixture.detectChanges();
+
+    expect(el(fixture).querySelector('[data-testid="dse-widerruf-anmelden"]')).toBeNull();
+    http.expectOne({ method: 'GET', url: WIDERRUFBAR }).flush({ spielgefuehl: null, punkte: null, rangliste: null, abzeichen: null });
+    fixture.destroy();
   });
 });

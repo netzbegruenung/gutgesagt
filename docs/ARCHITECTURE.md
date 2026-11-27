@@ -765,8 +765,10 @@ level at `fuer_mich`.
   Muster-Hinweise naming the person. Withdrawing Art. 9 records a level above `aus` as `aus`.
 - `GET /api/v1/usage/users/me/widerrufbar` (signed in, always 200, no switch): the stored
   answers above no/`aus` (Spielgefühl level with its title, old points, Rangliste and badge
-  consents) with their wording; the privacy settings page shows one "Ausschalten" line each and
-  sends the no to the `PUT` endpoints above (`einwilligung/widerrufbar.component.ts`).
+  consents) with their wording; the privacy settings page, the privacy policy (box
+  `#einwilligung-widerrufen`, signed in only) and „Meine Beiträge" show one "Ausschalten" line
+  each and send the no to the `PUT` endpoints above (`einwilligung/widerrufbar.component.ts`,
+  reloads itself with silent requests).
 - `POST …/spielgefuehl/ranglistenname`: rolls a new random name (only with level `rangliste`, else
   409), a new proof row.
 
