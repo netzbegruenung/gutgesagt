@@ -7,10 +7,10 @@
 Stand 27.11.2026, Code `main` @ `bdc2093d` (letzter Tag `v0.9.14`). Grundlage sind die
 Datenschutz-Folgenabschätzung ([`docs/DSFA.md`](./DSFA.md), Verarbeitungen V1 bis V22 in
 Abschnitt 8.2) mit dem Nachtrag Spielgefühl
-([`docs/DSFA_NACHTRAG_SPIELGEFUEHL.md`](./DSFA_NACHTRAG_SPIELGEFUEHL.md), V28 bis V31), das Löschkonzept ([`docs/LOESCHKONZEPT.md`](./LOESCHKONZEPT.md), `LK`), die
+([`docs/DSFA_NACHTRAG_SPIELGEFUEHL.md`](./DSFA_NACHTRAG_SPIELGEFUEHL.md), V28 bis V31), das
+Löschkonzept ([`docs/LOESCHKONZEPT.md`](./LOESCHKONZEPT.md), `LK`), die
 Art.-9-Einwilligung ([`docs/ART9_EINWILLIGUNG.md`](./ART9_EINWILLIGUNG.md)) und die
-Datenschutzerklärung
-(`mvp/frontend/gutgesagt-frontend/src/app/datenschutz/datenschutz.component.html`, `DSE`).
+Datenschutzerklärung (`mvp/frontend/gutgesagt-frontend/src/app/datenschutz/datenschutz.component.html`, `DSE`).
 Die Datenschutzerklärung zitieren wir mit dem Titel ihres Abschnitts, das Löschkonzept ebenso.
 Begriffe wie in [`GLOSSARY.md`](../GLOSSARY.md).
 
