@@ -114,7 +114,7 @@ describe('Saal-Spruch (Schalter saal_spruch)', () => {
 
       const el: HTMLElement = fixture.nativeElement;
       expect(karte(el)).not.toBeNull();
-      expect(el.querySelector('h2')!.textContent).toContain('Heute im Saal gehört:');
+      expect(el.querySelector('h2')!.textContent).toContain('Heute im Netz zur BDK:');
       expect(el.querySelector('[data-testid="saal-spruch-text"]')!.textContent).toContain(SPRUCH);
       expect(el.textContent).toContain('Wie würdest du antworten?');
       const knopf = el.querySelector('[data-testid="saal-spruch-knopf"]') as HTMLAnchorElement;

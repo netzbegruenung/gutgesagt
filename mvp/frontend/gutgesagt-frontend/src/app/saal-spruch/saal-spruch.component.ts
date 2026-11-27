@@ -20,9 +20,10 @@ export function browserTag(jetzt = new Date()): string {
 }
 
 /**
- * Karte „Heute im Saal gehört:“ oben auf der Startseite (Schalter „saal_spruch“, Glossar
- * „Saal-Spruch“): ein Spruch, den ein Admin vorab für diesen Tag festgelegt hat, etwa für
- * die Tage der BDK, und der Knopf „Antworten ansehen“, der die Suche mit dem Spruch
+ * Karte „Heute im Netz zur BDK:“ oben auf der Startseite (Schalter „saal_spruch“, Glossar
+ * „Saal-Spruch“): der Spruch, den ein Admin für diesen Tag gewählt hat, weil er gerade unter
+ * Beiträgen zur BDK im Netz kursiert (im Saal bei den Grünen fallen solche Sprüche nicht,
+ * Entscheidung 27.11.2026), und der Knopf „Antworten ansehen“, der die Suche mit dem Spruch
  * startet. Ohne Spruch für heute oder bei Schalter aus gibt es die Karte nicht.
  *
  * Höchstens ein Aufruf über dem Feed (Review Spielgefühl 25.11.): Den Vorrang gegenüber
@@ -49,7 +50,7 @@ export function browserTag(jetzt = new Date()): string {
       <section class="saal-spruch" aria-labelledby="saal-spruch-titel" data-testid="saal-spruch">
         <h2 id="saal-spruch-titel" class="saal-spruch-titel">
           <mat-icon aria-hidden="true">campaign</mat-icon>
-          Heute im Saal gehört:
+          Heute im Netz zur BDK:
         </h2>
         <blockquote class="saal-spruch-zitat" data-testid="saal-spruch-text">„{{ spruch }}“</blockquote>
         <p class="saal-spruch-frage">Wie würdest du antworten?</p>
