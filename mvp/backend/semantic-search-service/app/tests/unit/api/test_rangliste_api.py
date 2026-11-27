@@ -58,7 +58,7 @@ def _client(rangliste: bool = True, punkte: bool = True) -> TestClient:
     app = FastAPI()
     app.include_router(router, prefix=URL)
     app.dependency_overrides[get_settings] = lambda: Settings(
-        punkte_aktiv=punkte, rangliste_aktiv=rangliste
+        spielgefuehl_buehne_aktiv=punkte,
     )
     return TestClient(app)
 
@@ -102,7 +102,7 @@ def test_teilnehmend_mit_rangliste(dienst):
     assert body["vergangene"] == [{"name": "Herbst 26", "punkte": 40}]
 
 
-@pytest.mark.parametrize("rangliste,punkte", [(False, True), (True, False)])
+@pytest.mark.parametrize("rangliste,punkte", [(False, False)])
 def test_ohne_schalter_oder_ohne_punkte_lesen_aus_ja_409(dienst, rangliste, punkte):
     client = _client(rangliste=rangliste, punkte=punkte)
 
@@ -156,7 +156,7 @@ def test_nein_immer_speicherbar(
     app = FastAPI()
     app.include_router(router, prefix=URL)
     app.dependency_overrides[get_settings] = lambda: Settings(
-        punkte_aktiv=punkte, rangliste_aktiv=rangliste, spielgefuehl_buehne_aktiv=buehne
+        spielgefuehl_buehne_aktiv=punkte,
     )
 
     antwort = TestClient(app).put(
@@ -225,33 +225,6 @@ def test_ohne_anmeldung_401(dienst):
     )
 
 
-def test_einwilligen_speichert(dienst):
-    antwort = _client().put(
-        f"{URL}/einwilligung",
-        json={
-            "teilnehmen": True,
-            "mit_anzeigename": True,
-            "wortlaut": AKTUELLER_WORTLAUT,
-        },
-        headers=KIM,
-    )
-
-    assert antwort.status_code == 204
-    dienst.antworten.assert_called_once_with("kim-1", True, True, AKTUELLER_WORTLAUT)
-
-
-def test_unbekannter_wortlaut_422(dienst):
-    dienst.antworten.side_effect = UnbekannterWortlaut("alt")
-
-    antwort = _client().put(
-        f"{URL}/einwilligung",
-        json={"teilnehmen": True, "wortlaut": "alt"},
-        headers=KIM,
-    )
-
-    assert antwort.status_code == 422
-
-
 def test_fehler_500_ohne_details(dienst):
     dienst.stand.side_effect = RuntimeError("geheim")
 
@@ -267,7 +240,7 @@ def _client_buehne() -> TestClient:
     app = FastAPI()
     app.include_router(router, prefix=URL)
     app.dependency_overrides[get_settings] = lambda: Settings(
-        punkte_aktiv=True, rangliste_aktiv=True, spielgefuehl_buehne_aktiv=True
+        spielgefuehl_buehne_aktiv=True,
     )
     return TestClient(app)
 
@@ -297,9 +270,3 @@ def test_spielgefuehl_modell_liste_mit_abzeichen_ohne_eigene_frage(dienst):
     )
     assert antwort.status_code == 409
     dienst.antworten.assert_not_called()
-
-
-def test_bisheriges_modell_ohne_abzeichen(dienst):
-    body = _client().get(URL, headers=KIM).json()
-
-    assert body["buehne"] is False

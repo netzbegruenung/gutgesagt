@@ -35,33 +35,9 @@ def _client(an: bool = True, punkte: bool = True) -> TestClient:
     app = FastAPI()
     app.include_router(usage_router, prefix="/api/v1/usage")
     app.dependency_overrides[get_settings] = lambda: Settings(
-        punkte_aktiv=punkte, abzeichen_sichtbar_aktiv=an
+        spielgefuehl_buehne_aktiv=punkte
     )
     return TestClient(app)
-
-
-def test_nie_gefragt(dienst):
-    antwort = _client().get(URL, headers=KIM)
-
-    assert antwort.status_code == 200
-    body = antwort.json()
-    assert body["gefragt"] is False
-    assert body["zeigen"] is None
-    assert body["aktueller_wortlaut"]["kennung"] == "2026-11-09-b"
-    assert body["aktueller_wortlaut"]["text"].startswith("Sollen andere Angemeldete")
-    assert "Screenshot" in body["aktueller_wortlaut"]["mehr_dazu"]
-    dienst.sichtbarkeit.assert_called_once_with("kim-1")
-
-
-def test_gefragt_mit_antwort(dienst):
-    dienst.sichtbarkeit.return_value = Sichtbarkeit(
-        True, "2026-11-09", datetime.datetime(2026, 11, 9)
-    )
-
-    body = _client().get(URL, headers=KIM).json()
-
-    assert body["gefragt"] is True
-    assert body["zeigen"] is True
 
 
 @pytest.mark.parametrize("an,punkte", [(False, True), (True, False)])
@@ -109,7 +85,7 @@ def test_im_spielgefuehl_modell_nein_speicherbar(dienst, monkeypatch):
     app = FastAPI()
     app.include_router(usage_router, prefix="/api/v1/usage")
     app.dependency_overrides[get_settings] = lambda: Settings(
-        punkte_aktiv=True, abzeichen_sichtbar_aktiv=True, spielgefuehl_buehne_aktiv=True
+        spielgefuehl_buehne_aktiv=True,
     )
 
     antwort = TestClient(app).put(
@@ -140,32 +116,3 @@ def test_nur_angemeldet(dienst):
 
     assert client.get(URL).status_code == 401
     assert client.get(URL, headers={"X-User": "anonymous"}).status_code == 401
-
-
-def test_antworten(dienst):
-    antwort = _client().put(
-        URL, json={"zeigen": False, "wortlaut": "2026-11-09"}, headers=KIM
-    )
-
-    assert antwort.status_code == 204
-    dienst.antworten.assert_awaited_once_with("kim-1", False, "2026-11-09")
-
-
-def test_antworten_unbekannter_wortlaut_422(dienst):
-    dienst.antworten.side_effect = UnbekannterWortlaut("x")
-
-    antwort = _client().put(URL, json={"zeigen": True, "wortlaut": "x"}, headers=KIM)
-
-    assert antwort.status_code == 422
-
-
-def test_nein_auch_ohne_art9_einwilligung(dienst, art9_einwilligung_ohne_datenbank):
-    """Zuruecknehmen geht immer, wie der Widerruf der Einwilligung selbst."""
-    art9_einwilligung_ohne_datenbank.lesen.return_value = None
-
-    antwort = _client().put(
-        URL, json={"zeigen": False, "wortlaut": "2026-11-09"}, headers=KIM
-    )
-
-    assert antwort.status_code == 204
-    dienst.antworten.assert_awaited_once_with("kim-1", False, "2026-11-09")

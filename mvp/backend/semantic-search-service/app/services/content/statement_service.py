@@ -25,7 +25,6 @@ from services.content.base_content_service import (
 from services.dieselbe_behauptung.nli_modell import NliModell, NliPruefer, nli_modell
 from services.dieselbe_behauptung.schatten import Schattenprotokoll
 from services.dieselbe_behauptung import fassung, regel, stufe
-from services.schalter_service import schalter_wirksam
 from repositories.interfaces.statement_repository import (
     IStatementRepository,
 )

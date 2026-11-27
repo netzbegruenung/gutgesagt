@@ -123,9 +123,7 @@ def client(repo):
     app.dependency_overrides[get_unbeantwortete_aussagen_service] = lambda: Mock(
         liste=AsyncMock(return_value=[])
     )
-    app.dependency_overrides[get_settings] = lambda: Settings(
-        antworten_hinweis_aktiv=True
-    )
+    app.dependency_overrides[get_settings] = lambda: Settings()
     nutzung = Mock(nutzung_seit_letztem_besuch=AsyncMock(return_value=0))
     inhalte = Mock(count_neue_von_anderen=AsyncMock(return_value=0))
     with patch.object(
@@ -144,14 +142,6 @@ class TestBesuch:
 
         assert antwort.status_code == 200
         assert antwort.json()["antworten_auf_eigene_aussagen"] == 1
-
-    def test_aus_keine_abfrage_und_null(self, werte, client, repo):
-        werte["antworten_hinweis"] = False
-        antwort = client.post("/api/v1/usage/users/me/besuch", headers=ICH)
-
-        assert antwort.status_code == 200
-        assert antwort.json()["antworten_auf_eigene_aussagen"] is None
-        repo.get_by_author.assert_not_called()
 
     def test_fehler_kostet_nur_diese_zahl(self, werte, client, repo):
         repo.get_by_author.side_effect = RuntimeError("weg")
@@ -181,24 +171,6 @@ class TestListe:
         assert antworten[0]["titel"] == f"Titel {NEU_ANDERE}"
         # Keine Kennungen anderer Personen in der Antwort
         assert "bo-2" not in antwort.text
-
-    def test_aus_404_ohne_abfrage(self, werte, client, repo):
-        werte["antworten_hinweis"] = False
-
-        assert (
-            client.get("/api/v1/usage/users/me/aussagen", headers=ICH).status_code
-            == 404
-        )
-        repo.get_by_author.assert_not_called()
-
-    def test_obergrenze_aus_404(self, werte, client, repo):
-        client.app.dependency_overrides[get_settings] = lambda: Settings(
-            antworten_hinweis_aktiv=False
-        )
-        assert (
-            client.get("/api/v1/usage/users/me/aussagen", headers=ICH).status_code
-            == 404
-        )
 
     def test_nur_angemeldet(self, werte, client):
         assert client.get("/api/v1/usage/users/me/aussagen").status_code == 401

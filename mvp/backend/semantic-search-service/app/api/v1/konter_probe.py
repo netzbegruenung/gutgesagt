@@ -37,7 +37,6 @@ from services.content.reference_service import ReferenceService
 from services.guete_service import guete_ergaenzen
 from services.konter_probe_service import KonterProbeService
 from services.oft_genutzt_service import sichtbaren_beitrag_laden
-from services.schalter_service import schalter_wirksam
 from services.usage_tracking_service import get_usage_service
 from services.varianten import varianten_ergaenzen
 

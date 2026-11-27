@@ -847,9 +847,9 @@ async def punkte_einwilligung(
     )
     # Im neuen Modell (Schalter spielgefuehl_buehne) gibt es diese Einwilligung
     # nicht mehr: aktiv false, die App fragt stattdessen nach dem Spielgefuehl.
-    if not schalter_wirksam("spielgefuehl_buehne", settings) or spielgefuehl_service.buehne_aktiv(
-        settings
-    ):
+    if not schalter_wirksam(
+        "spielgefuehl_buehne", settings
+    ) or spielgefuehl_service.buehne_aktiv(settings):
         return PunkteEinwilligungResponse(
             eingewilligt=False, aktueller_wortlaut=wortlaut_aktuell, aktiv=False
         )
@@ -1010,7 +1010,7 @@ async def besuch(
         unbeantwortete_aussagen_mehr=wartend >= LIMIT_STANDARD,
         ausformulierte_einwuerfe=max(0, ausformuliert),
         neue_beitraege=max(0, beitraege),
-        antworten_auf_eigene_aussagen=max(0, antworten) if mit_antworten else None,
+        antworten_auf_eigene_aussagen=max(0, antworten),
         neu_oeffentlich_gepostet=max(0, gepostet) if mit_echo else None,
         erster_besuch=erster,
     )

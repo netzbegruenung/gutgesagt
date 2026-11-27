@@ -50,34 +50,9 @@ def werte():
 def _client(dienst, obergrenze=True) -> TestClient:
     app = FastAPI()
     app.include_router(router, prefix="/api/v1/search")
-    app.dependency_overrides[get_settings] = lambda: Settings(
-        gartenansicht_aktiv=obergrenze
-    )
+    app.dependency_overrides[get_settings] = lambda: Settings()
     app.dependency_overrides[get_gartenansicht_service] = lambda: dienst
     return TestClient(app)
-
-
-def test_schalter_aus_leer_ohne_abfrage(werte):
-    # 200 statt 404: Die Seite laedt selbst nach (Gateway-fail2ban, docs/ARCHITECTURE.md)
-    dienst = FalscherDienst()
-
-    antwort = _client(dienst).get(URL)
-
-    assert antwort.status_code == 200
-    assert antwort.json() == {"beete": [], "aktiv": False}
-    assert dienst.gefragt == 0
-
-
-def test_obergrenze_aus_schlaegt_admin_wert(werte):
-    werte["gartenansicht"] = True
-    dienst = FalscherDienst()
-
-    assert _client(dienst, obergrenze=False).get(URL).json()["aktiv"] is False
-    assert dienst.gefragt == 0
-
-
-def test_obergrenze_von_haus_aus_aus():
-    assert Settings().gartenansicht_aktiv is False
 
 
 def test_besucher_sehen_je_thema_nur_zahlen(werte):

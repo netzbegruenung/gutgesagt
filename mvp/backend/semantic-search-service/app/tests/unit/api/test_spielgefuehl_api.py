@@ -43,12 +43,12 @@ def _client(buehne=True, punkte=True) -> TestClient:
     app = FastAPI()
     app.include_router(router, prefix="/api/v1/usage")
     app.dependency_overrides[get_settings] = lambda: Settings(
-        spielgefuehl_buehne_aktiv=buehne, punkte_aktiv=punkte, rangliste_aktiv=True
+        spielgefuehl_buehne_aktiv=buehne,
     )
     return TestClient(app)
 
 
-@pytest.mark.parametrize("buehne, punkte", [(False, True), (True, False)])
+@pytest.mark.parametrize("buehne, punkte", [(False, True)])
 def test_ohne_schalter_aktiv_false_ohne_abfrage(dienst, buehne, punkte):
     client = _client(buehne, punkte)
 
@@ -60,7 +60,7 @@ def test_ohne_schalter_aktiv_false_ohne_abfrage(dienst, buehne, punkte):
     assert client.post(URL + "/ranglistenname", headers=KIM).status_code == 404
 
 
-@pytest.mark.parametrize("buehne, punkte", [(False, True), (True, False)])
+@pytest.mark.parametrize("buehne, punkte", [(False, True)])
 def test_ohne_schalter_aus_immer_speicherbar(dienst, buehne, punkte):
     """Widerruf so einfach wie die Einwilligung (Art. 7 Abs. 3 DSGVO), auch nach Not-Aus."""
     dienst.herabstufung.return_value = True
@@ -91,7 +91,7 @@ def test_ohne_schalter_herabstufen_aus_der_rangliste(dienst):
 
 
 @pytest.mark.parametrize("stufe", ["fuer_mich", "rangliste"])
-@pytest.mark.parametrize("buehne, punkte", [(False, True), (True, False)])
+@pytest.mark.parametrize("buehne, punkte", [(False, True)])
 def test_ohne_schalter_kein_heraufstufen(dienst, buehne, punkte, stufe):
     """Ein Ja bleibt an die Schalter gebunden; 409 statt 404 (Gateway-fail2ban)."""
     dienst.herabstufung.return_value = False
@@ -222,28 +222,9 @@ def _client_ohne_rangliste() -> TestClient:
     app = FastAPI()
     app.include_router(router, prefix="/api/v1/usage")
     app.dependency_overrides[get_settings] = lambda: Settings(
-        spielgefuehl_buehne_aktiv=True, punkte_aktiv=True, rangliste_aktiv=False
+        spielgefuehl_buehne_aktiv=True,
     )
     return TestClient(app)
-
-
-def test_ohne_schalter_rangliste_keine_stufe_rangliste(dienst):
-    client = _client_ohne_rangliste()
-
-    stufen = client.get(URL, headers=KIM).json()["aktueller_wortlaut"]["stufen"]
-    antwort = client.put(
-        URL,
-        json={
-            "stufe": "rangliste",
-            "mit_anzeigename": False,
-            "wortlaut": AKTUELLER_WORTLAUT,
-        },
-        headers=KIM,
-    )
-
-    assert [s["stufe"] for s in stufen] == ["fuer_mich", "aus"]
-    assert antwort.status_code == 422
-    dienst.antworten.assert_not_called()
 
 
 def test_neu_wuerfeln_zu_oft_429(dienst):
@@ -254,9 +235,7 @@ def test_neu_wuerfeln_zu_oft_429(dienst):
     assert _client().post(URL + "/ranglistenname", headers=KIM).status_code == 429
 
 
-@pytest.mark.parametrize(
-    "buehne, punkte", [(False, False), (False, True), (True, False)]
-)
+@pytest.mark.parametrize("buehne, punkte", [(False, False), (False, True)])
 def test_widerruf_haengt_an_der_gespeicherten_stufe_nicht_am_schalter(
     spielgefuehl_ohne_datenbank, monkeypatch, buehne, punkte
 ):

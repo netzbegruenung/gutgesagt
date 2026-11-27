@@ -51,11 +51,8 @@ def gepostet(monkeypatch, art9_einwilligung_ohne_datenbank):
 def _client(**schalter) -> TestClient:
     app = FastAPI()
     app.include_router(usage_router, prefix="/api/v1/usage")
-    werte = dict(gepostet_aktiv=True, startkonten="start-9")
-    # Wirkungs-Echo und Danke-Knopf wirken nur zusammen (services/schalter_service.py,
-    # NUR_ZUSAMMEN): wer einen einschaltet, bekommt hier den Partner dazu.
-    if schalter.get("wirkungs_echo_aktiv") or schalter.get("danke_knopf_aktiv"):
-        werte.update(wirkungs_echo_aktiv=True, danke_knopf_aktiv=True)
+    werte = dict(startkonten="start-9")
+    # Wirkungs-Echo und Danke-Knopf sind ein Paket (wirkungs_echo, Schalter-Umbau 27.11.)
     werte.update(schalter)
     app.dependency_overrides[get_settings] = lambda: Settings(**werte)
 
@@ -189,7 +186,7 @@ class TestDanke:
     def test_angemeldet_zaehlt_ueber_die_kennung(
         self, wirkung, art9_einwilligung_ohne_datenbank
     ):
-        antwort = _client(danke_knopf_aktiv=True).post(DANKE, headers=KIM)
+        antwort = _client(wirkungs_echo_aktiv=True).post(DANKE, headers=KIM)
 
         assert antwort.status_code == 200
         assert antwort.json() == {"gezaehlt": True}
@@ -199,7 +196,7 @@ class TestDanke:
     def test_ohne_einwilligung_403(self, wirkung, art9_einwilligung_ohne_datenbank):
         art9_einwilligung_ohne_datenbank.lesen.return_value = None
 
-        antwort = _client(danke_knopf_aktiv=True).post(DANKE, headers=KIM)
+        antwort = _client(wirkungs_echo_aktiv=True).post(DANKE, headers=KIM)
 
         assert antwort.status_code == 403
         assert antwort.json()["detail"] == "art9_einwilligung_fehlt"
@@ -208,7 +205,7 @@ class TestDanke:
     def test_eigener_beitrag_zaehlt_nicht(
         self, wirkung, art9_einwilligung_ohne_datenbank
     ):
-        antwort = _client(danke_knopf_aktiv=True).post(
+        antwort = _client(wirkungs_echo_aktiv=True).post(
             f"/api/v1/usage/content/{EIGENER_ID}/danke", headers=KIM
         )
 
@@ -216,7 +213,7 @@ class TestDanke:
         wirkung.danke_sagen.assert_not_called()
 
     def test_startkonto_zaehlt_nicht(self, wirkung, art9_einwilligung_ohne_datenbank):
-        antwort = _client(danke_knopf_aktiv=True).post(
+        antwort = _client(wirkungs_echo_aktiv=True).post(
             DANKE, headers={"X-User": "start-9"}
         )
 
@@ -226,7 +223,7 @@ class TestDanke:
     def test_unlesbarer_beitrag_zaehlt_nicht(
         self, wirkung, art9_einwilligung_ohne_datenbank
     ):
-        antwort = _client(danke_knopf_aktiv=True).post(
+        antwort = _client(wirkungs_echo_aktiv=True).post(
             f"/api/v1/usage/content/{UNLESBAR_ID}/danke", headers=KIM
         )
 
@@ -236,7 +233,7 @@ class TestDanke:
     def test_unbekannter_beitrag_404_kaputte_id_400(
         self, wirkung, art9_einwilligung_ohne_datenbank
     ):
-        client = _client(danke_knopf_aktiv=True)
+        client = _client(wirkungs_echo_aktiv=True)
 
         assert (
             client.post(
@@ -250,14 +247,14 @@ class TestDanke:
         )
 
     def test_ohne_konto_nur_mit_unterschalter(self, wirkung):
-        assert _client(danke_knopf_aktiv=True).post(DANKE).status_code == 404
+        assert _client(wirkungs_echo_aktiv=True).post(DANKE).status_code == 404
         assert (
             _client(danke_ohne_konto_aktiv=True).post(DANKE).status_code == 404
         ), "Unterschalter wirkt nur mit dem Danke-Knopf"
         wirkung.danke_sagen.assert_not_called()
 
     def test_ohne_konto_ueber_das_besuchermerkmal(self, wirkung):
-        antwort = _client(danke_knopf_aktiv=True, danke_ohne_konto_aktiv=True).post(
+        antwort = _client(wirkungs_echo_aktiv=True, danke_ohne_konto_aktiv=True).post(
             DANKE, headers={"X-Real-IP": "203.0.113.5"}
         )
 
@@ -271,12 +268,12 @@ class TestDanke:
     ):
         wirkung.danke_sagen.return_value = False
 
-        antwort = _client(danke_knopf_aktiv=True).post(DANKE, headers=KIM)
+        antwort = _client(wirkungs_echo_aktiv=True).post(DANKE, headers=KIM)
 
         assert antwort.json() == {"gezaehlt": False}
 
     def test_rate_limit_429(self, wirkung, art9_einwilligung_ohne_datenbank):
-        client = _client(danke_knopf_aktiv=True)
+        client = _client(wirkungs_echo_aktiv=True)
         limiter = Mock(is_rate_limited=AsyncMock(return_value=True))
         client.app.dependency_overrides[get_nutzung_rate_limiter] = lambda: limiter
 
@@ -288,7 +285,7 @@ class TestDanke:
     ):
         wirkung.danke_sagen.side_effect = RuntimeError("kaputt")
 
-        antwort = _client(danke_knopf_aktiv=True).post(DANKE, headers=KIM)
+        antwort = _client(wirkungs_echo_aktiv=True).post(DANKE, headers=KIM)
 
         assert antwort.status_code == 500
         assert "kim-1" not in caplog.text

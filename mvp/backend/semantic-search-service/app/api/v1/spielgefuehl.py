@@ -44,7 +44,6 @@ from domain.spielgefuehl import (
     Stufe,
     UnbekannterWortlaut,
 )
-from services.schalter_service import schalter_wirksam
 from services.spielgefuehl_service import (
     KeinWiderruf,
     NichtInRangliste,

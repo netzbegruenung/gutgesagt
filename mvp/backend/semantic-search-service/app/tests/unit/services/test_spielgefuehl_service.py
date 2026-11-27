@@ -448,7 +448,9 @@ class TestMusterHinweiseImNeuenModell:
         )
         alt = MagicMock()
         alt.eingewilligt.return_value = True
-        settings = Settings(punkte_aktiv=True, spielgefuehl_buehne_aktiv=True)
+        settings = Settings(
+            spielgefuehl_buehne_aktiv=True,
+        )
         with patch("repositories.punkte_einwilligung_repository._repository", alt):
             assert asyncio.run(_punkte_eingewilligt("kim", settings)) is erwartet
         # Die bisherige Einwilligung zaehlt im neuen Modell nicht.
@@ -464,7 +466,8 @@ class TestMusterHinweiseImNeuenModell:
 
         alt = MagicMock()
         alt.eingewilligt.return_value = True
-        settings = Settings(punkte_aktiv=True, spielgefuehl_buehne_aktiv=False)
+        # Paket Spielgefuehl aus (seit dem Schalter-Umbau gibt es dann auch keine Punkte)
+        settings = Settings()
         with patch("repositories.punkte_einwilligung_repository._repository", alt):
             assert asyncio.run(_punkte_eingewilligt("kim", settings)) is True
         spielgefuehl_ohne_datenbank.lesen.assert_not_called()
@@ -477,7 +480,9 @@ def test_muster_im_neuen_modell_bei_lesefehler_nicht(spielgefuehl_ohne_datenbank
     from core.config import Settings
 
     spielgefuehl_ohne_datenbank.lesen.side_effect = RuntimeError("weg")
-    settings = Settings(punkte_aktiv=True, spielgefuehl_buehne_aktiv=True)
+    settings = Settings(
+        spielgefuehl_buehne_aktiv=True,
+    )
 
     assert asyncio.run(_punkte_eingewilligt("kim", settings)) is False
 

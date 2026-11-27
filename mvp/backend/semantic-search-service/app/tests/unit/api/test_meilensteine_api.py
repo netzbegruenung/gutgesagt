@@ -51,7 +51,9 @@ def dienst():
 def _client(dienst, aktiv: bool) -> TestClient:
     app = FastAPI()
     app.include_router(usage_router, prefix="/api/v1/usage")
-    app.dependency_overrides[get_settings] = lambda: Settings(punkte_aktiv=aktiv)
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        spielgefuehl_buehne_aktiv=aktiv
+    )
     app.dependency_overrides[get_meilensteine_service] = lambda: dienst
     return TestClient(app)
 

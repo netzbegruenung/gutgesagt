@@ -268,7 +268,7 @@ class TestGepostet:
         dienst = Mock()
         dienst.melden.return_value = 3
         monkeypatch.setattr(gepostet_modul, "_service", dienst)
-        app.dependency_overrides[get_settings] = lambda: Settings(gepostet_aktiv=True)
+        app.dependency_overrides[get_settings] = lambda: Settings()
         return dienst
 
     def test_ja_gepostet_zaehlt(self, app, zaehler, gepostet):

@@ -55,7 +55,9 @@ def funktionen(settings: Settings = Depends(get_settings)) -> FunktionenResponse
     gemeldet = {
         name: schalter_wirksam(name, settings) for name in oeffentliche_schalter()
     }
-    gemeldet.update({name: notaus_wirksam(name, settings) for name in NOTAUS_OEFFENTLICH})
+    gemeldet.update(
+        {name: notaus_wirksam(name, settings) for name in NOTAUS_OEFFENTLICH}
+    )
     # Not-Aus und Ende der Startphase am 31.12.2026
     gemeldet["feedback_gestoert"] = gestoert_knopf_an(settings)
     return FunktionenResponse(funktionen=gemeldet)

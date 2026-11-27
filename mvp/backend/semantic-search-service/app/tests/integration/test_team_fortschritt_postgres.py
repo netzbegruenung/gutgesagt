@@ -25,7 +25,7 @@ from tests.integration.test_loeschkommando import _loeschen, datenbank  # noqa: 
 
 pytestmark = pytest.mark.integration
 
-AN = Settings(teams_aktiv=True, team_fortschritt_aktiv=True, team_quests_aktiv=True)
+AN = Settings(teams_aktiv=True, team_quests_aktiv=True)
 AUS = Settings(teams_aktiv=True)
 HEUTE = date(2026, 11, 25)
 LAUFENDE = date(2026, 11, 23)

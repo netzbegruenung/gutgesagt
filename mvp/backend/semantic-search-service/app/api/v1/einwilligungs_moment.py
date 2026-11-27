@@ -24,7 +24,6 @@ from dependencies import get_settings, require_user
 from repositories.einwilligungs_moment_repository import (
     get_einwilligungs_moment_repository,
 )
-from services.schalter_service import schalter_wirksam
 from services.spielgefuehl_service import buehne_aktiv
 
 logger = get_logger(__name__)

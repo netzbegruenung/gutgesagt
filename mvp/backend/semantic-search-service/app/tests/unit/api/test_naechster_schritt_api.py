@@ -79,36 +79,9 @@ def werte():
 def _client(quellen, obergrenze=True) -> TestClient:
     app = FastAPI()
     app.include_router(router, prefix="/api/v1/usage")
-    app.dependency_overrides[get_settings] = lambda: Settings(
-        naechster_schritt_aktiv=obergrenze
-    )
+    app.dependency_overrides[get_settings] = lambda: Settings()
     app.dependency_overrides[get_quellen] = lambda: quellen
     return TestClient(app)
-
-
-def test_schalter_aus_leer_ohne_abfrage(werte):
-    # 200 statt 404: Die Startseite fragt automatisch (Gateway-fail2ban)
-    quellen = FalscheQuellen()
-
-    antwort = _client(quellen).get(URL, headers=ICH)
-
-    assert antwort.status_code == 200
-    assert antwort.json() == {"vorschlaege": [], "aktiv": False}
-    assert quellen.gefragt == []
-
-
-def test_obergrenze_aus_schlaegt_admin_wert(werte):
-    werte["naechster_schritt"] = True
-    quellen = FalscheQuellen()
-
-    antwort = _client(quellen, obergrenze=False).get(URL, headers=ICH)
-
-    assert antwort.json()["aktiv"] is False
-    assert quellen.gefragt == []
-
-
-def test_obergrenze_von_haus_aus_aus():
-    assert Settings().naechster_schritt_aktiv is False
 
 
 def test_nur_fuer_angemeldete(werte):
@@ -166,7 +139,7 @@ def test_regel_3_haengt_nicht_an_der_einwilligung_punkte(werte):
 def test_quellen_lesen_stimmen_ohne_punkte_und_ohne_punkte_einwilligung():
     # Die echten Quellen mit Punkten aus: Die Stimmen kommen trotzdem, und die Klasse der
     # Einwilligung "Punkte und Meilensteine" wird weder angelegt noch gefragt (Jura 25.11.).
-    quellen = Quellen(Mock(), Settings(punkte_aktiv=False), Mock())
+    quellen = Quellen(Mock(), Settings(spielgefuehl_buehne_aktiv=False), Mock())
 
     with patch("api.v1.naechster_schritt.PunkteRepository") as punkte, patch(
         "repositories.punkte_einwilligung_repository.PunkteEinwilligungRepository"

@@ -58,7 +58,6 @@ def _client(an: bool, proben):
     return (
         patch.multiple(
             modul,
-            schalter_wirksam=Mock(return_value=an),
             get_konter_probe_service=Mock(return_value=service),
             get_reference_service=Mock(),
         ),
@@ -74,14 +73,6 @@ def namen(anzeigenamen_ohne_datenbank):
 
 @pytest.mark.unit
 class TestKonterProbeApi:
-    def test_schalter_aus_leer(self):
-        # 200 statt 404: Die Startseite fragt automatisch (Gateway-fail2ban)
-        patcher, client = _client(False, [])
-        with patcher:
-            antwort = client.get(URL)
-        assert antwort.status_code == 200
-        assert antwort.json() == {"proben": [], "aktiv": False}
-
     def test_ohne_passende_aussage_leer(self):
         patcher, client = _client(True, [])
         with patcher:

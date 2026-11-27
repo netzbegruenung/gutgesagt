@@ -30,13 +30,11 @@ from dtos.contribution import ContributionEntry
 from repositories.einwurf_repository import EinwurfRepository, get_einwurf_repository
 from repositories.punkte_repository import PunkteRepository
 from services.naechster_schritt import (
-    SCHALTER,
     Brachflaeche,
     EigenerStand,
     meistgenutzter_ohne_kurzfassung,
     vorschlaege,
 )
-from services.schalter_service import schalter_wirksam
 from services.unbeantwortete_aussagen_service import UnbeantworteteAussagenService
 from services.usage_tracking_service import get_usage_service
 

@@ -39,7 +39,7 @@ DSFA_HINWEIS = (
 # Go des Vorstands und AV-Vertrag seit 27.11.2026 (Schalter-Umbau): Pakete und die
 # Einzelschalter, die danach freigegeben sind, tragen rechtlich_freigegeben. Ihr Hinweis
 # sagt nur noch, welche Schutzgrenze weiter gilt.
-GO_27_11 = "Rechtlich freigegeben (Go des Vorstands 27.11.)"
+GO_27_11 = "Go des Vorstands angenommen (Sebastian, 27.11.)"
 
 # Abschnitte der Admin-Seite "Schalter", in dieser Reihenfolge (Schalter-Umbau 27.11.:
 # vier Pakete, daneben die Einzelschalter). Die Seite zeigt je Gruppe einen Abschnitt.

@@ -41,40 +41,6 @@ def _schalter(werte):
     )
 
 
-class TestSchalter:
-    def test_obergrenze_von_haus_aus_aus(self):
-        art = SCHALTER["gepostet_ohne_konto"]
-        assert art.umgebungsvariable == "SEMANTIC_SEARCH_GEPOSTET_OHNE_KONTO_AKTIV"
-        assert Settings.model_fields[art.feld].default is False
-        with pytest.raises(ObergrenzeAus):
-            _schalter({}).setzen("gepostet_ohne_konto", True, "admin-1", Settings())
-
-    def test_wirkt_nur_mit_gepostet(self):
-        an = Settings(gepostet_aktiv=True, gepostet_ohne_konto_aktiv=True)
-
-        assert (
-            _schalter({"gepostet_ohne_konto": True}).wirksam("gepostet_ohne_konto", an)
-            is False
-        )
-        assert (
-            _schalter({"gepostet_ohne_konto": True, "gepostet": True}).wirksam(
-                "gepostet_ohne_konto", an
-            )
-            is True
-        )
-        assert _schalter({"gepostet": True}).wirksam("gepostet_ohne_konto", an) is False
-
-    def test_einschalt_hinweis_und_oeffentlich(self):
-        stand = {s.name: s for s in _schalter({}).stand(Settings())}
-
-        assert stand["gepostet_ohne_konto"].dsfa_hinweis == (
-            "Jura vorläufig ok 26.11. (interner Test), DSE-Absatz drin (Variante B)"
-        )
-        # Besucher haben keinen eigenen Abruf, der mit 404 antworten koennte, bevor
-        # sie kopieren: das Frontend fragt GET /api/v1/funktionen.
-        assert "gepostet_ohne_konto" in oeffentliche_schalter()
-
-
 class TestWochenzaehler:
     def test_melden_zaehlt_auf_den_montag(self):
         repository = Mock()
@@ -134,7 +100,7 @@ class TestNichtAlsMenschen:
         app = FastAPI()
         app.include_router(metrics_router, prefix="/api/v1/metrics")
         app.dependency_overrides[get_settings] = lambda: Settings(
-            gepostet_aktiv=True, gepostet_ohne_konto_aktiv=True
+            gepostet_ohne_konto_aktiv=True
         )
         app.dependency_overrides[require_admin] = lambda: "admin-1"
         gepostet = Mock()

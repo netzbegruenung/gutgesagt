@@ -52,6 +52,8 @@ def gestoert_knopf_an(einstellungen=None, heute: Optional[date] = None) -> bool:
 
     tag = heute if heute is not None else heute_utc()
     return notaus_wirksam("feedback_gestoert", einstellungen) and gestoert_offen(tag)
+
+
 TEXT_MAX = 2000
 KONTAKT_MAX = 200
 LIMIT_STANDARD = 100

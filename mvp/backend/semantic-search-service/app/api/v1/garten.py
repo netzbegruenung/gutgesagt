@@ -23,8 +23,7 @@ from dependencies import (
 from domain.themen import NACH_SCHLUESSEL
 from repositories.aussage_themen_repository import get_aussage_themen_repository
 from services.content.statement_service import StatementService
-from services.gartenansicht_service import SCHALTER, GartenansichtService
-from services.schalter_service import schalter_wirksam
+from services.gartenansicht_service import GartenansichtService
 from services.unbeantwortete_aussagen_service import UnbeantworteteAussagenService
 
 logger = get_logger(__name__)
