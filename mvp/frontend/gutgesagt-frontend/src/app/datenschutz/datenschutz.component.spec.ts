@@ -1043,7 +1043,7 @@ describe('DatenschutzComponent', () => {
   });
 });
 
-/** Spielgefühl in drei Stufen (Schalter spielgefuehl_buehne): ersetzt die Einwilligungsteile. */
+/** Spielgefühl als eine Frage (Schalter spielgefuehl_buehne): ersetzt die Einwilligungsteile. */
 describe('DatenschutzComponent: Spielgefühl', () => {
   const ALLE = ['spielgefuehl_buehne', 'punkte', 'rangliste'];
   function seiteMit(an: boolean | string[]): HTMLElement {
@@ -1075,7 +1075,8 @@ describe('DatenschutzComponent: Spielgefühl', () => {
     const punkte = abschnittIn(seite, 'Punkte');
 
     expect(seite.querySelector('#spielgefuehl')).not.toBeNull();
-    expect(punkte).toContain('entscheidest du mit einer Frage in drei Stufen');
+    expect(punkte).toContain('Spielgefühl. Beim Spielgefühl wählst du selbst, ob und wie du mitspielst:');
+    expect(punkte).not.toContain('in drei Stufen');
     expect(punkte).toContain('also deinem Anzeigenamen oder einem zufällig vergebenen Ranglistennamen');
     expect(punkte).toContain('Abzeichen zeigen wir nirgends sonst');
     expect(punkte).toContain('Rechtsgrundlage: siehe „Spielgefühl“ oben');
@@ -1093,10 +1094,27 @@ describe('DatenschutzComponent: Spielgefühl', () => {
     expect(punkte).toContain('Paar-Prüfwert');
   });
 
-  // Jura zum Gamification-Gegencheck (26.11.)
+  it('Schalter an: die angebotenen Stufen als Liste, Rangliste nur mit Schalter rangliste', () => {
+    const stufen = (an: string[]) =>
+      Array.from(seiteMit(an).querySelectorAll('[data-testid="dse-spielgefuehl"] li')).map((li) => normalisiert(li.textContent));
+
+    const mit = stufen(ALLE);
+    expect(mit.length).toBe(3);
+    expect(mit[0]).toBe('‚Aus‘: Wir berechnen nichts.');
+    expect(mit[1]).toContain('‚Nur für mich‘: Wir berechnen Punkte und Meilensteine, die nur du siehst');
+    expect(mit[2]).toContain('‚In der Saison-Rangliste mitspielen‘: Zusätzlich stehst du in der Rangliste');
+
+    TestBed.resetTestingModule();
+    const ohne = stufen(['spielgefuehl_buehne', 'punkte']);
+    expect(ohne.length).toBe(2);
+    expect(ohne.join(' ')).not.toContain('In der Saison-Rangliste mitspielen');
+  });
+
+  // Jura zum Gamification-Gegencheck (26.11.), Wortlaut nach der Sammelrunde 27.11.
   const SOCKEL =
-    'Hast du beim Spielgefühl eine Stufe gewählt, speichern wir deine Wahl und den Zeitpunkt. Ausschalten kannst du das ' +
-    'jederzeit in deinen Datenschutz-Einstellungen, auch wenn wir die Funktion gerade nicht anbieten.';
+    'Hast du beim Spielgefühl eine Stufe gewählt, speichern wir deine Wahl, deine Namenswahl, gegebenenfalls deinen ' +
+    'Zufallsnamen, die Fassung des Einwilligungstexts und den Zeitpunkt. Ausschalten kannst du das jederzeit in deinen ' +
+    'Datenschutz-Einstellungen, auch wenn wir die Funktion gerade nicht anbieten.';
 
   it('der Sockelsatz steht immer, auch ohne Schalter', () => {
     for (const namen of [[], ['spielgefuehl_buehne'], ALLE]) {

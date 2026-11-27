@@ -5,19 +5,23 @@
  *
  * Wortlaut von Jura (26.11., vorläufig zum Bauen, endgültig vor dem Go), mit den Sätzen
  * zur Namenswahl aus der Nachsteuerung vom selben Abend und der Ergänzung zum Schutz gegen
- * Absprachen aus der Antwort auf die Fachfragen zu PR #849. Kennung des Fragewortlauts:
+ * Absprachen aus der Antwort auf die Fachfragen zu PR #849; Einleitung und Sockelsatz nach
+ * Jura vom 27.11. (vorläufig). Kennung des Fragewortlauts:
  * spielgefuehl-2026-11-26 (backend domain/spielgefuehl.py).
  */
 export const DSE_SPIELGEFUEHL_TITEL = 'Spielgefühl.';
 
 /**
- * Der Absatz in drei Teilen (Jura zum Gamification-Gegencheck, 26.11.): Der Teil zur Stufe
- * Rangliste steht nur, solange der Schalter `rangliste` an ist, sonst der Satz
- * DSE_SPIELGEFUEHL_OHNE_RANGLISTE. Zusammen ergeben die drei Teile den bisherigen Wortlaut.
+ * Der Absatz als Einleitung und Liste der angebotenen Stufen (Jura zum Gamification-Gegencheck,
+ * 26.11.; Einleitung nach der Sammelrunde 27.11.): Der Listenpunkt zur Stufe Rangliste steht nur,
+ * solange der Schalter `rangliste` wirksam an ist, sonst nach der Liste der Satz
+ * DSE_SPIELGEFUEHL_OHNE_RANGLISTE. Danach DSE_SPIELGEFUEHL_SCHLUSS.
  */
-export const DSE_SPIELGEFUEHL_ANFANG =
-  'Ob wir aus deiner Mitwirkung Punkte und Meilensteine berechnen und ob du in der Rangliste ' +
-  'mitspielst, entscheidest du mit einer Frage in drei Stufen. ‚Aus‘: Wir berechnen nichts. ' +
+export const DSE_SPIELGEFUEHL_EINLEITUNG = 'Beim Spielgefühl wählst du selbst, ob und wie du mitspielst:';
+
+export const DSE_SPIELGEFUEHL_AUS = '‚Aus‘: Wir berechnen nichts.';
+
+export const DSE_SPIELGEFUEHL_NUR_FUER_MICH =
   '‚Nur für mich‘: Wir berechnen Punkte und Meilensteine, die nur du siehst (wie unten ' +
   'beschrieben), und mit deiner Stufe gilt auch der Schutz gegen Absprachen (unten).';
 
@@ -43,10 +47,11 @@ export const DSE_SPIELGEFUEHL_SCHLUSS =
   'zur Löschung deines Kontos.';
 
 /**
- * Steht immer, auch ohne Schalter (Jura 26.11.): Eine gespeicherte Wahl bleibt, wenn wir
+ * Steht immer, auch ohne Schalter (Jura 26.11., Wortlaut nach der Sammelrunde 27.11.): Eine gespeicherte Wahl bleibt, wenn wir
  * die Funktion ausschalten, und lässt sich in den Datenschutz-Einstellungen ausschalten.
  */
 export const DSE_SPIELGEFUEHL_SOCKEL =
-  'Hast du beim Spielgefühl eine Stufe gewählt, speichern wir deine Wahl und den Zeitpunkt. ' +
+  'Hast du beim Spielgefühl eine Stufe gewählt, speichern wir deine Wahl, deine Namenswahl, ' +
+  'gegebenenfalls deinen Zufallsnamen, die Fassung des Einwilligungstexts und den Zeitpunkt. ' +
   'Ausschalten kannst du das jederzeit in deinen Datenschutz-Einstellungen, auch wenn wir die ' +
   'Funktion gerade nicht anbieten.';

@@ -798,14 +798,20 @@
         was gilt, sobald wir sie einschalten. Bis dahin entsteht nichts von dem, was hier
         steht.
       </p>
-      <!-- Spielgefuehl in drei Stufen (Schalter spielgefuehl_buehne, dse-spielgefuehl.ts): ersetzt
+      <!-- Spielgefuehl als eine Frage (Schalter spielgefuehl_buehne, dse-spielgefuehl.ts): ersetzt
            die Einwilligungsteile zu Punkten, Abzeichen und Rangliste; die Rechenregeln bleiben. -->
-      <!-- Jura 26.11.: nur mit spielgefuehl_buehne und punkte (die Frage braucht beide); der Teil
-           zur Rangliste nur mit rangliste. Der Sockelsatz steht immer. -->
-      <p *ngIf="spielgefuehlBuehne() && punkte()" id="spielgefuehl" data-testid="dse-spielgefuehl">
-        <strong>{{ spielgefuehlTitel }}</strong> {{ spielgefuehlAnfang }}
-        {{ rangliste() ? spielgefuehlRangliste : spielgefuehlOhneRangliste }} {{ spielgefuehlSchluss }}
-      </p>
+      <!-- Jura 26.11.: nur mit spielgefuehl_buehne und punkte (die Frage braucht beide); die Stufe
+           Rangliste nur mit rangliste (wirksam laut GET /api/v1/funktionen), sonst der Satz, dass
+           wir sie gerade nicht anbieten. Einleitung als Liste: Jura 27.11. Der Sockelsatz steht immer. -->
+      <div *ngIf="spielgefuehlBuehne() && punkte()" id="spielgefuehl" data-testid="dse-spielgefuehl">
+        <p><strong>{{ spielgefuehlTitel }}</strong> {{ spielgefuehlEinleitung }}</p>
+        <ul>
+          <li>{{ spielgefuehlAus }}</li>
+          <li>{{ spielgefuehlNurFuerMich }}</li>
+          <li *ngIf="rangliste()" data-testid="dse-spielgefuehl-stufe-rangliste">{{ spielgefuehlRangliste }}</li>
+        </ul>
+        <p><ng-container *ngIf="!rangliste()">{{ spielgefuehlOhneRangliste }} </ng-container>{{ spielgefuehlSchluss }}</p>
+      </div>
       <p data-testid="dse-spielgefuehl-sockel">{{ spielgefuehlSockel }}</p>
       <p>
         Mit Punkten zeigen wir dir, wie deine Mitwirkung wirkt: wenige Punkte für deine
@@ -1632,7 +1638,7 @@
     </section>
 
     <div class="update-notice">
-      <p><strong>Stand:</strong> 26. November 2026</p>
+      <p><strong>Stand:</strong> 27. November 2026</p>
     </div>
   </div>
 </div>

@@ -4,7 +4,9 @@ import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { RouterModule } from '@angular/router';
 import {
-  DSE_SPIELGEFUEHL_ANFANG,
+  DSE_SPIELGEFUEHL_AUS,
+  DSE_SPIELGEFUEHL_EINLEITUNG,
+  DSE_SPIELGEFUEHL_NUR_FUER_MICH,
   DSE_SPIELGEFUEHL_OHNE_RANGLISTE,
   DSE_SPIELGEFUEHL_RANGLISTE,
   DSE_SPIELGEFUEHL_SCHLUSS,
@@ -64,12 +66,14 @@ export class DatenschutzComponent {
   /** Merker der Meilensteine im Browser; der Absatz dazu steht erst, wenn er an ist (§ 25 TDDDG). */
   readonly meilensteinMerker = inject(MEILENSTEIN_MERKER);
   /**
-   * Spielgefühl in drei Stufen (Schalter spielgefuehl_buehne): der Absatz „Spielgefühl“
+   * Spielgefühl als eine Frage (Schalter spielgefuehl_buehne): der Absatz „Spielgefühl“
    * ersetzt unter „Punkte“ die Einwilligungsteile zu Punkten, Abzeichen und Rangliste.
    */
   readonly spielgefuehlBuehne = this.funktionen.an('spielgefuehl_buehne');
   readonly spielgefuehlTitel = DSE_SPIELGEFUEHL_TITEL;
-  readonly spielgefuehlAnfang = DSE_SPIELGEFUEHL_ANFANG;
+  readonly spielgefuehlEinleitung = DSE_SPIELGEFUEHL_EINLEITUNG;
+  readonly spielgefuehlAus = DSE_SPIELGEFUEHL_AUS;
+  readonly spielgefuehlNurFuerMich = DSE_SPIELGEFUEHL_NUR_FUER_MICH;
   readonly spielgefuehlRangliste = DSE_SPIELGEFUEHL_RANGLISTE;
   readonly spielgefuehlOhneRangliste = DSE_SPIELGEFUEHL_OHNE_RANGLISTE;
   readonly spielgefuehlSchluss = DSE_SPIELGEFUEHL_SCHLUSS;
