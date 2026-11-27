@@ -4,12 +4,13 @@
 > Verzeichnis der Verantwortliche (Art. 30 Abs. 1); dieser Entwurf leitet es aus Code und Doku
 > ab, damit der Vorstand es übernehmen kann. Aussagen ohne Beleg im Repo stehen als **offen** da.
 
-Stand 12.11.2026, Code `main` @ `c4a95e9c` (letzter Tag `v0.8.3`). Grundlage sind die
+Stand 27.11.2026, Code `main` @ `bdc2093d` (letzter Tag `v0.9.14`). Grundlage sind die
 Datenschutz-Folgenabschätzung ([`docs/DSFA.md`](./DSFA.md), Verarbeitungen V1 bis V22 in
-Abschnitt 8.2), das Löschkonzept ([`docs/LOESCHKONZEPT.md`](./LOESCHKONZEPT.md), `LK`), die
+Abschnitt 8.2) mit dem Nachtrag Spielgefühl
+([`docs/DSFA_NACHTRAG_SPIELGEFUEHL.md`](./DSFA_NACHTRAG_SPIELGEFUEHL.md), V28 bis V31), das
+Löschkonzept ([`docs/LOESCHKONZEPT.md`](./LOESCHKONZEPT.md), `LK`), die
 Art.-9-Einwilligung ([`docs/ART9_EINWILLIGUNG.md`](./ART9_EINWILLIGUNG.md)) und die
-Datenschutzerklärung
-(`mvp/frontend/gutgesagt-frontend/src/app/datenschutz/datenschutz.component.html`, `DSE`).
+Datenschutzerklärung (`mvp/frontend/gutgesagt-frontend/src/app/datenschutz/datenschutz.component.html`, `DSE`).
 Die Datenschutzerklärung zitieren wir mit dem Titel ihres Abschnitts, das Löschkonzept ebenso.
 Begriffe wie in [`GLOSSARY.md`](../GLOSSARY.md).
 
@@ -211,7 +212,8 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   Muster-Hinweise nur für Admins.
 - **Fristen:** LK „Fristen“ (Paar-Prüfwerte, Muster-Hinweise, Abzeichen).
 - **TOM:** DSFA Abschnitt 3, V11, V22. Eigene Einwilligung „Punkte und Meilensteine“ gebaut (#668, `PUNKTE_EINWILLIGUNG_GEBAUT`). Schalter `punkte_aktiv` und `abzeichen_sichtbar_aktiv`,
-  Standard aus; einschalten erst nach Übernahme der DSFA (DSFA Abschnitt 7).
+  Standard aus; einschalten erst nach Übernahme der DSFA (DSFA Abschnitt 7). Mit Schalter
+  `spielgefuehl_buehne` gelten T16 (Punkte, Rangliste) und T18 (Muster-Hinweise).
 
 ### T8 Meldungen, Sperren und Widerspruch
 
@@ -288,7 +290,7 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
 - **Zweck:** der Person zeigen, in welchen Teams sie dabei ist, und die Nummer im Team vergeben
   (GLOSSARY „Team“, „Teamlink“, „Mitgliedschaft“, „Saison“); mit derselben Einwilligung die
   Zahl der Beiträge, Bewertungen und Kommentare und der Meldungen „Ja, gepostet“ in eine Summe
-  des Teams einbeziehen (noch nicht gebaut); später, mit eigener Einwilligung
+  des Teams einbeziehen (gebaut, T17); später, mit eigener Einwilligung
   und eigenem Schalter, die Teams der aktuellen Saison am Anzeigenamen zeigen.
 - **Rechtsgrundlage:** Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a über eine eigene,
   ausdrückliche Einwilligung je Team (Wortlaut `team-2026-11-26`, Knopf „Ja, speichert, dass ich
@@ -305,8 +307,8 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   kann die Mitgliedschaft auf politische Haltung und Ort schließen lassen (Art. 9).
 - **Empfänger:** die Person selbst („Meine Teams“); Admins nur die Zahl der Mitglieder je
   Team, keine Liste, kein Export, keine API; am Namen für andere Angemeldete nur mit Schalter
-  `teams_oeffentlich` und zweiter Einwilligung, Besucher nie; die Summe des Teams (noch nicht
-  gebaut) nur Mitglieder des Teams, nur für abgeschlossene Wochen, erst ab fünf Einwilligenden,
+  `teams_oeffentlich` und zweiter Einwilligung, Besucher nie; die Summe des Teams (gebaut,
+  T17) nur Mitglieder des Teams, nur für abgeschlossene Wochen, erst ab fünf Einwilligenden,
   gerundet und ohne Namen.
 - **Fristen:** LK „Teams“ und „Fristen“: „Team verlassen“ löscht sofort, die Kontolöschung
   alle Mitgliedschaften (LK „Ablauf“, Schritt 2); Sicherungskopien bis zu ihrem Ablauf.
@@ -356,8 +358,132 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   dieselbe Seite binnen 5 Minuten zählt einmal; höchstens 500 Aufrufe je Besucher und Tag;
   Rate-Limit je Anschluss.
 
+### T16 Spielgefühl, Rangliste und Punkte (DSFA V28; gebaut, ausgeschaltet)
+
+- **Zweck:** Mitwirkenden auf Wunsch die Wirkung ihrer Mitwirkung als Punkte zeigen und, wenn sie
+  es wählen, in einer Saison-Rangliste mit anderen Mitspielenden vergleichen.
+- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a über eine eigene,
+  freiwillige Einwilligung, die Frage „Spielgefühl“ (Wortlaut `spielgefuehl-2026-11-28`, eine
+  Fassung mit Quest-Punkten und Zustimmungen, die die Frage immer zeigt;
+  `spielgefuehl-2026-11-26` und `spielgefuehl-2026-11-27` gelten weiter, bis neu gefragt wird).
+  Drei gleichwertige Knöpfe ohne Vorauswahl: „Aus“, „Nur für mich“, „In der
+  Saison-Rangliste mitspielen“. Getrennt von der Art.-9-Einwilligung zum Beitragen (Art. 7
+  Abs. 4). Ersetzt mit Schalter `spielgefuehl_buehne` die Einwilligungen „Punkte und
+  Meilensteine“, Abzeichen am Namen und Rangliste (T7). DSE „Spielgefühl“.
+- **Betroffene:** angemeldete Personen mit Stufe „Nur für mich“ oder „Saison-Rangliste“, ohne
+  Startkonten. In der Rangliste sichtbar nur Personen der Stufe 3.
+- **Daten:** je Antwort eine Zeile mit Kennung, Stufe, Namenswahl (Anzeigename oder
+  Zufallsname), Ranglistenname, Kennung des Wortlauts und Zeitpunkt (`spielgefuehl`, auch
+  „Aus“). Punkte, Plätze und Abzeichen werden nicht gespeichert, sondern bei jedem Abruf
+  berechnet: aus der Nutzung der eigenen Beiträge (`usage_events`), aus Zustimmung anderer,
+  eigenen Beiträgen, Einwürfen und Bewertungen fremder Beiträge (Richtung zählt nicht, höchstens
+  3 je Tag (Standardwert der Konfiguration)) und aus Team-Quests (T17). Die Kombination kann politische Haltung und Aktivität
+  erkennen lassen (Art. 9).
+- **Empfänger:** Punkte nur die Person selbst. Rangliste (Name, Platz, Punkte, Abzeichen) nur
+  angemeldete Mitspielende der Stufe 3, erst ab 10 Teilnehmenden, kein Abruf ohne Anmeldung.
+  Admins nur in der Datenbank.
+- **Fristen:** LK „Fristen“: `spielgefuehl` als Nachweis (Art. 7 Abs. 1), solange das Konto
+  besteht. Nutzungsereignisse 90 Tage als Einzelzeilen. Widerruf („Aus“) nimmt die Person sofort
+  aus Rangliste, Punkten und Abzeichen.
+- **TOM:** DSFA-Nachtrag Spielgefühl, Zeilen V28. Schalter `punkte`, `rangliste`,
+  `spielgefuehl_buehne`, Standard aus. Widerruf jederzeit auch bei ausgeschaltetem Schalter
+  speicherbar, sichtbar auf der Datenschutzseite („Einwilligung widerrufen“) und in „Meine
+  Beiträge“ (#862, #864). Rangliste nur mit Anmeldung (BFF und `require_user`), Mindestzahl 10.
+  Zufallsname wählbar.
+
+### T17 Team-Fortschritt und Team-Quests (DSFA V29; gebaut, ausgeschaltet)
+
+- **Zweck:** Mitgliedern eines Teams zeigen, was das Team in der letzten abgeschlossenen Woche
+  gemeinsam bewirkt hat, und ihnen ein gemeinsames Wochenziel aus dem Bedarf geben.
+- **Rechtsgrundlage:** die Team-Einwilligung aus T13 (Wortlaut `team-2026-11-26`), die die
+  Team-Summe ausdrücklich nennt (Art. 6 Abs. 1 lit. a, Art. 9 Abs. 2 lit. a). Für Quest-Punkte
+  an der Person zusätzlich die Einwilligung aus T16 im Wortlaut `spielgefuehl-2026-11-28`, der
+  die Quest-Punkte nennt (siehe „Offen“).
+- **Betroffene:** Mitglieder von Teams mit Team-Einwilligung, ohne Startkonten.
+- **Daten:** Wochenzähler je Team, Saison und Woche (Zahl der Beiträge einschließlich
+  Kommentaren, Bewertungen und Meldungen „Ja, gepostet“, `team_wochen`). Je Team und Woche eine
+  Quest mit Thema und Ziel (`team_quests`). Beides ohne Kennung, Beitrag und Zeitpunkt. Entdoppelt wird über
+  einen Wochen-Prüfwert nur im Arbeitsspeicher, der Schlüssel entsteht jede Woche neu.
+  Quest-Punkte werden beim Abruf berechnet und nicht gespeichert.
+- **Empfänger:** nur Mitglieder des Teams, nur die letzte abgeschlossene Woche, erst ab 5
+  Mitgliedern mit Einwilligung, gerundet, ohne Namen. Admins keine Liste. Bekannte
+  Restinformation: „geschafft“ und das Ziel verraten grob die Zahl der Mitglieder mit
+  Einwilligung.
+- **Fristen:** LK „Fristen“: `team_wochen` und `team_quests` ohne Personenbezug, unbefristet,
+  gehen mit dem Team (eine Team-Löschung gibt es noch nicht). Prüfwerte verfallen mit dem
+  Wochenwechsel. „Team verlassen“ und die Kontolöschung lassen die Zähler stehen; das geht, weil
+  sie keiner Person zugeordnet sind.
+- **TOM:** DSFA-Nachtrag „Teams“ und Spielgefühl V23/V29. Schalter `team_fortschritt` (nur mit
+  `teams`) und `team_quests` (nur mit `team_fortschritt`), Standard aus. Schwelle 5, Rundung,
+  keine laufende Woche (gegen Rückschluss aus der Differenz zweier Stände).
+
+### T18 Muster-Hinweise gegen Absprachen, auch aus Zustimmungen (DSFA V30; gebaut, ausgeschaltet)
+
+- **Zweck:** Punkte und Rangliste vor Zweitkonten und Absprachen schützen. Admins einen Hinweis
+  geben, wenn sich zwei Konten auffällig oft gegenseitig nutzen oder einander zustimmen;
+  Letzteres nur mit Schalter `muster_stimmen`.
+- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a über den Absatz zu
+  Absprachen in der Einwilligung „Spielgefühl“ ab „Nur für mich“ (T16). Für Zustimmungen der
+  Wortlaut `spielgefuehl-2026-11-27` oder `spielgefuehl-2026-11-28` plus die
+  Art.-9-Einwilligung, beide bei beiden Konten. Ohne `spielgefuehl_buehne` gilt weiter T7.
+- **Betroffene:** Paare angemeldeter Konten, die beide aktuell eingewilligt haben.
+- **Daten:** Paar-Prüfwerte (HMAC, keinem Konto zuordenbar, Schlüssel nur im Arbeitsspeicher,
+  `muster_pruefwerte`). Muster-Hinweise mit den Kennungen beider Konten, Art (Nutzung oder
+  Zustimmung), erstem und letztem Tag und der Zahl der Tage mit gegenseitiger Nutzung bzw.
+  Zustimmung (`muster_hinweise`). Ablehnungen zählen nicht.
+- **Empfänger:** nur Admins; das Admin-Dashboard zeigt Anzeigename und Kennung beider Konten und
+  prüft beim Zeigen erneut die Einwilligungen. Ein Mensch entscheidet; keine Wirkung auf Punkte
+  oder Rangliste, keine automatische Sperre (Art. 22 greift nicht).
+- **Fristen:** LK „Fristen“: Paar-Prüfwerte 7 Tage, Hinweise höchstens 56 Tage nach dem letzten
+  Tag. Sofort gelöscht: alle Hinweise, die eine Person nennen, wenn sie „Aus“ wählt; die Hinweise
+  aus Zustimmungen, wenn sie die Art.-9-Einwilligung widerruft oder auf einen Wortlaut ohne
+  Zustimmungen zurückgeht. Im Übrigen spätestens im nächsten täglichen Lauf, sobald nicht mehr
+  beide Konten wirksam eingewilligt haben.
+- **TOM:** DSFA-Nachtrag V30, DSFA V11. Admins prüfen jeden Hinweis selbst und halten fest, wie
+  sie geprüft haben (sonst kann trotz menschlicher Entscheidung Art. 22 greifen, EuGH
+  C-634/21). Hinweise gehören zur Auskunft nach Art. 15; sie wird von Hand erteilt. Schalter
+  `muster_stimmen`
+  (Obergrenze aus, wirkt nur mit `spielgefuehl_buehne`); Einwilligung beim Erzeugen und beim
+  Zeigen geprüft; täglicher Löschlauf unabhängig vom abschaltbaren Bereinigungsjob.
+
+### T19 Wirkungs-Echo und Danke (DSFA V31; gebaut, ausgeschaltet)
+
+- **Zweck:** Schreibenden zeigen, dass ihre Beiträge anderen helfen: wie oft sie öffentlich
+  gepostet wurden und wie oft sich jemand bedankt hat.
+- **Rechtsgrundlage:** getrennt nach Seite. Das Danke selbst samt Tages-Prüfwert: Art. 9 Abs. 2
+  lit. a über die Art.-9-Einwilligung (403 ohne sie), weil ein Danke Zustimmung zu einem
+  politischen Inhalt zeigt; offen ist, ob „Mitwirkung“ im Wortlaut `2026-11-13` das Danke trägt,
+  obwohl die Aufzählung nur „Beiträge, Einwürfe, Sätze und Bewertungen“ nennt. Die Anzeige der
+  Summen ohne Personenbezug an die Schreibenden und deren eigener Zählerstand: Art. 6 Abs. 1
+  lit. f (DSE „Rückmeldung zur Nutzung deiner Beiträge“). Danke ohne Konto bleibt aus
+  (`danke_ohne_konto`), deshalb hier kein § 25 TDDDG.
+- **Betroffene:** Schreibende (Empfang der Summen); angemeldete Dankende mit
+  Art.-9-Einwilligung; Personen, die „Ja, gepostet“ melden (T6).
+- **Daten:** je Beitrag zwei Summen ohne Kennung und Zeitpunkt (`wirkung_je_beitrag`). Für das
+  Danke ein Tages-Prüfwert in `nutzung_heute`, gelöscht mit dem Tageswechsel; beim Echo nur im
+  Arbeitsspeicher. Je Konto ein Zählerstand „Echo beim letzten Besuch“ (`gesehene_nutzung`,
+  Spalte `echo`).
+- **Empfänger:** die schreibende Person sieht nur Summen, nie, wer gedankt oder gepostet hat.
+  Admins nur in der Datenbank.
+- **Fristen:** LK „Fristen“: Summen ohne Frist, ohne Personenbezug; Tages-Prüfwerte bis zum
+  Tageswechsel; `gesehene_nutzung` geht mit dem Konto.
+- **TOM:** DSFA-Nachtrag V31. Schalter `wirkungs_echo` und `danke_knopf`, nur zusammen, Standard
+  aus. Höchstens ein Danke je Person, Beitrag und Tag; eigene Beiträge und Startkonten zählen
+  nicht; Rate-Limit; keine Punkte für Danke.
+
 ## Offen
 
 Gesammelt in DSFA 8.6: AV-Vertrag (F1), SMTP-Server (F2), Verschlüsselung der Sicherungen (F3),
 Rollen und Zugriff (F4), Schlüssel des Tagespseudonyms (F5), Frist der Protokolle (F6). Dazu
 die Lücken aus DSFA 8.5: Anzeigename vor der Einwilligung (T1), Widerruf ohne volle Folgen (T2, nach #658 nur Stimmen gelöscht).
+
+Aus dem DSFA-Nachtrag Spielgefühl (T16 bis T19):
+
+- Mindestalter 16 für Spielgefühl ab Stufe 2 (Art. 8), falls Mitglieder unter 16 die App
+  nutzen.
+- Rechtsgrundlage für Quest-Punkte: Wortlaut `spielgefuehl-2026-11-28` (T16).
+- Danke (T19): im Art.-9-Wortlaut nicht ausdrücklich genannt. Mindestens die DSE ergänzen, dass
+  das Danke auf der Einwilligung nach Art. 9 beruht; bei der nächsten Änderung des
+  Art.-9-Wortlauts „Danke“ aufnehmen.
+- DSE „Teams“: Satz ergänzen, dass Zahlen, die schon in die Team-Summe eingegangen sind, nach
+  „Team verlassen“ als Zahl ohne Namen bleiben (Art. 7 Abs. 3, Art. 13 Abs. 2).
