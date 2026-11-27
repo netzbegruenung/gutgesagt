@@ -12,12 +12,13 @@ import { Widerrufbar, WiderrufbarComponent } from './widerrufbar.component';
 
 const BASIS = `${environment.baseUrl}/api/v1`;
 const URL = `${BASIS}/usage/users/me/widerrufbar`;
-const NICHTS: Widerrufbar = { spielgefuehl: null, punkte: null, rangliste: null, abzeichen: null };
+const NICHTS: Widerrufbar = { spielgefuehl: null, punkte: null, rangliste: null, abzeichen: null, team_oeffentlich: null };
 const ALLES: Widerrufbar = {
   spielgefuehl: { stufe: 'rangliste', titel: 'In der Saison-Rangliste mitspielen', wortlaut: 'spielgefuehl-2026-11-26' },
   punkte: { wortlaut: '2026-11-13' },
   rangliste: { wortlaut: 'rangliste-2026-11-25' },
   abzeichen: { wortlaut: '2026-11-09-b' },
+  team_oeffentlich: { wortlaut: 'team-oeffentlich-2026-11-25' },
 };
 
 /** Widerruf jederzeit, auch bei ausgeschalteten Schaltern (Art. 7 Abs. 3 DSGVO). */
@@ -76,8 +77,11 @@ describe('WiderrufbarComponent', () => {
     expect(zeile('punkte')?.textContent).toContain('Punkte und Meilensteine: an');
     expect(zeile('rangliste')?.textContent).toContain('Rangliste: dabei');
     expect(zeile('abzeichen')?.textContent).toContain('Abzeichen am Namen: sichtbar');
+    expect(zeile('team_oeffentlich')?.textContent).toContain('Teams am Namen: sichtbar');
+    // Jura 27.11.: neutral, weil darunter auch die Teams stehen
+    expect(el().querySelector('[id^="widerrufbar-titel"]')?.textContent?.trim()).toBe('Einwilligungen ausschalten');
     const knoepfe = Array.from(el().querySelectorAll('button')).map((b) => b.textContent?.trim());
-    expect(knoepfe).toEqual(['Ausschalten', 'Ausschalten', 'Ausschalten', 'Ausschalten']);
+    expect(knoepfe).toEqual(['Ausschalten', 'Ausschalten', 'Ausschalten', 'Ausschalten', 'Ausschalten']);
   });
 
   it('lässt die Punkte-Zeile weg, solange das Häkchen den Widerruf anbietet', () => {
@@ -95,6 +99,8 @@ describe('WiderrufbarComponent', () => {
     ['punkte', `${BASIS}/usage/users/me/punkte-einwilligung`, { eingewilligt: false, wortlaut: '2026-11-13' }],
     ['rangliste', `${BASIS}/rangliste/einwilligung`, { teilnehmen: false, mit_anzeigename: false, wortlaut: 'rangliste-2026-11-25' }],
     ['abzeichen', `${BASIS}/usage/users/me/abzeichen-sichtbarkeit`, { zeigen: false, wortlaut: '2026-11-09-b' }],
+    // Auch bei Schalter teams_oeffentlich aus: der Server nimmt ein Nein immer an.
+    ['team_oeffentlich', `${BASIS}/teams/oeffentlich`, { zeigen: false, wortlaut: 'team-oeffentlich-2026-11-25' }],
   ];
 
   for (const [art, url, body] of FAELLE) {
@@ -215,7 +221,7 @@ describe('WiderrufbarComponent', () => {
     it('nimmt die Ebene der Überschrift von der Seite', () => {
       starten(ALLES, { ebene: 4 });
 
-      expect(el().querySelector('h4[id^="widerrufbar-titel"]')?.textContent).toContain('Spielgefühl und Punkte ausschalten');
+      expect(el().querySelector('h4[id^="widerrufbar-titel"]')?.textContent).toContain('Einwilligungen ausschalten');
       expect(el().querySelector('h3')).toBeNull();
     });
 
@@ -346,7 +352,7 @@ describe('WiderrufbarComponent', () => {
       const abschnitt = el().querySelector('[data-testid="widerrufbar"]') as HTMLElement;
       const id = abschnitt.getAttribute('aria-labelledby') as string;
       expect(id).toMatch(/^widerrufbar-titel-\d+$/);
-      expect(el().querySelector(`#${id}`)?.textContent).toContain('Spielgefühl und Punkte ausschalten');
+      expect(el().querySelector(`#${id}`)?.textContent).toContain('Einwilligungen ausschalten');
     });
 
     it('frischt nach dem Ausschalten von Spielgefühl oder Punkten die Spielgefühl-Karte auf', () => {
@@ -377,5 +383,13 @@ describe('WiderrufbarComponent', () => {
       el().remove();
       fixture.destroy();
     }));
+  });
+
+  it('kommt mit einem älteren Backend ohne team_oeffentlich zurecht', () => {
+    const { team_oeffentlich: _weg, ...ohne } = ALLES;
+    starten(ohne);
+
+    expect(zeile('team_oeffentlich')).toBeNull();
+    expect(zeile('abzeichen')).not.toBeNull();
   });
 });

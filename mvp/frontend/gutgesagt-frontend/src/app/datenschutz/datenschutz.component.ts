@@ -1,11 +1,14 @@
 import { Component, DestroyRef, Injector, afterNextRender, computed, effect, inject, signal } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { of } from 'rxjs';
+import { catchError, map, switchMap, take } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
+import { dseMusterStimmen } from './dse-muster-stimmen';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { ActivatedRoute, RouterModule } from '@angular/router';
-import { take } from 'rxjs/operators';
 import {
   DSE_SPIELGEFUEHL_AUS,
   DSE_SPIELGEFUEHL_EINLEITUNG,
@@ -180,6 +183,28 @@ export class DatenschutzComponent {
    */
   /** Punkte: der Vorbehalt „noch nicht eingeschaltet“ entfällt, die Muster-Hinweise gelten. */
   readonly punkte = this.funktionen.an('punkte');
+  /**
+   * Zustimmungen in den Muster-Hinweisen (Schalter muster_stimmen): ein Satz unter
+   * „Muster-Hinweise“ mit dem Einschalttag, den die Seite erst fragt, wenn der Schalter an ist.
+   */
+  readonly musterStimmen = this.funktionen.an('muster_stimmen');
+  private readonly http = inject(HttpClient, { optional: true });
+  private readonly musterStimmenSeit = toSignal(
+    toObservable(this.musterStimmen).pipe(
+      switchMap((an) =>
+        an && this.http
+          ? this.http
+              .get<{ seit: string | null }>(`${environment.baseUrl}/api/v1/funktionen/muster_stimmen/seit`)
+              .pipe(
+                map((antwort) => antwort?.seit ?? null),
+                catchError(() => of(null)),
+              )
+          : of(null),
+      ),
+    ),
+    { initialValue: null },
+  );
+  readonly musterStimmenSatz = computed(() => dseMusterStimmen(this.musterStimmenSeit()));
   /** Rangliste (#793): Absatz statt des Hinweises „noch nicht eingeschaltet“. */
   readonly rangliste = this.funktionen.an('rangliste');
   /** Team-Summe (#784): der Satz „noch nicht eingeschaltet“ entfällt. */

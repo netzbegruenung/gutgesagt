@@ -32,9 +32,11 @@ export interface Widerrufbar {
   punkte: { wortlaut: string } | null;
   rangliste: { wortlaut: string } | null;
   abzeichen: { wortlaut: string } | null;
+  /** „Team öffentlich am Namen zeigen“; fehlt bei einem älteren Backend. */
+  team_oeffentlich?: { wortlaut: string } | null;
 }
 
-export type WiderrufArt = 'spielgefuehl' | 'punkte' | 'rangliste' | 'abzeichen';
+export type WiderrufArt = 'spielgefuehl' | 'punkte' | 'rangliste' | 'abzeichen' | 'team_oeffentlich';
 
 export interface WiderrufZeile {
   art: WiderrufArt;
@@ -49,7 +51,8 @@ let naechsteNummer = 0;
 
 /**
  * Widerruf jederzeit, auch wenn die Schalter aus sind (Art. 7 Abs. 3 DSGVO): je
- * gespeicherter Einwilligung zu Spielgefühl, Punkten, Rangliste und Abzeichen am Namen,
+ * gespeicherter Einwilligung zu Spielgefühl, Punkten, Rangliste, Abzeichen am Namen und
+ * Teams am Namen („Team öffentlich am Namen zeigen“, auch bei Schalter teams_oeffentlich aus),
  * die nicht „aus“ ist, eine Zeile „… · Ausschalten“. Sie zeigt kein Ja und fragt nach
  * nichts; Einwilligen geht nur dort, wo die Frage steht. Die Punkte-Zeile fehlt, solange
  * das Häkchen „Punkte und Meilensteine“ darunter selbst den Widerruf anbietet.
@@ -180,7 +183,7 @@ export class WiderrufbarComponent implements OnInit {
   /** Wie viele Zeilen „Ausschalten“ gerade stehen (bei jeder Änderung), etwa für Sätze der Seite drumherum. */
   @Output() readonly zeilenZahl = new EventEmitter<number>();
 
-  readonly titel = 'Spielgefühl und Punkte ausschalten';
+  readonly titel = 'Einwilligungen ausschalten';
   readonly titelId = `widerrufbar-titel-${++naechsteNummer}`;
   readonly sitzungAbgelaufenText = SITZUNG_ABGELAUFEN;
   /** 401/403: Die Abfragen haben aufgehört; statt der Knöpfe der Link zum Anmelden. */
@@ -308,6 +311,9 @@ export class WiderrufbarComponent implements OnInit {
     if (s?.abzeichen) {
       zeilen.push({ art: 'abzeichen', text: 'Abzeichen am Namen: sichtbar' });
     }
+    if (s?.team_oeffentlich) {
+      zeilen.push({ art: 'team_oeffentlich', text: 'Teams am Namen: sichtbar' });
+    }
     const vorher = this.zeilen.length;
     this.zeilen = zeilen;
     // Erst mit einem Stand vom Server (oder nach 401): vorher hört noch niemand zu, und 0 hieße nichts.
@@ -376,6 +382,13 @@ export class WiderrufbarComponent implements OnInit {
               teilnehmen: false,
               mit_anzeigename: false,
               wortlaut: s.rangliste.wortlaut,
+            })
+          : null;
+      case 'team_oeffentlich':
+        return s?.team_oeffentlich
+          ? this.http.put(`${BASIS}/teams/oeffentlich`, {
+              zeigen: false,
+              wortlaut: s.team_oeffentlich.wortlaut,
             })
           : null;
       case 'abzeichen':

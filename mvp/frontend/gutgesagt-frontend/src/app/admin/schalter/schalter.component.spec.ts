@@ -341,6 +341,19 @@ describe('SchalterComponent', () => {
       expect(kopplung(buehne)).toBe('Wirkt nur zusammen mit: Punkte.');
     });
 
+    it('Muster-Hinweise aus Zustimmungen: Name und Kette Punkte → Spielgefühl', () => {
+      laden([
+        schalter({ name: 'punkte', admin_wert: true, wirksam: true }),
+        schalter({ name: 'spielgefuehl_buehne', admin_wert: false, wirksam: false }),
+        schalter({ name: 'muster_stimmen', admin_wert: true, wirksam: false }),
+      ]);
+
+      const stimmen = karten()[2];
+      expect(stimmen.querySelector('h4')!.textContent).toBe('Muster-Hinweise aus Zustimmungen');
+      expect(zustand(stimmen)).toBe('Admin: an · wirksam: aus, weil Spielgefühl als eine Frage aus');
+      expect(kopplung(stimmen)).toBe('Wirkt nur zusammen mit: Punkte, Spielgefühl als eine Frage.');
+    });
+
     it('Abzeichen am Namen: wirkt nicht, solange das Spielgefühl an ist', () => {
       laden([
         schalter({ name: 'punkte', admin_wert: true, wirksam: true }),

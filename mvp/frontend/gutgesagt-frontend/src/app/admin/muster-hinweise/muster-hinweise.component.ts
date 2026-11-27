@@ -8,7 +8,8 @@ import { MetricsService } from '../../services/metrics.service';
 import { MusterHinweis, MusterHinweiseResponse } from '../../services/dtos/metricsDtos';
 
 /**
- * Muster-Hinweise (#352): Kontenpaare, die sich innerhalb von sieben Tagen gegenseitig genutzt haben.
+ * Muster-Hinweise (#352): Kontenpaare, die sich innerhalb von sieben Tagen gegenseitig genutzt
+ * oder (Schalter muster_stimmen) einander zugestimmt haben; je Art eine Zeile.
  * Nur ein Hinweis für Admins; keine Automatik zieht Punkte ab (ADR 0004).
  */
 @Component({
@@ -50,6 +51,11 @@ export class MusterHinweiseComponent implements OnInit {
   /** Anzeigename mit Kennung; Admins sehen die Kennung (Glossar „Kennung“). */
   konto(kennung: string, name: string | null): string {
     return name ? `${name} (${kennung})` : kennung;
+  }
+
+  /** Woran das Muster auffiel; ältere Dienste ohne Feld meinen Nutzung. */
+  art(h: MusterHinweis): string {
+    return h.art === 'zustimmung' ? 'Zustimmung' : 'Nutzung';
   }
 
   zeitraum(h: MusterHinweis): string {

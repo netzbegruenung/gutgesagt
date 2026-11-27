@@ -895,6 +895,8 @@
         Widerrufst du, löschen wir sofort auch bestehende Muster-Hinweise, an denen du beteiligt bist.
         Die Prüfwerte, mit denen wir Muster erkennen, lassen sich keinem Konto zuordnen und verfallen nach sieben Tagen; nach deinem Widerruf werten wir sie für dich nicht mehr aus.
       </p>
+      <!-- Zustimmungen in den Muster-Hinweisen, nur mit Schalter muster_stimmen (dse-muster-stimmen.ts) -->
+      <p *ngIf="musterStimmen()" data-testid="dse-muster-stimmen">{{ musterStimmenSatz() }}</p>
       <p>
         <strong>Zweck:</strong> dir die Wirkung deiner Mitwirkung zeigen und die Punkte gegen
         Absprachen schützen.<br>

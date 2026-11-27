@@ -44,7 +44,9 @@ export interface MusterHinweis {
     name_a: string | null;
     konto_b: string;
     name_b: string | null;
-    /** Tage mit gegenseitiger Nutzung. */
+    /** Woran das Muster auffiel: gegenseitig genutzt oder einander zugestimmt (muster_stimmen). */
+    art?: 'nutzung' | 'zustimmung';
+    /** Tage mit gegenseitiger Nutzung bzw. Zustimmung. */
     tage: number;
     erster_tag: string;
     letzter_tag: string;

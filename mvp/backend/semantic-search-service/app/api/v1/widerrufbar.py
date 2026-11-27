@@ -5,7 +5,8 @@ Zeilen "… · Ausschalten" auf der Seite Datenschutz-Einstellungen (frontend
 einwilligung/widerrufbar.component.ts), auch wenn die Schalter aus sind und die
 Fragen selbst nicht erscheinen.
 
-- ``GET /users/me/widerrufbar``: je gespeicherter Antwort, die kein Nein bzw. ``aus``
+- ``GET /users/me/widerrufbar``: je gespeicherter Antwort (Spielgefuehl, Punkte, Rangliste,
+  Abzeichen am Namen, Team oeffentlich am Namen), die kein Nein bzw. ``aus``
   ist, ihr Wortlaut (zum Mitschicken beim Widerruf; ein unbekannter wird durch den
   aktuellen ersetzt); sonst null. Immer 200, auch bei
   ausgeschalteten Schaltern (die Seite fragt beim Oeffnen, ein 404 zaehlte fuer den
@@ -28,6 +29,7 @@ from core.logging import get_logger, log_pseudonym
 from dependencies import require_user
 from domain import abzeichen_sichtbarkeit, punkte_einwilligung, rangliste
 from domain.spielgefuehl import AKTUELLER_WORTLAUT, WORTLAUTE, Stufe
+from domain.teams import OEFFENTLICH_KENNUNG, OEFFENTLICH_WORTLAUTE
 
 logger = get_logger(__name__)
 
@@ -68,6 +70,9 @@ class WiderrufbarResponse(BaseModel):
     punkte: Optional[GespeichertesJa] = None
     rangliste: Optional[GespeichertesJa] = None
     abzeichen: Optional[GespeichertesJa] = None
+    # "Team oeffentlich am Namen zeigen": null ohne Antwort oder nach dem Zuruecknehmen;
+    # zurueckgenommen wird ueber PUT /api/v1/teams/oeffentlich, auch ohne Schalter
+    team_oeffentlich: Optional[GespeichertesJa] = None
 
 
 def _lesen(user_id: str) -> WiderrufbarResponse:
@@ -81,11 +86,13 @@ def _lesen(user_id: str) -> WiderrufbarResponse:
         get_rangliste_einwilligung_repository,
     )
     from repositories.spielgefuehl_repository import get_spielgefuehl_repository
+    from repositories.team_repository import get_team_repository
 
     spielgefuehl = get_spielgefuehl_repository().lesen(user_id)
     punkte = get_punkte_einwilligung_repository().lesen(user_id)
     rangliste_antwort = get_rangliste_einwilligung_repository().lesen(user_id)
     abzeichen = get_abzeichen_sichtbarkeit_repository().lesen(user_id)
+    team = get_team_repository().oeffentlich_lesen(user_id)
     return WiderrufbarResponse(
         spielgefuehl=(
             GespeicherteStufe(
@@ -129,6 +136,17 @@ def _lesen(user_id: str) -> WiderrufbarResponse:
                 )
             )
             if abzeichen is not None and abzeichen.zeigen
+            else None
+        ),
+        team_oeffentlich=(
+            GespeichertesJa(
+                wortlaut=_bekannt(
+                    team.einwilligung_kennung,
+                    OEFFENTLICH_WORTLAUTE,
+                    OEFFENTLICH_KENNUNG,
+                )
+            )
+            if team is not None and team.zeigen
             else None
         ),
     )

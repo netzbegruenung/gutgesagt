@@ -13,6 +13,7 @@ import { SUCHANFRAGEN_ABSCHNITT } from '../search/search.component';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
 import { FEIER_TON_SCHLUESSEL } from '../shared/feier/feier-ton.service';
 import { FunktionenService } from '../services/funktionen.service';
+import { dseDatum, dseMusterStimmen } from './dse-muster-stimmen';
 
 /** Der Satz zu Widerrufen vor dem Einspielen: mit Platzhalter oder mit Datum („1. Dezember 2026“). */
 const WIDERRUF_VOR_DEM_EINSPIELEN = new RegExp(
@@ -1730,5 +1731,68 @@ describe('DatenschutzComponent: Anker hinter einem Schalter', () => {
     await fixture.whenStable();
 
     expect(stand$).not.toHaveBeenCalled();
+  });
+});
+
+/** Zustimmungen in den Muster-Hinweisen (Schalter muster_stimmen, Wortlaut Jura 27.11.). */
+describe('DatenschutzComponent: Zustimmungen in den Muster-Hinweisen', () => {
+  const SEIT = `${environment.baseUrl}/api/v1/funktionen/muster_stimmen/seit`;
+  let http: HttpTestingController | undefined;
+
+  beforeEach(() => (http = undefined));
+
+  function seiteMit(an: boolean) {
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: FunktionenService, useValue: { an: (name: string) => signal(an && name === 'muster_stimmen') } },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  const satz = (f: { nativeElement: HTMLElement }) =>
+    f.nativeElement.querySelector('[data-testid="dse-muster-stimmen"]')?.textContent?.trim() ?? null;
+
+  afterEach(() => http?.verify());
+
+  it('Schalter aus: kein Satz und keine Abfrage', () => {
+    const fixture = seiteMit(false);
+
+    expect(satz(fixture)).toBeNull();
+    http!.expectNone(SEIT);
+  });
+
+  it('Schalter an: der Satz von Jura mit dem Tag des Einschaltens', () => {
+    const fixture = seiteMit(true);
+    http!.expectOne(SEIT).flush({ seit: '2026-11-28' });
+    fixture.detectChanges();
+
+    expect(satz(fixture)).toBe(
+      'Seit dem 28. November 2026 fließt auch ein, wessen Beiträgen du zustimmst, wenn du dafür ' +
+        'eingewilligt hast. Die Hinweise bleiben höchstens 56 Tage und werden gelöscht, sobald einer ' +
+        'von euch widerruft.',
+    );
+  });
+
+  it('ohne lesbaren Tag: „Seit dem Einschalten“', () => {
+    const fixture = seiteMit(true);
+    http!.expectOne(SEIT).flush('weg', { status: 500, statusText: 'Fehler' });
+    fixture.detectChanges();
+
+    expect(satz(fixture)).toMatch(/^Seit dem Einschalten fließt auch ein, wessen Beiträgen du zustimmst/);
+  });
+
+  it('Datum: nur echte Tage', () => {
+    expect(dseDatum('2026-01-05')).toBe('5. Januar 2026');
+    expect(dseDatum('2026-13-01')).toBeNull();
+    expect(dseDatum(null)).toBeNull();
+    expect(dseMusterStimmen('kein Datum')).toContain('Seit dem Einschalten');
   });
 });

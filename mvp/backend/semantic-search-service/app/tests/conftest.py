@@ -252,6 +252,7 @@ def spielgefuehl_ohne_datenbank(monkeypatch):
     repository.lesen.return_value = None
     repository.teilnehmende.return_value = {}
     repository.wirksame_stufen.return_value = {}
+    repository.stimmen_eingewilligte.return_value = set()
     repository.vergebene_namen.return_value = set()
     monkeypatch.setattr(modul, "_repository", repository)
     spielgefuehl_service_setzen(None)
@@ -350,6 +351,8 @@ def art9_einwilligung_ohne_datenbank(monkeypatch):
         widerrufen_am=None,
     )
     repository.ohne_lesen.return_value = None
+    # Wie lesen: alle eingewilligt (eine Abfrage fuer viele Kennungen)
+    repository.zaehlende.side_effect = lambda kennungen: set(kennungen)
     monkeypatch.setattr(modul, "_service", modul.Art9EinwilligungService(repository))
     yield repository
 
