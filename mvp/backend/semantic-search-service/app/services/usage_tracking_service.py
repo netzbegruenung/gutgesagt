@@ -56,6 +56,7 @@ class UsageTrackingService:
         fassung: Optional[str] = None,
         pruefwert: Optional[str] = None,
         tag: Optional[date] = None,
+        deckel: Optional[List[str]] = None,
     ) -> bool:
         """
         Track that a content item was used (copied).
@@ -67,6 +68,7 @@ class UsageTrackingService:
             pruefwert: Pruefwert fuer die Entdoppelung (services/entdoppelung.py,
                 #352); None, wenn niemand zu erkennen ist
             tag: Der UTC-Tag, fuer den der Pruefwert gilt; Standard heute
+            deckel: Plaetze des Tagesdeckels ohne Anmeldung (Befund 9), sonst None
 
         Returns:
             bool: True if tracking was successful
@@ -88,6 +90,7 @@ class UsageTrackingService:
                 fassung=fassung,
                 pruefwert=pruefwert,
                 tag=tag,
+                deckel=deckel,
             )
             logger.info(
                 f"Service: Repository returned {result} for content {content_id}"

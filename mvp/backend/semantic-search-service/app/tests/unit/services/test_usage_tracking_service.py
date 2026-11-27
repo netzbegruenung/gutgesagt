@@ -76,6 +76,9 @@ class TestUsageTrackingService:
             "pruefwert",
             # Nur der UTC-Tag des Pruefwerts, keine Uhrzeit.
             "tag",
+            # Plaetze des Tagesdeckels ohne Anmeldung (Befund 9): nur aus Beitrag,
+            # Tag und Platznummer, ohne Merkmal der Besuchenden.
+            "deckel",
         }
 
     def test_track_content_usage_invalid_uuid(self, service, mock_repository):

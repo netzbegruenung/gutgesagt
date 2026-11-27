@@ -800,14 +800,22 @@
       </p>
       <!-- Spielgefuehl in drei Stufen (Schalter spielgefuehl_buehne, dse-spielgefuehl.ts): ersetzt
            die Einwilligungsteile zu Punkten, Abzeichen und Rangliste; die Rechenregeln bleiben. -->
-      <p *ngIf="spielgefuehlBuehne()" id="spielgefuehl" data-testid="dse-spielgefuehl">
-        <strong>{{ spielgefuehlTitel }}</strong> {{ spielgefuehlText }}
+      <!-- Jura 26.11.: nur mit spielgefuehl_buehne und punkte (die Frage braucht beide); der Teil
+           zur Rangliste nur mit rangliste. Der Sockelsatz steht immer. -->
+      <p *ngIf="spielgefuehlBuehne() && punkte()" id="spielgefuehl" data-testid="dse-spielgefuehl">
+        <strong>{{ spielgefuehlTitel }}</strong> {{ spielgefuehlAnfang }}
+        {{ rangliste() ? spielgefuehlRangliste : spielgefuehlOhneRangliste }} {{ spielgefuehlSchluss }}
       </p>
+      <p data-testid="dse-spielgefuehl-sockel">{{ spielgefuehlSockel }}</p>
       <p>
         Mit Punkten zeigen wir dir, wie deine Mitwirkung wirkt: wenige Punkte für deine
-        Beiträge und ausformulierten Einwürfe, die meisten dafür, dass andere deine Beiträge
+        Beiträge und ausformulierten Einwürfe und einen kleinen Punkt je Bewertung eines
+        fremden Beitrags, höchstens drei am Tag; die Richtung der Bewertung zählt nicht. Die
+        meisten gibt es dafür, dass andere deine Beiträge
         nutzen (gezählt wie oben unter „Verwendung von Beiträgen“: höchstens einmal je
-        Person, Beitrag und Tag) und ihnen zustimmen. Deinen Punktestand
+        Person, Beitrag und Tag) und ihnen zustimmen. Kopiert oder nutzt jemand ohne
+        Anmeldung deinen Beitrag, zählen wir das für deine Punkte höchstens dreimal je
+        Beitrag und Tag; wer das war, wissen und speichern wir nicht. Deinen Punktestand
         <strong>siehst nur du</strong><ng-container *ngIf="rangliste()">, außer du spielst in der
         Rangliste mit; dann sehen ihn auch die anderen Mitspielenden (siehe unten)</ng-container>. Wir speichern ihn nicht, sondern berechnen ihn bei
         jedem Abruf aus deinen sichtbaren Beiträgen und den Zählern daran. Eigene Kopien und
@@ -821,8 +829,8 @@
         Unterstützung: der erste und 10 ausformulierte Einwürfe anderer und 10 eigene
         Einwürfe, die andere ausformuliert haben. Für dein eigenes Tun, als
         <strong>Wegmarken</strong>: dein erster Einwurf, dein erster Beitrag, der mindestens
-        drei Tage alt und heute sichtbar ist, und dein erster Kommentar, den eine Aussage als
-        Antwort führt. Dafür zählen wir auch, wie viele Einwürfe anderer du ausformuliert
+        drei Tage alt und heute sichtbar ist, dein erster Kommentar, den eine Aussage als
+        Antwort führt, und „Erste 10 Bewertungen“. Dafür zählen wir auch, wie viele Einwürfe anderer du ausformuliert
         hast und wie viele Einwürfe du eingeworfen hast (verworfene nicht), und sehen nach,
         ob eine Aussage einen deiner Kommentare als Antwort führt. Deine Meilensteine
         <strong>siehst nur du</strong><ng-container *ngIf="spielgefuehlBuehne()">; deine Abzeichen zeigen wir nur in der Rangliste, wenn du mitspielst</ng-container>. Wir speichern sie nicht, sondern berechnen sie bei

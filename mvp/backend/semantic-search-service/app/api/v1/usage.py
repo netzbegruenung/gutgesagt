@@ -38,7 +38,7 @@ from services.unbeantwortete_aussagen_service import (
 from utils.client_identity import derive_client_key
 from utils.device_category import derive_device_category
 from utils.rate_limiter import RateLimiter
-from services.entdoppelung import pruefwert
+from services.entdoppelung import deckel_pruefwerte, pruefwert
 from utils.aufrufer import ANONYM
 from services.meilensteine_service import MeilensteineService
 from services.abzeichen_service import AbzeichenService, get_abzeichen_service
@@ -476,8 +476,14 @@ async def track_content_usage(
         # Entdoppelung fuer Punkte und "oft genutzt" (#352): angemeldet je Kennung,
         # sonst je Besuchermerkmal (#446), je Beitrag und UTC-Tag. Ein Konto ohne
         # Einwilligung bekommt keinen (#559).
+        deckel = None
         if not angemeldet:
             wert = pruefwert(aufrufer, besucher_merkmal(request), content_uuid, jetzt)
+            # Ohne Anmeldung ist die eigene Kopie nicht zu erkennen (Befund 9): je
+            # Beitrag und Tag zaehlen hoechstens die ersten N, egal von wem.
+            deckel = deckel_pruefwerte(
+                content_uuid, settings.punkte_nutzung_ohne_anmeldung_je_tag, jetzt
+            )
         elif eingewilligt:
             wert = pruefwert(aufrufer, None, content_uuid, jetzt)
         else:
@@ -491,6 +497,7 @@ async def track_content_usage(
             fassung=fassung,
             pruefwert=wert,
             tag=jetzt.date(),
+            deckel=deckel,
         )
 
         if not success:

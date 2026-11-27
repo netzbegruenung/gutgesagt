@@ -115,6 +115,30 @@ def pruefwert(
     )
 
 
+def deckel_pruefwerte(
+    content_id: uuid.UUID, anzahl: int, moment: Optional[datetime] = None
+) -> List[str]:
+    """
+    Die Plaetze des Tagesdeckels fuer Nutzung ohne Anmeldung (Gamification-Check
+    26.11., Befund 9): ``anzahl`` Pruefwerte je Beitrag und UTC-Tag, gebildet nur aus
+    Beitrag, Tag und Platznummer, ohne Merkmal der Besuchenden (Bedingung Jura,
+    § 25 TDDDG). Eine Nutzung ohne Anmeldung zaehlt nur entdoppelt, wenn sie einen
+    freien Platz belegt; so bringen hoechstens die ersten ``anzahl`` am Tag Punkte,
+    egal von wem. Verworfen wie alle Pruefwerte nach dem Tageswechsel.
+
+    Ohne geheimen Schluessel (Review): In den Plaetzen steckt keine Person, nur Beitrag
+    und Tag, die ohnehin an der Nutzung stehen. So gilt der Deckel auch ueber einen
+    Neustart am selben Tag hinweg, statt mit dem Tagesschluessel neu zu beginnen.
+    """
+    tag = (moment or datetime.now(timezone.utc)).astimezone(timezone.utc).date()
+    return [
+        hashlib.sha256(
+            f"ohne-anmeldung|{platz}|{content_id}|{tag.isoformat()}".encode("utf-8")
+        ).hexdigest()
+        for platz in range(1, anzahl + 1)
+    ]
+
+
 def danke_pruefwert(
     user_id: Optional[str],
     besucher_merkmal: Optional[str],
