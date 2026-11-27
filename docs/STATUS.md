@@ -45,7 +45,7 @@ use existing comments/background info, and contribute their own.
 Candidate features:
 
 * Simple user registration (with manual Kreisverband approval, rate limiting)
-* Trending content feed (top 10 of the week by usage, 🔥 badge)
+* Trending content feed (top 10 of the week by usage, "viel genutzt" badge)
 * Onboarding flow ("add your first contribution" CTA, success states)
 * First gamification (XP, daily tasks, leaderboard)
 * Catch-all / meta-commentaries for queries with no specific match

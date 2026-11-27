@@ -2,7 +2,7 @@
 Schalter ``teamlink_vertrauenssatz``: der Vertrauenssatz auf der Begruessung eines
 Teamlinks (Jura vorlaeufig 26.11., Punkt d). Eigene Obergrenze, von Haus aus aus,
 oeffentlich (das Frontend blendet den Satz ueber GET /api/v1/funktionen ein), wirkt nur
-mit ``teams``; die Admin-Seite zeigt die Jura-Bedingung fuers Einschalten.
+mit ``team_fortschritt`` (und damit mit ``teams``), weil der Satz die Team-Summe nennt; die Admin-Seite zeigt die Jura-Bedingung fuers Einschalten.
 """
 
 import pytest
@@ -24,7 +24,11 @@ from services.schalter_service import (
 pytestmark = pytest.mark.unit
 
 NAME = "teamlink_vertrauenssatz"
-OBERGRENZEN_AN = Settings(teams_aktiv=True, teamlink_vertrauenssatz_aktiv=True)
+OBERGRENZEN_AN = Settings(
+    teams_aktiv=True, team_fortschritt_aktiv=True, teamlink_vertrauenssatz_aktiv=True
+)
+# Der Satz nennt die Team-Summe: wirksam nur mit Teams und Team-Fortschritt
+BASIS = {"teams": True, "team_fortschritt": True}
 
 
 def _dienst(werte):
@@ -60,8 +64,25 @@ def test_gruppe_teams_oeffentlich_und_jura_hinweis():
 
 
 def test_ohne_admin_wert_aus_mit_admin_wert_an():
-    assert _dienst({"teams": True}).wirksam(NAME, OBERGRENZEN_AN) is False
-    assert _dienst({"teams": True, NAME: True}).wirksam(NAME, OBERGRENZEN_AN) is True
+    assert _dienst(dict(BASIS)).wirksam(NAME, OBERGRENZEN_AN) is False
+    assert _dienst({**BASIS, NAME: True}).wirksam(NAME, OBERGRENZEN_AN) is True
+
+
+def test_nur_mit_team_fortschritt():
+    """Ohne Team-Summe verspraeche der Satz etwas, das es nicht gibt (Check 26.11., #8)."""
+    assert (
+        _dienst({"teams": True, "team_fortschritt": False, NAME: True}).wirksam(
+            NAME, OBERGRENZEN_AN
+        )
+        is False
+    )
+    ohne_fortschritt_obergrenze = Settings(
+        teams_aktiv=True, teamlink_vertrauenssatz_aktiv=True
+    )
+    assert (
+        _dienst({**BASIS, NAME: True}).wirksam(NAME, ohne_fortschritt_obergrenze)
+        is False
+    )
 
 
 def test_nur_mit_teams():
@@ -95,6 +116,6 @@ def test_funktionen_meldet_den_schalter_ohne_anmeldung(werte):
     """Aus heisst 200 mit false, nie 404 (#824): die Begruessung fragt beim Laden."""
     assert _funktionen(OBERGRENZEN_AN)[NAME] is False
 
-    werte.update({"teams": True, NAME: True})
+    werte.update({**BASIS, NAME: True})
     assert _funktionen(OBERGRENZEN_AN)[NAME] is True
     assert _funktionen(Settings(teams_aktiv=True))[NAME] is False

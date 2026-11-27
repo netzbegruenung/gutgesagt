@@ -72,7 +72,9 @@ def test_obergrenze_von_haus_aus_aus(name):
 
 @pytest.mark.parametrize("name", list(ERWARTET))
 def test_ohne_admin_wert_aus_mit_admin_wert_an(name):
-    werte = {"danke_knopf": True, "punkte": True}
+    # Mit den Schaltern, an denen einzelne haengen (danke_knopf und wirkungs_echo nur
+    # zusammen, rangliste an punkte)
+    werte = {"danke_knopf": True, "wirkungs_echo": True, "punkte": True}
     werte.pop(name, None)
     assert _dienst(werte).wirksam(name, ALLE_AN) is False
 
