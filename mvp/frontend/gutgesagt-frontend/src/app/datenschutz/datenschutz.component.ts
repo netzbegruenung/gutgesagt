@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, effect, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -44,6 +44,23 @@ export class DatenschutzComponent {
     inject(AuthService).userInfo$.pipe(map((info) => (info ? info.isAuthenticated : null))),
     { initialValue: null }
   );
+  /**
+   * Zurück vom Anmelden (returnUrl …#einwilligung-widerrufen): Sobald der Anmeldestand da ist,
+   * einmal wie ein Sprunglink zum Kasten, mit scroll-padding und Fokus (WCAG 2.4.3); das
+   * anchorScrolling des Routers kennt beides nicht.
+   */
+  private kastenAngesprungen = false;
+  private readonly zumKasten = effect(() => {
+    if (this.angemeldet() === null || this.kastenAngesprungen || location.hash !== '#einwilligung-widerrufen') {
+      return;
+    }
+    this.kastenAngesprungen = true;
+    setTimeout(() => {
+      const ziel = document.getElementById('einwilligung-widerrufen');
+      ziel?.scrollIntoView({ block: 'start' });
+      ziel?.focus({ preventScroll: true });
+    });
+  });
   /** Sätze des Kastens „Kurz gesagt“ (dse-kurzfassung.ts). */
   readonly kurzfassungSaetze: readonly KurzfassungSatz[] = inject(KURZFASSUNG);
   /** Schlusssatz unter den drei Sätzen des Kastens (Wortlaut Jura). */

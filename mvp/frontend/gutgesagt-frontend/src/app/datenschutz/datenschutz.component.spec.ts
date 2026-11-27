@@ -1,5 +1,5 @@
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -1551,7 +1551,7 @@ describe('DatenschutzComponent: Einwilligung widerrufen', () => {
 
     const kasten = el(fixture).querySelector('#einwilligung-widerrufen') as HTMLElement;
     expect(kasten.querySelector('[data-testid="widerruf-spielgefuehl"]')?.textContent).toContain('Spielgefühl: Nur für mich');
-    expect(kasten.querySelector('h4#widerrufbar-titel')).not.toBeNull();
+    expect(kasten.querySelector('h4[id^="widerrufbar-titel"]')).not.toBeNull();
     expect(kasten.querySelector('button')?.textContent?.trim()).toBe('Ausschalten');
     expect(kasten.querySelector('a[href="/einwilligung"]')?.textContent?.trim()).toBe('Datenschutz-Einstellungen');
     expect(el(fixture).querySelector('[data-testid="dse-widerruf-anmelden"]')).toBeNull();
@@ -1585,4 +1585,18 @@ describe('DatenschutzComponent: Einwilligung widerrufen', () => {
     http.expectOne({ method: 'GET', url: WIDERRUFBAR }).flush({ spielgefuehl: null, punkte: null, rangliste: null, abzeichen: null });
     fixture.destroy();
   });
+  it('springt nach der Rückkehr vom Anmelden auf den Kasten und setzt den Fokus dorthin', fakeAsync(() => {
+    const vorher = `${location.pathname}${location.search}${location.hash}`;
+    history.replaceState(history.state, '', `${location.pathname}${location.search}#einwilligung-widerrufen`);
+    try {
+      const fixture = seite(anmeldung(false));
+      document.body.appendChild(el(fixture));
+      tick();
+
+      expect(document.activeElement?.id).toBe('einwilligung-widerrufen');
+      el(fixture).remove();
+    } finally {
+      history.replaceState(history.state, '', vorher);
+    }
+  }));
 });

@@ -12,6 +12,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
+import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, Subject } from 'rxjs';
 
@@ -20,7 +21,7 @@ import { LoggingService } from '../services/logging.service';
 import { PunkteEinwilligungService } from '../shared/punkte-einwilligung/punkte-einwilligung.service';
 import { merkerEntfernen } from '../meine-beitraege/meilenstein-merker';
 import { SpielgefuehlService } from '../services/spielgefuehl.service';
-import { nachladeStrom, ohneRechte, stillerKontext } from '../shared/selbst-nachladen';
+import { SITZUNG_ABGELAUFEN, nachladeStrom, ohneRechte, stillerKontext } from '../shared/selbst-nachladen';
 
 /** GET /api/v1/usage/users/me/widerrufbar: gespeicherte Antworten über Nein bzw. „aus“. */
 export interface Widerrufbar {
@@ -40,6 +41,9 @@ export interface WiderrufZeile {
 }
 
 const BASIS = `${environment.baseUrl}/api/v1`;
+
+/** Je Instanz eine eigene id für aria-labelledby. */
+let naechsteNummer = 0;
 
 /**
  * Widerruf jederzeit, auch wenn die Schalter aus sind (Art. 7 Abs. 3 DSGVO): je
@@ -65,14 +69,14 @@ const BASIS = `${environment.baseUrl}/api/v1`;
 @Component({
   selector: 'app-widerrufbar',
   standalone: true,
-  imports: [CommonModule, MatButtonModule],
+  imports: [CommonModule, MatButtonModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section *ngIf="zeilen.length" class="widerrufbar" [class.karte]="karte" aria-labelledby="widerrufbar-titel" data-testid="widerrufbar">
+    <section *ngIf="zeilen.length" class="widerrufbar" [class.karte]="karte" [attr.aria-labelledby]="titelId" data-testid="widerrufbar">
       <ng-container [ngSwitch]="ebene">
-        <h2 *ngSwitchCase="2" id="widerrufbar-titel">{{ titel }}</h2>
-        <h4 *ngSwitchCase="4" id="widerrufbar-titel">{{ titel }}</h4>
-        <h3 *ngSwitchDefault id="widerrufbar-titel">{{ titel }}</h3>
+        <h2 *ngSwitchCase="2" [id]="titelId">{{ titel }}</h2>
+        <h4 *ngSwitchCase="4" [id]="titelId">{{ titel }}</h4>
+        <h3 *ngSwitchDefault [id]="titelId">{{ titel }}</h3>
       </ng-container>
       <ul>
         <li *ngFor="let zeile of zeilen; trackBy: art" [attr.data-testid]="'widerruf-' + zeile.art">
@@ -86,6 +90,10 @@ const BASIS = `${environment.baseUrl}/api/v1`;
       </ul>
     </section>
     <p *ngIf="geladen && !zeilen.length && leerText" class="leer" data-testid="widerrufbar-leer">{{ leerText }}</p>
+    <!-- Nach 401/403: Der Weg zum Widerruf bleibt sichtbar, über neues Anmelden -->
+    <p *ngIf="sitzungAbgelaufen" class="leer" data-testid="widerrufbar-sitzung">
+      <a routerLink="/login" [queryParams]="{ returnUrl: anmeldeZiel || aktuelleAdresse() }">{{ sitzungAbgelaufenText }}</a>
+    </p>
     <!-- Außerhalb der Zeilen: bleibt stehen, auch wenn die letzte Zeile geht -->
     <div #meldungsBereich tabindex="-1" class="meldungen">
       <p role="status" data-testid="widerruf-status" class="status">{{ meldung }}</p>
@@ -165,8 +173,15 @@ export class WiderrufbarComponent implements OnInit {
   @Input() karte = false;
   /** Satz, wenn nichts zu widerrufen ist; leer: dann zeigt die Komponente nichts. */
   @Input() leerText = '';
+  /** Wohin es nach neuem Anmelden zurückgeht (Sitzung abgelaufen); leer: die jetzige Adresse. */
+  @Input() anmeldeZiel = '';
 
   readonly titel = 'Spielgefühl und Punkte ausschalten';
+  readonly titelId = `widerrufbar-titel-${++naechsteNummer}`;
+  readonly sitzungAbgelaufenText = SITZUNG_ABGELAUFEN;
+  /** 401/403: Die Abfragen haben aufgehört; statt der Knöpfe der Link zum Anmelden. */
+  sitzungAbgelaufen = false;
+  private readonly router = inject(Router);
   private stand: Widerrufbar | null = null;
   /** Der erste Stand ist da: erst dann darf `leerText` stehen. */
   geladen = false;
@@ -177,6 +192,11 @@ export class WiderrufbarComponent implements OnInit {
   private karteStufe: string | null | undefined = undefined;
   /** Nach dem Ausschalten: diese Zeile ist erledigt, danach den Fokus versetzen. */
   private fokusNach: WiderrufArt | null = null;
+  /**
+   * Ein Lauf, der schon vor dem Ausschalten unterwegs war, kann die Zeile noch enthalten; dann
+   * wartet der Fokus einmal auf den nächsten Lauf (nachladeStrom holt ihn nach).
+   */
+  private fokusGewartet = false;
   private readonly anstoss$ = new Subject<void>();
   zeilen: WiderrufZeile[] = [];
   laeuft: WiderrufArt | null = null;
@@ -223,10 +243,17 @@ export class WiderrufbarComponent implements OnInit {
       { sofort: true, aufhoerenBei: ohneRechte, anstoss$: this.anstoss$ },
     ).subscribe((lauf) => {
       const nachAusschalten = this.fokusNach;
+      if (lauf.fehler === null && nachAusschalten && lauf.daten?.[nachAusschalten] && !this.fokusGewartet) {
+        // Alter Stand von vor dem Ausschalten: nicht anzeigen, auf den nachgeholten Lauf warten.
+        this.fokusGewartet = true;
+        return;
+      }
       this.fokusNach = null;
+      this.fokusGewartet = false;
       if (lauf.fehler === null) {
         this.stand = lauf.daten;
         this.geladen = true;
+        this.sitzungAbgelaufen = false;
         this.zeilenBauen();
         if (nachAusschalten) this.fokusNachAusschalten();
         return;
@@ -234,9 +261,10 @@ export class WiderrufbarComponent implements OnInit {
       // Ohne Stand keine neuen Zeilen; nach einem Ausschalten die erledigte Zeile trotzdem weg.
       this.logger.error('Widerrufbares nicht geladen', lauf.fehler as Error);
       if (ohneRechte(lauf.fehler)) {
-        // Sitzung abgelaufen: Knöpfe ohne Wirkung zeigen wir nicht.
+        // Sitzung abgelaufen: Knöpfe ohne Wirkung zeigen wir nicht, aber den Weg zum Anmelden.
         this.stand = null;
         this.geladen = false;
+        this.sitzungAbgelaufen = true;
         this.zeilenBauen();
       } else if (nachAusschalten && this.stand) {
         this.stand = { ...this.stand, [nachAusschalten]: null };
@@ -252,6 +280,11 @@ export class WiderrufbarComponent implements OnInit {
     this.cdr.detectChanges();
     const naechster = (this.host.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('li button');
     (naechster ?? this.meldungsBereich?.nativeElement)?.focus();
+  }
+
+  /** Die jetzige Adresse samt Anker, als Rückkehrziel nach dem Anmelden. */
+  aktuelleAdresse(): string {
+    return this.router.url;
   }
 
   private zeilenBauen(): void {
@@ -290,7 +323,12 @@ export class WiderrufbarComponent implements OnInit {
         }
         // Das Häkchen „Punkte und Meilensteine“ zeigt danach den neuen Stand.
         this.punkteDienst.laden().subscribe();
+        if (art === 'punkte' || art === 'spielgefuehl') {
+          // Der Server setzt dabei das Spielgefühl auf „aus“: alles, was auf die Stufe hört, frisch.
+          this.spielgefuehlDienst.laden(true).subscribe({ error: () => undefined });
+        }
         this.fokusNach = art;
+        this.fokusGewartet = false;
         this.anstoss$.next();
       },
       error: (fehler) => {

@@ -1618,7 +1618,7 @@
             Was du hier ausschaltest, wirkt sofort. Deine Einwilligung zur Mitwirkung widerrufst
             du unter <a routerLink="/einwilligung">Datenschutz-Einstellungen</a>.
           </p>
-          <app-widerrufbar [ebene]="4" [punkteHaekchenDaneben]="false"
+          <app-widerrufbar [ebene]="4" [punkteHaekchenDaneben]="false" anmeldeZiel="/datenschutz#einwilligung-widerrufen"
             leerText="Spielgefühl, Punkte, Rangliste und Abzeichen am Namen sind bei dir aus; hier gibt es nichts zu widerrufen."></app-widerrufbar>
         </ng-container>
         <p *ngIf="angemeldet() === false" data-testid="dse-widerruf-anmelden">
