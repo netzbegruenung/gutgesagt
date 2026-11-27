@@ -29,6 +29,7 @@ class EinladungRepository:
         team_name: Optional[str] = None,
         team_motiv: Optional[str] = None,
         team_saison: Optional[str] = None,
+        team_saison_id: Optional[uuid.UUID] = None,
         team_art: Optional[str] = None,
         team_zustimmung_am: Optional[date] = None,
     ) -> EinladungZeile:
@@ -44,6 +45,7 @@ class EinladungRepository:
                 team_name=team_name,
                 team_motiv=team_motiv,
                 team_saison=team_saison,
+                team_saison_id=team_saison_id,
                 team_art=team_art,
                 team_zustimmung_am=team_zustimmung_am,
             )
@@ -83,6 +85,7 @@ class EinladungRepository:
         "team_name",
         "team_motiv",
         "team_saison",
+        "team_saison_id",
         "team_art",
         "team_zustimmung_am",
     )

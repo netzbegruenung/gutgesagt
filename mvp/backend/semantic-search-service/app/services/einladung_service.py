@@ -97,6 +97,8 @@ class Einladung:
     team_name: Optional[str] = None
     team_motiv: Optional[str] = None
     team_saison: Optional[str] = None
+    # Die Saison per ID (Befund 6); leer bei Links ohne passende Saison.
+    team_saison_id: Optional[uuid.UUID] = None
     # "anlass" oder "gruppe" (domain/teams.py TEAM_ARTEN); leer bei Einladungen
     # von vor dieser Spalte, dann gilt "anlass".
     team_art: Optional[str] = None
@@ -117,6 +119,7 @@ class Einladung:
             team_name=getattr(z, "team_name", None),
             team_motiv=getattr(z, "team_motiv", None),
             team_saison=getattr(z, "team_saison", None),
+            team_saison_id=getattr(z, "team_saison_id", None),
             team_art=getattr(z, "team_art", None),
             team_zustimmung_am=getattr(z, "team_zustimmung_am", None),
         )
@@ -132,6 +135,7 @@ class Einladung:
             self.team_saison,
             art=self.team_art or TEAM_ART_ANLASS,
             zustimmung_am=self.team_zustimmung_am,
+            saison_id=self.team_saison_id,
         )
 
     def zustand(self, heute: Optional[date] = None) -> EinladungZustand:
@@ -342,6 +346,7 @@ def _team_spalten(team: Optional[Team]) -> dict:
         "team_name": team.name if team else None,
         "team_motiv": team.motiv if team else None,
         "team_saison": team.saison if team else None,
+        "team_saison_id": team.saison_id if team else None,
         "team_art": team.art if team else None,
         "team_zustimmung_am": (
             team.zustimmung_am if team and team.art == TEAM_ART_GRUPPE else None

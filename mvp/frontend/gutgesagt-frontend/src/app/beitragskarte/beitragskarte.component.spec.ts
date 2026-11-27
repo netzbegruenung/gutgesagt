@@ -726,7 +726,12 @@ describe('BeitragskarteComponent', () => {
       zeigen(ausSuchergebnis(paket('commentary_result', { usage_count: 5 })));
 
       expect(component.istBeliebt).toBeTrue();
-      expect(element('.badge-beliebt')).toBeTruthy();
+      const badge = element('.badge-beliebt')!;
+      expect(badge).toBeTruthy();
+      // Wort plus neutrales Motiv, kein 🔥 (bei verdigado das Zeichen für "brauche Hilfe")
+      expect(badge.textContent).toContain('viel genutzt');
+      expect(badge.querySelector('mat-icon')!.textContent).toBe('trending_up');
+      expect(badge.textContent).not.toContain('\u{1F525}');
     });
 
     it('should not show trending badge for content with less than 5 uses', () => {

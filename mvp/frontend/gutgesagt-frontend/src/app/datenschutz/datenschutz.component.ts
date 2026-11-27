@@ -5,7 +5,14 @@ import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { take } from 'rxjs/operators';
-import { DSE_SPIELGEFUEHL, DSE_SPIELGEFUEHL_TITEL } from './dse-spielgefuehl';
+import {
+  DSE_SPIELGEFUEHL_ANFANG,
+  DSE_SPIELGEFUEHL_OHNE_RANGLISTE,
+  DSE_SPIELGEFUEHL_RANGLISTE,
+  DSE_SPIELGEFUEHL_SCHLUSS,
+  DSE_SPIELGEFUEHL_SOCKEL,
+  DSE_SPIELGEFUEHL_TITEL,
+} from './dse-spielgefuehl';
 import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
 import { FunktionenService } from '../services/funktionen.service';
@@ -109,7 +116,11 @@ export class DatenschutzComponent {
    */
   readonly spielgefuehlBuehne = this.funktionen.an('spielgefuehl_buehne');
   readonly spielgefuehlTitel = DSE_SPIELGEFUEHL_TITEL;
-  readonly spielgefuehlText = DSE_SPIELGEFUEHL;
+  readonly spielgefuehlAnfang = DSE_SPIELGEFUEHL_ANFANG;
+  readonly spielgefuehlRangliste = DSE_SPIELGEFUEHL_RANGLISTE;
+  readonly spielgefuehlOhneRangliste = DSE_SPIELGEFUEHL_OHNE_RANGLISTE;
+  readonly spielgefuehlSchluss = DSE_SPIELGEFUEHL_SCHLUSS;
+  readonly spielgefuehlSockel = DSE_SPIELGEFUEHL_SOCKEL;
   /** Merker „Hinweis Home-Bildschirm ausgeblendet“; der Absatz dazu steht nur, wenn er an ist. */
   readonly homeHinweisMerker = inject(HOME_HINWEIS_MERKER);
   /**

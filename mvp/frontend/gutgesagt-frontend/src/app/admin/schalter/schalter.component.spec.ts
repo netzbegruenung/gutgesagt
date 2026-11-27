@@ -324,6 +324,70 @@ describe('SchalterComponent', () => {
     );
   });
 
+  describe('Kopplungen (Gamification-Check 26.11.)', () => {
+    const zustand = (k: HTMLElement) => (k.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim();
+    const kopplung = (k: HTMLElement) => k.querySelector('[data-testid="kopplung"]')?.textContent!.trim() ?? null;
+
+    it('Spielgefühl in drei Stufen: wirkt nicht ohne Punkte und sagt warum', () => {
+      laden([
+        schalter({ name: 'punkte', admin_wert: false, wirksam: false }),
+        schalter({ name: 'spielgefuehl_buehne', admin_wert: true, wirksam: false }),
+      ]);
+
+      const buehne = karten()[1];
+      expect(zustand(buehne)).toBe('Admin: an · wirksam: aus, weil Punkte aus');
+      expect((buehne.querySelector('[data-testid="status"]') as HTMLElement).textContent!.trim()).toBe('frei einschaltbar');
+      expect(kopplung(buehne)).toBe('Wirkt nur zusammen mit: Punkte.');
+    });
+
+    it('Abzeichen am Namen: wirkt nicht, solange das Spielgefühl an ist', () => {
+      laden([
+        schalter({ name: 'punkte', admin_wert: true, wirksam: true }),
+        schalter({ name: 'spielgefuehl_buehne', admin_wert: true, wirksam: true }),
+        schalter({ name: 'abzeichen_sichtbar', admin_wert: true, wirksam: false }),
+      ]);
+
+      const abzeichen = karten()[2];
+      expect(zustand(abzeichen)).toBe(
+        'Admin: an · wirksam: aus, weil Spielgefühl in drei Stufen an (Abzeichen dann nur in der Rangliste)',
+      );
+      expect((abzeichen.querySelector('[data-testid="zustand"]') as HTMLElement).hidden).toBeFalse();
+      expect(kopplung(abzeichen)).toBe(
+        'Wirkt nur zusammen mit: Punkte. Wirkt nicht, solange Spielgefühl in drei Stufen an ist (Abzeichen dann nur in der Rangliste).',
+      );
+    });
+
+    it('Wirkungs-Echo und Danke-Knopf: nur zusammen, je mit Grund', () => {
+      laden([
+        schalter({ name: 'wirkungs_echo', admin_wert: true, wirksam: false }),
+        schalter({ name: 'danke_knopf', admin_wert: false, wirksam: false }),
+      ]);
+
+      const [echo, danke] = karten();
+      expect(zustand(echo)).toBe('Admin: an · wirksam: aus, weil Danke-Knopf aus');
+      expect(kopplung(echo)).toBe('Wirkt nur zusammen mit: Danke-Knopf.');
+      expect(kopplung(danke)).toBe('Wirkt nur zusammen mit: Wirkungs-Echo.');
+    });
+
+    it('Vertrauenssatz beim Teambeitritt: braucht den Team-Fortschritt', () => {
+      laden([
+        schalter({ name: 'teams', admin_wert: true, wirksam: true }),
+        schalter({ name: 'team_fortschritt', admin_wert: false, wirksam: false }),
+        schalter({ name: 'teamlink_vertrauenssatz', admin_wert: true, wirksam: false }),
+      ]);
+
+      const satz = karten()[2];
+      expect(zustand(satz)).toBe('Admin: an · wirksam: aus, weil Team-Fortschritt aus');
+      expect(kopplung(satz)).toBe('Wirkt nur zusammen mit: Teams, Team-Fortschritt.');
+    });
+
+    it('ohne Kopplung keine Zeile dazu', () => {
+      laden([schalter({ name: 'gartenansicht' })]);
+
+      expect(kopplung(karten()[0])).toBeNull();
+    });
+  });
+
   describe('Teams und aktuelle Saison', () => {
     const SAISON: Einstellung = {
       name: 'aktuelle_saison',

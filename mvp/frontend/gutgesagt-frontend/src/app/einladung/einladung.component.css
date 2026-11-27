@@ -108,6 +108,12 @@ form .email + button {
 }
 
 /* Hinweis im Kasten, gut lesbar (nicht leise): betrifft, ob überhaupt gespeichert wird */
+.viel-los {
+  padding: 8px 12px;
+  border-left: 4px solid var(--akzent-tanne);
+  background: var(--flaeche);
+}
+
 .team-hinweis {
   padding: 8px 12px;
   border-left: 4px solid var(--akzent-tanne);

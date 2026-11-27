@@ -288,11 +288,13 @@ async def test_modellwechsel_vergisst_die_alten_zahlen():
     async def standard(user_id: str) -> List[Meilenstein]:
         return [_meilenstein(True)] * 4
 
+    # Das Modell kommt hier aus buehne_aktiv; die Obergrenze des Schalters bleibt aus,
+    # sonst waere abzeichen_sichtbar schon vor dem Wechsel nicht wirksam
+    # (services/schalter_service.py: keine Abzeichen am Namen mit Spielgefuehl).
     settings = Settings(
         punkte_aktiv=True,
         abzeichen_sichtbar_aktiv=True,
         rangliste_aktiv=True,
-        spielgefuehl_buehne_aktiv=True,
     )
     dienst = AbzeichenService(
         repo,

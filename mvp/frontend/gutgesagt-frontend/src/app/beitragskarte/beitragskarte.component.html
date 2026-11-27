@@ -95,9 +95,13 @@
                 </ng-template>
             </mat-menu>
             <!-- Als Wort statt Symbol mit Tooltip: am Handy gibt es keinen Tooltip (#616) -->
-            <span class="badge badge-neu" *ngIf="istVoll && istNeu">neu</span>
-            <span class="badge badge-beliebt" *ngIf="istVoll && istBeliebt"
-                  matTooltip="Beliebt" matTooltipPosition="left">🔥</span>
+            <!-- Am Handy untereinander, damit der Titel neben den Woertern Platz behaelt -->
+            <span class="karte-pillen" *ngIf="istVoll && (istNeu || istBeliebt)">
+                <span class="badge badge-neu" *ngIf="istNeu">neu</span>
+                <!-- Wort plus neutrales Motiv statt Feuer-Emoji (bei verdigado "brauche Hilfe"); nicht "beliebt" (GLOSSARY: Avoid) -->
+                <span class="badge badge-beliebt" *ngIf="istBeliebt"
+                      [matTooltip]="beliebtTooltip" matTooltipPosition="left"><mat-icon aria-hidden="true">trending_up</mat-icon>viel genutzt</span>
+            </span>
             <!-- Die Nutzung steht beschriftet in der Meta-Zeile unten ("1× genutzt", #599):
                  Als Kreis "1×" war sie nicht zu deuten, als Pille hier kuerzte sie den Titel. -->
         </div>

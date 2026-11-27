@@ -1,9 +1,10 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ActivatedRoute, provideRouter } from '@angular/router';
-import { EinladungComponent, codeAusEingabe } from './einladung.component';
+import { EINLOESEN_NEUVERSUCHE, EinladungComponent, codeAusEingabe } from './einladung.component';
+import { NEUVERSUCH_HOECHSTENS_MS } from '../shared/neuversuch';
 import { environment } from '../../environments/environment';
 
 const URL = `${environment.baseUrl}/api/v1/einladungen`;
@@ -140,16 +141,22 @@ describe('EinladungComponent', () => {
     expect(el().textContent).toContain('gilt nicht');
   });
 
-  it('meldet einen Fehler beim Anlegen und laesst es erneut versuchen', () => {
+  it('meldet einen Fehler beim Anlegen nach den Neuversuchen und laesst es erneut versuchen', fakeAsync(() => {
     starten('Code123');
     pruefen(true);
 
     absenden('neu@example.org').flush('kaputt', { status: 502, statusText: 'Bad Gateway' });
+    for (let i = 0; i < EINLOESEN_NEUVERSUCHE; i++) {
+      tick(NEUVERSUCH_HOECHSTENS_MS);
+      http.expectOne(`${URL}/einloesen`).flush('kaputt', { status: 502, statusText: 'Bad Gateway' });
+    }
     fixture.detectChanges();
 
     expect(el().textContent).toContain('hat nicht geklappt');
     expect(el().querySelector('input[type="email"]')).not.toBeNull();
-  });
+    tick(NEUVERSUCH_HOECHSTENS_MS);
+    http.expectNone(`${URL}/einloesen`);
+  }));
 
   it('fragt Vor- und Nachname mit sichtbarer Beschriftung und Autofill ab', () => {
     starten('Code123');
@@ -208,17 +215,18 @@ describe('EinladungComponent', () => {
     expect(el().textContent).not.toContain('nicht wie eine Mail-Adresse');
   });
 
-  for (const [status, text] of [
-    [422, 'nicht wie eine Mail-Adresse'],
-    [429, 'Viertelstunde'],
-    [503, 'noch nicht anlegen'],
+  // 429 und andere vorübergehende Fehler versucht die Seite selbst noch einmal (einladung-neuversuch.component.spec.ts).
+  for (const [status, antwort, text] of [
+    [422, 'nein', 'nicht wie eine Mail-Adresse'],
+    [503, { detail: 'Registration not configured' }, 'noch nicht anlegen'],
   ] as const) {
     it(`sagt bei ${status}, woran es liegt`, () => {
       starten('Code123');
       pruefen(true);
 
-      absenden('neu@example.org').flush('nein', { status, statusText: 'Fehler' });
+      absenden('neu@example.org').flush(antwort, { status, statusText: 'Fehler' });
       fixture.detectChanges();
+      http.expectNone(`${URL}/einloesen`);
 
       expect(el().textContent).toContain(text);
       expect(el().textContent).not.toContain('hat nicht geklappt');
