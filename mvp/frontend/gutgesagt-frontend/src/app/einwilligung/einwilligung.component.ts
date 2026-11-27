@@ -21,6 +21,7 @@ import { EINE_SEITE_TEXTE } from './einwilligung-texte';
 import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { PunkteEinwilligungComponent } from '../shared/punkte-einwilligung/punkte-einwilligung.component';
 import { PunkteEinwilligungService } from '../shared/punkte-einwilligung/punkte-einwilligung.service';
+import { WiderrufbarComponent } from './widerrufbar.component';
 import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 import { FunktionenService } from '../services/funktionen.service';
 import { HILFE_PARAM } from '../help-dialog/help-dialog.component';
@@ -73,6 +74,7 @@ type Zustand = 'laedt' | 'frage' | 'sendet' | 'eingewilligt' | 'widerruft' | 'fe
     MatCheckboxModule,
     MatDialogModule,
     PunkteEinwilligungComponent,
+    WiderrufbarComponent,
   ],
   templateUrl: './einwilligung.component.html',
   styleUrls: ['./einwilligung.component.css'],
@@ -89,6 +91,8 @@ export class EinwilligungComponent implements OnInit {
   nbFehler = false;
   readonly texte = EINE_SEITE_TEXTE;
   @ViewChild('nbHaekchen') private nbHaekchen?: MatCheckbox;
+  /** Die Widerrufszeilen: Ein Art.-9-Widerruf ändert gespeicherte Stufen (Rangliste -> Nur für mich). */
+  @ViewChild(WiderrufbarComponent) private widerrufbar?: WiderrufbarComponent;
   private readonly budget = inject(EinwilligungsBudgetService);
   /** Schalter einwilligung_im_gewinn (#788): keine zweite Frage neben der Art.-9-Einwilligung. */
   private readonly funktionen = inject(FunktionenService);
@@ -303,7 +307,10 @@ export class EinwilligungComponent implements OnInit {
     // Eingewilligte zu zeigen.
     this.zustand = this.zustand === 'frage' ? 'sendet' : 'widerruft';
     this.einwilligung.widerrufen().subscribe({
-      next: () => this.laden(),
+      next: () => {
+        this.laden();
+        this.widerrufbar?.neuLaden();
+      },
       error: () => (this.zustand = 'fehler'),
     });
   }

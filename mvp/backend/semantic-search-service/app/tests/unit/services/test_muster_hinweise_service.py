@@ -9,6 +9,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from repositories.muster_hinweis_repository import MusterHinweis
 from services.entdoppelung import pruefwerte_verwerfen_im_takt
 from services.muster_hinweise_service import MusterHinweiseService, loeschen_im_takt
 
@@ -67,3 +68,59 @@ async def test_pruefwerte_verwerfen_im_takt_verdichtet_gepostet_auch_nach_fehler
     task.cancel()
 
     assert nutzung.vergangene_tage_verwerfen.call_count >= 2
+
+
+def _hinweis(a: str, b: str) -> MusterHinweis:
+    return MusterHinweis(a, b, 1, date(2026, 10, 26), date(2026, 10, 26))
+
+
+def test_hinweise_nur_wenn_beide_eingewilligt_haben():
+    """Nach einem Widerruf erscheint die Person nicht mehr im Admin-Dashboard."""
+    repository = Mock()
+    repository.hinweise.return_value = [
+        _hinweis("bo-2", "kim-1"),
+        _hinweis("ali-3", "bo-2"),
+        _hinweis("ali-3", "eda-4"),
+    ]
+    gefragt = []
+
+    def eingewilligte(kennungen):
+        gefragt.append(set(kennungen))
+        return {"bo-2", "kim-1", "eda-4"}
+
+    hinweise = MusterHinweiseService(repository).hinweise(eingewilligte)
+
+    assert hinweise == [_hinweis("bo-2", "kim-1")]
+    # Eine Abfrage fuer alle Kennungen
+    assert gefragt == [{"bo-2", "kim-1", "ali-3", "eda-4"}]
+
+
+def test_hinweise_mit_filter_lesen_vorrat_und_kuerzen():
+    repository = Mock()
+    repository.hinweise.return_value = [
+        _hinweis(f"a-{i:03}", f"b-{i:03}") for i in range(150)
+    ]
+
+    hinweise = MusterHinweiseService(repository).hinweise(lambda ks: set(ks))
+
+    repository.hinweise.assert_called_once_with(150)
+    assert len(hinweise) == 50
+
+
+def test_hinweise_ohne_eintraege_fragen_keine_einwilligung():
+    repository = Mock()
+    repository.hinweise.return_value = []
+    eingewilligte = Mock()
+
+    assert MusterHinweiseService(repository).hinweise(eingewilligte) == []
+    eingewilligte.assert_not_called()
+
+
+def test_vergessen_loescht_die_hinweise_der_person():
+    repository = Mock()
+
+    MusterHinweiseService(repository).vergessen("kim-1")
+    MusterHinweiseService(repository).vergessen("anonymous")
+    MusterHinweiseService(repository).vergessen("")
+
+    repository.vergessen.assert_called_once_with("kim-1")

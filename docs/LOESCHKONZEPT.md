@@ -342,7 +342,14 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
   sieben Tagen von selbst; ein gelöschtes Konto nutzt nichts mehr, ein Hinweis kann
   aus ihm also nicht mehr entstehen. Ein Muster-Hinweis nennt zwei Kennungen und soll Admins
   helfen, Punkte gegen Absprachen zu schützen; nach acht Wochen ohne neuen auffälligen
-  Tag ist er dafür nicht mehr nötig (DSFA zu #374). Prüfwerte verwirft ein eigener
+  Tag ist er dafür nicht mehr nötig (DSFA zu #374). Widerruft eine der beiden Personen
+  („Punkte und Meilensteine“ Nein, Spielgefühl „Aus“), gehen alle Hinweise, die sie nennen,
+  sofort (`MusterHinweiseService.vergessen`); das Admin-Dashboard zeigt ohnehin nur Paare, bei
+  denen beide aktuell eingewilligt haben. Ihre Paar-Prüfwerte gehen erst mit der Frist von
+  sieben Tagen (nicht per Kennung löschbar, siehe oben); ein neuer Hinweis entsteht trotzdem
+  nicht, weil beim Erzeugen die Einwilligung beider Konten geprüft wird
+  (`api/v1/usage.py`, vor `nutzung_melden`). Wortgleich in der Datenschutzerklärung:
+  „Die Prüfwerte, mit denen wir Muster erkennen, lassen sich keinem Konto zuordnen und verfallen nach sieben Tagen; nach deinem Widerruf werten wir sie für dich nicht mehr aus.“ Prüfwerte verwirft ein eigener
   Task (`services/entdoppelung.py`), Paar-Prüfwerte und Hinweise ein zweiter
   (`services/muster_hinweise_service.py`), beide unabhängig vom abschaltbaren Bereinigungsjob.
   Punkte selbst werden nicht gespeichert, sondern bei jedem Abruf berechnet

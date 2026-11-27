@@ -257,7 +257,11 @@ in the 200 answer, e.g. `{"balken": null, "aktiv": false}`, `{"proben": [], "akt
 above (`haproxy-probing`: 50 × 404 in 5 minutes, `haproxy-auth-flood`: 20 × 401) counts per IP,
 and a hall WLAN is one IP; one 404 per page view of hundreds of phones locks out the hall within
 minutes. Real 404s stay for unknown resources by id (a Beitrag, a Saison) and for actions
-(`PUT`/`POST`) on a building block that is off; real 401 where a page needs a login. A 403
+(`PUT`/`POST`) on a building block that is off; real 401 where a page needs a login. Exception:
+a withdrawal (no, `aus`, a lower Spielgefühl level) is always accepted, also while its switch is
+off (Art. 7 Abs. 3 DSGVO: as easy as giving consent, at any time); only a yes is refused then,
+with 409 rather than 404 (points consent, badge visibility, Rangliste, Spielgefühl, Team
+öffentlich). A 403
 for missing consent is not counted, but stays the exception (only `gepostet`, and only while
 it is on).
 
@@ -717,13 +721,15 @@ in memory once per season for 120 s; one request recomputes (at most 8 people in
 others wait for it. Neither points nor places are stored.
 
 - `GET /api/v1/rangliste` (signed in; while `rangliste` is not effective 200 with `aktiv: false`
-  and nothing asked, never 404; the `PUT` answers 404 then): own answer, random
+  and nothing asked, never 404; a yes via `PUT` answers 409 then): own answer, random
   Ranglistenname, and for participants the top 10 plus the own place (only from 10 participants)
   and past seasons as own sums (only seasons that started within the retention). If the own points
 cannot be computed, the request fails with 500 instead of showing a list without the person.
 - `PUT /api/v1/rangliste/einwilligung` `{teilnehmen, mit_anzeigename, wortlaut}`: yes only to the
-  current wording; withdrawing the Art. 9 consent or "Punkte und Meilensteine" records an earlier
-yes as no.
+  current wording and only while the question is offered (else 409); no always, to any known
+  wording, also with the switch off or in the Spielgefühl model, where it also records a level
+  `rangliste` as `fuer_mich`. Withdrawing the Art. 9 consent or "Punkte und Meilensteine" records
+  an earlier yes as no.
 
 #### Spielgefühl as one setting (switch `spielgefuehl_buehne`)
 
@@ -742,14 +748,25 @@ over, so everyone is asked again. Points ⇔ level ≥ `fuer_mich`; Rangliste �
 (`AbzeichenService.abzeichen` empty), only in the Rangliste (`in_rangliste`, computed in the
 15-minute cycle for participants). Pair check values and Muster-Hinweise as before for both
 levels above `aus` (the wording names them in a sentence below the three levels). The old endpoints for points consent, badge visibility and `PUT /rangliste/einwilligung`
-answer `aktiv: false` / 404.
+answer `aktiv: false` to reads and 409 to a yes; a no is still recorded (withdrawal). Withdrawals
+carry over between the models in both directions, upgrades never: a level answer records an
+earlier yes to badges at the name as no (also level `rangliste`, so the badge does not come back
+when the switch goes off), below `rangliste` the Rangliste, at `aus` the points consent; a no to
+the old points consent records a level above `aus` as `aus`, a no to the old Rangliste caps the
+level at `fuer_mich`.
 
 - `GET /api/v1/usage/users/me/spielgefuehl`: level (null = not asked yet), name choice,
   Ranglistenname, wording in button order (community first), one-time badge note; 200 with
   `aktiv: false` without the switches `spielgefuehl_buehne` and `punkte`.
 - `PUT …/spielgefuehl` `{stufe, mit_anzeigename, wortlaut}`: level `rangliste` needs the name
   choice (no preset, 422 without); the first time rolls the random name; downgrading takes the
-  badges out of the Rangliste immediately. Withdrawing Art. 9 records a level above `aus` as `aus`.
+  badges out of the Rangliste immediately. Without the switches only a withdrawal is accepted
+  (`aus` always, `fuer_mich` from `rangliste`), an upgrade answers 409. `aus` also deletes the
+  Muster-Hinweise naming the person. Withdrawing Art. 9 records a level above `aus` as `aus`.
+- `GET /api/v1/usage/users/me/widerrufbar` (signed in, always 200, no switch): the stored
+  answers above no/`aus` (Spielgefühl level with its title, old points, Rangliste and badge
+  consents) with their wording; the privacy settings page shows one "Ausschalten" line each and
+  sends the no to the `PUT` endpoints above (`einwilligung/widerrufbar.component.ts`).
 - `POST …/spielgefuehl/ranglistenname`: rolls a new random name (only with level `rangliste`, else
   409), a new proof row.
 

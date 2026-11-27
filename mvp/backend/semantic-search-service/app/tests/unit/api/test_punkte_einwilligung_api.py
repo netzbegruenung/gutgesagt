@@ -43,7 +43,9 @@ def test_ohne_punkte_wird_nichts_angeboten(repo):
     antwort = _client(aktiv=False).put(
         URL, headers=KIM, json={"eingewilligt": True, "wortlaut": AKTUELLER_WORTLAUT}
     )
-    assert antwort.status_code == 404
+    # 409 statt 404: kein Treffer fuer den Gateway-fail2ban
+    assert antwort.status_code == 409
+    repo.antworten.assert_not_called()
 
 
 def test_nur_angemeldet():
@@ -184,4 +186,95 @@ def test_im_spielgefuehl_modell_nicht_mehr_angeboten(repo):
     antwort = client.put(
         URL, headers=KIM, json={"eingewilligt": True, "wortlaut": AKTUELLER_WORTLAUT}
     )
-    assert antwort.status_code == 404
+    assert antwort.status_code == 409
+    repo.antworten.assert_not_called()
+
+
+def _client_mit(**schalter) -> TestClient:
+    app = FastAPI()
+    app.include_router(usage_router, prefix="/api/v1/usage")
+    app.dependency_overrides[get_settings] = lambda: Settings(**schalter)
+    return TestClient(app)
+
+
+@pytest.mark.parametrize(
+    "schalter",
+    [
+        {"punkte_aktiv": False},
+        {"punkte_aktiv": True, "spielgefuehl_buehne_aktiv": True},
+    ],
+)
+def test_widerruf_immer_speicherbar(repo, monkeypatch, schalter):
+    """Widerruf so einfach wie die Einwilligung (Art. 7 Abs. 3 DSGVO), auch nach Not-Aus."""
+    abzeichen = MagicMock()
+    monkeypatch.setattr("api.v1.usage.get_abzeichen_service", lambda: abzeichen)
+
+    antwort = _client_mit(**schalter).put(
+        URL, headers=KIM, json={"eingewilligt": False, "wortlaut": AKTUELLER_WORTLAUT}
+    )
+
+    assert antwort.status_code == 204
+    repo.antworten.assert_called_once_with("kim-1", False, AKTUELLER_WORTLAUT)
+    abzeichen.vergessen.assert_called_once_with("kim-1")
+
+
+def test_widerruf_unbekannter_wortlaut_422(repo):
+    antwort = _client(aktiv=False).put(
+        URL, headers=KIM, json={"eingewilligt": False, "wortlaut": "1999-01-01"}
+    )
+
+    assert antwort.status_code == 422
+    repo.antworten.assert_not_called()
+
+
+def test_widerruf_loescht_die_muster_hinweise(repo, muster_hinweise_ohne_datenbank):
+    antwort = _client().put(
+        URL, headers=KIM, json={"eingewilligt": False, "wortlaut": AKTUELLER_WORTLAUT}
+    )
+
+    assert antwort.status_code == 204
+    muster_hinweise_ohne_datenbank.vergessen.assert_called_once_with("kim-1")
+
+
+def test_einwilligen_laesst_die_muster_hinweise(repo, muster_hinweise_ohne_datenbank):
+    _client().put(
+        URL, headers=KIM, json={"eingewilligt": True, "wortlaut": AKTUELLER_WORTLAUT}
+    )
+
+    muster_hinweise_ohne_datenbank.vergessen.assert_not_called()
+
+
+def test_widerruf_gilt_auch_wenn_das_loeschen_der_hinweise_scheitert(
+    repo, muster_hinweise_ohne_datenbank
+):
+    muster_hinweise_ohne_datenbank.vergessen.side_effect = RuntimeError("weg")
+
+    antwort = _client().put(
+        URL, headers=KIM, json={"eingewilligt": False, "wortlaut": AKTUELLER_WORTLAUT}
+    )
+
+    assert antwort.status_code == 204
+    repo.antworten.assert_called_once_with("kim-1", False, AKTUELLER_WORTLAUT)
+
+
+def test_widerruf_stuft_das_spielgefuehl_auf_aus(repo, spielgefuehl_ohne_datenbank):
+    """Sonst gaelte eine Stufe ueber aus nach dem Einschalten des neuen Modells weiter."""
+    from domain.spielgefuehl import AKTUELLER_WORTLAUT as SPIELGEFUEHL_WORTLAUT
+    from domain.spielgefuehl import Stufe
+    from repositories.spielgefuehl_repository import SpielgefuehlAntwort
+
+    spielgefuehl_ohne_datenbank.lesen.return_value = SpielgefuehlAntwort(
+        Stufe.FUER_MICH,
+        False,
+        SPIELGEFUEHL_WORTLAUT,
+        datetime(2026, 12, 1, tzinfo=timezone.utc),
+    )
+
+    antwort = _client().put(
+        URL, headers=KIM, json={"eingewilligt": False, "wortlaut": AKTUELLER_WORTLAUT}
+    )
+
+    assert antwort.status_code == 204
+    spielgefuehl_ohne_datenbank.antworten.assert_called_once_with(
+        "kim-1", Stufe.AUS, False, SPIELGEFUEHL_WORTLAUT
+    )

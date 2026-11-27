@@ -57,9 +57,73 @@ def test_ohne_schalter_aktiv_false_ohne_abfrage(dienst, buehne, punkte):
     assert antwort.status_code == 200
     assert antwort.json()["aktiv"] is False
     dienst.stand.assert_not_called()
-    body = {"stufe": "aus", "wortlaut": AKTUELLER_WORTLAUT}
-    assert client.put(URL, json=body, headers=KIM).status_code == 404
     assert client.post(URL + "/ranglistenname", headers=KIM).status_code == 404
+
+
+@pytest.mark.parametrize("buehne, punkte", [(False, True), (True, False)])
+def test_ohne_schalter_aus_immer_speicherbar(dienst, buehne, punkte):
+    """Widerruf so einfach wie die Einwilligung (Art. 7 Abs. 3 DSGVO), auch nach Not-Aus."""
+    dienst.herabstufung.return_value = True
+
+    antwort = _client(buehne, punkte).put(
+        URL, json={"stufe": "aus", "wortlaut": AKTUELLER_WORTLAUT}, headers=KIM
+    )
+
+    assert antwort.status_code == 204
+    dienst.herabstufung.assert_called_once_with("kim-1", Stufe.AUS)
+    dienst.antworten.assert_called_once_with(
+        "kim-1", Stufe.AUS, None, AKTUELLER_WORTLAUT
+    )
+
+
+def test_ohne_schalter_herabstufen_aus_der_rangliste(dienst):
+    dienst.herabstufung.return_value = True
+
+    antwort = _client(buehne=False).put(
+        URL, json={"stufe": "fuer_mich", "wortlaut": AKTUELLER_WORTLAUT}, headers=KIM
+    )
+
+    assert antwort.status_code == 204
+    dienst.antworten.assert_called_once_with(
+        "kim-1", Stufe.FUER_MICH, None, AKTUELLER_WORTLAUT
+    )
+
+
+@pytest.mark.parametrize("stufe", ["fuer_mich", "rangliste"])
+@pytest.mark.parametrize("buehne, punkte", [(False, True), (True, False)])
+def test_ohne_schalter_kein_heraufstufen(dienst, buehne, punkte, stufe):
+    """Ein Ja bleibt an die Schalter gebunden; 409 statt 404 (Gateway-fail2ban)."""
+    dienst.herabstufung.return_value = False
+
+    antwort = _client(buehne, punkte).put(
+        URL,
+        json={"stufe": stufe, "mit_anzeigename": False, "wortlaut": AKTUELLER_WORTLAUT},
+        headers=KIM,
+    )
+
+    assert antwort.status_code == 409
+    dienst.antworten.assert_not_called()
+
+
+def test_ohne_schalter_lesefehler_500(dienst):
+    dienst.herabstufung.side_effect = RuntimeError("geheim")
+
+    antwort = TestClient(_client(buehne=False).app, raise_server_exceptions=False).put(
+        URL, json={"stufe": "fuer_mich", "wortlaut": AKTUELLER_WORTLAUT}, headers=KIM
+    )
+
+    assert antwort.status_code == 500
+    assert "geheim" not in antwort.text
+    dienst.antworten.assert_not_called()
+
+
+def test_mit_schalter_ohne_pruefung_der_herabstufung(dienst):
+    _client().put(
+        URL, json={"stufe": "fuer_mich", "wortlaut": AKTUELLER_WORTLAUT}, headers=KIM
+    )
+
+    dienst.herabstufung.assert_not_called()
+    dienst.antworten.assert_called_once()
 
 
 def test_ohne_anmeldung_401(dienst):
@@ -187,3 +251,57 @@ def test_neu_wuerfeln_zu_oft_429(dienst):
     dienst.neu_wuerfeln.side_effect = ZuOftGewuerfelt()
 
     assert _client().post(URL + "/ranglistenname", headers=KIM).status_code == 429
+
+
+@pytest.mark.parametrize(
+    "buehne, punkte", [(False, False), (False, True), (True, False)]
+)
+def test_widerruf_haengt_an_der_gespeicherten_stufe_nicht_am_schalter(
+    spielgefuehl_ohne_datenbank, monkeypatch, buehne, punkte
+):
+    """
+    Mit dem echten Dienst: Ob ein Herabstufen ohne Schalter angenommen wird, entscheidet
+    die gespeicherte Stufe, nicht buehne_aktiv (das wirkt nur zusammen mit punkte).
+    """
+    from datetime import datetime, timezone
+
+    from repositories.spielgefuehl_repository import SpielgefuehlAntwort
+
+    monkeypatch.setattr(
+        "services.spielgefuehl_service._alt_zuruecknehmen", lambda u, s: None
+    )
+    monkeypatch.setattr(
+        "services.spielgefuehl_service._abzeichen_vergessen", lambda u: None
+    )
+    spielgefuehl_service_setzen(None)
+    spielgefuehl_ohne_datenbank.lesen.return_value = SpielgefuehlAntwort(
+        Stufe.RANGLISTE,
+        True,
+        AKTUELLER_WORTLAUT,
+        datetime(2026, 11, 26, tzinfo=timezone.utc),
+        "Kluge Eule 11",
+    )
+    client = _client(buehne, punkte)
+
+    for stufe in ("fuer_mich", "aus"):
+        antwort = client.put(
+            URL, json={"stufe": stufe, "wortlaut": AKTUELLER_WORTLAUT}, headers=KIM
+        )
+        assert antwort.status_code == 204, stufe
+    assert [
+        c.args[1] for c in spielgefuehl_ohne_datenbank.antworten.call_args_list
+    ] == [
+        Stufe.FUER_MICH,
+        Stufe.AUS,
+    ]
+    antwort = client.put(
+        URL,
+        json={
+            "stufe": "rangliste",
+            "mit_anzeigename": True,
+            "wortlaut": AKTUELLER_WORTLAUT,
+        },
+        headers=KIM,
+    )
+    assert antwort.status_code == 409
+    spielgefuehl_service_setzen(None)

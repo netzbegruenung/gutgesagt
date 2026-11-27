@@ -42,6 +42,7 @@ from services.suchen_ohne_treffer_service import (
 )
 from core.config import Settings
 from services.schalter_service import schalter_wirksam
+from services.spielgefuehl_service import punkte_eingewilligte
 from core.logging import get_logger
 from core.fehler import INTERNER_FEHLER
 
@@ -610,14 +611,20 @@ async def get_muster_hinweise(
     Muster-Hinweise (#352): Kontenpaare, die sich innerhalb von sieben Tagen gegenseitig
     genutzt haben, zuletzt aufgefallene zuerst. Nur ein Hinweis fuer Admins, keine
     Automatik (services/muster_hinweise_service.py). Ohne ``punkte_aktiv`` entstehen
-    keine Hinweise; ``aktiv`` sagt das dem Dashboard.
+    keine Hinweise; ``aktiv`` sagt das dem Dashboard. Gezeigt werden nur Paare, bei
+    denen beide Konten aktuell eingewilligt haben ("Punkte und Meilensteine" bzw. im
+    Spielgefuehl-Modell ab Stufe ``fuer_mich``): Nach einem Widerruf erscheint die
+    Person hier nicht mehr (Art. 7 Abs. 3 DSGVO).
     """
     if not schalter_wirksam("punkte", settings):
         return MusterHinweiseResponse(
             aktiv=False, frist_tage=MUSTER_FRIST_TAGE, hinweise=[]
         )
     try:
-        hinweise = await asyncio.to_thread(service.hinweise)
+        hinweise = await asyncio.to_thread(
+            service.hinweise,
+            lambda kennungen: punkte_eingewilligte(kennungen, settings),
+        )
         namen = await asyncio.to_thread(
             get_anzeigename_service().namen,
             [k for h in hinweise for k in (h.konto_a, h.konto_b)],

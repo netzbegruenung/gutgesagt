@@ -373,6 +373,34 @@ def zuruecknehmen(
         repository.antworten(user_id, False, False, antwort.wortlaut)
 
 
+def nein(
+    user_id: str,
+    wortlaut: str,
+    repository: Optional[RanglisteEinwilligungRepository] = None,
+) -> None:
+    """
+    Nein zur Rangliste (api/v1/rangliste.py), jederzeit: auch bei ausgeschaltetem
+    Schalter und im Spielgefuehl-Modell (Widerruf so einfach wie die Einwilligung,
+    Art. 7 Abs. 3 DSGVO). Zu jedem bekannten Wortlaut. Haelt das Nein in der
+    bisherigen Einwilligung fest und stuft eine Stufe ``rangliste`` im Spielgefuehl
+    auf ``fuer_mich`` herab, damit kein frueheres Ja nach einem Umschalten wieder gilt.
+    Synchron.
+    """
+    from repositories.rangliste_einwilligung_repository import (
+        get_rangliste_einwilligung_repository,
+    )
+    from services import spielgefuehl_service
+
+    if wortlaut not in WORTLAUTE:
+        raise UnbekannterWortlaut(wortlaut)
+    repository = repository or get_rangliste_einwilligung_repository()
+    repository.antworten(user_id, False, False, wortlaut)
+    if spielgefuehl_service.zuruecknehmen(user_id):
+        # Raus aus der Rangliste: ihre Abzeichen sofort aus dem Speicher, nicht erst
+        # im naechsten Takt.
+        spielgefuehl_service._abzeichen_vergessen(user_id)
+
+
 _service: Optional[RanglisteService] = None
 
 

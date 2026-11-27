@@ -134,3 +134,16 @@ class TestMusterHinweise:
         dienst.fristen_anwenden(MONTAG + timedelta(1))
 
         assert [h.letzter_tag for h in dienst.hinweise()] == [MONTAG]
+
+    def test_vergessen_loescht_alle_hinweise_mit_der_person(self, dienst):
+        """Widerruf: Hinweise mit der Person gehen, die anderer Paare bleiben."""
+        for a, b in [("kim-1", "bo-2"), ("ali-3", "kim-1"), ("ali-3", "bo-2")]:
+            dienst.nutzung_melden(a, b, _um(MONTAG))
+            dienst.nutzung_melden(b, a, _um(MONTAG))
+        assert len(dienst.hinweise()) == 3
+
+        dienst.vergessen("kim-1")
+
+        assert [(h.konto_a, h.konto_b) for h in dienst.hinweise()] == [
+            ("ali-3", "bo-2")
+        ]
