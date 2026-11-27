@@ -8,12 +8,15 @@ Einwilligungs-Moment nach dem neuen Modell. Wegwerf-Schema aus der Fixture
 import pytest
 from sqlalchemy import text
 
-from domain.spielgefuehl import AKTUELLER_WORTLAUT, STIMMEN_WORTLAUT, Stufe
+from domain.spielgefuehl import AKTUELLER_WORTLAUT, Stufe
 from repositories.einwilligungs_moment_repository import EinwilligungsMomentRepository
 from repositories.spielgefuehl_repository import SpielgefuehlRepository
 from tests.integration.test_loeschkommando import datenbank  # noqa: F401
 
 pytestmark = pytest.mark.integration
+
+MINUS_26 = "spielgefuehl-2026-11-26"
+MINUS_27 = "spielgefuehl-2026-11-27"
 
 
 def _zeilen(datenbank, kennung) -> int:  # noqa: F811
@@ -63,28 +66,50 @@ class TestSpielgefuehlRepository:
         }
         assert repo.vergebene_namen() == {"Name A", "Name B", "Name D"}
 
-    def test_stimmen_eingewilligte_nur_neuer_wortlaut_ab_fuer_mich(
+    def test_stimmen_eingewilligte_mit_minus_27_oder_28_ab_fuer_mich(
         self, datenbank  # noqa: F811
     ):
-        """Zustimmungen zaehlen nur mit dem Wortlaut -27; -26 reicht nicht."""
+        """Zustimmungen zaehlen mit dem Wortlaut -27 oder -28; -26 reicht nicht."""
         repo = SpielgefuehlRepository(datenbank)
-        repo.antworten("neu-r", Stufe.RANGLISTE, False, STIMMEN_WORTLAUT, "Name")
-        repo.antworten("neu-f", Stufe.FUER_MICH, False, STIMMEN_WORTLAUT)
-        repo.antworten("neu-aus", Stufe.AUS, False, STIMMEN_WORTLAUT)
-        repo.antworten("alt", Stufe.RANGLISTE, False, AKTUELLER_WORTLAUT, "Alt")
+        repo.antworten("neu-r", Stufe.RANGLISTE, False, MINUS_27, "Name")
+        repo.antworten("neu-f", Stufe.FUER_MICH, False, AKTUELLER_WORTLAUT)
+        repo.antworten("neu-aus", Stufe.AUS, False, AKTUELLER_WORTLAUT)
+        repo.antworten("alt", Stufe.RANGLISTE, False, MINUS_26, "Alt")
         # Erst -27, dann wieder -26: die juengste Antwort zaehlt
-        repo.antworten("zurueck", Stufe.FUER_MICH, False, STIMMEN_WORTLAUT)
-        repo.antworten("zurueck", Stufe.RANGLISTE, False, AKTUELLER_WORTLAUT, "Z")
+        repo.antworten("zurueck", Stufe.FUER_MICH, False, MINUS_27)
+        repo.antworten("zurueck", Stufe.RANGLISTE, False, MINUS_26, "Z")
 
         assert repo.stimmen_eingewilligte(
             ["neu-r", "neu-f", "neu-aus", "alt", "zurueck", "nie"]
         ) == {"neu-r", "neu-f"}
         assert repo.stimmen_eingewilligte([]) == set()
-        # Beide Wortlaute gelten fuer Punkte und Rangliste
-        assert repo.wirksame_stufen(["neu-f", "alt"]) == {
+        # Alle Wortlaute gelten fuer Punkte und Rangliste
+        assert repo.wirksame_stufen(["neu-f", "alt", "neu-r"]) == {
             "neu-f": Stufe.FUER_MICH,
             "alt": Stufe.RANGLISTE,
+            "neu-r": Stufe.RANGLISTE,
         }
+
+    def test_quest_einwilligung_seit_der_ersten_antwort_zu_minus_28(
+        self, datenbank  # noqa: F811
+    ):
+        repo = SpielgefuehlRepository(datenbank)
+        repo.antworten("kim", Stufe.FUER_MICH, False, MINUS_27)
+        repo.antworten("kim", Stufe.FUER_MICH, False, AKTUELLER_WORTLAUT)
+        repo.antworten("kim", Stufe.RANGLISTE, True, AKTUELLER_WORTLAUT, "Name")
+        repo.antworten("nur-27", Stufe.RANGLISTE, False, MINUS_27, "N")
+        with datenbank.get_session() as session:
+            erste_28 = session.execute(
+                text(
+                    "SELECT min(beantwortet_am) FROM spielgefuehl"
+                    " WHERE user_id = 'kim' AND wortlaut = :w"
+                ),
+                {"w": AKTUELLER_WORTLAUT},
+            ).scalar_one()
+
+        assert repo.quest_einwilligung_seit("kim") == erste_28
+        assert repo.quest_einwilligung_seit("nur-27") is None
+        assert repo.quest_einwilligung_seit("nie") is None
 
 
 class TestEinwilligungsMomentImNeuenModell:

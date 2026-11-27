@@ -422,9 +422,9 @@ class Settings(BaseSettings):
     # die Tabelle spielgefuehl, und alle werden neu gefragt. Standard aus.
     spielgefuehl_buehne_aktiv: bool = False
     # Gegenseitige Zustimmungen als weiteres Merkmal der Muster-Hinweise (Schalter
-    # muster_stimmen, wirkt nur mit spielgefuehl_buehne): an, zeigt die Spielgefuehl-Frage
-    # den Wortlaut spielgefuehl-2026-11-27 und fragt Konten mit -26 neu; Zustimmungen
-    # zaehlen nur bei Paaren, die beide dazu eingewilligt haben. Nur ein Admin-Hinweis,
+    # muster_stimmen, wirkt nur mit spielgefuehl_buehne): an, zaehlen Zustimmungen nur bei
+    # Paaren, die beide zu spielgefuehl-2026-11-27 oder -28 eingewilligt haben (die Frage
+    # zeigt -28 unabhaengig vom Schalter). Nur ein Admin-Hinweis,
     # keine Wirkung auf Punkte oder Rangliste. Standard aus.
     muster_stimmen_aktiv: bool = False
     # Vertrauenszeile vor dem Anmelden (services/schalter_service.py, vorlaeufige

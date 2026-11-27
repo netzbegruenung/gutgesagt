@@ -542,7 +542,8 @@ TEAM_SCHALTER = (
         ),
         dsfa_hinweis=True,
         einschalt_hinweis=(
-            f"{JURA_VORLAEUFIG}; an nur mit team_fortschritt; {GO_VOR_AUSWEITUNG}"
+            f"{JURA_VORLAEUFIG}; Quest-Punkte erst ab Wortlaut -28 (spielgefuehl-2026-11-28); "
+            f"an nur mit team_fortschritt; {GO_VOR_AUSWEITUNG}"
         ),
         # Die Datenschutzerklaerung blendet ihren Absatz danach ein
         oeffentlich=True,
@@ -665,9 +666,10 @@ SCHALTER["spielgefuehl_buehne"] = Schalterart(
 
 
 # Gegenseitige Zustimmungen in den Muster-Hinweisen (Entscheidung Maintainer 27.11.,
-# Wortlaut und Kennung spielgefuehl-2026-11-27 von Jura 27.11.): Obergrenze von Haus aus
-# aus. Wirkt nur mit spielgefuehl_buehne, weil der Zweck im Wortlaut des Spielgefuehls
-# steht (domain/spielgefuehl.py STIMMEN_WORTLAUT). Oeffentlich, weil die
+# Wortlaut spielgefuehl-2026-11-27, seit der juristischen Vorgabe vom 27.11. die Fassung
+# spielgefuehl-2026-11-28): Obergrenze von Haus aus aus. Wirkt nur mit
+# spielgefuehl_buehne, weil der Zweck im Wortlaut des Spielgefuehls steht
+# (domain/spielgefuehl.py STIMMEN_WORTLAUTE). Oeffentlich, weil die
 # Datenschutzerklaerung ihren Satz danach zeigt.
 SCHALTER["muster_stimmen"] = Schalterart(
     name="muster_stimmen",
@@ -676,13 +678,14 @@ SCHALTER["muster_stimmen"] = Schalterart(
     umgebungsvariable="SEMANTIC_SEARCH_MUSTER_STIMMEN_AKTIV",
     erklaerung=(
         "Muster-Hinweise auch, wenn zwei Konten einander innerhalb von sieben Tagen "
-        "zustimmen, nur bei Konten, die beide dem neuen Wortlaut des Spielgefühls "
-        "zugestimmt haben; die Frage zeigt dann diesen Wortlaut und fragt alle neu. "
+        "zustimmen, nur bei Konten, die beide einem Wortlaut des Spielgefühls mit "
+        "Zustimmungen zugestimmt haben (die Frage zeigt ihn immer). "
         "Nur ein Hinweis für Admins, keine Wirkung auf Punkte oder Rangliste; wirkt "
         "nur zusammen mit dem Spielgefühl als eine Frage."
     ),
     einschalt_hinweis=(
-        "Wortlaut spielgefuehl-2026-11-27 von Jura 27.11., DSE-Satz drin; "
+        "Wortlaut spielgefuehl-2026-11-28 (juristische Vorgabe vom 27.11.), "
+        "DSE-Satz drin; "
         f"{GO_VOR_AUSWEITUNG}"
     ),
     oeffentlich=True,

@@ -611,7 +611,7 @@ officer has advised.
 | `danke_ohne_konto` | `SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV` | off | yes | V31 and visitor marker (#495); works only with `danke_knopf` |
 | `rangliste` | `SEMANTIC_SEARCH_RANGLISTE_AKTIV` | off | yes | legal OK (wording, DSFA V28, privacy policy) and Punkte on (#793); works only with `punkte` |
 | `saal_spruch` | `SEMANTIC_SEARCH_SAAL_SPRUCH_AKTIV` | off | yes | none: public text only, nothing about the person (see "Saal-Spruch" below) |
-| `muster_stimmen` | `SEMANTIC_SEARCH_MUSTER_STIMMEN_AKTIV` | off | yes | wording `spielgefuehl-2026-11-27` by the legal review 27.11. (in the code), privacy policy sentence shown while on, DSFA V11 addendum; works only with `spielgefuehl_buehne` (see "Spielgefühl as one setting") |
+| `muster_stimmen` | `SEMANTIC_SEARCH_MUSTER_STIMMEN_AKTIV` | off | yes | wording `spielgefuehl-2026-11-28` per the legal requirement of 27.11. (in the code), privacy policy sentence shown while on, DSFA V11 addendum; works only with `spielgefuehl_buehne` (see "Spielgefühl as one setting") |
 
 #### Saal-Spruch
 
@@ -763,25 +763,38 @@ level at `fuer_mich`.
 
 Mutual approvals (switch `muster_stimmen`, upper bound `SEMANTIC_SEARCH_MUSTER_STIMMEN_AKTIV`,
 default off, effective only with `spielgefuehl_buehne`; decision of the maintainer 27.11., wording
-by the legal review 27.11.): while effective, the question shows the wording
-`spielgefuehl-2026-11-27` (same levels, the sentence on Absprachen adds "oder einander
-zustimmen"), and an answer above `aus` to `-26` is reported as level null, so the app asks again
-(`domain/spielgefuehl.py` `neu_fragen`); until then `-26` keeps counting for points, Rangliste and
-mutual usage. Both wordings stay valid, so switching off asks nobody again. A Zustimmung (`PUT
+by the legal review 27.11.). The question always shows the wording `spielgefuehl-2026-11-28`,
+independent of the switches (legal requirement of 27.11.): it names Quest-Punkte and, in the
+sentence on Absprachen, mutual approvals "sobald diese Prüfung eingeschaltet ist". An answer above
+`aus` to `-26` or `-27` is reported as level null, so the app asks once again
+(`domain/spielgefuehl.py` `neu_fragen`); until then the old answer keeps counting for points,
+Rangliste and mutual usage. `PUT` accepts a level above `aus` only with `-28`. A Zustimmung (`PUT
 …/like`, not a dislike) reports a pair check value of its own kind (`zustimmung|…`, same window
-key, same table `muster_pruefwerte`) only if both accounts' newest answer is `-27` at level
-`fuer_mich` or above, checked on every report; mutual approvals within seven days give a
+key, same table `muster_pruefwerte`) only if both accounts' newest answer is `-27` or `-28` at
+level `fuer_mich` or above, checked on every report; mutual approvals within seven days give a
 Muster-Hinweis of kind `zustimmung` (column `art` of `muster_hinweise`), with the same 56-day
 retention. The admin dashboard shows those only while the switch is effective and both accounts
-still have `-27` and a valid Art. 9 consent. The daily retention run (`loeschen_im_takt`) also
-deletes every Muster-Hinweis whose two accounts no longer both consent (usage: points consent or
-Spielgefühl ≥ `fuer_mich`; approvals: `-27` ≥ `fuer_mich` plus Art. 9), so a hint written during a
-withdrawal goes within one run; the dashboard request cleans up the rows it reads the same way.
-No effect on points or the Rangliste. An answer without the purpose after one
-with it (e.g. `fuer_mich` to `-26` after the switch went off) deletes only the hints of kind
-`zustimmung`; `aus` deletes all. `GET /api/v1/funktionen/muster_stimmen/seit` (no sign-in, always
-200) gives the day (German time) the admin value was last switched on, for the sentence in the
-privacy policy; `seit: null` while not effective.
+still have `-27` or `-28` and a valid Art. 9 consent. The daily retention run (`loeschen_im_takt`)
+also deletes every Muster-Hinweis whose two accounts no longer both consent (usage: points
+consent or Spielgefühl ≥ `fuer_mich`; approvals: `-27`/`-28` ≥ `fuer_mich` plus Art. 9), so a hint
+written during a withdrawal goes within one run; the dashboard request cleans up the rows it reads
+the same way. No effect on points or the Rangliste. `aus` deletes all hints of the person; a
+withdrawal of the Art. 9 consent deletes the hints of kind `zustimmung`. Without the switches
+`spielgefuehl_buehne` and `punkte` the person does not see the question; a downgrade then keeps
+the wording id of the previous answer (`SpielgefuehlService.antworten(widerruf=True)`), so no
+consent to a text the person never saw is recorded. `GET /api/v1/funktionen/muster_stimmen/seit`
+(no sign-in, always 200) gives the day (German time) the admin value was last switched on, for the
+sentence in the privacy policy; `seit: null` while not effective.
+
+Quest-Punkte (Team-Quests, switch `team_quests`) count only for accounts whose newest answer is
+`-28` at level `fuer_mich` or above, and only for Beiträge saved since that consent
+(`SpielgefuehlRepository.quest_einwilligung_seit`: start of the uninterrupted run of `-28` answers
+above `aus`; a change between `fuer_mich` and `rangliste` does not interrupt it, `aus` does).
+`PunkteService` passes only those Beiträge to `TeamFortschrittService.quest_tage`, so a quest week
+before the consent is never credited afterwards. Quest-Punkte also need `spielgefuehl_buehne`
+to be effective (`spielgefuehl_service.quest_einwilligung_seit` returns None without it, legal
+requirement of 27.11.): only `-28` carries them, and the privacy policy names them only with that
+switch. With `team_quests` or `spielgefuehl_buehne` off the consent is not read at all.
 
 - `GET /api/v1/usage/users/me/spielgefuehl`: level (null = not asked yet), name choice,
   Ranglistenname, wording in button order (community first), one-time badge note; 200 with

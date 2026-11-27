@@ -6,8 +6,9 @@
  * Wortlaut von Jura (26.11., vorläufig zum Bauen, endgültig vor dem Go), mit den Sätzen
  * zur Namenswahl aus der Nachsteuerung vom selben Abend und der Ergänzung zum Schutz gegen
  * Absprachen aus der Antwort auf die Fachfragen zu PR #849; Einleitung und Sockelsatz nach
- * Jura vom 27.11. (vorläufig). Kennung des Fragewortlauts:
- * spielgefuehl-2026-11-26 (backend domain/spielgefuehl.py).
+ * Jura vom 27.11. (vorläufig). Kennung des Fragewortlauts seit der juristischen Vorgabe
+ * vom 27.11.: spielgefuehl-2026-11-28 (backend domain/spielgefuehl.py). Dieser Absatz zählt
+ * die Punktequellen nicht auf; die Quest-Punkte nennt der Absatz zu Team-Quests unter „Teams“.
  */
 export const DSE_SPIELGEFUEHL_TITEL = 'Spielgefühl.';
 

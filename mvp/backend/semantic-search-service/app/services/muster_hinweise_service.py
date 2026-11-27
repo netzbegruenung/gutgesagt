@@ -30,7 +30,7 @@ Ein eigener Hinweis der Art ``zustimmung`` nach derselben Regel, sieben Tage Fen
 MUSTER_FRIST_TAGE Frist, dieselben Paar-Pruefwerte mit eigenem Praefix. Gemeldet wird
 nur bei einer Zustimmung (nicht bei einer Ablehnung) und nur, wenn beide Konten zum
 Spielgefuehl-Wortlaut mit Zustimmungen eingewilligt haben (domain/spielgefuehl.py
-``STIMMEN_WORTLAUT``, geprueft in api/v1/voting.py); das Admin-Dashboard prueft das
+``STIMMEN_WORTLAUTE``, -27 oder -28, geprueft in api/v1/voting.py); das Admin-Dashboard prueft das
 beim Zeigen erneut. Keine Wirkung auf Punkte oder Rangliste.
 
 Abgleich mit der Einwilligung (Art. 17, Bedingung Jura zu #863): Derselbe Lauf loescht
@@ -213,7 +213,7 @@ class MusterHinweiseService:
         Alle Hinweise loeschen, bei denen nicht mehr beide Konten wirksam eingewilligt
         haben (Art. 17 DSGVO; Bedingung Jura zu #863): Nutzungen nach
         ``eingewilligte``, Zustimmungen nach ``stimmen_eingewilligte`` (Wortlaut -27
-        ab "Nur fuer mich" und Art.-9-Einwilligung). So geht auch ein Hinweis, der
+        oder -28 ab "Nur fuer mich" und Art.-9-Einwilligung). So geht auch ein Hinweis, der
         waehrend eines Widerrufs entstand, spaetestens nach einem Lauf. Liefert die
         Anzahl.
         """

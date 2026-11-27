@@ -47,7 +47,9 @@ Wochenende nur, ob es geschafft ist; ein verfehltes Ziel erwaehnt nichts. Nie Te
 gegen Team. Quest-Punkte (``quest_tage``, ADR 0004 Stufe 2) bekommt, wer zum Team
 gehoert, mit deckender Einwilligung, und in der Woche einen Beitrag gespeichert hat,
 der heute sichtbar und mindestens drei Tage alt ist; ob die Einwilligung "Punkte und
-Meilensteine" gilt, prueft services/punkte_service.py davor.
+Meilensteine" gilt und seit wann die zum Spielgefuehl-Wortlaut mit Quest-Punkten
+(spielgefuehl-2026-11-28, nur mit wirksamem Schalter spielgefuehl_buehne), prueft services/punkte_service.py davor und reicht nur
+Beitraege ab dieser Einwilligung herein.
 
 Kontoloeschung und "Team verlassen" loeschen die Mitgliedschaft; der Zaehler bleibt,
 er traegt nichts zur Person. Eine Zuordnung Person -> Zaehler entsteht nirgends: Die

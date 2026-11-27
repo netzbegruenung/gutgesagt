@@ -341,6 +341,7 @@ def get_punkte_service(
         settings,
         # Team-Quests (#792): Der Dienst fragt seinen Schalter selbst.
         quest_tage=get_team_fortschritt_service().quest_tage,
+        quests_wirksam=get_team_fortschritt_service().quests_wirksam,
     )
 
 

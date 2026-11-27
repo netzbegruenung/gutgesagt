@@ -22,22 +22,22 @@ jeder Abruf neu fragt.
 import threading
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Callable, Dict, Iterable, Optional, Set
 
 from core.config import Settings
 from core.logging import get_logger
 from domain.rangliste import neuer_ranglistenname
 from domain.spielgefuehl import (
+    AKTUELLER_WORTLAUT,
     NAMENS_VORBELEGUNG,
     WORTLAUTE,
     NamenswahlFehlt,
     Stufe,
     UnbekannterWortlaut,
-    aktueller_wortlaut,
     in_rangliste,
     neu_fragen,
     punkte_wirksam,
-    stimmen_eingewilligt,
 )
 from repositories.rangliste_einwilligung_repository import (
     RanglisteAntwort,
@@ -53,6 +53,10 @@ logger = get_logger(__name__)
 
 SCHALTER = "spielgefuehl_buehne"
 STIMMEN_SCHALTER = "muster_stimmen"
+
+
+class KeinWiderruf(RuntimeError):
+    """Ohne Schalter geht nur ein Herabstufen, kein gleich hoch oder hoeher."""
 
 
 class NichtInRangliste(RuntimeError):
@@ -81,9 +85,9 @@ def buehne_aktiv(einstellungen: Optional[Settings] = None) -> bool:
 
 def stimmen_aktiv(einstellungen: Optional[Settings] = None) -> bool:
     """
-    Ob gegenseitige Zustimmungen in die Muster-Hinweise einfliessen und die Frage den
-    Wortlaut ``STIMMEN_WORTLAUT`` zeigt (Schalter ``muster_stimmen``, wirkt nur mit
-    ``spielgefuehl_buehne``).
+    Ob gegenseitige Zustimmungen in die Muster-Hinweise einfliessen (Schalter
+    ``muster_stimmen``, wirkt nur mit ``spielgefuehl_buehne``). Die Frage zeigt den
+    Wortlaut mit Zustimmungen unabhaengig davon.
     """
     from services.schalter_service import schalter_wirksam
 
@@ -135,10 +139,27 @@ def punkte_eingewilligte(
     return get_punkte_einwilligung_repository().eingewilligte(liste)
 
 
+def quest_einwilligung_seit(
+    user_id: str, einstellungen: Optional[Settings] = None
+) -> Optional[datetime]:
+    """
+    Seit wann Quest-Punkte fuer die Kennung zaehlen duerfen: die Einwilligung zum
+    Wortlaut mit Quest-Punkten (domain/spielgefuehl.py ``QUEST_WORTLAUT``) ab
+    ``fuer_mich``, ohne Unterbrechung bis heute; None ohne sie. Nur mit wirksamem
+    Schalter ``spielgefuehl_buehne`` (juristische Vorgabe vom 27.11.): Nur ``-28``
+    traegt Quest-Punkte, und die Datenschutzerklaerung nennt sie nur mit dem Schalter;
+    ohne ihn wird die Tabelle nicht gefragt. Synchron.
+    """
+    if not buehne_aktiv(einstellungen):
+        return None
+    return _neues_repository().quest_einwilligung_seit(user_id)
+
+
 def stimmen_eingewilligte(kennungen: Iterable[str]) -> Set[str]:
     """
     Die Kennungen, deren Zustimmungen in die Muster-Hinweise einfliessen duerfen: Stufe
-    ab ``fuer_mich`` zum Wortlaut ``STIMMEN_WORTLAUT`` (domain/spielgefuehl.py) und eine
+    ab ``fuer_mich`` zu einem Wortlaut aus ``STIMMEN_WORTLAUTE`` (domain/spielgefuehl.py,
+    ``-27`` oder ``-28``) und eine
     geltende Art.-9-Einwilligung. Ohne diese gibt es keine Stimmen (ihr Widerruf loescht
     sie), also auch keinen Hinweis daraus, auch nicht aus einem Paar-Pruefwert von davor.
     Fragt den Schalter nicht; das tun die Aufrufer.
@@ -224,8 +245,6 @@ class SpielgefuehlService:
         alt_zuruecknehmen: Callable[[str, Stufe], None] = lambda user_id, stufe: None,
         uhr: Callable[[], float] = time.monotonic,
         hinweise_vergessen: Callable[[str], None] = lambda user_id: None,
-        stimmen: Callable[[], bool] = lambda: False,
-        stimmen_hinweise_vergessen: Callable[[str], None] = lambda user_id: None,
     ):
         """
         ``alte_namen``: Ranglistennamen aus der bisherigen Einwilligung (zum Wuerfeln
@@ -235,10 +254,9 @@ class SpielgefuehlService:
         ``alt_zuruecknehmen(kennung, stufe)``: die gewaehlte Stufe in den bisherigen
         Einwilligungen festhalten, soweit sie dort ein Nein ist, damit sie auch nach
         dem Ausschalten des Schalters gilt; ``hinweise_vergessen(kennung)``: die
-        Muster-Hinweise der Person loeschen (bei ``aus``); ``stimmen``: ob der
-        Schalter ``muster_stimmen`` wirkt; ``stimmen_hinweise_vergessen(kennung)``: nur
-        die Muster-Hinweise aus Zustimmungen loeschen (Antwort ohne den Zweck
-        Zustimmungen nach einer mit ihm). Alle synchron.
+        Muster-Hinweise der Person loeschen (bei ``aus``). Alle synchron. Eine Stufe
+        ueber ``aus`` nimmt der Dienst nur zum aktuellen Wortlaut an, der Zustimmungen
+        nennt; einen Widerruf nur der Zustimmungen gibt es deshalb nicht.
         """
         self._repository = repository
         self._alte_namen = alte_namen
@@ -247,26 +265,21 @@ class SpielgefuehlService:
         self._alt_zuruecknehmen = alt_zuruecknehmen
         self._uhr = uhr
         self._hinweise_vergessen = hinweise_vergessen
-        self._stimmen = stimmen
-        self._stimmen_hinweise_vergessen = stimmen_hinweise_vergessen
         self._gewuerfelt: Dict[str, float] = {}
         self._sperre = threading.Lock()
 
-    def stand(self, user_id: str, stimmen: Optional[bool] = None) -> SpielgefuehlStand:
+    def stand(self, user_id: str) -> SpielgefuehlStand:
         """
         Ohne Antwort, zu einem nicht mehr geltenden Wortlaut oder mit ``neu_fragen``
-        (Schalter ``muster_stimmen``, Antwort zu ``-26``) ist die Stufe None: Die App
-        fragt neu. Bis dahin gilt die bisherige Antwort fuer das, was ihr Wortlaut nennt.
-        ``stimmen``: ob ``muster_stimmen`` wirkt, wie der Aufrufer es schon gefragt hat
-        (sonst fragt der Dienst selbst).
+        (Antwort ab ``fuer_mich`` zu ``-26`` oder ``-27``) ist die Stufe None: Die App
+        fragt neu. Bis dahin gilt die bisherige Antwort fuer das, was ihr Wortlaut nennt
+        (Punkte und Rangliste, keine Quest-Punkte).
         """
-        if stimmen is None:
-            stimmen = self._stimmen()
         antwort = self._repository.lesen(user_id)
         if (
             antwort is None
             or not antwort.gilt
-            or neu_fragen(antwort.wortlaut, antwort.stufe, stimmen)
+            or neu_fragen(antwort.wortlaut, antwort.stufe)
         ):
             return SpielgefuehlStand(
                 stufe=None,
@@ -302,11 +315,14 @@ class SpielgefuehlService:
         stufe: Stufe,
         mit_anzeigename: Optional[bool],
         wortlaut: str,
-        stimmen: Optional[bool] = None,
+        widerruf: bool = False,
     ) -> None:
         """
         Eine Stufe waehlen, jederzeit. Eine Stufe ueber ``aus`` nur zum aktuellen
-        Wortlaut, ``aus`` zu jedem bekannten. Stufe rangliste braucht die Namenswahl
+        Wortlaut, ``aus`` zu jedem bekannten. ``widerruf`` (ohne Schalter, die Person
+        sieht die Frage nicht): nur ein Herabstufen, und eine Stufe ueber ``aus``
+        behaelt den Wortlaut der bisherigen Antwort, sonst entstuende eine Einwilligung
+        in einen Text, den die Person nie gesehen hat (etwa Quest-Punkte mit ``-28``). Stufe rangliste braucht die Namenswahl
         (``NAMENS_VORBELEGUNG`` ist None); das erste Mitspielen wuerfelt den
         Zufallsnamen, auch wenn die Person den Anzeigenamen waehlt, damit sie jederzeit
         wechseln kann. Herabstufen nimmt die Abzeichen sofort aus der Rangliste und
@@ -319,13 +335,15 @@ class SpielgefuehlService:
         die die Person nennen; Fehler dabei nur im Log (die Admin-Ansicht filtert
         ohnehin nach der aktuellen Einwilligung).
         """
-        if stimmen is None:
-            stimmen = self._stimmen()
-        if wortlaut not in WORTLAUTE or (
-            stufe is not Stufe.AUS and wortlaut != aktueller_wortlaut(stimmen)
-        ):
+        if wortlaut not in WORTLAUTE:
             raise UnbekannterWortlaut(wortlaut)
         vorher = self._repository.lesen(user_id)
+        if widerruf and stufe is not Stufe.AUS:
+            if vorher is None or _RANG[stufe] >= _RANG[vorher.wirksame_stufe]:
+                raise KeinWiderruf()
+            wortlaut = vorher.wortlaut
+        elif stufe is not Stufe.AUS and wortlaut != AKTUELLER_WORTLAUT:
+            raise UnbekannterWortlaut(wortlaut)
         name: Optional[str] = None
         if in_rangliste(stufe):
             if mit_anzeigename is None:
@@ -346,20 +364,6 @@ class SpielgefuehlService:
             except Exception as e:
                 logger.error(
                     f"Muster-Hinweise nach Spielgefuehl aus nicht geloescht: {type(e).__name__}",
-                    exc_info=True,
-                )
-        elif (
-            vorher is not None
-            and stimmen_eingewilligt(vorher.wortlaut, vorher.wirksame_stufe)
-            and not stimmen_eingewilligt(wortlaut, stufe)
-        ):
-            # Widerruf nur des Zwecks Zustimmungen (etwa "Nur fuer mich" zu -26 nach
-            # einer Antwort zu -27, wenn der Schalter wieder aus ist).
-            try:
-                self._stimmen_hinweise_vergessen(user_id)
-            except Exception as e:
-                logger.error(
-                    f"Muster-Hinweise aus Zustimmungen nicht geloescht: {type(e).__name__}",
                     exc_info=True,
                 )
 
@@ -497,8 +501,6 @@ def get_spielgefuehl_service() -> SpielgefuehlService:
             _abzeichen_vergessen,
             _alt_zuruecknehmen,
             hinweise_vergessen=muster_hinweise_vergessen,
-            stimmen=stimmen_aktiv,
-            stimmen_hinweise_vergessen=muster_stimmen_hinweise_vergessen,
         )
     return _service
 

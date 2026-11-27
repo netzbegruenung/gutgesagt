@@ -630,7 +630,9 @@ describe('DatenschutzComponent', () => {
         'Diese Anzeige am Namen ist noch nicht eingeschaltet. ' +
           'Mit derselben Einwilligung darf die Zahl deiner Beiträge, Bewertungen und Kommentare und deiner Meldungen „Ja, gepostet“ in eine Summe deines Teams eingehen. ' +
           'Diese Summe sehen nur Mitglieder des Teams, nur für abgeschlossene Wochen, erst wenn mindestens fünf ' +
-          'Mitglieder eingewilligt haben, gerundet und nie mit einzelnen Namen. Die Team-Summe ist noch nicht eingeschaltet.'
+          'Mitglieder eingewilligt haben, gerundet und nie mit einzelnen Namen. ' +
+          'Was schon in die Summe deines Teams eingegangen ist, bleibt nach ‚Team verlassen‘ als Zahl ohne Namen ' +
+          'stehen; wir können es dir dann nicht mehr zuordnen. Die Team-Summe ist noch nicht eingeschaltet.'
       );
     });
 
@@ -1392,18 +1394,66 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     expect(text).toContain('Diese Anzeige am Namen ist noch nicht eingeschaltet.');
   });
 
-  it('team_quests: der Absatz unter „Teams“', () => {
-    expect(abschnittIn(seiteMit('team_fortschritt', 'team_quests'), 'Teams')).toContain(
-      'In Teams gibt es gemeinsame Wochenaufgaben (Quests). Am Team speichern wir je Woche nur Thema und Ziel der ' +
-        'Quest, ohne Namen. Ob das Team sie schafft, berechnen wir bei jedem Abruf aus der Mitwirkung der Mitglieder; ' +
-        'die Mitglieder sehen nur die Summe des Teams, und erst ab fünf Mitgliedern. Hast du Punkte eingeschaltet, ' +
-        'bringen dir erfüllte Quests auch Punkte.',
+  const QUESTS =
+    'In Teams gibt es gemeinsame Wochenaufgaben (Quests). Am Team speichern wir je Woche nur Thema und Ziel der ' +
+    'Quest, ohne Namen. Ob das Team sie schafft, berechnen wir bei jedem Abruf aus der Mitwirkung der Mitglieder; ' +
+    'die Mitglieder sehen nur die Summe des Teams, und erst ab fünf Mitgliedern.';
+  // Juristische Vorgabe vom 27.11.: nur mit spielgefuehl_buehne (Quest-Punkte trägt nur Wortlaut -28)
+  const QUEST_PUNKTE =
+    'Hast du beim Spielgefühl ‚Nur für mich‘ oder ‚In der Saison-Rangliste mitspielen‘ gewählt und dabei auch ' +
+    'den Quest-Punkten zugestimmt, bringen dir erfüllte Quests auch Punkte, für Beiträge, die du ab dieser ' +
+    'Zustimmung speicherst.';
+
+  it('team_quests mit spielgefuehl_buehne: der Absatz unter „Teams“ mit dem Satz zu Quest-Punkten', () => {
+    expect(abschnittIn(seiteMit('team_fortschritt', 'team_quests', 'spielgefuehl_buehne'), 'Teams')).toContain(
+      QUESTS + ' ' + QUEST_PUNKTE,
     );
+  });
+
+  it('team_quests ohne spielgefuehl_buehne: der Absatz ohne Quest-Punkte', () => {
+    const text = abschnittIn(seiteMit('team_fortschritt', 'team_quests'), 'Teams');
+
+    expect(text).toContain(QUESTS);
+    expect(text).not.toContain('bringen dir erfüllte Quests auch Punkte');
   });
 
   it('ohne team_quests: kein Absatz zu Quests', () => {
     expect(abschnittIn(seiteMit('team_fortschritt'), 'Teams')).not.toContain('Quests');
   });
+
+  // Juristische Vorgabe vom 27.11.: Quest-Punkte im Absatz „Mit Punkten zeigen wir dir …“, nur mit
+  // team_quests und spielgefuehl_buehne
+  const PUNKTE_QUESTS =
+    'Bist du in einem Team und hast beim Spielgefühl auch den Quest-Punkten zugestimmt, bekommst du Punkte für ' +
+    'jede Quest deines Teams, die in einer Woche erfüllt ist, in der du ab deiner Zustimmung selbst einen Beitrag ' +
+    'gespeichert hast (siehe ‚Teams‘).';
+
+  it('team_quests und spielgefuehl_buehne: „Punkte“ nennt Quest-Punkte und die Wochensummen der Teams', () => {
+    const text = abschnittIn(
+      seiteMit('punkte', 'team_fortschritt', 'team_quests', 'spielgefuehl_buehne'),
+      'Punkte',
+    );
+
+    expect(text).toContain('und ihnen zustimmen. ' + PUNKTE_QUESTS + ' Kopiert oder nutzt jemand');
+    expect(text).toContain(
+      'aus deinen sichtbaren Beiträgen und den Zählern daran und aus den Wochensummen deiner Teams. Eigene Kopien',
+    );
+  });
+
+  for (const [titel, namen] of [
+    ['nur team_quests', ['punkte', 'team_fortschritt', 'team_quests']],
+    ['nur spielgefuehl_buehne', ['punkte', 'spielgefuehl_buehne']],
+    ['keiner von beiden', ['punkte']],
+  ] as const) {
+    it(`${titel}: „Punkte“ ohne Quest-Punkte, die übrigen Sätze unverändert`, () => {
+      const text = abschnittIn(seiteMit(...namen), 'Punkte');
+
+      expect(text).not.toContain('Quest-Punkten zugestimmt');
+      expect(text).not.toContain('Wochensummen deiner Teams');
+      expect(text).toContain('und ihnen zustimmen. Kopiert oder nutzt jemand');
+      expect(text).toContain('aus deinen sichtbaren Beiträgen und den Zählern daran. Eigene Kopien');
+    });
+  }
 
   it('rangliste: im Abschnitt „Punkte“ sehen Mitspielende den Punktestand', () => {
     expect(abschnittIn(seiteMit('punkte', 'rangliste'), 'Punkte')).toContain(
@@ -1446,6 +1496,27 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
       'nur zwei Zahlen: wie oft deine Beiträge insgesamt genutzt waren und wie viele Einwürfe anderer es im ' +
         'Fangkorb gab, als du zuletzt da warst.',
     );
+  });
+
+  // Juristische Vorgabe vom 27.11. (vorläufig): DSE-Satz 1, nur mit danke_knopf
+  const DANKE_EINWILLIGUNG =
+    'Wenn du selbst ‚Danke‘ sagst, verarbeiten wir das mit deiner Einwilligung nach Artikel 9 Absatz 2 ' +
+    'Buchstabe a DSGVO (siehe ‚Deine Zustimmung und deine Einwilligung‘); ohne diese Einwilligung gibt es den ' +
+    'Knopf nicht.';
+
+  it('danke_knopf: der Satz zur Einwilligung steht im Block Zweck/Rechtsgrundlage nach lit. f', () => {
+    const text = abschnittIn(seiteMit('danke_knopf'), 'Rückmeldung zur Nutzung deiner Beiträge');
+
+    expect(text).toContain(
+      'Rechtsgrundlage: Artikel 6 Absatz 1 Buchstabe f DSGVO — unser berechtigtes Interesse ist, Mitwirkende über ' +
+        'die Wirkung ihrer Beiträge zu informieren. ' + DANKE_EINWILLIGUNG,
+    );
+  });
+
+  it('ohne danke_knopf kein Satz zur Einwilligung ins Danke', () => {
+    const ganz = normalisiert(seiteMit('wirkungs_echo').textContent);
+
+    expect(ganz).not.toContain('Wenn du selbst ‚Danke‘ sagst');
   });
 
   it('nur wirkungs_echo: Zählerstand des Echos, keine Sätze zum Danke-Knopf', () => {
