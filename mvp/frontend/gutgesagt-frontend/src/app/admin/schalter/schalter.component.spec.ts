@@ -1,9 +1,12 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { SchalterComponent } from './schalter.component';
-import { Schalter } from '../../services/moderation.service';
+import { SaisonsComponent } from '../saisons/saisons.component';
+import { SaalSpruecheComponent } from '../saal-sprueche/saal-sprueche.component';
+import { Einstellung, Schalter } from '../../services/moderation.service';
 import { environment } from '../../../environments/environment';
 
 const URL = `${environment.baseUrl}/api/v1/moderation/schalter`;
@@ -16,9 +19,19 @@ function schalter(teil: Partial<Schalter> & { name: string }): Schalter {
     admin_wert: false,
     wirksam: false,
     dsfa_hinweis: null,
+    gruppe: 'Grundfunktionen',
+    wartet_auf_recht: false,
     ...teil,
   };
 }
+
+/** Die Saisons haben eine eigene Spec; hier ohne eigene Abrufe. */
+@Component({ selector: 'app-saisons', standalone: true, template: '' })
+class SaisonsStubComponent {}
+
+/** Die Saal-Sprüche ebenso. */
+@Component({ selector: 'app-saal-sprueche', standalone: true, template: '' })
+class SaalSpruecheStubComponent {}
 
 const DSFA = 'Vor dem Einschalten auf Prod: DSFA beschlossen (docs/DSFA.md Abschnitt 7)';
 
@@ -30,7 +43,12 @@ describe('SchalterComponent', () => {
     await TestBed.configureTestingModule({
       imports: [SchalterComponent],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()],
-    }).compileComponents();
+    })
+      .overrideComponent(SchalterComponent, {
+        remove: { imports: [SaisonsComponent, SaalSpruecheComponent] },
+        add: { imports: [SaisonsStubComponent, SaalSpruecheStubComponent] },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(SchalterComponent);
     http = TestBed.inject(HttpTestingController);
@@ -72,6 +90,148 @@ describe('SchalterComponent', () => {
     expect(gepostet.querySelector('[data-testid="gesperrt"]')).not.toBeNull();
     expect(gepostet.querySelector('[data-testid="dsfa-hinweis"]')).toBeNull();
     expect(knopf(gepostet).disabled).toBeTrue();
+  });
+
+  it('zeigt einen eigenen Einschalt-Hinweis des Servers statt des allgemeinen DSFA-Hinweises', () => {
+    const teams = 'Rechtlich freigegeben (25.11.): darf vor dem Beschluss der DSFA eingeschaltet werden. Die Anzeige am Namen (teams_oeffentlich) bleibt aus.';
+    laden([
+      schalter({ name: 'teams', dsfa_hinweis: teams }),
+      schalter({ name: 'teams_oeffentlich', dsfa_hinweis: DSFA }),
+    ]);
+
+    const [t, oeffentlich] = karten();
+    expect(t.querySelector('[data-testid="dsfa-hinweis"]')!.textContent).toContain(teams);
+    expect(t.querySelector('[data-testid="dsfa-hinweis"]')!.textContent).not.toContain('DSFA beschlossen');
+    expect(oeffentlich.querySelector('[data-testid="dsfa-hinweis"]')!.textContent).toContain('DSFA beschlossen');
+  });
+
+  describe('Gruppen, Status und Filter (25.11.)', () => {
+    const LISTE = (): Schalter[] => [
+      schalter({ name: 'sharepic', admin_wert: true, wirksam: true }),
+      schalter({ name: 'gepostet' }),
+      schalter({ name: 'teams', gruppe: 'Teams', obergrenze: false, dsfa_hinweis: 'Rechtlich freigegeben (25.11.)' }),
+      schalter({ name: 'teams_oeffentlich', gruppe: 'Teams', obergrenze: false, dsfa_hinweis: DSFA, wartet_auf_recht: true }),
+      schalter({ name: 'punkte', gruppe: 'Punkte & Anerkennung', dsfa_hinweis: DSFA, wartet_auf_recht: true }),
+    ];
+
+    function gruppen(): HTMLElement[] {
+      return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="gruppe"]'));
+    }
+
+    function chip(text: string): HTMLButtonElement {
+      const chips = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="filter-chip"]'),
+      ) as HTMLButtonElement[];
+      return chips.find((c) => c.textContent!.trim().startsWith(text))!;
+    }
+
+    it('zeigt je Gruppe des Servers einen Abschnitt mit Überschrift und Zähler, in dessen Reihenfolge', () => {
+      laden(LISTE());
+
+      const g = gruppen();
+      expect(g.map((x) => x.querySelector('h3 span')!.textContent!.trim())).toEqual([
+        'Grundfunktionen',
+        'Teams',
+        'Punkte & Anerkennung',
+      ]);
+      expect(g[0].querySelector('[data-testid="gruppe-zaehler"]')!.textContent!.trim()).toBe('1 von 2 an');
+      expect(g[1].querySelector('[data-testid="gruppe-zaehler"]')!.textContent!.trim()).toBe('0 von 2 an');
+      // Überschriften-Hierarchie: Seite h2, Gruppe h3, Schalter h4; Abschnitt nach seiner Überschrift benannt
+      expect(g[0].getAttribute('aria-labelledby')).toBe(g[0].querySelector('h3')!.id);
+      expect(g[0].querySelectorAll('h4').length).toBe(2);
+    });
+
+    it('berechnet die Status-Pille: an, frei einschaltbar, wartet auf Recht, gesperrt (Server)', () => {
+      laden(LISTE());
+
+      const pillen = karten().map((k) => k.querySelector('[data-testid="status"]')!.textContent!.trim());
+      // teams: Hinweis steht, aber rechtlich freigegeben, und der Server sperrt ihn
+      expect(pillen).toEqual(['an', 'frei einschaltbar', 'gesperrt (Server)', 'wartet auf Recht', 'wartet auf Recht']);
+    });
+
+    it('sagt bei einem wirksamen Schalter mit offenem Recht „an, Recht offen“', () => {
+      laden([schalter({ name: 'punkte', admin_wert: true, wirksam: true, dsfa_hinweis: DSFA, wartet_auf_recht: true })]);
+
+      const pille = karten()[0].querySelector('[data-testid="status"]') as HTMLElement;
+      expect(pille.textContent!.trim()).toBe('an, Recht offen');
+      expect(pille.classList).toContain('pille-recht');
+      expect(fixture.componentInstance.anzahl('an')).toBe(1);
+    });
+
+    it('fasst Schalter ohne Gruppe vom Server unter „Weitere“', () => {
+      laden([schalter({ name: 'gepostet', gruppe: '' })]);
+      expect(gruppen()[0].querySelector('h3 span')!.textContent!.trim()).toBe('Weitere');
+    });
+
+    it('filtert nach Status, zählt je Chip und blendet leere Gruppen aus', () => {
+      laden(LISTE());
+      expect(chip('Alle').getAttribute('aria-pressed')).toBe('true');
+      expect(chip('Wartet auf Recht').textContent).toContain('2');
+
+      chip('Wartet auf Recht').click();
+      fixture.detectChanges();
+
+      expect(chip('Wartet auf Recht').getAttribute('aria-pressed')).toBe('true');
+      expect(chip('Alle').getAttribute('aria-pressed')).toBe('false');
+      expect(karten().map((k) => k.querySelector('h4')!.textContent)).toEqual([
+        'Teams am Anzeigenamen',
+        'Punkte und Meilensteine',
+      ]);
+      expect(gruppen().length).toBe(2);
+      // Der Zähler gilt für die ganze Gruppe, nicht nur für die gefilterten
+      expect(gruppen()[0].querySelector('[data-testid="gruppe-zaehler"]')!.textContent!.trim()).toBe('0 von 2 an');
+    });
+
+    it('sagt, wenn kein Schalter zum Filter passt', () => {
+      laden([schalter({ name: 'gepostet' })]);
+      chip('Gesperrt').click();
+      fixture.detectChanges();
+
+      expect(karten().length).toBe(0);
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="filter-leer"]')!.textContent).toContain(
+        'Kein Schalter passt',
+      );
+    });
+
+    it('klappt die Details auf und zu, mit aria-expanded, und behält das beim Nachladen', () => {
+      laden(LISTE());
+      const karte = karten()[1];
+      const knopfAuf = karte.querySelector('[data-testid="aufklappen"]') as HTMLButtonElement;
+      const details = karte.querySelector('[data-testid="details"]') as HTMLElement;
+      expect(knopfAuf.getAttribute('aria-expanded')).toBe('false');
+      expect(knopfAuf.getAttribute('aria-controls')).toBe(details.id);
+      expect(knopfAuf.getAttribute('aria-label')).toBe('Details zu Rückfrage „Ja, gepostet“');
+      expect(details.hidden).toBeTrue();
+
+      knopfAuf.focus();
+      knopfAuf.click();
+      fixture.detectChanges();
+      // Dieselbe Zeile bleibt stehen, der Fokus auf dem Knopf (WCAG 2.4.3)
+      expect(knopfAuf.isConnected).toBeTrue();
+      expect(document.activeElement).toBe(knopfAuf);
+      expect(knopfAuf.getAttribute('aria-expanded')).toBe('true');
+      expect(details.hidden).toBeFalse();
+      expect((karte.querySelector('[data-testid="zustand"]') as HTMLElement).hidden).toBeFalse();
+
+      (fixture.componentInstance as unknown as { uebernehmen(d: unknown): void }).uebernehmen({ schalter: LISTE() });
+      fixture.detectChanges();
+      expect((karten()[1].querySelector('[data-testid="details"]') as HTMLElement).hidden).toBeFalse();
+
+      (karten()[1].querySelector('[data-testid="aufklappen"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect((karten()[1].querySelector('[data-testid="details"]') as HTMLElement).hidden).toBeTrue();
+    });
+
+    it('zeigt den Zustand auch zugeklappt, wenn der Admin-Wert an ist, aber nicht wirkt', () => {
+      laden([
+        schalter({ name: 'punkte', admin_wert: true, wirksam: true }),
+        schalter({ name: 'gepostet', obergrenze: false, admin_wert: true, wirksam: false }),
+      ]);
+
+      const [punkte, gepostet] = karten().map((k) => k.querySelector('[data-testid="zustand"]') as HTMLElement);
+      expect(punkte.hidden).toBeTrue();
+      expect(gepostet.hidden).toBeFalse();
+    });
   });
 
   it('setzt beim Umschalten den Admin-Wert und zeigt den neuen Stand ohne Neuladen', () => {
@@ -132,5 +292,235 @@ describe('SchalterComponent', () => {
 
     expect(knopf(karten()[0]).getAttribute('aria-checked')).toBe('false');
     expect(document.body.textContent).toContain('Der Server erlaubt diesen Schalter nicht.');
+  });
+
+  it('zeigt die Schalter des Spielgefühls mit Namen und erklärt die Unterschalter', () => {
+    laden([
+      schalter({ name: 'kopiert_erfolg' }),
+      schalter({ name: 'danke_knopf', admin_wert: false, wirksam: false }),
+      schalter({ name: 'danke_ohne_konto', admin_wert: true, wirksam: false }),
+      schalter({ name: 'punkte', admin_wert: false, wirksam: false }),
+      schalter({ name: 'rangliste', admin_wert: true, wirksam: false }),
+    ]);
+
+    const [kopiert, , ohneKonto, , rangliste] = karten();
+    expect(kopiert.querySelector('h4')!.textContent).toBe('Erfolgstext nach dem Kopieren');
+    expect(ohneKonto.querySelector('h4')!.textContent).toBe('Danke-Knopf ohne Konto');
+    const zustand = (k: HTMLElement) => (k.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim();
+    expect(zustand(ohneKonto)).toBe('Admin: an · wirksam: aus, weil Danke-Knopf aus');
+    expect(zustand(rangliste)).toBe('Admin: an · wirksam: aus, weil Punkte aus');
+  });
+
+  it('„Ja, gepostet“ ohne Konto: Name und Voraussetzung (#799)', () => {
+    laden([
+      schalter({ name: 'gepostet', admin_wert: false, wirksam: false }),
+      schalter({ name: 'gepostet_ohne_konto', admin_wert: true, wirksam: false }),
+    ]);
+
+    const ohneKonto = karten()[1];
+    expect(ohneKonto.querySelector('h4')!.textContent).toBe('„Ja, gepostet“ ohne Konto');
+    expect((ohneKonto.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim()).toBe(
+      'Admin: an · wirksam: aus, weil Rückfrage „Ja, gepostet“ aus',
+    );
+  });
+
+  describe('Kopplungen (Gamification-Check 26.11.)', () => {
+    const zustand = (k: HTMLElement) => (k.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim();
+    const kopplung = (k: HTMLElement) => k.querySelector('[data-testid="kopplung"]')?.textContent!.trim() ?? null;
+
+    it('Spielgefühl als eine Frage: wirkt nicht ohne Punkte und sagt warum', () => {
+      laden([
+        schalter({ name: 'punkte', admin_wert: false, wirksam: false }),
+        schalter({ name: 'spielgefuehl_buehne', admin_wert: true, wirksam: false }),
+      ]);
+
+      const buehne = karten()[1];
+      expect(buehne.querySelector('h4')!.textContent).toBe('Spielgefühl als eine Frage');
+      expect(zustand(buehne)).toBe('Admin: an · wirksam: aus, weil Punkte aus');
+      expect((buehne.querySelector('[data-testid="status"]') as HTMLElement).textContent!.trim()).toBe('frei einschaltbar');
+      expect(kopplung(buehne)).toBe('Wirkt nur zusammen mit: Punkte.');
+    });
+
+    it('Muster-Hinweise aus Zustimmungen: Name und Kette Punkte → Spielgefühl', () => {
+      laden([
+        schalter({ name: 'punkte', admin_wert: true, wirksam: true }),
+        schalter({ name: 'spielgefuehl_buehne', admin_wert: false, wirksam: false }),
+        schalter({ name: 'muster_stimmen', admin_wert: true, wirksam: false }),
+      ]);
+
+      const stimmen = karten()[2];
+      expect(stimmen.querySelector('h4')!.textContent).toBe('Muster-Hinweise aus Zustimmungen');
+      expect(zustand(stimmen)).toBe('Admin: an · wirksam: aus, weil Spielgefühl als eine Frage aus');
+      expect(kopplung(stimmen)).toBe('Wirkt nur zusammen mit: Punkte, Spielgefühl als eine Frage.');
+    });
+
+    it('Abzeichen am Namen: wirkt nicht, solange das Spielgefühl an ist', () => {
+      laden([
+        schalter({ name: 'punkte', admin_wert: true, wirksam: true }),
+        schalter({ name: 'spielgefuehl_buehne', admin_wert: true, wirksam: true }),
+        schalter({ name: 'abzeichen_sichtbar', admin_wert: true, wirksam: false }),
+      ]);
+
+      const abzeichen = karten()[2];
+      expect(zustand(abzeichen)).toBe(
+        'Admin: an · wirksam: aus, weil Spielgefühl als eine Frage an (Abzeichen dann nur in der Rangliste)',
+      );
+      expect((abzeichen.querySelector('[data-testid="zustand"]') as HTMLElement).hidden).toBeFalse();
+      expect(kopplung(abzeichen)).toBe(
+        'Wirkt nur zusammen mit: Punkte. Wirkt nicht, solange Spielgefühl als eine Frage an ist (Abzeichen dann nur in der Rangliste).',
+      );
+    });
+
+    it('Wirkungs-Echo und Danke-Knopf: nur zusammen, je mit Grund', () => {
+      laden([
+        schalter({ name: 'wirkungs_echo', admin_wert: true, wirksam: false }),
+        schalter({ name: 'danke_knopf', admin_wert: false, wirksam: false }),
+      ]);
+
+      const [echo, danke] = karten();
+      expect(zustand(echo)).toBe('Admin: an · wirksam: aus, weil Danke-Knopf aus');
+      expect(kopplung(echo)).toBe('Wirkt nur zusammen mit: Danke-Knopf.');
+      expect(kopplung(danke)).toBe('Wirkt nur zusammen mit: Wirkungs-Echo.');
+    });
+
+    it('Vertrauenssatz beim Teambeitritt: braucht den Team-Fortschritt', () => {
+      laden([
+        schalter({ name: 'teams', admin_wert: true, wirksam: true }),
+        schalter({ name: 'team_fortschritt', admin_wert: false, wirksam: false }),
+        schalter({ name: 'teamlink_vertrauenssatz', admin_wert: true, wirksam: false }),
+      ]);
+
+      const satz = karten()[2];
+      expect(zustand(satz)).toBe('Admin: an · wirksam: aus, weil Team-Fortschritt aus');
+      expect(kopplung(satz)).toBe('Wirkt nur zusammen mit: Teams, Team-Fortschritt.');
+    });
+
+    it('ohne Kopplung keine Zeile dazu', () => {
+      laden([schalter({ name: 'gartenansicht' })]);
+
+      expect(kopplung(karten()[0])).toBeNull();
+    });
+  });
+
+  describe('Teams und aktuelle Saison', () => {
+    const SAISON: Einstellung = {
+      name: 'aktuelle_saison',
+      erklaerung: 'Saison der Teams, die am Namen erscheinen.',
+      wert: '2026',
+      standard: '2026',
+      max_laenge: 20,
+    };
+
+    function mitEinstellungen(liste: Schalter[], einstellungen: Einstellung[] = [SAISON]): void {
+      http.expectOne(URL).flush({ schalter: liste, einstellungen });
+      fixture.detectChanges();
+    }
+
+    function einstellung(): HTMLElement {
+      return (fixture.nativeElement as HTMLElement).querySelector('[data-testid="einstellung"]') as HTMLElement;
+    }
+
+    it('zeigt die Schalter teams und teams_oeffentlich mit Namen', () => {
+      mitEinstellungen([schalter({ name: 'teams' }), schalter({ name: 'teams_oeffentlich' })]);
+
+      const [teams, oeffentlich] = karten();
+      expect(teams.querySelector('h4')!.textContent).toBe('Teams über Einladungen');
+      expect(oeffentlich.querySelector('h4')!.textContent).toBe('Teams am Anzeigenamen');
+    });
+
+    it('erklärt, warum teams_oeffentlich ohne Teams nicht wirkt', () => {
+      mitEinstellungen([
+        schalter({ name: 'teams', admin_wert: false, wirksam: false }),
+        schalter({ name: 'teams_oeffentlich', admin_wert: true, wirksam: false }),
+      ]);
+
+      expect((karten()[1].querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim()).toBe(
+        'Admin: an · wirksam: aus, weil Teams aus',
+      );
+    });
+
+    it('erklärt die Kette Teams → Team-Fortschritt → Team-Quests', () => {
+      mitEinstellungen([
+        schalter({ name: 'teams', admin_wert: false, wirksam: false }),
+        schalter({ name: 'team_fortschritt', admin_wert: true, wirksam: false }),
+        schalter({ name: 'team_quests', admin_wert: true, wirksam: false }),
+      ]);
+
+      const [, fortschritt, quests] = karten().map((k) =>
+        (k.querySelector('[data-testid="zustand"]') as HTMLElement).textContent!.trim(),
+      );
+      expect(fortschritt).toBe('Admin: an · wirksam: aus, weil Teams aus');
+      expect(quests).toBe('Admin: an · wirksam: aus, weil Team-Fortschritt aus');
+    });
+
+    it('sagt, wenn eine laufende Saison die Einstellung ersetzt (#782)', () => {
+      const hinweis = 'Gilt gerade nicht: Die Saison „Winter 26“ ist die aktuelle Saison der Teams, bis die nächste beginnt (Abschnitt Saisons).';
+      mitEinstellungen([schalter({ name: 'teams' })], [{ ...SAISON, hinweis }]);
+      expect(einstellung().querySelector('[data-testid="einstellung-hinweis"]')!.textContent).toContain(hinweis);
+    });
+
+    it('ohne laufende Saison kein Hinweis an der Einstellung', () => {
+      mitEinstellungen([schalter({ name: 'teams' })]);
+      expect(einstellung().querySelector('[data-testid="einstellung-hinweis"]')).toBeNull();
+    });
+
+    it('zeigt die aktuelle Saison als Textfeld mit Standard und Grenze', async () => {
+      mitEinstellungen([schalter({ name: 'teams' })]);
+      // ngModel schreibt den Wert erst nach einem Mikrotask ins Feld (whenStable wartete auf den Nachlade-Takt)
+      await Promise.resolve();
+      fixture.detectChanges();
+
+      const karte = einstellung();
+      expect(karte.querySelector('h3')!.textContent).toBe('Aktuelle Saison');
+      expect(karte.textContent).toContain('Saison der Teams, die am Namen erscheinen.');
+      expect(karte.textContent).toContain('Standard: 2026');
+      const feld = karte.querySelector('input') as HTMLInputElement;
+      expect(feld.value).toBe('2026');
+      expect(feld.maxLength).toBe(20);
+      expect((karte.querySelector('[data-testid="einstellung-speichern"]') as HTMLButtonElement).disabled).toBeTrue();
+    });
+
+    it('speichert eine neue Saison und zeigt den Stand des Servers ohne Neuladen', () => {
+      mitEinstellungen([schalter({ name: 'teams' })]);
+      const k = fixture.componentInstance;
+      k.entwuerfe['aktuelle_saison'] = ' 2027 ';
+      k.einstellungSpeichern(k.einstellungen[0]);
+
+      const anfrage = http.expectOne(`${URL}/einstellungen/aktuelle_saison`);
+      expect(anfrage.request.method).toBe('PUT');
+      expect(anfrage.request.body).toEqual({ wert: '2027' });
+      anfrage.flush({ schalter: [schalter({ name: 'teams' })], einstellungen: [{ ...SAISON, wert: '2027' }] });
+      fixture.detectChanges();
+
+      expect(einstellung().querySelector('[data-testid="einstellung-stand"]')!.textContent).toContain('Gespeichert: 2027');
+      expect(k.entwuerfe['aktuelle_saison']).toBe('2027');
+    });
+
+    it('meldet einen ungültigen Wert (422)', () => {
+      mitEinstellungen([schalter({ name: 'teams' })]);
+      const k = fixture.componentInstance;
+      k.entwuerfe['aktuelle_saison'] = 'x';
+      k.einstellungSpeichern(k.einstellungen[0]);
+
+      http
+        .expectOne(`${URL}/einstellungen/aktuelle_saison`)
+        .flush({ detail: 'Ungueltiger Wert' }, { status: 422, statusText: 'Unprocessable Entity' });
+      fixture.detectChanges();
+
+      expect(document.body.textContent).toContain('Ungültiger Wert');
+      expect(k.entwuerfe['aktuelle_saison']).toBe('x');
+    });
+
+    it('überschreibt beim Nachladen keine angefangene Eingabe', () => {
+      mitEinstellungen([schalter({ name: 'teams' })]);
+      const k = fixture.componentInstance;
+      k.entwuerfe['aktuelle_saison'] = 'Winter';
+      (k as unknown as { uebernehmen(d: unknown): void }).uebernehmen({
+        schalter: [schalter({ name: 'teams' })],
+        einstellungen: [{ ...SAISON, wert: '2028' }],
+      });
+
+      expect(k.entwuerfe['aktuelle_saison']).toBe('Winter');
+    });
   });
 });

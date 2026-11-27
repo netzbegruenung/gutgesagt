@@ -34,9 +34,10 @@ ein Besucher je Worker.
 Die Adresse wird dabei weder gespeichert noch geloggt; das Merkmal existiert nur
 innerhalb der Anfrage. Laenger lebt nur, was daraus mit dem Tagesschluessel
 berechnet ist: das Pseudonym an Suchereignissen des laufenden Tages (am Tagesende
-verdichtet zu Zaehlern, services/loeschfristen_service.py) und an offenen anonymen
-Meldungen, bei Suchen ohne Treffer ein Pruefwert aus Pseudonym und Aussage, im
-Speicher bis Mitternacht.
+verdichtet zu Zaehlern, services/loeschfristen_service.py), mit eigenem Praefix an den
+Seitenaufrufen des laufenden Tages (``aufrufe_heute``, #761, ebenso verdichtet,
+services/aufrufe_service.py) und an offenen anonymen Meldungen, bei Suchen ohne
+Treffer ein Pruefwert aus Pseudonym und Aussage, im Speicher bis Mitternacht.
 """
 
 import hashlib
@@ -55,9 +56,9 @@ class Tagesschluessel:
     """
     Ein zufaelliger Schluessel je UTC-Tag, nur im Prozessspeicher.
 
-    Heute fragen nur die Suchroute im Event-Loop nach dem Schluessel. Das Lock
-    haelt den Tageswechsel trotzdem atomar, damit ein kuenftiger Aufruf aus dem
-    Threadpool am selben Tag nicht einen zweiten Schluessel erzeugt.
+    Die Suchroute fragt im Event-Loop nach dem Schluessel, das Zaehlen der
+    Seitenaufrufe (#761) aus dem Threadpool. Das Lock haelt den Tageswechsel atomar,
+    damit beide am selben Tag denselben Schluessel bekommen.
     """
 
     def __init__(self):

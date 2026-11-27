@@ -3,10 +3,12 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pydantic import BaseModel, Field
 
-from dtos.metrics import GetMetricsResponse
+from dtos.metrics import GetMetricsResponse, ZuwachsResponse
+from domain.bestandszahl import ZUWACHS_AB, zeitraum_beginn, zuwachs
+from domain.models.content_type import ContentType
 from dependencies import (
     get_bilanz_service,
     get_commentary_service,
@@ -26,6 +28,10 @@ from services.content.statement_service import StatementService
 from services.anzeigename_service import get_anzeigename_service
 from services.bilanz_service import BilanzService
 from services.gepostet_service import GepostetService, get_gepostet_service
+from services.gepostet_ohne_konto_service import (
+    GepostetOhneKontoService,
+    get_gepostet_ohne_konto_service,
+)
 from services.metrics_service import get_metrics_service
 from services.muster_hinweise_service import MUSTER_FRIST_TAGE, MusterHinweiseService
 from services.suchen_ohne_treffer_service import (
@@ -36,6 +42,11 @@ from services.suchen_ohne_treffer_service import (
 )
 from core.config import Settings
 from services.schalter_service import schalter_wirksam
+from services.spielgefuehl_service import (
+    punkte_eingewilligte,
+    stimmen_aktiv,
+    stimmen_eingewilligte,
+)
 from core.logging import get_logger
 from core.fehler import INTERNER_FEHLER
 
@@ -182,10 +193,35 @@ class SuchenOhneTrefferResponse(BaseModel):
     suchanfragen: List[SucheOhneTrefferEintrag]
 
 
+async def _zuwachs(content_repository, settings: Settings) -> Optional[ZuwachsResponse]:
+    """
+    Zuwachs zur Bestandszahl (domain/bestandszahl.py), nur mit dem Schalter
+    bestandszahl_zuwachs. Ein Fehler laesst nur den Zuwachs weg, nie die Zaehler.
+    """
+    try:
+        if not await asyncio.to_thread(
+            schalter_wirksam, "bestandszahl_zuwachs", settings
+        ):
+            return None
+        neu, zeitpunkte = await content_repository.angelegt_seit(
+            zeitraum_beginn(datetime.now(timezone.utc)),
+            (ContentType.COMMENTARY.value,),
+            ZUWACHS_AB - 1,
+        )
+        ergebnis = zuwachs(neu, zeitpunkte)
+        return ZuwachsResponse(
+            neu_7_tage=ergebnis.neu, zuletzt_ergaenzt=ergebnis.zuletzt_ergaenzt
+        )
+    except Exception as e:
+        logger.error(f"Zuwachs nicht gezaehlt: {type(e).__name__}", exc_info=True)
+        return None
+
+
 # Bewusst oeffentlich: /getMetrics liefert nur aggregierte Bestandszaehler
 # (content_count, statement_count, commentary_count, reference_count); das BFF
-# fuehrt es als anonym erlaubt (EndpointPolicy). Die Startseite zeigt die Zahlen
-# seit dem Umbau auf zwei Kacheln nicht mehr an. Die Kennzahlen fuer Admins stehen
+# fuehrt es als anonym erlaubt (EndpointPolicy). Die Startseite zeigt Kommentare und
+# Aussagen abgerundet als Bestandszahl in der Unterzeile des Claims
+# (search-view/hero-unterzeile.component.ts). Die Kennzahlen fuer Admins stehen
 # in den Endpunkten darunter, die admin-only sind; Betriebskennzahlen liegen unter
 # /metrics (api/betriebskennzahlen.py).
 @router.get("/getMetrics", response_model=GetMetricsResponse)
@@ -238,6 +274,7 @@ async def get_metrics(
                 statement_count=statement_count,
                 commentary_count=await commentary_service.count(),
                 reference_count=await reference_service.count(),
+                zuwachs=await _zuwachs(content_repository, settings),
             )
 
             _metrics_cache = (time.monotonic(), metrics)
@@ -458,11 +495,16 @@ def get_bilanz(
 
 class GepostetWocheResponse(BaseModel):
     woche: date = Field(description="Montag der Kalenderwoche (UTC)")
+    # Verschiedene Menschen mit Konto: der Nordstern
     personen: int
+    # Meldungen ohne Konto (#799): Klicks, keine Menschen; nie zu ``personen`` addieren
+    meldungen_ohne_konto: int = 0
 
 
 class GepostetResponse(BaseModel):
     aktiv: bool
+    # Ob "Ja, gepostet" ohne Konto gerade gezaehlt wird (#799)
+    ohne_konto_aktiv: bool = False
     woechentlich: List[GepostetWocheResponse]
 
 
@@ -477,24 +519,38 @@ async def get_gepostet(
     admin_user: str = Depends(require_admin),
     settings: Settings = Depends(get_settings),
     dienst: GepostetService = Depends(get_gepostet_service),
+    ohne_konto: GepostetOhneKontoService = Depends(get_gepostet_ohne_konto_service),
 ):
     """
     Der Nordstern (#643): je Kalenderwoche, wie viele verschiedene Personen nach dem
     Kopieren "Ja, gepostet" gemeldet haben. Nur Zahlen, keine Kennungen
     (services/gepostet_service.py). Ohne ``gepostet_aktiv`` entstehen keine Meldungen;
     ``aktiv`` sagt das.
+
+    Daneben getrennt die Meldungen ohne Konto (#799): Klicks je Woche, keine Menschen,
+    deshalb ein eigenes Feld und nie in ``personen``.
     """
     if not schalter_wirksam("gepostet", settings):
         return GepostetResponse(aktiv=False, woechentlich=[])
     try:
         zeilen = await asyncio.to_thread(dienst.wochen, wochen)
+        ohne = {
+            z.woche: z.meldungen
+            for z in await asyncio.to_thread(ohne_konto.wochen, wochen)
+        }
     except Exception as e:
         logger.error(f"Error fetching Gepostet: {type(e).__name__}", exc_info=True)
         raise HTTPException(status_code=500, detail=INTERNER_FEHLER)
     return GepostetResponse(
         aktiv=True,
+        ohne_konto_aktiv=schalter_wirksam("gepostet_ohne_konto", settings),
         woechentlich=[
-            GepostetWocheResponse(woche=z.woche, personen=z.personen) for z in zeilen
+            GepostetWocheResponse(
+                woche=z.woche,
+                personen=z.personen,
+                meldungen_ohne_konto=ohne.get(z.woche, 0),
+            )
+            for z in zeilen
         ],
     )
 
@@ -538,6 +594,8 @@ class MusterHinweisEintrag(BaseModel):
     name_a: Optional[str]
     konto_b: str
     name_b: Optional[str]
+    # "nutzung" (gegenseitig genutzt) oder "zustimmung" (einander zugestimmt)
+    art: str = "nutzung"
     tage: int
     erster_tag: date
     letzter_tag: date
@@ -559,14 +617,25 @@ async def get_muster_hinweise(
     Muster-Hinweise (#352): Kontenpaare, die sich innerhalb von sieben Tagen gegenseitig
     genutzt haben, zuletzt aufgefallene zuerst. Nur ein Hinweis fuer Admins, keine
     Automatik (services/muster_hinweise_service.py). Ohne ``punkte_aktiv`` entstehen
-    keine Hinweise; ``aktiv`` sagt das dem Dashboard.
+    keine Hinweise; ``aktiv`` sagt das dem Dashboard. Gezeigt werden nur Paare, bei
+    denen beide Konten aktuell eingewilligt haben ("Punkte und Meilensteine" bzw. im
+    Spielgefuehl-Modell ab Stufe ``fuer_mich``): Nach einem Widerruf erscheint die
+    Person hier nicht mehr (Art. 7 Abs. 3 DSGVO), und gelesene Hinweise ohne
+    Einwilligung beider loescht der Abruf nebenbei (wie der Loeschlauf).
     """
     if not schalter_wirksam("punkte", settings):
         return MusterHinweiseResponse(
             aktiv=False, frist_tage=MUSTER_FRIST_TAGE, hinweise=[]
         )
     try:
-        hinweise = await asyncio.to_thread(service.hinweise)
+        # Hinweise aus Zustimmungen nur mit wirksamem muster_stimmen und nur, wenn
+        # beide Konten aktuell zum Wortlaut mit Zustimmungen eingewilligt haben.
+        mit_stimmen = stimmen_aktiv(settings)
+        hinweise = await asyncio.to_thread(
+            service.hinweise,
+            lambda kennungen: punkte_eingewilligte(kennungen, settings),
+            stimmen_eingewilligte if mit_stimmen else None,
+        )
         namen = await asyncio.to_thread(
             get_anzeigename_service().namen,
             [k for h in hinweise for k in (h.konto_a, h.konto_b)],
@@ -583,6 +652,7 @@ async def get_muster_hinweise(
                 name_a=namen.get(h.konto_a),
                 konto_b=h.konto_b,
                 name_b=namen.get(h.konto_b),
+                art=h.art,
                 tage=h.tage,
                 erster_tag=h.erster_tag,
                 letzter_tag=h.letzter_tag,

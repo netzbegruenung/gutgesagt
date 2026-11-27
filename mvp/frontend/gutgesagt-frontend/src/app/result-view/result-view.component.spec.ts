@@ -1,4 +1,4 @@
-import { ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, signal } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { BehaviorSubject, of } from 'rxjs';
@@ -16,8 +16,11 @@ import { StatementService } from '../services/statement.service';
 import { routes } from '../app.routes';
 import { ohneWaechter } from '../testing/routen-ohne-waechter';
 import { StateManagementService } from '../services/state-management.service';
+import { FunktionenService } from '../services/funktionen.service';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { WIEDERHOLUNG_MS } from '../shared/lade-wiederholung';
+import { SUCHE_GESCHEITERT, SUCHE_HAKT } from '../services/suchfehler';
 import { TEILEN_LINK_KOPIERT, TEILEN_NAVIGATOR, TeilenNavigator } from '../shared/teilen.service';
 
 /** Die Karten, wie sie dastehen, ueber alle Gruppen und Typen. */
@@ -190,6 +193,125 @@ describe('ResultViewComponent: Klick auf Hinzufuegen bei leerer Suche', () => {
 });
 
 /**
+ * Scheitert die Suche (UX-Review 26.11.2026, Befund 1): nie der rohe HTTP-Text, sondern ein
+ * Satz; bei 0, 429 und 5xx versucht die Seite es selbst noch einmal, gestreut und mit
+ * wachsendem Abstand; „Noch einmal suchen“ sucht sofort.
+ */
+describe('ResultViewComponent: Suchfehler', () => {
+  const SUCHE = (req: { url: string }) => req.url.endsWith('/api/v1/search/searchByText');
+  let fixture: ComponentFixture<ResultViewComponent>;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [ResultViewComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+    http = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(ResultViewComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.searchQuery = 'windraeder toeten voegel';
+  });
+
+  function suchen(): void {
+    (fixture.componentInstance as unknown as { performSearch(): void }).performSearch();
+  }
+
+  function kasten(): HTMLElement | null {
+    return fixture.nativeElement.querySelector('app-error-message mat-card');
+  }
+
+  it('zeigt bei 503 einen Satz statt des HTTP-Texts und versucht es selbst noch einmal', fakeAsync(() => {
+    suchen();
+    http.expectOne(SUCHE).flush('Service Unavailable', { status: 503, statusText: 'Service Unavailable' });
+    fixture.detectChanges();
+
+    const text = kasten()!.textContent!;
+    expect(text).toContain(SUCHE_HAKT);
+    expect(SUCHE_HAKT).toBe('Die Suche hakt gerade, vermutlich ist das Netz voll. Wir versuchen es gleich noch einmal.');
+    expect(text).not.toMatch(/Http|failure|503|searchByText/);
+    expect(kasten()!.querySelector('button')!.textContent).toContain('Noch einmal suchen');
+    expect(kasten()!.querySelector('h3')!.textContent).toContain('Einen Moment');
+
+    // Gestreut: bis zu 30 % frueher oder spaeter als der erste Abstand
+    tick(Math.ceil(WIEDERHOLUNG_MS[0] * 1.3));
+    http.expectOne(SUCHE).flush({
+      query_was_newly_added_as_statement: false,
+      statement_id: null,
+      statement_text: '',
+      commentary_search_results_count: 0,
+      commentary_search_results: [],
+      generictext_search_results_count: 0,
+      generictext_search_results: [],
+    });
+    fixture.detectChanges();
+    expect(kasten()).toBeNull();
+    // Nach dem Erfolg ist nichts mehr geplant
+    tick(WIEDERHOLUNG_MS[WIEDERHOLUNG_MS.length - 1] * 2);
+    http.expectNone(SUCHE);
+  }));
+
+  it('versucht es auch ohne Antwort (Netz weg, Status 0) und bei 429 selbst', fakeAsync(() => {
+    suchen();
+    http.expectOne(SUCHE).error(new ProgressEvent('error'), { status: 0 });
+    tick(Math.ceil(WIEDERHOLUNG_MS[0] * 1.3));
+    http.expectOne(SUCHE).flush({}, { status: 429, statusText: 'Too Many Requests' });
+    fixture.detectChanges();
+    expect(kasten()!.textContent).toContain(SUCHE_HAKT);
+    tick(Math.ceil(WIEDERHOLUNG_MS[1] * 1.3));
+    http.expectOne(SUCHE).flush({}, { status: 500, statusText: 'Server Error' });
+    fixture.componentInstance.ngOnDestroy();
+    tick(WIEDERHOLUNG_MS[WIEDERHOLUNG_MS.length - 1] * 2);
+    http.expectNone(SUCHE);
+  }));
+
+  it('bei 422 kein Versprechen und kein Neuversuch, nur der Knopf; der sucht sofort', fakeAsync(() => {
+    suchen();
+    http.expectOne(SUCHE).flush({ detail: 'x' }, { status: 422, statusText: 'Unprocessable Entity' });
+    fixture.detectChanges();
+    expect(kasten()!.textContent).toContain(SUCHE_GESCHEITERT);
+    // Kein „Einen Moment“: gewartet wird hier nicht
+    expect(kasten()!.querySelector('h3')!.textContent).toContain('Das hat nicht geklappt');
+    tick(WIEDERHOLUNG_MS[WIEDERHOLUNG_MS.length - 1] * 2);
+    http.expectNone(SUCHE);
+
+    kasten()!.querySelector('button')!.click();
+    http.expectOne(SUCHE).flush({}, { status: 422, statusText: 'Unprocessable Entity' });
+  }));
+
+  it('der Abstand waechst je Fehlschlag, eine neue Suche beginnt wieder beim kurzen', fakeAsync(() => {
+    suchen();
+    http.expectOne(SUCHE).flush({}, { status: 503, statusText: 'Service Unavailable' });
+    tick(Math.ceil(WIEDERHOLUNG_MS[0] * 1.3));
+    http.expectOne(SUCHE).flush({}, { status: 503, statusText: 'Service Unavailable' });
+    // Zweiter Abstand: frueher als WIEDERHOLUNG_MS[1] * 0,7 kein Versuch
+    tick(Math.floor(WIEDERHOLUNG_MS[1] * 0.7) - 1);
+    http.expectNone(SUCHE);
+
+    // Neue Suche: Fehlschlag, dann wieder nach dem ersten, kurzen Abstand
+    fixture.componentInstance.searchQuery = 'heizungsgesetz';
+    suchen();
+    http.expectOne(SUCHE).flush({}, { status: 503, statusText: 'Service Unavailable' });
+    tick(Math.ceil(WIEDERHOLUNG_MS[0] * 1.3));
+    http.expectOne(SUCHE).flush({}, { status: 422, statusText: 'Unprocessable Entity' });
+    tick(WIEDERHOLUNG_MS[WIEDERHOLUNG_MS.length - 1] * 2);
+    http.expectNone(SUCHE);
+  }));
+
+  it('eine neue Suche verwirft den geplanten Neuversuch der vorigen', fakeAsync(() => {
+    suchen();
+    http.expectOne(SUCHE).flush({}, { status: 503, statusText: 'Service Unavailable' });
+    fixture.componentInstance.searchQuery = 'heizungsgesetz';
+    suchen();
+    const neu = http.expectOne(SUCHE);
+    expect(neu.request.body.query_text).toBe('heizungsgesetz');
+    neu.flush({}, { status: 422, statusText: 'Unprocessable Entity' });
+    tick(WIEDERHOLUNG_MS[WIEDERHOLUNG_MS.length - 1] * 2);
+    http.expectNone(SUCHE);
+  }));
+});
+
+/**
  * Themenfilter (#363): Die Treffer tragen die Themen der Aussage, ueber die sie
  * gefunden wurden. Der Filter bietet nur diese Themen an und zeigt danach nur die
  * Treffer mit dem gewaehlten Thema.
@@ -332,7 +454,13 @@ describe('ResultViewComponent: Nicht dabei?', () => {
     },
   };
 
-  function oeffnen(mobil: boolean, mitTreffer: boolean, vorschlaege = [SCHON_DA, AEHNLICH]): HTMLElement {
+  function oeffnen(
+    mobil: boolean,
+    mitTreffer: boolean,
+    vorschlaege = [SCHON_DA, AEHNLICH],
+    schonGesucht: number | null = null,
+    nullTrefferAnzahlAn = false,
+  ): HTMLElement {
     statementService = jasmine.createSpyObj('StatementService', ['aehnlicheAussagen']);
     statementService.aehnlicheAussagen.and.returnValue(of(vorschlaege));
     TestBed.configureTestingModule({
@@ -346,6 +474,10 @@ describe('ResultViewComponent: Nicht dabei?', () => {
           provide: BreakpointObserver,
           useValue: { observe: (query: string[]) => of({ matches: mobil && query[0] === '(max-width: 599px)', breakpoints: {} }) },
         },
+        {
+          provide: FunktionenService,
+          useValue: { an: (name: string) => signal(name === 'null_treffer_anzahl' && nullTrefferAnzahlAn) },
+        },
       ],
     });
     router = TestBed.inject(Router);
@@ -358,6 +490,7 @@ describe('ResultViewComponent: Nicht dabei?', () => {
       commentary_search_results: mitTreffer ? [KOMMENTAR as any] : [],
       generictext_search_results_count: 0,
       generictext_search_results: [],
+      schon_gesucht_anzahl: schonGesucht,
     });
     fixture = TestBed.createComponent(ResultViewComponent);
     fixture.detectChanges();
@@ -392,6 +525,28 @@ describe('ResultViewComponent: Nicht dabei?', () => {
     expect(bereich.querySelector('.keine-antwort-noetig')?.textContent).toContain('Nicht jede Aussage braucht eine Antwort.');
     bereich.querySelector<HTMLButtonElement>('.nur-link button')!.click();
     expect(navigate).toHaveBeenCalledWith(['/einwerfen']);
+  });
+
+  it('sagt ohne Treffer mit Schalter an, wie oft schon danach gesucht wurde (#362, Jura 26.11.)', () => {
+    const seite = oeffnen(true, false, [SCHON_DA, AEHNLICH], 3, true);
+    const zeile = seite.querySelector('.unified-empty-state .schon-gesucht')?.textContent ?? '';
+    expect(zeile).toContain('Danach wurde in den letzten vier Wochen schon 3-mal gesucht.');
+    expect(zeile).not.toContain('Personen');
+  });
+
+  it('zeigt mit Schalter aus keine Zahl, auch wenn das Backend eine schickt (#362)', () => {
+    const seite = oeffnen(true, false, [SCHON_DA, AEHNLICH], 5, false);
+    expect(seite.querySelector('.schon-gesucht')).toBeNull();
+  });
+
+  it('zeigt unter drei keine Zahl, auch mit Schalter an (#362, Jura 26.11.)', () => {
+    const seite = oeffnen(true, false, [SCHON_DA, AEHNLICH], 2, true);
+    expect(seite.querySelector('.schon-gesucht')).toBeNull();
+  });
+
+  it('zeigt ohne Zahl keinen Hinweis (#362)', () => {
+    const seite = oeffnen(false, false, [SCHON_DA, AEHNLICH], null, true);
+    expect(seite.querySelector('.schon-gesucht')).toBeNull();
   });
 
   it('gibt ohne Treffer einen Suchtipp, der zur Suche nach Aussagen passt (#617)', () => {
@@ -1524,22 +1679,19 @@ describe('ResultViewComponent: Testeingabe', () => {
   }
 
   // Keine weiteren Aufrufe, etwa an andere Endpunkte, die eine Aussage anlegen koennten.
-  afterEach(() => http.verify());
+  // Ausgenommen der lesende Schalterstand (/api/v1/funktionen), den das Suchfeld fragt.
+  afterEach(() => {
+    http.match((r) => r.url.endsWith('/api/v1/funktionen'));
+    http.verify();
+  });
 
   it('zeigt keine spaete Antwort einer vorigen Suche unter der Karte', async () => {
     const { harness, seite } = await oeffnen('Klimaschutz ist zu teuer');
     const offen = http.expectOne((r) => r.url.endsWith('/api/v1/search/searchByText'));
     await harness.navigateByUrl('result?searchQuery=test', ResultViewComponent);
     await harness.fixture.whenStable();
-    offen.flush({
-      query_was_newly_added_as_statement: true,
-      statement_id: null,
-      statement_text: 'Klimaschutz ist zu teuer',
-      commentary_search_results_count: 0,
-      commentary_search_results: [],
-      generictext_search_results_count: 0,
-      generictext_search_results: [],
-    });
+    // Die neue Eingabe beendet die laufende Suche: Ihre Antwort kann gar nicht mehr ankommen
+    expect(offen.cancelled).withContext('vorige Suche abgebrochen').toBeTrue();
     harness.detectChanges();
     expect(suchaufrufe()).withContext('fuer "test" kein neuer Suchaufruf').toBe(0);
     expect(seite.querySelector('.testeingabe-karte')).toBeTruthy();

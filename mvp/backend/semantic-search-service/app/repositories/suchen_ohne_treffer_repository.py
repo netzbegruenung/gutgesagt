@@ -133,6 +133,18 @@ class SuchenOhneTrefferRepository:
                 for statement_id, anzahl, personen in session.execute(abfrage).all()
             ]
 
+    def personen(self, statement_id: uuid.UUID, seit_woche: date) -> int:
+        """
+        Personen, die ab seit_woche ohne Treffer nach dieser Aussage gesucht haben,
+        summiert ueber die Wochen wie in haeufigste; 0 ohne Zeile.
+        """
+        abfrage = select(func.coalesce(_PERSONEN, 0)).where(
+            SucheOhneTrefferZeile.statement_id == statement_id,
+            SucheOhneTrefferZeile.woche >= seit_woche,
+        )
+        with self.db.get_session() as session:
+            return int(session.execute(abfrage).scalar() or 0)
+
     def ueber_der_schwelle(
         self, seit_woche: date, mindestanzahl: int, freigabe: Optional[str] = None
     ) -> List[uuid.UUID]:

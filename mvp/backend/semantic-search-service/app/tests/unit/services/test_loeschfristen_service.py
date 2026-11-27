@@ -177,6 +177,36 @@ class TestSchalterVerlauf:
         beitraege.geloeschte_laden.assert_awaited_once()
 
 
+class TestAnkuenfte:
+    """Ankuenfte je Kampagnenwort und Tag nach zwoelf Monaten (docs/LOESCHKONZEPT.md)."""
+
+    @pytest.fixture
+    def ankuenfte(self):
+        return Mock(**{"loeschen_vor.return_value": 0})
+
+    @pytest.fixture
+    def service(self, meldungen, einwuerfe, beitraege, moderation, sperren, ankuenfte):
+        return LoeschfristenService(
+            meldungen, einwuerfe, beitraege, moderation, sperren, ankuenfte=ankuenfte
+        )
+
+    async def test_tage_vor_einem_jahr_gehen(self, service, ankuenfte):
+        await service.fristen_anwenden(HEUTE)
+
+        ankuenfte.loeschen_vor.assert_called_once_with(
+            datetime(2025, 10, 29, tzinfo=timezone.utc)
+        )
+
+    async def test_fehler_haelt_die_anderen_nicht_auf(
+        self, service, ankuenfte, beitraege
+    ):
+        ankuenfte.loeschen_vor.side_effect = RuntimeError("db weg")
+
+        await service.fristen_anwenden(HEUTE)
+
+        beitraege.geloeschte_laden.assert_awaited_once()
+
+
 class TestPostgres:
     async def test_suchereignisse_abgeschlossener_tage_werden_verdichtet(
         self, service, suchereignisse
@@ -326,6 +356,58 @@ class TestNieBenutzteKonten:
         await mit_konten.fristen_anwenden(HEUTE)
 
         meldungen.bearbeitete_loeschen_vor.assert_called_once()
+
+    def _mit_teams(self, meldungen, einwuerfe, beitraege, moderation, sperren, konten):
+        teams = Mock(**{"konten_loeschen.return_value": 1})
+        service = LoeschfristenService(
+            meldungen, einwuerfe, beitraege, moderation, sperren, konten, teams=teams
+        )
+        return service, teams
+
+    async def test_teamdaten_gehen_mit_dem_konto(
+        self, meldungen, einwuerfe, beitraege, moderation, sperren, konten
+    ):
+        # Mitgliedschaften entstehen beim Anlegen; ein nie benutztes Konto nimmt sie mit.
+        def loeschen(grenze, bei_geloescht):
+            bei_geloescht("konto-a")
+            bei_geloescht("konto-b")
+            return 2
+
+        konten.nie_benutzte_loeschen.side_effect = loeschen
+        service, teams = self._mit_teams(
+            meldungen, einwuerfe, beitraege, moderation, sperren, konten
+        )
+
+        await service.fristen_anwenden(HEUTE)
+
+        teams.konten_loeschen.assert_called_once_with(["konto-a", "konto-b"])
+
+    async def test_teamdaten_auch_wenn_der_realm_mittendrin_abbricht(
+        self, meldungen, einwuerfe, beitraege, moderation, sperren, konten
+    ):
+        def loeschen(grenze, bei_geloescht):
+            bei_geloescht("konto-a")
+            raise RuntimeError("Keycloak weg")
+
+        konten.nie_benutzte_loeschen.side_effect = loeschen
+        service, teams = self._mit_teams(
+            meldungen, einwuerfe, beitraege, moderation, sperren, konten
+        )
+
+        await service.fristen_anwenden(HEUTE)
+
+        teams.konten_loeschen.assert_called_once_with(["konto-a"])
+
+    async def test_ohne_geloeschte_konten_kein_teamlauf(
+        self, meldungen, einwuerfe, beitraege, moderation, sperren, konten
+    ):
+        service, teams = self._mit_teams(
+            meldungen, einwuerfe, beitraege, moderation, sperren, konten
+        )
+
+        await service.fristen_anwenden(HEUTE)
+
+        teams.konten_loeschen.assert_not_called()
 
 
 class TestTakt:

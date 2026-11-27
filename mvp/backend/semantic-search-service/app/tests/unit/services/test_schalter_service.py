@@ -3,6 +3,9 @@ Schalter mit Obergrenze und Admin-Wert (#708): wirksam nur, wenn beide an sind; 
 Admin-Wert aus; Einschalten ueber die Obergrenze hinaus abgelehnt; kurzer Cache.
 """
 
+import re
+from pathlib import Path
+
 import pytest
 
 from core.config import Settings
@@ -10,6 +13,7 @@ from services.schalter_service import (
     ObergrenzeAus,
     SchalterService,
     UnbekannterSchalter,
+    oeffentliche_schalter,
     schalter_service_setzen,
     schalter_wirksam,
 )
@@ -64,6 +68,82 @@ def test_abzeichen_nur_mit_wirksamen_punkten():
 
     dienst, _, _ = _dienst({"abzeichen_sichtbar": True, "punkte": True})
     assert dienst.wirksam("abzeichen_sichtbar", settings) is True
+
+
+def test_spielgefuehl_nur_mit_wirksamen_punkten():
+    """Die Frage gibt es nur mit Punkten: ohne sie nicht "wirksam: an" (Check 26.11., #7)."""
+    settings = Settings(punkte_aktiv=True, spielgefuehl_buehne_aktiv=True)
+    dienst, _, _ = _dienst({"spielgefuehl_buehne": True, "punkte": False})
+
+    assert dienst.wirksam("spielgefuehl_buehne", settings) is False
+    stand = {s.name: s for s in dienst.stand(settings)}
+    assert stand["spielgefuehl_buehne"].wirksam is False
+    assert stand["spielgefuehl_buehne"].admin_wert is True
+
+    dienst, _, _ = _dienst({"spielgefuehl_buehne": True, "punkte": True})
+    assert dienst.wirksam("spielgefuehl_buehne", settings) is True
+    ohne_punkte_obergrenze = Settings(spielgefuehl_buehne_aktiv=True)
+    assert dienst.wirksam("spielgefuehl_buehne", ohne_punkte_obergrenze) is False
+
+
+def test_muster_stimmen_nur_mit_wirksamem_spielgefuehl():
+    """Der Zweck Zustimmungen steht im Wortlaut des Spielgefuehls (Jura 27.11.)."""
+    settings = Settings(
+        punkte_aktiv=True, spielgefuehl_buehne_aktiv=True, muster_stimmen_aktiv=True
+    )
+    werte = {"muster_stimmen": True, "spielgefuehl_buehne": True, "punkte": True}
+
+    dienst, _, _ = _dienst(werte)
+    assert dienst.wirksam("muster_stimmen", settings) is True
+    for aus in ("spielgefuehl_buehne", "punkte", "muster_stimmen"):
+        dienst, _, _ = _dienst({**werte, aus: False})
+        assert dienst.wirksam("muster_stimmen", settings) is False, aus
+    dienst, _, _ = _dienst(werte)
+    ohne_obergrenze = Settings(punkte_aktiv=True, spielgefuehl_buehne_aktiv=True)
+    assert dienst.wirksam("muster_stimmen", ohne_obergrenze) is False
+    # Standard aus, und die Datenschutzerklaerung fragt den Stand ohne Anmeldung
+    assert Settings().muster_stimmen_aktiv is False
+    assert "muster_stimmen" in oeffentliche_schalter()
+
+
+def test_abzeichen_am_namen_nicht_mit_spielgefuehl():
+    """Im Spielgefuehl-Modell gibt es Abzeichen nur in der Rangliste (Check 26.11., #7)."""
+    settings = Settings(
+        punkte_aktiv=True, abzeichen_sichtbar_aktiv=True, spielgefuehl_buehne_aktiv=True
+    )
+    werte = {"abzeichen_sichtbar": True, "punkte": True, "spielgefuehl_buehne": True}
+    dienst, _, _ = _dienst(werte)
+
+    assert dienst.wirksam("abzeichen_sichtbar", settings) is False
+    stand = {s.name: s for s in dienst.stand(settings)}
+    assert stand["abzeichen_sichtbar"].wirksam is False
+
+    dienst, _, _ = _dienst({**werte, "spielgefuehl_buehne": False})
+    assert dienst.wirksam("abzeichen_sichtbar", settings) is True
+
+
+@pytest.mark.parametrize(
+    "echo, danke, erwartet",
+    [(True, False, False), (False, True, False), (True, True, True)],
+)
+def test_wirkungs_echo_und_danke_knopf_nur_zusammen(echo, danke, erwartet):
+    """Der DSE-Absatz nennt beide Summen (Jura): nur zusammen (Check 26.11., #8)."""
+    settings = Settings(wirkungs_echo_aktiv=True, danke_knopf_aktiv=True)
+    dienst, _, _ = _dienst({"wirkungs_echo": echo, "danke_knopf": danke})
+
+    assert dienst.wirksam("wirkungs_echo", settings) is erwartet
+    assert dienst.wirksam("danke_knopf", settings) is erwartet
+
+
+def test_nur_zusammen_auch_ueber_die_obergrenze_des_partners():
+    werte = {"wirkungs_echo": True, "danke_knopf": True, "danke_ohne_konto": True}
+    dienst, _, _ = _dienst(werte)
+
+    ohne_danke = Settings(wirkungs_echo_aktiv=True, danke_ohne_konto_aktiv=True)
+    assert dienst.wirksam("wirkungs_echo", ohne_danke) is False
+    # Der Unterschalter haengt am Danke-Knopf und damit auch am Echo
+    ohne_echo = Settings(danke_knopf_aktiv=True, danke_ohne_konto_aktiv=True)
+    assert dienst.wirksam("danke_ohne_konto", ohne_echo) is False
 
 
 def test_einschalten_ueber_die_obergrenze_abgelehnt_ausschalten_geht():
@@ -161,7 +241,9 @@ def test_stand_nennt_obergrenze_admin_wert_wirksam_und_dsfa_hinweis():
     assert stand["gepostet"].admin_wert is False
     assert "DSFA" in stand["punkte"].dsfa_hinweis
     assert "DSFA" in stand["abzeichen_sichtbar"].dsfa_hinweis
+    assert stand["abzeichen_sichtbar"].dsfa_hinweis.startswith("Aus lassen")
     assert stand["gepostet"].dsfa_hinweis is None
+    assert stand["merkliste"].wartet_auf_recht is True
     assert stand["abkuerzungen"].dsfa_hinweis is None
     assert stand["sharepic"].dsfa_hinweis is None
     assert all(s.erklaerung for s in stand.values())
@@ -186,6 +268,17 @@ def test_antworten_hinweis_obergrenze_aus_admin_wert_aus():
     assert stand.dsfa_hinweis is None
 
 
+def test_aufrufe_zaehlen_obergrenze_aus_und_dsfa_hinweis():
+    """#761: heikel, deshalb Obergrenze aus, mit der offenen Rechtsbedingung als Hinweis."""
+    dienst, _, _ = _dienst({"aufrufe_zaehlen": True})
+    stand = {s.name: s for s in dienst.stand(Settings())}["aufrufe_zaehlen"]
+
+    assert (stand.obergrenze, stand.admin_wert, stand.wirksam) == (False, True, False)
+    assert "§ 25 TDDDG" in stand.dsfa_hinweis and "V-Messung" in stand.dsfa_hinweis
+    assert stand.wartet_auf_recht is True
+    assert dienst.wirksam("aufrufe_zaehlen", Settings(aufrufe_zaehlen_aktiv=True))
+
+
 def test_sharepic_standard_aus_ohne_admin_wert():
     """Obergrenze standardmaessig an, ohne Admin-Wert trotzdem aus (#756)."""
     dienst, _, _ = _dienst()
@@ -200,3 +293,114 @@ def test_schalter_wirksam_nimmt_den_globalen_dienst():
     schalter_service_setzen(dienst)
 
     assert schalter_wirksam("punkte", Settings(punkte_aktiv=True)) is False
+
+
+def test_stand_nach_gruppen_geordnet_jeder_schalter_in_einer_gruppe():
+    from services.schalter_service import GRUPPEN, SCHALTER
+
+    dienst, _, _ = _dienst()
+    stand = dienst.stand(Settings())
+
+    assert {s.name for s in stand} == set(SCHALTER)
+    assert all(s.gruppe in GRUPPEN for s in stand)
+    reihenfolge = [GRUPPEN.index(s.gruppe) for s in stand]
+    assert reihenfolge == sorted(reihenfolge)
+    gruppe = {s.name: s.gruppe for s in stand}
+    assert gruppe["sharepic"] == "Grundfunktionen"
+    # Unterschalter bei seiner Voraussetzung "gepostet"
+    assert gruppe["gepostet_ohne_konto"] == gruppe["gepostet"] == "Grundfunktionen"
+    assert gruppe["team_quests"] == "Teams"
+    assert gruppe["naechster_schritt"] == "Spielgefühl"
+    assert gruppe["null_treffer_anzahl"] == "Spielgefühl"
+    assert gruppe["rangliste"] == "Punkte & Anerkennung"
+
+
+def test_wartet_auf_recht_nur_mit_hinweis_und_ohne_freigabe():
+    dienst, _, _ = _dienst()
+    stand = {s.name: s for s in dienst.stand(Settings())}
+
+    assert stand["punkte"].wartet_auf_recht is True
+    assert stand["teams_oeffentlich"].wartet_auf_recht is True
+    # Teams: Hinweis steht, aber rechtlich freigegeben (25.11.)
+    assert stand["teams"].dsfa_hinweis
+    assert stand["teams"].wartet_auf_recht is False
+    assert stand["sharepic"].wartet_auf_recht is False
+
+
+def test_stimmen_text_verfall_standard_aus_mit_jura_bedingung():
+    """#636: Obergrenze und Admin-Wert von Haus aus aus; Einschalten erst nach Jura-OK."""
+    from services.schalter_service import SCHALTER, oeffentliche_schalter
+
+    dienst, _, _ = _dienst()
+    assert Settings().stimmen_text_verfall_aktiv is False
+    assert dienst.wirksam("stimmen_text_verfall", Settings()) is False
+    # Admin-Wert allein reicht nicht, die Obergrenze ist aus
+    dienst, _, _ = _dienst({"stimmen_text_verfall": True})
+    assert dienst.wirksam("stimmen_text_verfall", Settings()) is False
+    an = Settings(stimmen_text_verfall_aktiv=True)
+    assert dienst.wirksam("stimmen_text_verfall", an) is True
+
+    art = SCHALTER["stimmen_text_verfall"]
+    assert art.umgebungsvariable == "SEMANTIC_SEARCH_STIMMEN_TEXT_VERFALL_AKTIV"
+    assert art.gruppe == "Grundfunktionen"
+    assert "Jura" in art.einschalt_hinweis
+    # Die Datenschutzerklaerung blendet ihren Halbsatz danach ein
+    assert "stimmen_text_verfall" in oeffentliche_schalter()
+    stand = {s.name: s for s in dienst.stand(Settings())}
+    assert stand["stimmen_text_verfall"].wartet_auf_recht is True
+
+
+# Schalter, an denen die Datenschutzerklaerung einen Absatz oder Satz haengt, gelesen
+# aus datenschutz.component.ts (jedes ``.an('<name>')``). Grundsatz Jura 26.11.: kein
+# Schalter ohne seinen Absatz. Das Frontend kennt nur, was GET /api/v1/funktionen
+# meldet; ein nicht oeffentlicher Schalter liesse den Absatz auch eingeschaltet weg.
+_DSE_KOMPONENTE = (
+    Path(__file__).resolve().parents[6]
+    / "frontend/gutgesagt-frontend/src/app/datenschutz/datenschutz.component.ts"
+)
+DSE_SCHALTER = tuple(
+    sorted(set(re.findall(r"\.an\('([a-z_]+)'\)", _DSE_KOMPONENTE.read_text())))
+)
+
+
+def test_dse_schalter_aus_der_komponente_gelesen():
+    # Die Erklaerung haengt heute mindestens an diesen; faellt das Lesen still aus,
+    # waere der Test darunter leer
+    assert {"punkte", "rangliste", "wirkungs_echo", "dse_kurzfassung"} <= set(
+        DSE_SCHALTER
+    )
+
+
+@pytest.mark.parametrize("name", DSE_SCHALTER)
+def test_schalter_der_datenschutzerklaerung_sind_oeffentlich(name):
+    from services.schalter_service import oeffentliche_schalter
+
+    assert name in oeffentliche_schalter()
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "teams_oeffentlich",
+        "merkliste",
+        "aufrufe_zaehlen",
+        "k_ankuenfte",
+        "abzeichen_sichtbar",
+    ],
+)
+def test_aus_lassen_laut_jura_26_11(name):
+    """Jura vorlaeufig 26.11.: diese bleiben fuer den internen Test aus, mit Grund."""
+    from services.schalter_service import SCHALTER
+
+    hinweis = SCHALTER[name].einschalt_hinweis
+    assert hinweis.startswith("Aus lassen (Jura 26.11.): ")
+    assert len(hinweis) > len("Aus lassen (Jura 26.11.): ") + 10
+
+
+def test_danke_ohne_konto_nicht_einschalten():
+    """Variante B (Jura 25.11.) nicht erfuellt; die Erklaerung hat dafuer keinen Satz."""
+    from services.schalter_service import SCHALTER
+
+    hinweis = SCHALTER["danke_ohne_konto"].einschalt_hinweis
+    assert hinweis.startswith("Nicht einschalten (Jura 26.11.): ")
+    assert "Variante B" in hinweis

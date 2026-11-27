@@ -34,8 +34,11 @@ export class MetricsService {
 
   constructor(private http: HttpClient) { }
 
-  getMetrics(): Observable<GetMetricsResponse> {
-    return this.http.get<GetMetricsResponse>(`${this.baseUrl}/getMetrics`);
+  /** ``still``: Hintergrund-Abfrage, frisch statt aus dem Cache (STILLE_ABFRAGE). */
+  getMetrics(still = false): Observable<GetMetricsResponse> {
+    return this.http.get<GetMetricsResponse>(`${this.baseUrl}/getMetrics`, {
+      context: still ? stillerKontext() : undefined,
+    });
   }
 
   /** ``still``: Hintergrund-Abfrage, frisch statt aus dem Cache, ohne Umleitung bei 401 (STILLE_ABFRAGE). */

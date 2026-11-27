@@ -1,13 +1,50 @@
 /**
- * Die Texte der Rückmeldung „Gepostet?“ nach dem Kopieren (#643), an einer Stelle.
+ * Die Texte der Rückmeldung „Gepostet?“ im Erfolgskasten nach dem Kopieren (#643), an einer Stelle.
  * Der Dank nennt eine echte Zahl: verschiedene Personen dieser Kalenderwoche, wie der
  * Server sie gezählt hat (CODING_STANDARDS.md „Visible numbers are real“).
  */
-export const KOPIERT_GEPOSTET_FRAGE = 'Kopiert. Gepostet?';
+/**
+ * Die Frage im Erfolgskasten nach dem Kopieren. Sie steht ohne Frist da, bis die Person
+ * den Kasten schließt oder eine andere Karte kopiert: Posten dauert länger als eine
+ * Snackbar (Review Spielgefühl 25.11., WCAG 2.2.1).
+ */
+export const GEPOSTET_FRAGE = 'Gepostet? Dann zählt dein Konter mit.';
+/**
+ * Dieselbe Frage ohne Konto (Gamification-Check 26.11., Befund 21): Meldungen ohne Konto
+ * zählen nicht zu „Öffentlich gekontert“, deshalb ohne „zählt mit“.
+ */
+export const GEPOSTET_FRAGE_OHNE_KONTO = 'Gepostet? Kurz antippen, wenn ja.';
 export const JA_GEPOSTET = 'Ja, gepostet';
-/** So lange bleibt die Frage stehen: Zeit, den Knopf zu lesen und zu treffen. */
-export const GEPOSTET_FRAGE_MS = 8000;
-export const GEPOSTET_NICHT_GEZAEHLT = 'Danke! Zählen hat gerade nicht geklappt.';
+/**
+ * Statt der Frage, wenn die Person nach dem Kopieren zurückkommt (Rückkehr-Moment,
+ * Entscheidung 25.11.): einmal je Kopieren, Gewinn statt Druck. Nicht „fürs gemeinsame
+ * Ziel“: Das Gemeinschaftsziel gibt es nur mit laufender Saison, Schalter `saison_ziel`
+ * und erreichter Schwelle; die Meldung zählt aber immer zu „Öffentlich gekontert“.
+ */
+export const GEPOSTET_RUECKKEHR = 'Gepostet? Kurz antippen – dann zählt dein Konter diese Woche mit.';
+/**
+ * Dasselbe ohne Konto (#799): Meldungen ohne Konto sind keine Menschen und zählen weder
+ * zu „Öffentlich gekontert“ noch fürs Gemeinschaftsziel, deshalb ohne „zählt mit“; gezählt
+ * wird nur die Zahl der Meldungen je Woche.
+ */
+export const GEPOSTET_RUECKKEHR_OHNE_KONTO = 'Gepostet? Kurz antippen – so sehen wir, wie oft Antworten öffentlich ankommen.';
+/** Der Knopf nach dem Tippen: Er bleibt stehen (Fokus), tut aber nichts mehr. */
+export const GEPOSTET_GEMELDET = 'Gepostet';
+/** Melden nicht angekommen: Der Knopf steht wieder bereit (Review 25.11.). */
+export const GEPOSTET_NICHT_GEZAEHLT = 'Danke! Zählen hat gerade nicht geklappt. Versuch es gleich noch einmal.';
+/**
+ * Der Dank ohne Konto (#799): ohne Zahl, denn gezählt werden dort nur Meldungen, keine
+ * Menschen; und ohne Aufforderung, sich anzumelden.
+ */
+export const GEPOSTET_OHNE_KONTO_DANK = 'Danke! Schön, dass du öffentlich konterst.';
+
+/**
+ * Der nächste Schritt unter dem Dank (UX-Review 26.11.2026, Befund 5): Nach dem Kontern
+ * endete der Weg sonst. Ein einziger Vorschlag, mit und ohne Konto, ohne Druck.
+ */
+export const GEPOSTET_WEITER = 'Noch ein Spruch, der dich ärgert?';
+/** Der Link dazu: auf die Startseite, Fokus ins Suchfeld. */
+export const GEPOSTET_WEITER_LINK = 'Spruch suchen';
 
 /**
  * Der Dank nach „Ja, gepostet“; ``personen`` schließt die Person selbst ein. Die Zahl

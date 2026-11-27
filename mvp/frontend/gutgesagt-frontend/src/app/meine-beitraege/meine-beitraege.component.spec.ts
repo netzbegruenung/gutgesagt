@@ -1,9 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Component, Input, signal } from '@angular/core';
+import { MerklisteService } from '../services/merkliste.service';
+import { ContentService } from '../services/content.service';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
+import { BehaviorSubject, NEVER, Observable, of, throwError } from 'rxjs';
 
 import { MeineBeitraegeComponent } from './meine-beitraege.component';
 import { AlbumComponent } from './album/album.component';
@@ -16,11 +19,24 @@ import { EinwurfService } from '../services/einwurf.service';
 import { SperrnachrichtService } from '../services/sperrnachricht.service';
 import { NavigationService } from '../services/navigation.service';
 import { StatementService } from '../services/statement.service';
+import { TeamsService } from '../services/teams.service';
+import { RanglisteService } from '../services/rangliste.service';
+import { SpielgefuehlService } from '../services/spielgefuehl.service';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { VotingService } from '../services/voting.service';
 import { LoggingService } from '../services/logging.service';
 import { PUNKTE_EINWILLIGUNG_AUS } from '../shared/punkte-einwilligung/punkte-einwilligung.testing';
+import { WiderrufbarComponent } from '../einwilligung/widerrufbar.component';
+
+/** Platzhalter für die Widerrufszeilen; widerrufbar.component.spec.ts prüft sie selbst. */
+@Component({ selector: 'app-widerrufbar', standalone: true, template: '' })
+class WiderrufbarAttrappe {
+  @Input() ebene = 3;
+  @Input() karte = false;
+  @Input() spielgefuehlKarteDaneben = false;
+  @Input() punkteHaekchenDaneben = true;
+}
 
 describe('MeineBeitraegeComponent', () => {
   let fixture: ComponentFixture<MeineBeitraegeComponent>;
@@ -77,7 +93,7 @@ describe('MeineBeitraegeComponent', () => {
     };
   }
 
-  function konfigurieren(laden: () => Observable<any>): void {
+  function konfigurieren(laden: () => Observable<any>, weitere: any[] = []): void {
     eigeneLaden = jasmine
       .createSpy('eigeneLaden')
       .and.returnValue(of({ results_count: 0, results: [], total_records_count: 0 }));
@@ -111,12 +127,23 @@ describe('MeineBeitraegeComponent', () => {
         { provide: LoggingService, useValue: jasmine.createSpyObj('LoggingService', ['error', 'debug', 'info', 'warn']) },
         { provide: EinwurfService, useValue: { eigeneLaden } },
         { provide: SperrnachrichtService, useValue: { meine: () => of([]) } },
+        // Meine Teams laedt nie fertig: keine Karte, kein Nachlade-Takt im Test
+        { provide: TeamsService, useValue: { meine: () => NEVER } },
+        // Die Rangliste ebenso (#793)
+        { provide: RanglisteService, useValue: { laden: () => NEVER } },
+        // Das Spielgefuehl ebenso
+        { provide: SpielgefuehlService, useValue: { laden: () => NEVER, stufe$: NEVER } },
         { provide: StatementService, useValue: { unbeantworteteAussagen: unbeantworteteLaden } },
         {
           provide: AuthService,
           useValue: { getCurrentUserId: () => null, getUserInfo: () => null, userInfo$: of(null) },
         },
+        ...weitere,
       ],
+    });
+    TestBed.overrideComponent(MeineBeitraegeComponent, {
+      remove: { imports: [WiderrufbarComponent] },
+      add: { imports: [WiderrufbarAttrappe] },
     });
 
     router = TestBed.inject(Router);
@@ -167,6 +194,46 @@ describe('MeineBeitraegeComponent', () => {
       expect(sichtbar('app-album')).toBeTrue();
       expect(fixture.nativeElement.querySelector('app-meine-einwuerfe')).toBeNull();
       expect(eigeneLaden).not.toHaveBeenCalled();
+    });
+
+    it('zeigt den Reiter „Gemerkt“ nur mit eingeschaltetem Schalter (#758)', async () => {
+      const an = signal(false);
+      konfigurieren(() => of({ beitraege: [beitrag()], gesamt: 1 }), [
+        {
+          provide: MerklisteService,
+          useValue: {
+            an: an.asReadonly(),
+            eingewilligt: () => true,
+            einwilligungOffen: () => false,
+            bereit: () => an(),
+            eintraege: signal([]).asReadonly(),
+            laden: () => of([]),
+            istGemerkt: () => false,
+            sicherstellen: () => undefined,
+          },
+        },
+        { provide: ContentService, useValue: { beitragLaden: () => of() } },
+      ]);
+      await TestBed.compileComponents();
+      fixture = TestBed.createComponent(MeineBeitraegeComponent);
+      fixture.detectChanges();
+
+      expect(tabs().map((tab) => tab.textContent!.trim())).toEqual(['Meine Beiträge', 'Meine Einwürfe']);
+      expect(fixture.nativeElement.querySelector('#meine-bereich-gemerkt')).toBeNull();
+
+      an.set(true);
+      fixture.detectChanges();
+      expect(tabs().map((tab) => tab.textContent!.trim())).toEqual(['Meine Beiträge', 'Meine Einwürfe', 'Gemerkt']);
+
+      tabWaehlen('Gemerkt');
+      expect(sichtbar('app-gemerkt')).toBeTrue();
+      expect(sichtbar('app-album')).toBeFalse();
+
+      // Schaltet ein Admin ab, faellt der offene Reiter auf Meine Beitraege zurueck
+      an.set(false);
+      fixture.detectChanges();
+      expect(sichtbar('app-album')).toBeTrue();
+      expect(tabs()[0].getAttribute('aria-selected')).toBe('true');
     });
 
     it('zeigt unter "Meine Einwürfe" die eigenen Einwuerfe statt der Beitraege', async () => {
@@ -263,6 +330,25 @@ describe('MeineBeitraegeComponent', () => {
     await erstellen([beitrag()]);
 
     expect(album().naechsterMeilenstein?.kennung).toBe('b');
+  });
+
+  // Jura 27.11.: Der Fußsatz der Spielgefühl-Frage verweist auf „Meine Beiträge“; der Weg zum
+  // Widerruf muss dort auch stehen, wenn die Karte leer ist (Schalter aus).
+  it('bietet unter der Spielgefühl-Karte die Widerrufszeilen an, als eigene Karte', async () => {
+    await erstellen([beitrag()]);
+
+    const bereich = fixture.nativeElement.querySelector('#meine-bereich-beitraege') as HTMLElement;
+    const reihenfolge = Array.from(bereich.querySelectorAll('app-spielgefuehl, app-widerrufbar')).map((e) =>
+      e.tagName.toLowerCase(),
+    );
+    expect(reihenfolge).toEqual(['app-spielgefuehl', 'app-widerrufbar']);
+    const zeilen = fixture.debugElement.query((d) => d.componentInstance instanceof WiderrufbarAttrappe)
+      .componentInstance as WiderrufbarAttrappe;
+    expect(zeilen.ebene).toBe(2);
+    expect(zeilen.karte).toBeTrue();
+    expect(zeilen.spielgefuehlKarteDaneben).toBeTrue();
+    // Hier steht kein Häkchen, das selbst den Widerruf anbietet.
+    expect(zeilen.punkteHaekchenDaneben).toBeFalse();
   });
 
   it('stellt das Album vor Punkte und Meilensteine', async () => {

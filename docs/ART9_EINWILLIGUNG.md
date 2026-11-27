@@ -56,7 +56,8 @@ die die App selbst einholt, nicht Keycloak (Entscheidung Maintainer, 05.11.2026,
   „Bitte versuche es erneut“; anderswo (etwa bei den Stimm-Knöpfen) eine Snackbar.
   Gesperrt: Beiträge anlegen und ändern, Herkunft anlegen, Einwurf und Satz, einen Einwurf
   ausformulieren, Stimmen abgeben, „Ja, gepostet“ nach dem Kopieren melden und erfragen, ob es
-  angeboten wird (#643). Offen bleiben Lesen, Suchen, Löschen, einen Einwurf
+  angeboten wird (#643), die eigene Merkliste lesen und etwas merken (#758; Entfernen bleibt
+  offen). Offen bleiben Lesen, Suchen, Löschen, einen Einwurf
   verwerfen, Melden, Feedback, Gegenlesen, Sprachhinweis, Kürzungsvorschlag und Widerspruch
   gegen eine Sperre. Die Liste prüft `tests/unit/api/test_art9_einwilligung_api.py`
   (`GESPERRT`, `OFFEN`): Ein neuer schreibender Endpunkt fällt dort auf, bis er in einer der
@@ -78,6 +79,24 @@ die die App selbst einholt, nicht Keycloak (Entscheidung Maintainer, 05.11.2026,
   keine Meilensteine, gefragt je Abruf). `PUNKTE_EINWILLIGUNG_GEBAUT` in `core/config.py` steht
   seit #668 auf `True`; auf `False` verhindert `punkte_schalter_pruefen`, dass der Suchdienst mit
   `punkte_aktiv` startet.
+- **Teams:** Die Mitgliedschaft in einem Team (GLOSSARY „Mitgliedschaft“) hängt nicht an dieser
+  Einwilligung, sondern an einer eigenen, ausdrücklichen je Team (Art. 6 Abs. 1 lit. a und
+  Art. 9 Abs. 2 lit. a DSGVO), gegeben mit dem Knopf „Ja, speichert, dass ich im Team X bin“,
+  gleichwertig daneben „Nein, ohne Team weiter“. Die Anzeige der Teams am Namen ist eine zweite,
+  eigene Einwilligung, gefragt nur mit dem Schalter `teams_oeffentlich`. Beide Wortlaute stehen
+  mit Kennung an einer Stelle, `EINWILLIGUNG_WORTLAUTE` (aktuell `team-2026-11-26`) und
+  `OEFFENTLICH_WORTLAUTE` (aktuell `team-oeffentlich-2026-11-25`) in `domain/teams.py`; das
+  Frontend zeigt, was `POST /api/v1/einladungen/pruefen` und `GET /api/v1/teams/meine` liefern
+  (`einwilligung_text`, `knopf_ja`, `knopf_nein`, `oeffentlich_text`), und hat keinen eigenen
+  Text. Wie hier bleibt jede Kennung bekannt, die einmal in Betrieb war; ein geänderter Wortlaut
+  bekommt eine neue. Neue Mitgliedschaften nimmt der Server nur mit einer Kennung aus
+  `EINWILLIGUNG_GELTEND` an (aktuell nur `team-2026-11-26`); eine frühere Kennung, etwa die vom
+  25.11.2026 ohne Kommentare und „Ja, gepostet“ in der Team-Summe, lehnt er bei neuen Anfragen
+  ab wie eine unbekannte (422). Bestehende Mitgliedschaften mit früherer Kennung bleiben
+  unangetastet.
+  Beitreten und die Antwort zur Anzeige gehen ohne diese Einwilligung (`OFFEN` in
+  `tests/unit/api/test_art9_einwilligung_api.py`); ein Widerruf hier lässt die Teams stehen,
+  verlassen geht unter „Meine Teams“ („Team verlassen“, `docs/LOESCHKONZEPT.md`, „Teams“).
 - **Abzeichen (#351):** Ohne geltende Einwilligung kein Abzeichen am Anzeigenamen. Ein Widerruf nimmt das Abzeichen sofort weg und hält ein
   früheres Ja zur Sichtbarkeit als Nein fest, damit es nach einer neuen Einwilligung nicht
   ohne neue Frage wieder erscheint (`AbzeichenService.zuruecknehmen`). Die Antwort zur
@@ -89,7 +108,7 @@ die die App selbst einholt, nicht Keycloak (Entscheidung Maintainer, 05.11.2026,
 - **Widerrufen:** jederzeit unter `/einwilligung` (Profilmenü „Datenschutz-Einstellungen“, bis #644 „Einwilligung“; Seitentitel ebenso). Die Zeile bekommt
   den Zeitpunkt des Widerrufs und bleibt stehen, als Nachweis, dass die Verarbeitung bis dahin
   auf der Einwilligung beruhte (Art. 7 Abs. 1); danach ist wieder gesperrt. In derselben
-  Transaktion löscht der Widerruf alle Stimmen der Person (`Art9EinwilligungService.widerrufen`,
+  Transaktion löscht der Widerruf alle Stimmen und die Merkliste der Person (#758, `Art9EinwilligungService.widerrufen`,
   Art. 17 Abs. 1 lit. b DSGVO, juristische Vorprüfung vom 12.11.2026); scheitert das, gilt auch
   der Widerruf nicht, die Antwort ist 500, und die Person kann über die Seite erneut widerrufen.
   Das Abzeichen nimmt der Endpunkt vorher und unabhängig davon zurück. In derselben Transaktion

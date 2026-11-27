@@ -34,7 +34,8 @@
         <tbody>
           <tr *ngFor="let e of daten.eintraege" data-testid="feedback-eintrag">
             <td class="inhalt tag">{{ tag(e.eingegangen_am) }}</td>
-            <td class="inhalt text">{{ e.text }}</td>
+            <!-- Ohne Leerraum um den Text: .text ist pre-wrap -->
+            <td class="inhalt text"><span *ngIf="e.kategorie === 'gestoert'" class="kategorie" data-testid="feedback-kategorie">Was hat dich gestört?</span>{{ e.text }}</td>
             <td class="inhalt">{{ e.kontakt ?? '–' }}</td>
             <td class="aktionen">
               <button
@@ -67,7 +68,8 @@
       <p class="fussnote">
         Ohne Bezug zu einem Konto. Nach {{ daten.aufbewahrung_tage }} Tagen wird ein Eintrag
         samt Kontakt gelöscht, auch wenn er erledigt ist. Den Kontakt nur nutzen, um auf das
-        Feedback zu antworten.
+        Feedback zu antworten. Einträge aus „Was hat dich gestört?“ haben keinen Kontakt und
+        werden am 31.12.2026 gelöscht.
       </p>
     </ng-container>
   </mat-card-content>

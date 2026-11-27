@@ -23,6 +23,14 @@
   width: 260px;
 }
 
+/* Die Tabelle richtet sich nach ihrer eigenen Breite, nicht nach dem Fenster: neben der
+   Admin-Navigation ist sie auf dem Tablet schmaler als das Fenster. Unter 900 px Karten,
+   darueber Tabelle; wird es doch zu eng, scrollt nur sie. */
+.tabelle-rahmen {
+  container: einladungen / inline-size;
+  overflow-x: auto;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -38,13 +46,161 @@ td {
   overflow-wrap: anywhere;
 }
 
+/* Kopfzellen nie mitten im Wort umbrechen: Bei den engen Spalten (width 1 %) stand
+   "Mitglieder" sonst einen Buchstaben je Zeile, "Zustand" in zwei Stuecken. */
+th {
+  overflow-wrap: normal;
+}
+
 .eng {
   white-space: nowrap;
   width: 1%;
 }
 
-.link code {
+.team-block {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: baseline;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--feldrand);
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.team-block legend {
+  padding: 0 4px;
+  font-weight: 700;
+}
+
+.team-name {
+  flex: 1 1 260px;
+}
+
+/* Die Beschriftung „Name der Gruppe (…)“ ist lang: eigene Zeile */
+.team-name.breit {
+  flex-basis: 100%;
+}
+
+.team-saison {
+  width: 200px;
+}
+
+.team-fehler,
+.team-erklaerung {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.motiv-wahl {
+  flex-basis: 100%;
+  min-width: 0;
+}
+
+/* Teamart vorn, über die ganze Breite; das Datum breit genug für die lange Beschriftung */
+.art-wahl {
+  flex-basis: 100%;
+  min-width: 0;
+}
+
+.arten {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.team-zustimmung {
+  flex: 1 1 100%;
+  max-width: 480px;
+}
+
+.team-art {
+  display: block;
   font-size: 12px;
+}
+
+.motiv-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.875rem;
+  color: var(--text-leise);
+}
+
+.motive {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.motiv-inhalt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Medaillon wie bei den Meilensteinen */
+.medaillon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primaer-tint);
+  box-shadow: inset 0 0 0 2px var(--akzent-tanne);
+}
+
+/* Team-Pille und Zeile „Nach Gruppe …“ nur an Wortgrenzen umbrechen, sonst rechnet die
+   Tabelle die Spalte auf einen Buchstaben herunter */
+td.team {
+  overflow-wrap: normal;
+}
+
+/* Die Notiz ebenso nur an Wortgrenzen, mit etwas Mindestbreite; ein ueberlanges Wort
+   bricht trotzdem, sobald es nicht mehr passt */
+td.text {
+  overflow-wrap: break-word;
+  min-width: 8rem;
+}
+
+/* Link und Kopier-Knopf nebeneinander: der Link gekuerzt in einer Zeile, der Knopf fest daneben.
+   Die feste Breite haelt die Spalte schmal; den ganzen Link zeigen Titel und Markieren. */
+.link-zeile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 14rem;
+}
+
+.link-text {
+  flex: 1 1 auto;
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+/* Der Ursprung ist in jeder Zeile gleich und wird zuerst gekuerzt; danach erst der Code,
+   dessen Anfang die Links unterscheidet */
+.link-ursprung,
+.link-pfad {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.link-ursprung {
+  flex: 0 1000 auto;
+}
+
+.link-pfad {
+  flex: 0 1 auto;
+}
+
+.kopieren {
+  flex: none;
 }
 
 tr.inaktiv td {
@@ -73,8 +229,8 @@ tr.inaktiv td {
   margin-top: 12px;
 }
 
-/* Mobil jede Einladung als Karte statt Tabelle, in der die Notiz einen Buchstaben je Zeile bekam */
-@media (max-width: 599px) {
+/* Schmal jede Einladung als Karte statt Tabelle, in der die Notiz einen Buchstaben je Zeile bekam */
+@container einladungen (max-width: 899px) {
   table,
   tbody,
   tr,
@@ -108,19 +264,19 @@ tr.inaktiv td {
     color: var(--text-leise);
   }
 
-  td.link {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px;
+  /* In der Karte ist Platz: der ganze Link, umgebrochen, der Knopf rechts daneben */
+  .link-zeile {
+    width: 100%;
   }
 
-  td.link::before {
-    flex-basis: 100%;
-  }
-
-  td.link code {
-    min-width: 0;
+  .link-text {
+    display: block;
+    white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  .link-ursprung,
+  .link-pfad {
+    overflow: visible;
   }
 }

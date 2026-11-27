@@ -86,7 +86,9 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   Vor- und Nachname und Passwort-Hash (DSE „Konto aus einer Einladung“); in der Plattform die
   Zustimmung zu den Nutzungsbedingungen (Kennung, Zeitpunkt, Stand) und das Archiv der bis zur
   Umstellung im Anmeldedienst gespeicherten Zustimmungszeitpunkte; beim Beta-Zugang E-Mail-Adresse, Anzeigename und Prüfsumme des
-  Passworts in einer Konfigurationsdatei; Anmelde-Cookie; an Einladungen nur Zähler und Notiz.
+  Passworts in einer Konfigurationsdatei; Anmelde-Cookie; an Einladungen nur Zähler und Notiz, bei
+  einem Teamlink dazu Teamname, Motiv, Saison und Teamart, bei einem Team nach Gruppe der Tag
+  der schriftlichen Zustimmung der Gruppenleitung ohne Namen (Mitgliedschaften unter T13).
   Im Browser bis zum Tabschluss, höchstens eine Stunde, ein angefangener Kommentar mit Prüfwert
   des Kontos (DSE „Weitere Einträge“, E1).
   Schon das Konto kann eine politische Nähe erkennen lassen (Art. 9).
@@ -280,6 +282,79 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
 - **TOM:** Schalter `herkunft_pruefen` (Standard aus); nur http/https, keine internen Adressen,
   auch nicht nach Weiterleitungen (`utils/sicherer_abruf.py`); höchstens ein Abruf je Sekunde.
   Als Eintrag geführt, weil der Dienst damit fremde Server anspricht.
+
+### T13 Teams über Einladungen (gebaut, ausgeschaltet)
+
+- **Zweck:** der Person zeigen, in welchen Teams sie dabei ist, und die Nummer im Team vergeben
+  (GLOSSARY „Team“, „Teamlink“, „Mitgliedschaft“, „Saison“); mit derselben Einwilligung die
+  Zahl der Beiträge, Bewertungen und Kommentare und der Meldungen „Ja, gepostet“ in eine Summe
+  des Teams einbeziehen (noch nicht gebaut); später, mit eigener Einwilligung
+  und eigenem Schalter, die Teams der aktuellen Saison am Anzeigenamen zeigen.
+- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a über eine eigene,
+  ausdrückliche Einwilligung je Team (Wortlaut `team-2026-11-26`, Knopf „Ja, speichert, dass ich
+  im Team X bin“, gleichwertig „Nein, ohne Team weiter“), getrennt von der Art.-9-Einwilligung
+  und von „Punkte und Meilensteine“; für die Anzeige am Namen eine zweite, eigene Einwilligung
+  (`team-oeffentlich-2026-11-25`). DSE „Teams“.
+- **Betroffene:** angemeldete Personen, die über einen Teamlink beitreten oder ein Konto
+  anlegen und einwilligen.
+- **Daten:** je Mitgliedschaft Kennung, Teamname, Motiv, Saison, laufende Nummer, Tag des
+  Beitritts, Kennung des Wortlauts und Zeitpunkt der Einwilligung (`team_mitgliedschaften`),
+  ohne Bezug zur Einladung; je Konto die jüngste Antwort auf die Anzeige am Namen
+  (`team_oeffentlich`); Zähler je Team und Saison ohne Kennung (`team_nummern`); die aktuelle
+  Saison mit der Kennung des ändernden Admins (`einstellungen`). Zusammen mit dem Teamnamen
+  kann die Mitgliedschaft auf politische Haltung und Ort schließen lassen (Art. 9).
+- **Empfänger:** die Person selbst („Meine Teams“); Admins nur die Zahl der Mitglieder je
+  Team, keine Liste, kein Export, keine API; am Namen für andere Angemeldete nur mit Schalter
+  `teams_oeffentlich` und zweiter Einwilligung, Besucher nie; die Summe des Teams (noch nicht
+  gebaut) nur Mitglieder des Teams, nur für abgeschlossene Wochen, erst ab fünf Einwilligenden,
+  gerundet und ohne Namen.
+- **Fristen:** LK „Teams“ und „Fristen“: „Team verlassen“ löscht sofort, die Kontolöschung
+  alle Mitgliedschaften (LK „Ablauf“, Schritt 2); Sicherungskopien bis zu ihrem Ablauf.
+- **TOM:** DSFA-Nachtrag „Teams“. Schalter `teams` (Obergrenze `SEMANTIC_SEARCH_TEAMS_AKTIV`) und
+  `teams_oeffentlich` (eigene Obergrenze `SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV`, nicht an die
+  Abzeichen gekoppelt), beide Standard aus; die Anzeige am Namen bleibt aus, bis der
+  Datenschutzbeauftragte geraten hat. Teamnamen nach Anlass, Ort oder Saison oder, als Team
+  nach Gruppe, nach einer Gruppe, die öffentlich unter diesem Namen auftritt, mit vorheriger
+  schriftlicher, widerruflicher Zustimmung der Gruppenleitung (Tag der Zustimmung an der
+  Einladung, nur für Admins; nach Widerruf wird das Team umbenannt,
+  `mvp/scripts/manual/team_umbenennen.sql`); die Gruppe bekommt nie Namen, Listen oder
+  eigene Zahlen und steuert nichts; keine Namen, die eine weitere besondere Kategorie erkennen
+  lassen (Hinweis im Admin-Formular, GLOSSARY „Team“). Keine Nummer am Namen.
+
+### T14 Merkliste (gebaut, ausgeschaltet)
+
+- **Zweck:** Beiträge, die eine Person öfter braucht, für sie selbst vormerken und unter „Meine
+  Beiträge“, „Gemerkt“ wiederfinden (#758).
+- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. b, zusätzlich Art.-9-Einwilligung: Was jemand merkt,
+  kann politische Meinungen erkennen lassen. Ohne Einwilligung kein Merken (403). Offen vor
+  dem Einschalten (neuer Zweck): eigener Einwilligungswortlaut, DSFA-Abschnitt und Absatz der
+  Datenschutzerklärung; Entwürfe im PR zu #758.
+- **Betroffene:** angemeldete Personen, die etwas merken.
+- **Daten:** Kennung, Beitrag, Zeitpunkt des letzten Merkens (Tabelle `merkliste`).
+- **Empfänger:** nur die Person selbst; keine Zähler für andere. Admins nur in der Datenbank.
+- **Fristen:** LK „Fristen“: bis die Person den Eintrag entfernt, mit dem Konto, sofort beim
+  Widerruf der Art.-9-Einwilligung und mit dem endgültig entfernten Beitrag; höchstens 500
+  Einträge je Person.
+- **TOM:** hinter dem Schalter `merkliste` (Standard aus), nur über die eigene Kennung aus der
+  Anmeldung erreichbar (`X-User`, #284).
+
+### T15 Seitenaufrufe und Besucher je Tag (gebaut, ausgeschaltet)
+
+- **Zweck:** zählen, wie viele Menschen die App an einem Tag öffnen, auch ohne Suche (#761).
+- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f; für das Tagespseudonym der Besucher **offen** mit
+  § 25 TDDDG wie T5 (DSFA V7, `docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md` Frage 2). Gezählt wird am
+  Server aus Abrufen, die die App ohnehin macht; der Browser schickt keine eigene Zähl-Anfrage.
+- **Betroffene:** alle, die die Startseite, eine Suche, ein Thema oder einen Beitrag abrufen,
+  angemeldet oder nicht.
+- **Daten:** je Besucher und laufendem Tag ein Tagespseudonym aus Anschluss und Tag (eigener
+  Raum, nicht verknüpfbar mit dem an Suchereignissen) und die Zahl der Aufrufe; keine
+  IP-Adresse, keine Kennung, kein Pfad, nichts im Browser. Im Arbeitsspeicher bis Mitternacht
+  ein Prüfwert aus Pseudonym und Seite (Wiederholsperre). Danach je Tag zwei Zahlen.
+- **Empfänger:** Admins (Kennzahlen).
+- **Fristen:** LK „Fristen“ (Pseudonyme bis zum Ende ihres Tages).
+- **TOM:** Schalter `aufrufe_zaehlen`, Obergrenze Standard aus, mit Einschalt-Hinweis;
+  dieselbe Seite binnen 5 Minuten zählt einmal; höchstens 500 Aufrufe je Besucher und Tag;
+  Rate-Limit je Anschluss.
 
 ## Offen
 

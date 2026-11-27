@@ -19,9 +19,10 @@ Prozess wuerde einen Widerruf, das Loeschkommando oder die Kennungsumstellung
 erst nach einem Neustart sehen.
 """
 
-from typing import Optional, Protocol
+from typing import Iterable, Optional, Protocol, Set
 
 from domain.art9_einwilligung import bekannter_wortlaut, geltender_wortlaut
+from repositories.merkliste_repository import get_merkliste_repository
 from repositories.loeschauftrag_repository import get_loeschauftrag_repository
 from repositories.vote_repository import VoteRepository
 from repositories.art9_einwilligung_repository import (
@@ -43,6 +44,10 @@ class StimmenDerPerson(Protocol):
     def loeschen_fuer_person(self, user_id: str, session=None) -> int: ...
 
 
+class MerklisteDerPerson(Protocol):
+    def loeschen_fuer_person(self, user_id: str, session=None) -> int: ...
+
+
 class LoeschauftraegeDerPerson(Protocol):
     def anlegen(self, user_id: str, session=None) -> None: ...
 
@@ -53,14 +58,17 @@ class Art9EinwilligungService:
         repository: Art9EinwilligungRepository,
         stimmen: Optional[StimmenDerPerson] = None,
         loeschauftraege: Optional[LoeschauftraegeDerPerson] = None,
+        merkliste: Optional[MerklisteDerPerson] = None,
     ):
         """
         ``stimmen``: loescht beim Widerruf die Stimmen; ``loeschauftraege``: legt
-        beim Widerruf einen Loeschauftrag an. Ohne (Tests) jeweils nichts.
+        beim Widerruf einen Loeschauftrag an; ``merkliste``: loescht beim Widerruf die
+        Merkliste (#758). Ohne (Tests) jeweils nichts.
         """
         self._repository = repository
         self._stimmen = stimmen
         self._loeschauftraege = loeschauftraege
+        self._merkliste = merkliste
 
     def stand(self, user_id: str) -> Optional[Art9Einwilligung]:
         return self._repository.lesen(user_id)
@@ -68,6 +76,10 @@ class Art9EinwilligungService:
     def eingewilligt(self, user_id: str) -> bool:
         einwilligung = self._repository.lesen(user_id)
         return einwilligung is not None and einwilligung.zaehlt
+
+    def eingewilligte(self, kennungen: Iterable[str]) -> Set[str]:
+        """Wie ``eingewilligt``, fuer viele Kennungen in einer Abfrage."""
+        return self._repository.zaehlende(kennungen)
 
     def einwilligen(self, user_id: str, wortlaut: str) -> None:
         if not bekannter_wortlaut(wortlaut):
@@ -102,13 +114,17 @@ class Art9EinwilligungService:
         """
         stimmen = self._stimmen
         loeschauftraege = self._loeschauftraege
-        if stimmen is None and loeschauftraege is None:
+        merkliste = self._merkliste
+        if stimmen is None and loeschauftraege is None and merkliste is None:
             self._repository.widerrufen(user_id)
             return
 
         def im_selben_zug(session, widerrufen: bool) -> None:
             if stimmen is not None:
                 stimmen.loeschen_fuer_person(user_id, session=session)
+            # Was jemand gemerkt hat, verraet politische Meinungen wie die Stimmen
+            if merkliste is not None:
+                merkliste.loeschen_fuer_person(user_id, session=session)
             if loeschauftraege is not None and widerrufen:
                 loeschauftraege.anlegen(user_id, session=session)
 
@@ -125,5 +141,6 @@ def get_art9_einwilligung_service() -> Art9EinwilligungService:
             get_art9_einwilligung_repository(),
             VoteRepository(),
             get_loeschauftrag_repository(),
+            get_merkliste_repository(),
         )
     return _service

@@ -1,5 +1,5 @@
 <!-- Ohne Einwilligung „Punkte und Meilensteine“ (#351) eine kurze Einladung statt der Liste -->
-<section *ngIf="einladen" class="meilensteine meilensteine-einladung" aria-labelledby="meilensteine-einladung-titel">
+<section *ngIf="haekchenEinladung" class="meilensteine meilensteine-einladung" aria-labelledby="meilensteine-einladung-titel">
     <h2 id="meilensteine-einladung-titel">Meilensteine</h2>
     <p class="meilensteine-hinweis">
         Punkte und Meilensteine wie „Erster Einwurf“ gibt es nur, wenn du sie willst. Sie zeigen dir, was du
@@ -7,10 +7,30 @@
     </p>
     <app-punkte-einwilligung></app-punkte-einwilligung>
 </section>
+<!--
+  Mit Schalter einwilligung_im_gewinn (#788): dieselbe Einladung als Frage, erst nach dem ersten
+  Gewinn und hoechstens eine Frage je Besuch. Wortlaut unveraendert vom Server, zwei gleichwertige
+  Knoepfe, nichts vorbelegt; kein Lob in der Naehe.
+-->
+<section *ngIf="einladen && punkteFrageZeigen" class="meilensteine meilensteine-einladung" aria-labelledby="punkte-frage-titel">
+    <h2 id="punkte-frage-titel">Meilensteine</h2>
+    <p class="meilensteine-hinweis">
+        Punkte und Meilensteine wie „Erster Einwurf“ gibt es nur, wenn du sie willst. Sie zeigen dir, was du
+        beigetragen hast und wie es wirkt; beitragen und bewerten kannst du genauso ohne.
+    </p>
+    <div class="sichtbarkeit-frage" role="group" aria-labelledby="punkte-frage-text">
+        <p id="punkte-frage-text">{{ punkteWortlaut }}</p>
+        <div class="sichtbarkeit-knoepfe">
+            <button mat-stroked-button type="button" [disabled]="punkteSpeichert" (click)="punkteAntworten(true)">Ja, einwilligen</button>
+            <button mat-stroked-button type="button" [disabled]="punkteSpeichert" (click)="punkteAntworten(false)">Nein, ohne Punkte</button>
+        </div>
+    </div>
+</section>
 <section *ngIf="meilensteine.length && !einladen" class="meilensteine" aria-labelledby="meilensteine-titel">
     <h2 id="meilensteine-titel">Meilensteine <span class="meilensteine-zahl">{{ erreichte }} von {{ meilensteine.length }}<ng-container *ngIf="sichtbar"> · Am Namen: {{ erreichteFuersAbzeichen }}</ng-container></span></h2>
     <p class="meilensteine-hinweis">
-        <ng-container *ngIf="!sichtbar">Nur du siehst deine Meilensteine.</ng-container>
+        <ng-container *ngIf="!sichtbar && stufe !== 'rangliste'">Nur du siehst deine Meilensteine.</ng-container>
+        <ng-container *ngIf="stufe === 'rangliste'">In der Rangliste sehen die anderen Mitspielenden, wie viele Meilensteine du erreicht hast; Wegmarken zählen dabei nicht.</ng-container>
         <ng-container *ngIf="sichtbar">Andere Angemeldete sehen an deinem Namen, wie viele Meilensteine du erreicht hast; Wegmarken zählen dabei nicht.</ng-container>
     </p>
     <!-- Erreichte und der naechste offene; der Rest aufklappbar, damit die Liste kurz bleibt (UX-Befund B14) -->
@@ -50,7 +70,7 @@
                 </span>
                 <span class="meilenstein-untertitel">{{ meilenstein.untertitel }}</span>
                 <span class="meilenstein-beschreibung">{{ meilenstein.beschreibung }}</span>
-                <span *ngIf="sichtbar && meilenstein.art === 'weg'" class="meilenstein-wegmarke">Wegmarke, zählt nicht fürs Abzeichen</span>
+                <span *ngIf="(sichtbar || stufe === 'rangliste') && meilenstein.art === 'weg'" class="meilenstein-wegmarke">Wegmarke, zählt nicht fürs Abzeichen</span>
             </span>
     </ng-template>
 
@@ -78,3 +98,11 @@
         <p *ngIf="fehler" class="sichtbarkeit-fehler">Das hat nicht geklappt. Bitte versuch es noch einmal.</p>
     </div>
 </section>
+<!-- Immer da, damit Screenreader die Antwort auf die Frage ansagen; nach der Antwort geht der Fokus hierher -->
+<div role="status" class="punkte-frage-status">
+    <p #punkteStatus *ngIf="punkteAntwort" tabindex="-1" class="punkte-frage-stand">
+        <ng-container *ngIf="punkteAntwort === 'ja'">Punkte und Meilensteine sind an. Ausschalten kannst du sie jederzeit in den Datenschutz-Einstellungen.</ng-container>
+        <ng-container *ngIf="punkteAntwort === 'nein'">Punkte und Meilensteine bleiben aus. Einschalten kannst du sie jederzeit in den Datenschutz-Einstellungen.</ng-container>
+    </p>
+    <p *ngIf="punkteFehler" class="punkte-frage-fehler">Das hat nicht geklappt. Bitte versuch es noch einmal.</p>
+</div>

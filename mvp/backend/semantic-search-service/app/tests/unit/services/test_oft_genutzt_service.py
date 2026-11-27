@@ -41,19 +41,63 @@ def _kandidaten(*nutzungen: int) -> List[Dict]:
     ]
 
 
-def _service(kandidaten: List[Dict], unsichtbar: frozenset = frozenset()):
+def _service(
+    kandidaten: List[Dict],
+    unsichtbar: frozenset = frozenset(),
+    mindest_nutzungen: int = 2,
+    mindest_beitraege: int = 2,
+):
     async def beitrag_laden(beitrag_id: uuid.UUID) -> Optional[Dict]:
         if str(beitrag_id) in unsichtbar:
             return None
         return {"id": str(beitrag_id), "title": f"Titel {beitrag_id}"}
 
     nutzung = _Nutzung(kandidaten)
-    return OftGenutztService(nutzung, beitrag_laden), nutzung
+    return (
+        OftGenutztService(
+            nutzung,
+            beitrag_laden,
+            mindest_nutzungen=mindest_nutzungen,
+            mindest_beitraege=mindest_beitraege,
+        ),
+        nutzung,
+    )
 
 
 async def test_beitraege_zu_wenig_nutzung_leer():
-    # Nur zwei Beitraege erreichen die Mindestnutzung - zu wenig fuer einen Bereich.
-    service, _ = _service(_kandidaten(5, 3, 1, 1))
+    # Nur ein Beitrag erreicht die Mindestnutzung - zu wenig fuer einen Bereich.
+    service, _ = _service(_kandidaten(5, 1, 1, 1))
+
+    assert await service.beitraege() == []
+
+
+async def test_beitraege_zwei_reichen_bei_mindestzahl_zwei():
+    kandidaten = _kandidaten(5, 3, 1, 1)
+    service, _ = _service(kandidaten)
+
+    beitraege = await service.beitraege()
+
+    assert [b["id"] for b in beitraege] == [k["content_id"] for k in kandidaten[:2]]
+
+
+async def test_beitraege_mindestzahl_aus_dem_aufruf():
+    """Hebt der Betrieb die Mindestzahl auf 3, reichen dieselben zwei nicht mehr."""
+    service, _ = _service(_kandidaten(5, 3, 1, 1), mindest_beitraege=3)
+
+    assert await service.beitraege() == []
+
+
+async def test_beitraege_mindestnutzung_aus_dem_aufruf():
+    """Mit Mindestnutzung 3 faellt der Beitrag mit zwei Nutzungen heraus."""
+    service, _ = _service(
+        _kandidaten(5, 3, 2), mindest_beitraege=2, mindest_nutzungen=3
+    )
+
+    assert [b["recent_uses"] for b in await service.beitraege()] == [5, 3]
+
+
+async def test_beitraege_ein_beitrag_reicht_bei_mindestzahl_zwei_nicht():
+    service, _ = _service(_kandidaten(9, 1))
 
     assert await service.beitraege() == []
 
@@ -92,9 +136,9 @@ async def test_beitraege_hoechstens_fuenf():
 
 
 async def test_beitraege_unsichtbare_fallen_weg_und_zaehlen_nicht():
-    # Gesperrt oder geloescht: Der Beitrag fehlt, und ohne ihn bleiben zwei -
+    # Gesperrt oder geloescht: Der Beitrag fehlt, und ohne ihn bleibt einer -
     # der Bereich entfaellt, statt mit einer Luecke dazustehen.
-    kandidaten = _kandidaten(6, 5, 4)
+    kandidaten = _kandidaten(6, 5)
     service, _ = _service(
         kandidaten, unsichtbar=frozenset({kandidaten[1]["content_id"]})
     )

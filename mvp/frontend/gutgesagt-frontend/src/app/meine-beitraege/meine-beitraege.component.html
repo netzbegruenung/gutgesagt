@@ -1,17 +1,17 @@
 <div class="component-box">
     <!-- Tab-Muster nach WAI-ARIA: ein Tab-Stopp, Pfeiltasten wechseln den Tab -->
-    <div class="tabs" role="tablist" [attr.aria-label]="aussagenAn ? 'Meine Beiträge, Einwürfe und Aussagen' : 'Meine Beiträge und Einwürfe'" (keydown)="tabTaste($event)">
+    <div class="tabs" role="tablist" [attr.aria-label]="tabsName" (keydown)="tabTaste($event)">
         <button *ngFor="let eintrag of tabs" type="button" role="tab" class="tab"
                 [id]="'meine-tab-' + eintrag.wert"
                 [attr.aria-controls]="'meine-bereich-' + eintrag.wert"
-                [class.aktiv]="tab === eintrag.wert"
-                [attr.aria-selected]="tab === eintrag.wert"
-                [attr.tabindex]="tab === eintrag.wert ? 0 : -1"
+                [class.aktiv]="aktiverTab === eintrag.wert"
+                [attr.aria-selected]="aktiverTab === eintrag.wert"
+                [attr.tabindex]="aktiverTab === eintrag.wert ? 0 : -1"
                 (click)="tabWaehlen(eintrag.wert)">{{ eintrag.name }}</button>
     </div>
 
     <div id="meine-bereich-beitraege" role="tabpanel" aria-labelledby="meine-tab-beitraege"
-         [hidden]="tab !== 'beitraege'">
+         [hidden]="aktiverTab !== 'beitraege'">
         <!-- Gesperrte eigene Beitraege stehen nicht im Album, nur hier (#448) -->
         <app-sperrnachrichten></app-sperrnachrichten>
 
@@ -58,22 +58,41 @@
             </app-album>
         </div>
 
+        <!-- Spielgefuehl als eine Einstellung in drei Stufen; ohne Schalter spielgefuehl_buehne leer -->
+        <app-spielgefuehl></app-spielgefuehl>
+
+        <!-- Widerruf jederzeit (Art. 7 Abs. 3 DSGVO), auch wenn die Spielgefühl-Karte leer ist (Schalter aus):
+             je gespeicherter Einwilligung eine Zeile „Ausschalten“; ohne gespeichertes Ja leer -->
+        <app-widerrufbar [ebene]="2" [karte]="true" [spielgefuehlKarteDaneben]="true" [punkteHaekchenDaneben]="false"></app-widerrufbar>
+
         <!-- Nur fuer die Person selbst; bei ausgeschalteten Punkten leer (#352) -->
         <app-punkte></app-punkte>
 
         <!-- Nur fuer die Person selbst; ohne Meilensteine (Punkte aus, keine Einwilligung) leer (#351) -->
         <app-meilensteine></app-meilensteine>
+
+        <!-- Rangliste der Saison mit eigener Einwilligung; ohne Schalter leer (#793) -->
+        <app-rangliste></app-rangliste>
+
+        <!-- Nur fuer die Person selbst; ohne Schalter teams fehlt die Karte (Glossar "Team") -->
+        <app-meine-teams></app-meine-teams>
     </div>
 
     <!-- Erst beim ersten Oeffnen geladen, danach nur versteckt: Seite und Liste bleiben beim Wechseln stehen -->
     <div id="meine-bereich-einwuerfe" role="tabpanel" aria-labelledby="meine-tab-einwuerfe"
-         [hidden]="tab !== 'einwuerfe'">
+         [hidden]="aktiverTab !== 'einwuerfe'">
         <app-meine-einwuerfe *ngIf="einwuerfeGeoeffnet"></app-meine-einwuerfe>
     </div>
 
     <!-- Meine Aussagen (#760): nur mit dem Schalter antworten_hinweis, laedt beim ersten Oeffnen -->
     <div id="meine-bereich-aussagen" role="tabpanel" aria-labelledby="meine-tab-aussagen"
-         [hidden]="tab !== 'aussagen'">
+         [hidden]="aktiverTab !== 'aussagen'">
         <app-meine-aussagen *ngIf="aussagenGeoeffnet"></app-meine-aussagen>
+    </div>
+
+    <!-- Merkliste (#758): nur mit Schalter; erst beim ersten Oeffnen geladen -->
+    <div id="meine-bereich-gemerkt" role="tabpanel" aria-labelledby="meine-tab-gemerkt"
+         *ngIf="gemerktAn" [hidden]="aktiverTab !== 'gemerkt'">
+        <app-gemerkt *ngIf="gemerktGeoeffnet"></app-gemerkt>
     </div>
 </div>

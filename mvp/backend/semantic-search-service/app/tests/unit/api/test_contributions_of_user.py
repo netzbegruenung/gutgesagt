@@ -381,3 +381,30 @@ def test_aussagen_nicht_lesbar_liefert_die_liste_ohne_thema(
     assert response.status_code == 200
     assert response.json()["results"][0]["aussage"] is None
     assert logger.warning.call_count == 1
+
+
+@pytest.mark.parametrize(
+    "schalter, erwartet",
+    [
+        ({}, (None, None)),
+        # Nur zusammen (services/schalter_service.py, NUR_ZUSAMMEN): einer allein wirkt nicht
+        ({"wirkungs_echo_aktiv": True}, (None, None)),
+        ({"danke_knopf_aktiv": True}, (None, None)),
+        ({"wirkungs_echo_aktiv": True, "danke_knopf_aktiv": True}, (3, 5)),
+    ],
+)
+def test_wirkung_und_danke_nur_mit_schalter(
+    client, repository, wirkung_ohne_datenbank, schalter, erwartet
+):
+    """#790, #791: nur Summen je Beitrag, nur mit beiden Schaltern (nur zusammen)."""
+    from core.config import Settings
+
+    eintrag = beitrag()
+    repository.getByAuthor.return_value = [eintrag]
+    repository.getCountByAuthor.return_value = 1
+    wirkung_ohne_datenbank.je_beitrag.return_value = {str(eintrag.id): (3, 5)}
+    client.app.dependency_overrides[get_settings] = lambda: Settings(**schalter)
+
+    karte = client.get(URL, headers={"X-User": "person-1"}).json()["results"][0]
+
+    assert (karte["oeffentlich_gepostet"], karte["danke"]) == erwartet

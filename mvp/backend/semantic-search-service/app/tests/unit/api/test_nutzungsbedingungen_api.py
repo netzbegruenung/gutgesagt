@@ -239,6 +239,8 @@ NB_NUR = {
 
 
 def _nb_gesperrte_routen():
+    from api.v1.merkliste import merkliste_angeboten
+    from api.v1.usage import gepostet_angeboten
     from main import app
 
     gesperrt = set()
@@ -246,7 +248,13 @@ def _nb_gesperrte_routen():
         if not isinstance(route, APIRoute):
             continue
         calls = {d.call for d in route.dependant.dependencies}
-        if calls & {require_art9_einwilligung, require_nutzungsbedingungen}:
+        # gepostet_angeboten ruft require_art9_einwilligung, sobald "Gepostet?" an ist
+        if calls & {
+            require_art9_einwilligung,
+            require_nutzungsbedingungen,
+            gepostet_angeboten,
+            merkliste_angeboten,
+        }:
             gesperrt |= {(m, route.path) for m in route.methods}
     return gesperrt
 

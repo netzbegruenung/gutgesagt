@@ -59,7 +59,10 @@ export const PAGE_TITLES = {
   DESTILLIEREN: 'Destillieren',
   AUSFORMULIEREN: 'Ausformulieren',
   HIER_FEHLT_EINE_ANTWORT: 'Hier fehlt eine Antwort',
+  // Gartenansicht (#783): je Thema Antworten und Sprueche ohne Antwort
+  GARTEN: 'Themen im Überblick',
   VARIANTEN: 'Varianten',
+  KONTER_PROBE: 'Konter-Probe',
   BEITRAG: 'Beitrag',
   SHARE_TARGET: 'Geteilter Inhalt',
   // Typnamen aus der Registry
@@ -85,6 +88,7 @@ export const PAGE_TITLES = {
   EINWILLIGUNG_FRAGE: 'Einwilligung',
   UEBER: 'Über Gut gesagt',
   EINLADUNG: 'Einladung',
+  WILLKOMMEN: 'Willkommen',
   ADMIN: 'Admin'
 };
 
@@ -98,11 +102,15 @@ export const ROUTES = {
   RAW_INPUT_LIST: '/fangkorb',
   DESTILLIEREN: '/destillieren',
   HIER_FEHLT_EINE_ANTWORT: '/hier-fehlt-eine-antwort',
+  GARTEN: '/garten',
   VARIANTEN: '/varianten',
+  KONTER_PROBE: '/konter-probe',
   BEITRAG: '/beitrag',
   SHARE_TARGET: '/teilen',
   LOGIN: '/login',
-  HELP: '/help'
+  HELP: '/help',
+  // Nach dem ersten Anmelden über eine Einladung ohne Team (einladung-anmelden)
+  WILLKOMMEN: '/willkommen'
 };
 
 export const STORAGE_KEYS = {

@@ -19,6 +19,7 @@ from services.content.beitrag_aendern_service import (
 from services.content.statement_service import StatementService
 from services.dieselbe_behauptung import fassung
 from services.dieselbe_behauptung.regel import Richtung, Urteil
+from services.schalter_service import SchalterService, schalter_service_setzen
 from tests.unit.services.test_beitrag_aendern_service import (
     AUTOR,
     BEITRAG_ID,
@@ -317,3 +318,261 @@ class TestStimmenBeimAendern:
         assert ergebnis is AenderErgebnis.NICHT_AUTOR
         gleich.assert_not_awaited()
         loeschen.assert_not_called()
+
+
+# --- #636: geaenderter Text unter gleichem Titel
+
+ALTER_TEXT = "Alter Text"
+
+
+@pytest.mark.asyncio
+class TestGleicherText:
+    async def test_normalisiert_gleich_ohne_einbettung(self, test_settings):
+        aehnlich = _aehnlich(0.1)
+        gleich = await fassung.gleicher_text(
+            "Ein Text.", "  ein text", test_settings, aehnlich
+        )
+        assert gleich is True
+        aehnlich.assert_not_awaited()
+
+    async def test_ganz_anderer_text_unter_der_schwelle(self, test_settings):
+        assert (
+            await fassung.gleicher_text("A", "B", test_settings, _aehnlich(0.84))
+            is False
+        )
+
+    @pytest.mark.parametrize("wert", [0.90, 0.945, 1.0])
+    async def test_korrektur_und_umformulierung_ab_der_schwelle(
+        self, test_settings, wert
+    ):
+        assert (
+            await fassung.gleicher_text("A", "B", test_settings, _aehnlich(wert))
+            is True
+        )
+
+
+@pytest.mark.asyncio
+class TestGleicherTextImStatementService:
+    def _dienst(
+        self, test_settings, repository_factory, modus, wert=0.5, obergrenze=True
+    ):
+        settings = test_settings.model_copy(
+            update={
+                "dieselbe_aussage_nli": modus,
+                "stimmen_text_verfall_aktiv": obergrenze,
+            }
+        )
+        dienst = StatementService(
+            settings, repository_factory=repository_factory, nli=Nli(DIESELBE)
+        )
+        dienst._aehnlichkeit = _aehnlich(wert)
+        return dienst
+
+    async def test_an_entscheidet_mit_passage_einbettung(
+        self, test_settings, repository_factory
+    ):
+        dienst = self._dienst(test_settings, repository_factory, "an")
+        assert await dienst.gleicher_text("alt", "neu") is False
+        dienst._aehnlichkeit.assert_awaited_once_with(
+            "alt", "neu", content_type="passage"
+        )
+
+    @pytest.mark.parametrize("modus", ["aus", "schatten"])
+    async def test_nicht_an_entscheidet_niemand(
+        self, test_settings, repository_factory, modus
+    ):
+        dienst = self._dienst(test_settings, repository_factory, modus)
+        assert await dienst.gleicher_text("alt", "neu") is None
+        dienst._aehnlichkeit.assert_not_awaited()
+
+    async def test_fehler_entscheidet_niemand(self, test_settings, repository_factory):
+        dienst = self._dienst(test_settings, repository_factory, "an")
+        dienst._aehnlichkeit = AsyncMock(side_effect=RuntimeError())
+        assert await dienst.gleicher_text("alt", "neu") is None
+
+    async def test_schalter_obergrenze_aus_entscheidet_niemand(
+        self, test_settings, repository_factory
+    ):
+        """Standard: Obergrenze aus, keine Einbettung, die Stimmen bleiben."""
+        dienst = self._dienst(test_settings, repository_factory, "an", obergrenze=False)
+        assert await dienst.gleicher_text("alt", "neu") is None
+        dienst._aehnlichkeit.assert_not_awaited()
+
+    async def test_schalter_admin_wert_aus_entscheidet_niemand(
+        self, test_settings, repository_factory
+    ):
+        werte = {"stimmen_text_verfall": False}
+        schalter_service_setzen(
+            SchalterService(
+                admin_werte_lesen=lambda: dict(werte),
+                admin_wert_setzen=lambda name, an, admin: None,
+            )
+        )
+        try:
+            dienst = self._dienst(test_settings, repository_factory, "an")
+            assert await dienst.gleicher_text("alt", "neu") is None
+            dienst._aehnlichkeit.assert_not_awaited()
+            werte["stimmen_text_verfall"] = True
+            schalter_service_setzen(
+                SchalterService(
+                    admin_werte_lesen=lambda: dict(werte),
+                    admin_wert_setzen=lambda name, an, admin: None,
+                )
+            )
+            assert await dienst.gleicher_text("alt", "neu") is False
+        finally:
+            schalter_service_setzen(None)
+
+
+class TestVerdrahtung:
+    def test_dependencies_uebergibt_gleicher_text(self, monkeypatch):
+        """get_beitrag_aendern_service reicht StatementService.gleicher_text durch."""
+        import dependencies
+
+        dienst = Mock(spec=StatementService)
+        monkeypatch.setattr(dependencies, "statement_service_instance", dienst)
+        monkeypatch.setattr(dependencies, "get_reference_service", Mock())
+        monkeypatch.setattr(dependencies, "get_content_report_repository", Mock())
+        monkeypatch.setattr("repositories.vote_repository.VoteRepository", Mock())
+
+        aendern = dependencies.get_beitrag_aendern_service(Mock())
+
+        assert aendern.gleicher_text is dienst.gleicher_text
+        assert aendern.gleiche_behauptung is dienst.gleiche_behauptung
+
+    def test_ohne_statement_service_entscheidet_niemand(self, monkeypatch):
+        import dependencies
+
+        monkeypatch.setattr(dependencies, "statement_service_instance", None)
+        monkeypatch.setattr(dependencies, "get_reference_service", Mock())
+        monkeypatch.setattr(dependencies, "get_content_report_repository", Mock())
+        monkeypatch.setattr("repositories.vote_repository.VoteRepository", Mock())
+
+        aendern = dependencies.get_beitrag_aendern_service(Mock())
+
+        assert aendern.gleicher_text is None
+
+
+def _mit_text_pruefung(test_settings, speicher, gleicher_text, stimmen_loeschen):
+    return BeitragAendernService(
+        ContentRepository(test_settings, speicher),
+        AsyncMock(return_value=uuid.uuid4()),
+        Mock(return_value=False),
+        gleiche_behauptung=AsyncMock(return_value=True),
+        stimmen_loeschen=stimmen_loeschen,
+        gleicher_text=gleicher_text,
+    )
+
+
+@pytest.mark.asyncio
+class TestStimmenBeiGeaendertemText:
+    async def test_ganz_anderer_text_stimmen_verfallen(self, test_settings, speicher):
+        speicher.add_test_data("commentary", [_beitrag(title=ALT)])
+        text = AsyncMock(return_value=False)
+        loeschen = Mock(return_value=2)
+        service = _mit_text_pruefung(test_settings, speicher, text, loeschen)
+
+        ergebnis = await service.aendern(
+            uuid.UUID(BEITRAG_ID), AUTOR, _aenderung(ALT, text="Ganz neuer Text.")
+        )
+
+        assert ergebnis is AenderErgebnis.GEAENDERT
+        text.assert_awaited_once_with(ALTER_TEXT, "Ganz neuer Text.")
+        service.gleiche_behauptung.assert_not_awaited()
+        loeschen.assert_called_once_with(uuid.UUID(BEITRAG_ID))
+
+    async def test_hintergrundinfo_ebenso(self, test_settings, speicher):
+        speicher.add_test_data("generic_text", [_beitrag("generic_text", title=ALT)])
+        loeschen = Mock(return_value=1)
+        service = _mit_text_pruefung(
+            test_settings, speicher, AsyncMock(return_value=False), loeschen
+        )
+        await service.aendern(
+            uuid.UUID(BEITRAG_ID), AUTOR, _aenderung(ALT, text="Ganz neuer Text.")
+        )
+        loeschen.assert_called_once()
+
+    @pytest.mark.parametrize("urteil", [True, None])
+    async def test_korrektur_oder_ohne_entscheidung_stimmen_bleiben(
+        self, test_settings, speicher, urteil
+    ):
+        speicher.add_test_data("commentary", [_beitrag(title=ALT)])
+        loeschen = Mock()
+        service = _mit_text_pruefung(
+            test_settings, speicher, AsyncMock(return_value=urteil), loeschen
+        )
+        await service.aendern(
+            uuid.UUID(BEITRAG_ID), AUTOR, _aenderung(ALT, text="Alter Text, ergänzt.")
+        )
+        loeschen.assert_not_called()
+
+    async def test_nur_normalform_geaendert_ohne_pruefung(
+        self, test_settings, speicher
+    ):
+        speicher.add_test_data("commentary", [_beitrag(title=ALT)])
+        text = AsyncMock(return_value=False)
+        loeschen = Mock()
+        service = _mit_text_pruefung(test_settings, speicher, text, loeschen)
+        await service.aendern(
+            uuid.UUID(BEITRAG_ID), AUTOR, _aenderung(ALT, text="alter text!")
+        )
+        text.assert_not_awaited()
+        loeschen.assert_not_called()
+
+    async def test_umformulierter_titel_und_ganz_anderer_text_verfallen(
+        self, test_settings, speicher
+    ):
+        """Titel umformuliert (dieselbe Behauptung), Text ausgetauscht: Der Text zaehlt."""
+        speicher.add_test_data("commentary", [_beitrag(title=ALT)])
+        text = AsyncMock(return_value=False)
+        loeschen = Mock(return_value=1)
+        service = _mit_text_pruefung(test_settings, speicher, text, loeschen)
+        neuer_titel = "Auch im Altbau lohnt sich die Wärmepumpe"
+        await service.aendern(
+            uuid.UUID(BEITRAG_ID), AUTOR, _aenderung(neuer_titel, text="Neu.")
+        )
+        service.gleiche_behauptung.assert_awaited_once_with(ALT, neuer_titel)
+        text.assert_awaited_once_with(ALTER_TEXT, "Neu.")
+        loeschen.assert_called_once()
+
+    async def test_andere_behauptung_im_titel_prueft_den_text_nicht_mehr(
+        self, test_settings, speicher
+    ):
+        speicher.add_test_data("commentary", [_beitrag(title=ALT)])
+        text = AsyncMock(return_value=True)
+        loeschen = Mock(return_value=1)
+        service = _mit_text_pruefung(test_settings, speicher, text, loeschen)
+        service.gleiche_behauptung = AsyncMock(return_value=False)
+        await service.aendern(
+            uuid.UUID(BEITRAG_ID),
+            AUTOR,
+            _aenderung("Wärmepumpe lohnt sich im Altbau nicht", text="Neu."),
+        )
+        text.assert_not_awaited()
+        loeschen.assert_called_once()
+
+    async def test_pruefung_wirft_stimmen_bleiben(self, test_settings, speicher):
+        speicher.add_test_data("commentary", [_beitrag(title=ALT)])
+        loeschen = Mock()
+        service = _mit_text_pruefung(
+            test_settings, speicher, AsyncMock(side_effect=RuntimeError()), loeschen
+        )
+        ergebnis = await service.aendern(
+            uuid.UUID(BEITRAG_ID), AUTOR, _aenderung(ALT, text="Ganz neuer Text.")
+        )
+        assert ergebnis is AenderErgebnis.GEAENDERT
+        loeschen.assert_not_called()
+
+    async def test_ohne_titelpruefung_prueft_der_text_trotzdem(
+        self, test_settings, speicher
+    ):
+        speicher.add_test_data("commentary", [_beitrag(title=ALT)])
+        loeschen = Mock(return_value=1)
+        service = _mit_text_pruefung(
+            test_settings, speicher, AsyncMock(return_value=False), loeschen
+        )
+        service.gleiche_behauptung = None
+        await service.aendern(
+            uuid.UUID(BEITRAG_ID), AUTOR, _aenderung(ALT, text="Ganz neuer Text.")
+        )
+        loeschen.assert_called_once()

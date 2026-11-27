@@ -25,6 +25,7 @@ from services.content.base_content_service import (
 from services.dieselbe_behauptung.nli_modell import NliModell, NliPruefer, nli_modell
 from services.dieselbe_behauptung.schatten import Schattenprotokoll
 from services.dieselbe_behauptung import fassung, regel, stufe
+from services.schalter_service import schalter_wirksam
 from repositories.interfaces.statement_repository import (
     IStatementRepository,
 )
@@ -468,16 +469,44 @@ class StatementService(
             )
             return None
 
-    async def _aehnlichkeit(self, alt: str, neu: str) -> float:
+    async def gleicher_text(self, alt: str, neu: str) -> Optional[bool]:
+        """
+        Ob ein geaenderter Text unter gleichem Titel noch derselbe ist (#636,
+        fassung.gleicher_text): False nur bei einem ganz anderen Text. Nur mit dem
+        Schalter stimmen_text_verfall (Standard aus) und wie beim Titel mit
+        dieselbe_aussage_nli = an; sonst oder bei einem Fehler None, und die Stimmen
+        bleiben.
+        """
+        if self.settings.dieselbe_aussage_nli != "an" or not schalter_wirksam(
+            "stimmen_text_verfall", self.settings
+        ):
+            return None
+        try:
+            return await fassung.gleicher_text(
+                alt,
+                neu,
+                self.settings,
+                lambda a, b: self._aehnlichkeit(a, b, content_type="passage"),
+            )
+        except Exception as e:
+            logger.warning(
+                "Pruefung des geaenderten Texts gescheitert (%s)", type(e).__name__
+            )
+            return None
+
+    async def _aehnlichkeit(
+        self, alt: str, neu: str, content_type: str = "statement"
+    ) -> float:
         """query/query-Aehnlichkeit wie bei den Kandidaten der Pruefung auf dieselbe
-        Aussage; die Vektoren sind normiert, das Skalarprodukt ist der Kosinus."""
+        Aussage, mit content_type="passage" passage/passage wie bei Beitragstexten; die
+        Vektoren sind normiert, das Skalarprodukt ist der Kosinus."""
         from services.embeddings.qdrant_embeddings_manager import get_embeddings_manager
 
         einbettung = get_embeddings_manager()
 
         def rechnen() -> float:
-            a = einbettung.encode_text(alt, content_type="statement")
-            b = einbettung.encode_text(neu, content_type="statement")
+            a = einbettung.encode_text(alt, content_type=content_type)
+            b = einbettung.encode_text(neu, content_type=content_type)
             return float(sum(x * y for x, y in zip(a, b)))
 
         return await asyncio.to_thread(rechnen)

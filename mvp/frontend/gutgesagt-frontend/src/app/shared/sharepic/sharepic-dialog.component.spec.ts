@@ -1,10 +1,10 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 import { TEILEN_NAVIGATOR, TeilenNavigator } from '../teilen.service';
-import { SharepicDaten } from './sharepic';
-import { SharepicDialogComponent } from './sharepic-dialog.component';
+import { SHAREPIC_ZEITGRENZE_MS, SharepicDaten, SharepicLader } from './sharepic';
+import { SHAREPIC_LADER, SHAREPIC_TEXTE, SharepicDialogComponent } from './sharepic-dialog.component';
 
 describe('SharepicDialogComponent (#756)', () => {
   const DATEN: SharepicDaten = {
@@ -19,8 +19,11 @@ describe('SharepicDialogComponent (#756)', () => {
   let dialogRef: jasmine.SpyObj<MatDialogRef<SharepicDialogComponent>>;
   let nav: TeilenNavigator;
 
+  /** Ohne Netz und Schriftladen (#819): das Logo fehlt, die Schriften gelten als geladen. */
+  const SCHNELL: SharepicLader = { bild: () => Promise.resolve(null), schriften: () => Promise.resolve() };
+
   /**
-   * Malen laeuft ueber Bild- und Schriftladen und toBlob; auf einem ausgelasteten CI-Runner
+   * Malen laeuft ueber toBlob; auf einem ausgelasteten CI-Runner
    * dauert das laenger als eine Sekunde. Deshalb nach Uhrzeit warten statt nach Durchlaeufen,
    * mit Luft unter der Zeitgrenze der Tests (ZEITGRENZE_MS).
    */
@@ -33,17 +36,23 @@ describe('SharepicDialogComponent (#756)', () => {
     }
   }
 
-  async function erzeugen(navigator: TeilenNavigator): Promise<void> {
+  function einrichten(navigator: TeilenNavigator, lader: SharepicLader): void {
     nav = navigator;
     dialogRef = jasmine.createSpyObj('MatDialogRef', ['close']);
-    await TestBed.configureTestingModule({
+    TestBed.configureTestingModule({
       imports: [SharepicDialogComponent, NoopAnimationsModule],
       providers: [
         { provide: MAT_DIALOG_DATA, useValue: DATEN },
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: TEILEN_NAVIGATOR, useFactory: () => nav },
+        { provide: SHAREPIC_LADER, useValue: lader },
       ],
-    }).compileComponents();
+    });
+  }
+
+  async function erzeugen(navigator: TeilenNavigator): Promise<void> {
+    einrichten(navigator, SCHNELL);
+    await TestBed.compileComponents();
     fixture = TestBed.createComponent(SharepicDialogComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -100,4 +109,35 @@ describe('SharepicDialogComponent (#756)', () => {
 
     expect(component.datei?.name).toBe('gut-gesagt-story.png');
   }, ZEITGRENZE_MS);
+
+  it('meldet nach der Zeitgrenze freundlich und malt mit Noch einmal versuchen neu (#819)', fakeAsync(() => {
+    const bild = jasmine.createSpy('bild').and.callFake(() => new Promise(() => undefined));
+    einrichten({}, { bild, schriften: () => Promise.resolve() });
+    fixture = TestBed.createComponent(SharepicDialogComponent);
+    component = fixture.componentInstance;
+    const meldung = () => fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement | null;
+    fixture.detectChanges();
+
+    tick(SHAREPIC_ZEITGRENZE_MS - 1);
+    fixture.detectChanges();
+    expect(component.laedt).toBeTrue();
+    expect(meldung()).toBeNull();
+
+    tick(1);
+    fixture.detectChanges();
+    expect(component.laedt).toBeFalse();
+    expect(meldung()?.textContent).toContain(SHAREPIC_TEXTE.zuLangsam);
+    expect(meldung()?.textContent).not.toContain('neu laden');
+    expect(knopf('sharepic-herunterladen')?.disabled).toBeTrue();
+
+    knopf('sharepic-nochmal')!.click();
+    fixture.detectChanges();
+    expect(knopf('sharepic-nochmal')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="status"]')?.textContent).toContain(SHAREPIC_TEXTE.laedt);
+    expect(bild).toHaveBeenCalledTimes(2);
+
+    tick(SHAREPIC_ZEITGRENZE_MS);
+    fixture.detectChanges();
+    expect(knopf('sharepic-nochmal')?.textContent).toContain('Noch einmal versuchen');
+  }));
 });

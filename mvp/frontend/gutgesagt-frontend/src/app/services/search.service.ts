@@ -7,6 +7,7 @@ import { environment } from '../../environments/environment';
 import { LoggingService } from './logging.service';
 import { StateManagementService } from './state-management.service';
 import { throwError } from 'rxjs';
+import { suchFehlerText } from './suchfehler';
 
 @Injectable({
   providedIn: 'root'
@@ -91,8 +92,8 @@ export class SearchService {
         });
       }),
       catchError(error => {
-        const errorMessage = error.message || 'Fehler bei der Suche';
-        this.stateService.setError(errorMessage);
+        // Nie der rohe HTTP-Text (UX-Review 26.11., Befund 1), sondern ein Satz fuer Menschen.
+        this.stateService.setError(suchFehlerText(error));
         this.logger.error('Search failed', error);
         return throwError(() => error);
       })

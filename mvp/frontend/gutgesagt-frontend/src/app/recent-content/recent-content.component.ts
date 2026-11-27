@@ -25,6 +25,35 @@ export const MOBIL_ANZAHL = 3;
 /** /recent liefert nur diese beiden Typen (api/v1/content.py). */
 const TEASER_TYPEN = ['commentary', 'generictext'];
 
+/**
+ * Frisch heisst: in den letzten 7 Tagen ergaenzt, wie die Kachel „Frisch aus der Community“
+ * unter „Seit deinem letzten Besuch“ (GLOSSARY.md, Rueckmeldung). /recent selbst kennt
+ * kein Zeitfenster, es liefert die neuesten sichtbaren Beitraege jeden Alters.
+ */
+export const FRISCH_TAGE = 7;
+
+/** Ist nichts frisch, zeigt der Bereich so viele der zuletzt ergaenzten (Entscheidung 26.11.). */
+export const ZULETZT_ANZAHL = 3;
+
+/**
+ * Was der Bereich zeigt: frische Beitraege, sonst die zuletzt ergaenzten jeden Alters,
+ * und nur ganz ohne Beitraege den Anfang (Entscheidung 26.11.: nie „Noch keine neuen
+ * Beitraege“).
+ */
+export type RecentContentStand = 'frisch' | 'zuletzt' | 'anfang';
+
+export const RECENT_CONTENT_TITEL: Record<RecentContentStand, string> = {
+  frisch: 'Frisch aus der Community',
+  zuletzt: 'Zuletzt ergänzt',
+  anfang: 'Frisch aus der Community',
+};
+
+/** Ob ein Beitrag mit diesem Zeitstempel noch frisch ist; ohne lesbares Datum nicht. */
+export function istFrisch(erstellt: string | undefined, jetzt: number = Date.now()): boolean {
+  const zeit = erstellt ? Date.parse(erstellt) : NaN;
+  return !Number.isNaN(zeit) && jetzt - zeit <= FRISCH_TAGE * 24 * 60 * 60 * 1000;
+}
+
 @Component({
   selector: 'app-recent-content',
   standalone: true,
@@ -40,11 +69,16 @@ const TEASER_TYPEN = ['commentary', 'generictext'];
 })
 export class RecentContentComponent implements OnInit, OnDestroy {
   karten: KartenDaten[] = [];
+  stand: RecentContentStand = 'frisch';
   loading = false;
   error = '';
   /** Bis 599 px eine Liste, darueber das Karussell. */
   istMobil = false;
   private destroy$ = new Subject<void>();
+
+  get titel(): string {
+    return RECENT_CONTENT_TITEL[this.stand];
+  }
 
   /** Mobil die neuesten drei, ab 600 px alle im Karussell. */
   get angezeigteKarten(): KartenDaten[] {
@@ -91,8 +125,11 @@ export class RecentContentComponent implements OnInit, OnDestroy {
 
     this.contentService.getRecentContent(TEASER_ANZAHL).subscribe({
       next: (response: RecentContentResponse) => {
-        this.karten = response.results
-          .filter((item) => TEASER_TYPEN.includes(item.result_type))
+        const beitraege = response.results.filter((item) => TEASER_TYPEN.includes(item.result_type));
+        // Nichts frisch: die zuletzt ergaenzten statt eines leeren Bereichs
+        this.stand =
+          beitraege.length === 0 ? 'anfang' : beitraege.some((item) => istFrisch(item.created)) ? 'frisch' : 'zuletzt';
+        this.karten = (this.stand === 'zuletzt' ? beitraege.slice(0, ZULETZT_ANZAHL) : beitraege)
           .map((item) =>
             ausSuchergebnis({
               score: 1.0,
@@ -103,13 +140,15 @@ export class RecentContentComponent implements OnInit, OnDestroy {
               [`${item.result_type}_result`]: item,
             }),
           );
-        this.logger.info(`Neueste Inhalte: ${this.karten.length} Karten`, this.karten.map((karte) => karte.id));
+        this.logger.info(`Neueste Inhalte (${this.stand}): ${this.karten.length} Karten`, this.karten.map((karte) => karte.id));
         this.loading = false;
         this.cdr.detectChanges();
       },
       error: (error) => {
         this.logger.error('Failed to load recent content', error);
         this.error = 'Die neuesten Beiträge konnten gerade nicht geladen werden.';
+        // Ueber der Fehlermeldung immer derselbe Titel, auch nach einem Nachladen
+        this.stand = 'frisch';
         this.loading = false;
         this.cdr.detectChanges();
       }

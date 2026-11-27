@@ -179,6 +179,15 @@ class Settings(BaseSettings):
     # Derselbe Text mit anderer Zahl liegt darueber und gilt als Dublette,
     # Umformulierungen zum Teil darunter. Die Schwelle trennt das nicht; siehe #387.
     generic_text_similarity_threshold: float = 0.975
+    # Stimmenverfall bei geaendertem Text (#636): Stimmen verfallen, wenn die
+    # passage/passage-Aehnlichkeit von altem und neuem Text darunter liegt
+    # (fassung.gleicher_text). Nutzt nur die Einbettung, kein NLI-Modell; wirkt nur mit
+    # dem Schalter stimmen_text_verfall und wie der Titel-Fall mit dieselbe_aussage_nli = an.
+    # Gemessen am Messset "Geaenderter Text" (tests/regression/MESSSET.md): Korrekturen,
+    # Ergaenzungen, Kuerzungen, Links und Umformulierungen ab 0,915, ganz andere Texte
+    # hoechstens 0,840. Ein ausgetauschter Text zum selben Thema kann darueber liegen
+    # (verwandte Kommentare 0,817-0,899, oben) und behaelt dann die Stimmen.
+    text_verfall_aehnlichkeit_unter: float = Field(default=0.88, ge=0.0, le=1.0)
     # Vorschlaege im Feld "Antwort auf" (#387, frueher Konstante im Frontend):
     # Aussagen ab dieser query/query-Aehnlichkeit. Gemessen fuer EMBEDDING_MODELL
     # (passende Aussagen 0,892-0,940). Widerspricht eine Aussage dem Getippten in einer
@@ -291,26 +300,151 @@ class Settings(BaseSettings):
     # Standard aus, unabhaengig von punkte_aktiv: eine eigene Verarbeitung, die erst
     # mit Satz in DSFA und Datenschutzerklaerung eingeschaltet wird.
     gepostet_aktiv: bool = False
+    # Meldungen ohne Konto (#799, services/gepostet_ohne_konto_service.py): "Ja, gepostet"
+    # ohne Anmeldung als reiner Wochenzaehler, ohne Pruefwert. Standard aus und nur
+    # zusammen mit gepostet_aktiv; erst nach DSE-Absatz und DSFA-Nachtrag (Jura).
+    gepostet_ohne_konto_aktiv: bool = False
+    # Drosselung von POST /api/v1/ereignis (#799): hoechstens so viele Meldungen je
+    # Sekunde fuer alle zusammen, nur im Arbeitsspeicher, ohne Adresse.
+    ereignis_je_sekunde: int = Field(default=10, ge=1)
+    # Kampagnenwort ?k= (GLOSSARY.md "Kampagnenwort"): Begruessung nach dem Wort (nur
+    # Anzeige im Browser) und Ankuenfte je Wort und Tag (services/ankunft_service.py),
+    # beide Standard aus (vorlaeufige Jura-Einschaetzung 26.11.2026). Gezaehlt werden nur
+    # Woerter aus k_woerter (kommagetrennt, klein); andere zaehlen nicht.
+    k_begruessung_aktiv: bool = False
+    k_ankuenfte_aktiv: bool = False
+    k_woerter: str = "vorhut,g1,g2,g3,g4,bdk,sticker,karte,technik"
+    # Drosselung von POST /api/v1/ankunft: hoechstens so viele Ankuenfte je Sekunde fuer
+    # alle zusammen, nur im Arbeitsspeicher, ohne Adresse (wie ereignis_je_sekunde).
+    ankunft_je_sekunde: int = Field(default=20, ge=1)
+
+    def kampagnenwoerter(self) -> frozenset:
+        """Die erlaubten Kampagnenwoerter, klein geschrieben; laengere als 20 Zeichen
+        (Spalte ``ankuenfte_je_tag.k``) fallen weg."""
+        return frozenset(
+            w.strip().lower()
+            for w in self.k_woerter.split(",")
+            if w.strip() and len(w.strip()) <= 20
+        )
+
     # Herkunft pruefen (#759): nachts die Links aller Herkuenfte abrufen und tote oder
     # umgezogene fuer Admins auflisten (services/herkunft_pruefen.py). Obergrenze an,
     # weil dabei nichts zur Person entsteht: kein Name, keine Kennung, nur Adresse und
     # Ergebnis. Wirksam erst, wenn ein Admin den Schalter einschaltet (Standard aus).
     herkunft_pruefen_aktiv: bool = True
+    # Merkliste (#758): Angemeldete merken Beitraege und finden sie unter "Meine
+    # Beitraege" wieder (Tabelle merkliste, api/v1/merkliste.py), nur mit
+    # Art.-9-Einwilligung. Obergrenze Standard aus: Vor dem Einschalten auf Prod braucht
+    # es Einwilligungswortlaut, DSFA-Abschnitt und DSE-Absatz (Hinweis auf der Admin-Seite).
+    merkliste_aktiv: bool = False
     # App-Abkuerzungen im Manifest (#757): Langes Druecken aufs App-Symbol bietet
     # Einwerfen, Suchen und Fangkorb an. Das Manifest ist statisch, der Schalter wirkt an
     # der Zielroute /abkuerzung/<name> (aus: Startseite). Obergrenze an, weil nichts
     # uebertragen wird; Standard aus ist der Admin-Wert (ohne Eintrag aus).
     abkuerzungen_aktiv: bool = True
     # Antworten auf eigene Aussagen (#760): Kachel auf der Startseite und Reiter "Meine
-    # Aussagen" (services/antworten_hinweis.py). Nichts wird gespeichert, aber die
-    # Datenschutzerklaerung nennt bisher nur zwei 7-Tage-Zahlen: Standard aus wie bei
-    # gepostet_aktiv, bis der Satz dort steht.
+    # Aussagen" (services/antworten_hinweis.py). Nichts wird gespeichert; der Satz der
+    # Datenschutzerklaerung dazu haengt am Schalter (Jura 25.11./26.11.). Standard aus
+    # wie bei gepostet_aktiv, eingeschaltet wird ueber die Obergrenze je Umgebung.
     antworten_hinweis_aktiv: bool = False
+    # Seitenaufrufe und Besucher je Tag (#761, services/aufrufe_service.py): das
+    # Tagespseudonym (#446) an einer Zeile je Besucher und Tag, am Tagesende zu zwei
+    # Zahlen verdichtet. Standard aus: eine weitere Verarbeitung mit dem Pseudonym, die
+    # erst mit Satz in Datenschutzerklaerung und DSFA und nach der Antwort auf die
+    # DSB-Frage 2 (#495) eingeschaltet wird.
+    aufrufe_zaehlen_aktiv: bool = False
     # Teilen als Bild (#756): Die Karte malt im Browser ein Bild (Sharepic) und gibt es
     # ans Teilen-Menue des Geraets; der Server sieht davon nichts. Obergrenze an, weil
     # nichts uebertragen oder gespeichert wird; Standard aus ist der Admin-Wert
     # (services/schalter_service.py, ohne Eintrag aus).
     sharepic_aktiv: bool = True
+    # "Melden" sichtbar an jeder Beitragskarte und "Melden & Kontakt" im Fuss
+    # (Schalter meldeweg_sichtbar): nur Anzeige, die Meldefunktion selbst gibt es
+    # schon. Jura vorlaeufig ohne Bedingung (26.11.); Obergrenze trotzdem von Haus aus
+    # aus wie alles Neue zur BDK, eingeschaltet wird auf Ansage.
+    meldeweg_sichtbar_aktiv: bool = False
+    # Zuwachs zur Bestandszahl (domain/bestandszahl.py): /getMetrics nennt dazu die neuen
+    # Kommentare der letzten 7 Tage bzw. den Tag des letzten. Obergrenze an, weil nur
+    # oeffentliche Inhalte beim Aufruf gezaehlt werden und nichts gespeichert wird;
+    # wirksam erst mit dem Admin-Wert (Feature-Toggle fuer Neues, Sebastian 26.11.).
+    bestandszahl_zuwachs_aktiv: bool = True
+    # Kurzfassung "Kurz gesagt" oben in der Datenschutzerklaerung (Jura b): Standard aus,
+    # bis der Wortlaut von Jura im Frontend steht (datenschutz/dse-kurzfassung.ts). Ohne
+    # Wortlaut bleibt der Kasten auch eingeschaltet unsichtbar.
+    dse_kurzfassung_aktiv: bool = False
+    # Stimmenverfall bei ganz anderem Text unter gleichem Titel (#636,
+    # StatementService.gleicher_text): Obergrenze von Haus aus aus, weil geloeschte
+    # Stimmen nicht zurueckkommen; wirkt nur zusammen mit dieselbe_aussage_nli = an.
+    # Erst nach dem endgueltigen Jura-OK zum Halbsatz "Bewertungen" einschalten.
+    stimmen_text_verfall_aktiv: bool = False
+    # Teams ueber Einladungen (services/team_service.py): Teamfelder an der Einladung,
+    # Beitreten mit eigener Einwilligung, "Meine Teams". Standard aus: Die
+    # Mitgliedschaft ist im Zweifel ein Art.-9-Datum; erst mit DSFA-Nachtrag,
+    # Loeschkonzept und Abschnitt "Teams" in der Datenschutzerklaerung einschalten.
+    teams_aktiv: bool = False
+    # Team-Fortschritt (#784) und Team-Quests (#792), services/team_fortschritt_service.py:
+    # eigene Obergrenzen, Standard aus; erst nach DSFA-Nachtrag V29 und Jura-OK
+    # einschalten. team_fortschritt wirkt nur mit teams, team_quests nur mit
+    # team_fortschritt.
+    team_fortschritt_aktiv: bool = False
+    team_quests_aktiv: bool = False
+    # Teams oeffentlich am Namen (eigene Einwilligung, domain/teams.py). Eigene
+    # Obergrenze, bewusst nicht an abzeichen_sichtbar_aktiv gekoppelt: Auf Prod bleibt
+    # sie aus, bis die Datenschutzbeauftragte geraten hat. Wirkt nur mit teams_aktiv.
+    teams_oeffentlich_aktiv: bool = False
+    # Vertrauenssatz beim Teambeitritt (Begruessung eines Teamlinks): nur ein Text, speichert
+    # nichts. Von Haus aus aus, bis Jura teams.py geprueft hat (was Mitglieder voneinander
+    # sehen). Wirkt nur mit teams_aktiv.
+    teamlink_vertrauenssatz_aktiv: bool = False
+    # Knopf "Was hat dich gestört?" fuer die Startphase (domain/feedback_gestoert.py):
+    # Feedback ohne Kontakt, geloescht bis 31.12.2026. Standard aus; einschalten erst
+    # mit dem Absatz der Datenschutzerklaerung (Jura-Paket 27.11.).
+    feedback_gestoert_aktiv: bool = False
+    # Spielgefuehl zur BDK (#782 bis #793, services/schalter_service.py SPIEL_SCHALTER):
+    # je Baustein eine Obergrenze, von Haus aus aus; Einschalt-Bedingungen je Schalter in
+    # docs/ARCHITECTURE.md. danke_ohne_konto wirkt nur mit danke_knopf, rangliste nur mit
+    # punkte.
+    saison_ziel_aktiv: bool = False
+    gartenansicht_aktiv: bool = False
+    kopiert_erfolg_aktiv: bool = False
+    konter_probe_aktiv: bool = False
+    luecke_zu_gross_aktiv: bool = False
+    einwilligung_im_gewinn_aktiv: bool = False
+    naechster_schritt_aktiv: bool = False
+    # "Danach wurde schon N-mal gesucht" (#362, Jura vorlaeufig 26.11.)
+    null_treffer_anzahl_aktiv: bool = False
+    wirkungs_echo_aktiv: bool = False
+    danke_knopf_aktiv: bool = False
+    danke_ohne_konto_aktiv: bool = False
+    rangliste_aktiv: bool = False
+    # Spielgefuehl als eine Einstellung in drei Stufen (domain/spielgefuehl.py): an,
+    # gilt statt der Einwilligungen Punkte, Abzeichen am Namen und Rangliste nur noch
+    # die Tabelle spielgefuehl, und alle werden neu gefragt. Standard aus.
+    spielgefuehl_buehne_aktiv: bool = False
+    # Gegenseitige Zustimmungen als weiteres Merkmal der Muster-Hinweise (Schalter
+    # muster_stimmen, wirkt nur mit spielgefuehl_buehne): an, zeigt die Spielgefuehl-Frage
+    # den Wortlaut spielgefuehl-2026-11-27 und fragt Konten mit -26 neu; Zustimmungen
+    # zaehlen nur bei Paaren, die beide dazu eingewilligt haben. Nur ein Admin-Hinweis,
+    # keine Wirkung auf Punkte oder Rangliste. Standard aus.
+    muster_stimmen_aktiv: bool = False
+    # Vertrauenszeile vor dem Anmelden (services/schalter_service.py, vorlaeufige
+    # juristische Einschaetzung 26.11.): reiner Text, speichert nichts; Obergrenze trotzdem
+    # von Haus aus aus, bis die Einschaetzung endgueltig ist.
+    vertrauenszeile_aktiv: bool = False
+    # Kurze Hinweiszeile unter dem Suchknopf (services/schalter_service.py
+    # HINWEIS_SCHALTER): Obergrenze von Haus aus aus, bis Jura den Wortlaut bestaetigt.
+    hinweiszeile_kurz_aktiv: bool = False
+    # Saal-Spruch (services/saal_spruch_service.py): Karte auf der Startseite
+    # mit einem oeffentlichen Spruch je Tag (an BDK-Tagen der, der gerade im Netz
+    # kursiert); nur Text, nichts zur Person.
+    saal_spruch_aktiv: bool = False
+    # Saison und Gemeinschaftsziel (#782, domain/saisons.py): Den Balken sehen alle erst,
+    # wenn es einmal so viele abgeschlossene Wochen hintereinander mit je mindestens so
+    # vielen verschiedenen Menschen gab, die "Ja, gepostet" gemeldet haben; vorher nur
+    # Admins. Die Datenschutzerklaerung nennt beide Zahlen: wer sie aendert, zieht den
+    # Satz in datenschutz.component.html ("Rueckmeldung 'Ja, gepostet'") nach.
+    saison_ziel_schwelle_menschen: int = Field(default=25, ge=0)
+    saison_ziel_schwelle_wochen: int = Field(default=3, ge=0)
     # Gewichte und Deckel der drei Stufen (domain/punkte.py): Tun klein und je Tag
     # gedeckelt, Quests mehr, Wirkung bei anderen am meisten.
     punkte_nutzung: int = Field(default=10, ge=0)
@@ -325,6 +459,11 @@ class Settings(BaseSettings):
     # Deckel fuers Tun, damit Abstimmen das Schreiben nicht verdraengt.
     punkte_bewertung: int = Field(default=1, ge=0)
     punkte_deckel_bewertungen_je_tag: int = Field(default=3, ge=0)
+    # Nutzung ohne Anmeldung (Gamification-Check 26.11., Befund 9, Entscheidung
+    # Maintainer): je Beitrag und UTC-Tag zaehlen hoechstens so viele entdoppelt, global
+    # und ohne Merkmal der Besuchenden. Die Datenschutzerklaerung nennt die Zahl
+    # ("hoechstens dreimal je Beitrag und Tag"): wer sie aendert, zieht den Satz nach.
+    punkte_nutzung_ohne_anmeldung_je_tag: int = Field(default=3, ge=0)
 
     # Guete eines Beitrags (#427, domain/guete.py): Stimmen anderer zaehlen erst ab
     # so vielen verschiedenen Stimmenden (DSFA, Massnahme M5), ihr Gewicht waechst mit
@@ -333,6 +472,19 @@ class Settings(BaseSettings):
     guete_stimmen_ab: int = Field(default=3, ge=1)
     guete_stimmen_gewicht_max: float = Field(default=0.6, ge=0, le=1)
     guete_stimmen_halbwert: int = Field(default=5, ge=1)
+
+    # "Diese Woche oft genutzt" (services/oft_genutzt_service.py): Ein Beitrag gilt ab so
+    # vielen entdoppelten Nutzungen in sieben Tagen als oft genutzt, und den Bereich gibt
+    # es erst ab so vielen solchen Beitraegen. Entdoppelt wird je Person und Tag, nicht je
+    # Woche: Eine Person allein kann den Bereich ausloesen, wenn sie die noetigen Beitraege
+    # an zwei Tagen kopiert (ohne Anmeldung auch ueber wechselnde Anschluesse). Das galt
+    # auch bei 3 und ist fuer die Startphase in Kauf genommen; wer was kopiert hat, zeigt
+    # der Bereich nicht. Die Mindestnutzung bleibt mindestens 2: eine einzelne Kopie ist
+    # Zufall, kein "oft". Startphase zur BDK (Maintainer 25.11.2026: bei kleinen Zahlen
+    # frueher zeigen): Standard 2 Beitraege; mit mehr Nutzung hebt der Betrieb ihn an.
+    # Hoechstens 5, so viele zeigt der Bereich (ANZAHL dort).
+    oft_genutzt_mindest_nutzungen: int = Field(default=2, ge=2)
+    oft_genutzt_mindest_beitraege: int = Field(default=2, ge=1, le=5)
 
     # Rate-Limit am Zaehl-Endpunkt (POST /usage/content/{id}/usage, #352): so viele
     # Kopien je Person (Besucher: je Adresse) im Fenster. Die Entdoppelung schuetzt
@@ -347,6 +499,12 @@ class Settings(BaseSettings):
     # Startkonten sind ausgenommen (Redaktion, Import).
     tagesdeckel_beitraege: int = Field(default=20, ge=1)
 
+    # Rate-Limit an den Anlege-Routen (middleware/rate_limit.py): so viele Anfragen
+    # je Person und Minute bzw. Stunde. Startkonten sind ausgenommen (Import des
+    # Startbestands), Admins nicht.
+    anlege_rate_limit_je_minute: int = Field(default=10, ge=1)
+    anlege_rate_limit_je_stunde: int = Field(default=100, ge=1)
+
     # Anfragen je Fenster der Rate-Limiter ohne Anmeldung (utils/rate_limiter.py).
     # Sie zaehlen je Anschluss; im Saal-WLAN eines Parteitags teilen sich alle eine
     # Adresse, dort hebt der Betrieb die Zahl an. Einstellbar ist nur die Zahl, nicht
@@ -358,6 +516,9 @@ class Settings(BaseSettings):
     meldung_rate_limit_anfragen: int = Field(default=5, ge=1)
     einladung_rate_limit_anfragen: int = Field(default=30, ge=1)
     einladung_pruefen_rate_limit_anfragen: int = Field(default=60, ge=1)
+    # Angemeldet einem Team beitreten (POST /einladungen/beitreten): je Person, nicht je
+    # Anschluss, damit Beitritte im Saal-WLAN nicht das Budget fuers Einloesen aufbrauchen.
+    team_beitreten_rate_limit_anfragen: int = Field(default=20, ge=1)
 
     # Secret key for the daily search-actor pseudonym (see SearchTrackingService).
     # Set SEMANTIC_SEARCH_ACTOR_HASH_SECRET in production so the daily-active-user
@@ -443,6 +604,10 @@ class Settings(BaseSettings):
     themen_vorschlag_abstand_hoechstens: float = Field(default=0.05, ge=0.0, le=2.0)
     themen_vorschlag_nli: bool = False
     themen_vorschlag_folgerung_ab: float = Field(default=0.5, ge=0.0, le=1.0)
+    # Karte "Dein naechster Schritt" (#789, services/naechster_schritt.py): unter so
+    # vielen eigenen Stimmen schlaegt sie Bewerten vor, wenn es so viele frische
+    # Antworten anderer gibt; der Satz nennt die Zahl.
+    naechster_schritt_stimmen: int = Field(default=3, ge=1, le=20)
 
     # Keyword overlap boosting configuration
     enable_keyword_overlap_boost: bool = (

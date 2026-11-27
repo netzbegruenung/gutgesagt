@@ -1,7 +1,9 @@
 <section *ngIf="punkte" class="punkte" aria-labelledby="punkte-titel">
     <h2 id="punkte-titel">Punkte <span class="punkte-zahl">{{ punkte.gesamt }}</span></h2>
     <p class="punkte-hinweis">
-        Nur du siehst deine Punkte. Die meisten gibt es, wenn andere deine Beiträge nutzen oder ihnen zustimmen.
+        <ng-container *ngIf="stufe !== 'rangliste'">Nur du siehst deine Punkte.</ng-container>
+        <ng-container *ngIf="stufe === 'rangliste'">Stehst du unter den ersten zehn der Rangliste, sehen die anderen Mitspielenden deine Punkte der Saison.</ng-container>
+        Die meisten gibt es, wenn andere deine Beiträge nutzen oder ihnen zustimmen.
     </p>
     <ul class="punkte-stufen">
         <li class="punkte-stufe" data-stufe="wirkung">Wirkung bei anderen: <span class="punkte-wert">{{ punkte.wirkung }}</span></li>
@@ -10,4 +12,4 @@
         <li *ngIf="punkte.quests" class="punkte-stufe" data-stufe="quests">Quests: <span class="punkte-wert">{{ punkte.quests }}</span></li>
     </ul>
 </section>
-<p *ngIf="!punkte && platzhalter" class="punkte-platzhalter" role="status">Punkte werden berechnet …</p>
+<p *ngIf="!punkte && platzhalter" class="punkte-platzhalter" role="status"><span *ngIf="!nichtAbrufbar">Punkte werden berechnet …</span><span *ngIf="nichtAbrufbar" data-testid="punkte-nicht-abrufbar">Deine Punkte sind gerade nicht abrufbar. Wir versuchen es gleich noch einmal.</span></p>

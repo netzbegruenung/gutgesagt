@@ -1,0 +1,151 @@
+:host {
+    display: inline-block;
+    line-height: 0;
+}
+
+svg {
+    overflow: visible;
+}
+
+/* Endbild: so steht es mit „Bewegung reduzieren“ und nach der Animation */
+.boden,
+.stiel {
+    fill: none;
+    stroke: var(--akzent-tanne);
+    stroke-width: 4;
+    stroke-linecap: round;
+}
+
+.stiel {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+}
+
+.blatt-links {
+    fill: var(--akzent-klee);
+}
+
+.blatt-rechts {
+    fill: var(--akzent);
+}
+
+.boden,
+.blatt,
+.flugblatt {
+    transform-box: view-box;
+}
+
+.boden-links {
+    transform-origin: 28px 82px;
+}
+
+.boden-rechts {
+    transform-origin: 92px 82px;
+}
+
+.blatt-links {
+    transform-origin: 60px 52px;
+}
+
+.blatt-rechts {
+    transform-origin: 60px 50px;
+}
+
+/* Die fliegenden Blätter gibt es nur in der Bewegung */
+.flugblatt {
+    display: none;
+    transform-origin: 60px 44px;
+}
+
+.flugblatt-1,
+.flugblatt-4,
+.flugblatt-7 {
+    fill: var(--akzent);
+}
+
+.flugblatt-2,
+.flugblatt-5 {
+    fill: var(--akzent-klee);
+}
+
+.flugblatt-3,
+.flugblatt-6 {
+    fill: var(--akzent-tanne);
+}
+
+.flugblatt-1 { --dx: -50px; --dy: -28px; --dreh: -120deg; }
+.flugblatt-2 { --dx: -34px; --dy: -50px; --dreh: 80deg; }
+.flugblatt-3 { --dx: -10px; --dy: -58px; --dreh: -40deg; }
+.flugblatt-4 { --dx: 16px; --dy: -58px; --dreh: 150deg; }
+.flugblatt-5 { --dx: 40px; --dy: -48px; --dreh: -90deg; }
+.flugblatt-6 { --dx: 54px; --dy: -24px; --dreh: 60deg; }
+.flugblatt-7 { --dx: -58px; --dy: -6px; --dreh: 110deg; }
+
+/*
+ * Einmal, 1,4 s insgesamt: Boden schließt sich (0–0,3 s), Stiel wächst (0,2–0,65 s),
+ * Blätter gehen auf (0,55–1,03 s), kleine Blätter fliegen auf (0,75–1,4 s). Kein Blinken:
+ * Jedes Teil wird höchstens einmal sichtbar und einmal unsichtbar.
+ */
+@media (prefers-reduced-motion: no-preference) {
+    :host(.bewegt) .boden {
+        animation: feier-boden 300ms ease-out both;
+    }
+
+    :host(.bewegt) .stiel {
+        animation: feier-stiel 450ms ease-out 200ms both;
+    }
+
+    :host(.bewegt) .blatt-links {
+        animation: feier-blatt 400ms cubic-bezier(0.34, 1.56, 0.64, 1) 550ms both;
+    }
+
+    :host(.bewegt) .blatt-rechts {
+        animation: feier-blatt 400ms cubic-bezier(0.34, 1.56, 0.64, 1) 630ms both;
+    }
+
+    :host(.bewegt) .flugblatt {
+        display: inline;
+        animation: feier-flug 650ms ease-out 750ms both;
+    }
+}
+
+@keyframes feier-boden {
+    from {
+        transform: scaleX(0.72);
+    }
+    to {
+        transform: scaleX(1);
+    }
+}
+
+@keyframes feier-stiel {
+    from {
+        stroke-dashoffset: 1;
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes feier-blatt {
+    from {
+        transform: scale(0);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+
+@keyframes feier-flug {
+    0% {
+        opacity: 0;
+        transform: translate(0, 0) rotate(0) scale(0.4);
+    }
+    20% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--dx), var(--dy)) rotate(var(--dreh)) scale(1);
+    }
+}

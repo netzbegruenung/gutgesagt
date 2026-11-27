@@ -304,6 +304,43 @@ describe('BeitragskarteComponent', () => {
       expect(fixture.nativeElement.querySelector('.autor-abzeichen')).toBeNull();
     });
 
+    it('zeigt die Teams der aktuellen Saison am Namen und den Rest als „+N“ mit Langtext', () => {
+      const teams = [
+        { name: 'BDK 26 Berlin', motiv: 'vogel', motiv_name: 'Vogel' },
+        { name: 'Bayreuth', motiv: 'waage', motiv_name: 'Waage' },
+        { name: 'Vorhut', motiv: 'laufschuh', motiv_name: 'Laufschuh' },
+        { name: 'Winter 26', motiv: 'sprechblase', motiv_name: 'Sprechblase' },
+      ];
+      zeigen(ausSuchergebnis(paket('commentary_result', { autor_name: 'Kim G.', autor_teams: teams })));
+
+      const zeile = element('[data-testid="autor-teams"]');
+      const pillen = Array.from(zeile.querySelectorAll('[data-testid="team-pille"]')) as HTMLElement[];
+      expect(pillen.map((p) => p.textContent!.trim())).toEqual(['BDK 26 Berlin', 'Bayreuth']);
+      expect(pillen[0].querySelector('img')!.getAttribute('src')).toBe('/meilensteine/vogel.svg');
+      // Keine Nummer am Namen (Datenminimierung)
+      expect(zeile.textContent).not.toContain('Nr.');
+      const mehr = zeile.querySelector('.autor-teams-mehr')!;
+      expect(mehr.textContent!.trim()).toBe('+2');
+      expect(mehr.getAttribute('aria-label')).toBe('und 2 weitere Teams: Vorhut, Winter 26');
+    });
+
+    it('zeigt ohne Teams vom Server nichts am Namen', () => {
+      zeigen(ausSuchergebnis(paket('commentary_result', { autor_name: 'Kim G.', autor_teams: null })));
+
+      expect(fixture.nativeElement.querySelector('[data-testid="autor-teams"]')).toBeNull();
+    });
+
+    it('zeigt ohne Anmeldung keine Teams, auch wenn welche mitkaemen', () => {
+      const auth = TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>;
+      auth.getUserInfo.and.returnValue(null);
+      zeigen(ausSuchergebnis(paket('commentary_result', {
+        autor_name: 'Kim G.',
+        autor_teams: [{ name: 'Bayreuth', motiv: 'waage', motiv_name: 'Waage' }],
+      })));
+
+      expect(fixture.nativeElement.querySelector('[data-testid="autor-teams"]')).toBeNull();
+    });
+
     it('zeigt ohne Herkunft keine Zeile und sonst die Adressen (#599)', () => {
       zeigen(ausSuchergebnis(paket('commentary_result')));
       expect(element('.karte-quellen')).toBeNull();
@@ -641,6 +678,26 @@ describe('BeitragskarteComponent', () => {
       ]);
     });
 
+    it('laesst Fassungen mit 0 weg', () => {
+      const beitrag = meinBeitrag();
+      beitrag.usage_count = 3;
+      beitrag.nutzung_letzte_7_tage = 1;
+      beitrag.nutzung_je_fassung = { kurz: { nutzung: 3, letzte_7_tage: 1 }, mittel: { nutzung: 0, letzte_7_tage: 0 } };
+      zeigen(ausBeitrag(beitrag));
+
+      expect(zeilen('[aria-hidden="true"]')).toEqual(['Kurz 3× +1']);
+    });
+
+    it('zeigt ganz ohne Nutzung keine Leiste statt dreimal 0×', () => {
+      const beitrag = meinBeitrag();
+      beitrag.usage_count = 0;
+      beitrag.nutzung_letzte_7_tage = 0;
+      beitrag.nutzung_je_fassung = { kurz: { nutzung: 0, letzte_7_tage: 0 }, mittel: { nutzung: 0, letzte_7_tage: 0 } };
+      zeigen(ausBeitrag(beitrag));
+
+      expect(element('.nutzung-je-fassung')).toBeNull();
+    });
+
     it('zeigt ausserhalb von Meine Beitraege keine Nutzung je Fassung', () => {
       zeigen(ausSuchergebnis(paket('commentary_result', { short_text: 'Kurzfassung' })));
 
@@ -669,7 +726,12 @@ describe('BeitragskarteComponent', () => {
       zeigen(ausSuchergebnis(paket('commentary_result', { usage_count: 5 })));
 
       expect(component.istBeliebt).toBeTrue();
-      expect(element('.badge-beliebt')).toBeTruthy();
+      const badge = element('.badge-beliebt')!;
+      expect(badge).toBeTruthy();
+      // Wort plus neutrales Motiv, kein 🔥 (bei verdigado das Zeichen für "brauche Hilfe")
+      expect(badge.textContent).toContain('viel genutzt');
+      expect(badge.querySelector('mat-icon')!.textContent).toBe('trending_up');
+      expect(badge.textContent).not.toContain('\u{1F525}');
     });
 
     it('should not show trending badge for content with less than 5 uses', () => {

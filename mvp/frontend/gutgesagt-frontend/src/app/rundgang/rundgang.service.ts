@@ -7,7 +7,9 @@ import { Art9EinwilligungService } from '../services/art9-einwilligung.service';
 import { HOME_HINWEIS_MERKER } from '../shared/geraetespeicher-schalter';
 import { HOME_BILDSCHIRM_MOEGLICH } from './home-bildschirm';
 import { AppInstallierenService } from './app-installieren.service';
-import { Angebot, APP_INSTALLIEREN_ANGEBOT, HOME_ANGEBOT, MITMACHEN_ANGEBOT, RUNDGAENGE, Rundgang, RundgangId, WILLKOMMEN } from './rundgang-daten';
+import { Angebot, APP_INSTALLIEREN_ANGEBOT, HOME_ANGEBOT, K_BEGRUESSUNG, MITMACHEN_ANGEBOT, RUNDGAENGE, Rundgang, RundgangId, WILLKOMMEN, WILLKOMMEN_ANGEMELDET, mitBegruessung } from './rundgang-daten';
+import { FunktionenService } from '../services/funktionen.service';
+import { KampagnenwortService } from '../shared/kampagnenwort.service';
 import { ANSICHT_PARAM, MIT_KONTO_PFAD, STANDARD_ZIEL, ZIEL_PARAM } from '../mit-konto/vorschau-schritte';
 import { gesehen as imSpeicher, merken as speichern } from './rundgang-merker';
 
@@ -50,8 +52,24 @@ export class RundgangService {
    * ist `aktiv()` noch leer. Nach einem Rundgang bleibt das Band für diesen Besuch weg.
    */
   private readonly rundgangGestartet = signal(false);
-  /** Das Angebot, das das Band gerade zeigt; ab dem ersten Rundgang des Besuchs keines. */
-  readonly band = computed(() => (this.rundgangGestartet() ? null : this.angebot()));
+  /** Kampagnenwort aus der Adresse (?k=), nur im Arbeitsspeicher. */
+  private readonly kampagnenwort = inject(KampagnenwortService).wort;
+  /**
+   * Schalter `k_begruessung`, nur gefragt, wenn es zum Wort eine Begrüßung gibt; als Signal,
+   * damit ein Umschalten ohne Neuladen ankommt (FunktionenService).
+   */
+  private readonly kBegruessungAn =
+    this.kampagnenwort && Object.hasOwn(K_BEGRUESSUNG, this.kampagnenwort)
+      ? inject(FunktionenService).an('k_begruessung')
+      : signal(false).asReadonly();
+  /**
+   * Das Angebot, das das Band gerade zeigt; ab dem ersten Rundgang des Besuchs keines. Mit
+   * Schalter `k_begruessung` begrüßt das Willkommen nach dem Kampagnenwort.
+   */
+  readonly band = computed(() => {
+    const angebot = this.rundgangGestartet() ? null : this.angebot();
+    return angebot && this.kBegruessungAn() ? mitBegruessung(angebot, this.kampagnenwort) : angebot;
+  });
   private readonly mitmachenOffen = signal(false);
   /** Neu-Punkt an „Beitragen“: angemeldet, eingewilligt, Mitmachen noch nicht beantwortet. */
   readonly beitragenNeu = this.mitmachenOffen.asReadonly();
@@ -199,7 +217,10 @@ export class RundgangService {
       if (this.mitmachenFaellig(info) && hier(MITMACHEN_ANGEBOT)) return MITMACHEN_ANGEBOT;
     }
     // Wer Mitmachen schon hatte, braucht kein Willkommen mehr
-    if (!this.gesehen(WILLKOMMEN) && !this.gesehen(MITMACHEN_ANGEBOT) && hier(WILLKOMMEN)) return WILLKOMMEN;
+    // Angemeldet ohne den Satz „Ein Konto brauchst du nicht“ (Review Spielgefühl 25.11.)
+    if (!this.gesehen(WILLKOMMEN) && !this.gesehen(MITMACHEN_ANGEBOT) && hier(WILLKOMMEN)) {
+      return info.isAuthenticated ? WILLKOMMEN_ANGEMELDET : WILLKOMMEN;
+    }
     // Zuletzt und nie zugleich mit einem anderen: Es gibt nur ein Band
     // iPhone und iPad: Anleitung. Sonst nur mit Angebot des Browsers (nicht in Firefox,
     // nicht schon installiert); ohne es wird auch kein Vermerk gelesen.

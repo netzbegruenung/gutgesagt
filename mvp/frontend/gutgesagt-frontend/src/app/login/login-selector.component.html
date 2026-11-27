@@ -2,6 +2,15 @@
 
     <h2 class="anmeldegrund" *ngIf="anmeldegrund">{{ anmeldegrund }}</h2>
 
+    <!-- Vertrauenszeile vor dem Anmelden (Jura vorläufig 26.11.), nur mit Schalter vertrauenszeile;
+         steht unabhängig von den Anmeldewegen. Bis GET /api/v1/funktionen geantwortet hat, gilt
+         der Schalter als aus; beim allerersten Aufruf kann die Zeile deshalb nachträglich erscheinen -->
+    @if (vertrauenszeileAn()) {
+        <p class="vertrauenszeile" data-testid="vertrauenszeile">
+            {{ vertrauenszeile }}<span aria-hidden="true"> · </span><a routerLink="/datenschutz" class="vertrauenszeile-link">Datenschutz</a>
+        </p>
+    }
+
     <div class="login-selector-container" *ngIf="!isLoading">
         <!-- Only the enabled login options; a switched-off one is hidden, not greyed out (#600) -->
         <div class="login-options">
@@ -57,6 +66,14 @@
     <section id="noch-kein-konto" class="registration-info-container konto-weg" aria-labelledby="konto-weg-titel">
         <h2 id="konto-weg-titel" class="konto-weg-titel">Noch kein Konto?</h2>
         <div class="registration-options">
+            <!-- Nur mit ?k=bdk und Schalter k_begruessung (UX-Review 26.11.): der Teamlink vom Stand zuerst -->
+            <div class="registration-option" *ngIf="bdkHinweisAn()" data-testid="bdk-hinweis">
+                <mat-icon class="option-icon">storefront</mat-icon>
+                <div class="option-text">
+                    <strong>{{ bdkHinweis.titel }}</strong>
+                    <p>{{ bdkHinweis.satz }}</p>
+                </div>
+            </div>
             <div class="registration-option">
                 <mat-icon class="option-icon">group</mat-icon>
                 <div class="option-text">

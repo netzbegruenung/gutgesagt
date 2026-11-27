@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { Observable, Subject, of } from 'rxjs';
 import { catchError, map, switchMap, takeUntil } from 'rxjs/operators';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -14,7 +14,11 @@ import { KartenDaten } from '../beitragskarte/karten-daten';
 import { MeineEinwuerfeComponent } from './meine-einwuerfe.component';
 import { SperrnachrichtenComponent } from './sperrnachrichten.component';
 import { MeilensteineComponent } from './meilensteine.component';
+import { MeineTeamsComponent } from './meine-teams.component';
+import { RanglisteComponent } from './rangliste.component';
 import { PunkteComponent } from './punkte.component';
+import { SpielgefuehlComponent } from './spielgefuehl.component';
+import { WiderrufbarComponent } from '../einwilligung/widerrufbar.component';
 import { tabMitTasteWaehlen } from '../shared/tab-tasten';
 import { MatButtonModule } from '@angular/material/button';
 import { ROUTES } from '../shared/constants/app.constants';
@@ -25,19 +29,26 @@ import { FORMULAR_PFAD } from '../shared/formular-adresse';
 import { AussagekarteComponent } from '../shared/aussagekarte/aussagekarte.component';
 import { MeineAussagenComponent } from './meine-aussagen.component';
 import { AlbumComponent } from './album/album.component';
+import { GemerktComponent } from './gemerkt.component';
+import { MerklisteService } from '../services/merkliste.service';
 import { AlbumEintrag, albumEintrag, naechsterMeilenstein } from './album/album';
 
 /** So viele unbeantwortete Aussagen zeigt der leere Zustand als ersten Schritt (#645). */
 export const ERSTE_SCHRITTE = 3;
 
-/** Die Tabs: eigene Beitraege, "Meine Einwuerfe" und, mit Schalter, "Meine Aussagen" (#760). */
-export type MeineTab = 'beitraege' | 'einwuerfe' | 'aussagen';
+/**
+ * Die Tabs: eigene Beitraege, "Meine Einwuerfe" und, je mit Schalter, "Meine Aussagen"
+ * (#760) und die Merkliste (#758).
+ */
+export type MeineTab = 'beitraege' | 'einwuerfe' | 'aussagen' | 'gemerkt';
 
 const TABS: ReadonlyArray<{ wert: MeineTab; name: string }> = [
   { wert: 'beitraege', name: 'Meine Beiträge' },
   { wert: 'einwuerfe', name: 'Meine Einwürfe' },
   { wert: 'aussagen', name: 'Meine Aussagen' },
 ];
+/** Der Reiter der Merkliste (#758); nur mit eingeschaltetem Schalter. */
+const GEMERKT_TAB = { wert: 'gemerkt' as const, name: 'Gemerkt' };
 
 /**
  * Meine Beitraege als Album nach Thema (Variante A, Sebastian und Aila 20.11.; app-album):
@@ -62,15 +73,23 @@ const TABS: ReadonlyArray<{ wert: MeineTab; name: string }> = [
     MeineAussagenComponent,
     SperrnachrichtenComponent,
     MeilensteineComponent,
+    MeineTeamsComponent,
+    RanglisteComponent,
     PunkteComponent,
-    AussagekarteComponent
+    SpielgefuehlComponent,
+    WiderrufbarComponent,
+    AussagekarteComponent,
+    GemerktComponent
   ],
   templateUrl: './meine-beitraege.component.html',
   styleUrls: ['../shared/tabs.css', '../shared/aussagekarte/aussagekarten.scss', './meine-beitraege.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MeineBeitraegeComponent implements OnInit, OnDestroy {
+  private readonly merkliste = inject(MerklisteService);
   tab: MeineTab = 'beitraege';
+  /** Ab dem ersten Oeffnen bleibt der Merkliste-Tab stehen. */
+  gemerktGeoeffnet = false;
   /** Ab dem ersten Oeffnen bleibt der Einwurf-Tab stehen, damit Wechseln nicht neu laedt. */
   einwuerfeGeoeffnet = false;
   aussagenGeoeffnet = false;
@@ -82,10 +101,6 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
 
   /** "Meine Aussagen" aus der Adresse (Kachel): erst gewaehlt, wenn der Besuch den Schalter bestaetigt. */
   private aussagenGewuenscht = false;
-
-  get tabs(): ReadonlyArray<{ wert: MeineTab; name: string }> {
-    return TABS.filter((eintrag) => eintrag.wert !== 'aussagen' || this.aussagenAn);
-  }
   eintraege: AlbumEintrag[] = [];
   private destroy$ = new Subject<void>();
   /** Nur beim ersten Laden; danach laedt die Liste still nach und bleibt stehen. */
@@ -110,9 +125,37 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
     private snackBar: MatSnackBar,
   ) { }
 
+  /** Ob der Schalter der Merkliste an ist (#758). */
+  get gemerktAn(): boolean {
+    return this.merkliste.an();
+  }
+
+  /** Die Tabs; „Meine Aussagen“ und „Gemerkt“ nur, solange ihr Schalter an ist. */
+  get tabs(): ReadonlyArray<{ wert: MeineTab; name: string }> {
+    const tabs = TABS.filter((eintrag) => eintrag.wert !== 'aussagen' || this.aussagenAn);
+    return this.gemerktAn ? [...tabs, GEMERKT_TAB] : tabs;
+  }
+
+  /** Name der Tab-Leiste fuer Screenreader, passend zu den sichtbaren Tabs. */
+  get tabsName(): string {
+    const teile = ['Beiträge', 'Einwürfe'];
+    if (this.aussagenAn) {
+      teile.push('Aussagen');
+    }
+    if (this.gemerktAn) {
+      teile.push('Merkliste');
+    }
+    return `Meine ${teile.slice(0, -1).join(', ')} und ${teile[teile.length - 1]}`;
+  }
+
+  /** Der angezeigte Tab: „Gemerkt“ bei ausgeschaltetem Schalter faellt auf Meine Beitraege zurueck. */
+  get aktiverTab(): MeineTab {
+    return this.tab === 'gemerkt' && !this.gemerktAn ? 'beitraege' : this.tab;
+  }
+
   ngOnInit() {
     // Ein Tab in der Adresse, etwa nach dem Ausformulieren "Meine Einwuerfe" (#508).
-    const tab = TABS.find((eintrag) => eintrag.wert === this.route.snapshot.queryParamMap.get(MEINE_TAB_PARAM));
+    const tab = [...TABS, GEMERKT_TAB].find((eintrag) => eintrag.wert === this.route.snapshot.queryParamMap.get(MEINE_TAB_PARAM));
     if (tab) {
       if (tab.wert === 'aussagen') {
         this.aussagenGewuenscht = true;
@@ -228,11 +271,12 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
     this.tab = tab;
     this.einwuerfeGeoeffnet ||= tab === 'einwuerfe';
     this.aussagenGeoeffnet ||= tab === 'aussagen';
+    this.gemerktGeoeffnet ||= tab === 'gemerkt';
   }
 
   /** Pfeiltasten, Pos1 und Ende waehlen den Tab und setzen den Fokus mit. */
   tabTaste(event: KeyboardEvent): void {
-    const jetzt = this.tabs.findIndex((eintrag) => eintrag.wert === this.tab);
+    const jetzt = this.tabs.findIndex((eintrag) => eintrag.wert === this.aktiverTab);
     tabMitTasteWaehlen(event, jetzt, this.tabs.length, (ziel) => this.tabWaehlen(this.tabs[ziel].wert));
   }
 

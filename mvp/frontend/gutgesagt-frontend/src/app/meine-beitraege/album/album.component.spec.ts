@@ -92,6 +92,29 @@ describe('AlbumComponent', () => {
   const text = (selektor: string): string => el().querySelector(selektor)!.textContent!.replace(/\s+/g, ' ').trim();
   const karten = (): HTMLElement[] => alle('app-beitragskarte article');
 
+  describe('Wirkungs-Echo und Danke (#790, #791)', () => {
+    // Nicht nur versteckt: ohne Zahl steht die Liste gar nicht im DOM (keine leere Liste fuer Screenreader)
+    const sichtbar = (): HTMLElement[] => alle('[data-testid="wirkung-echo"]');
+
+    it('zeigt unter der Karte nur Summen, mit Symbol und Namen', () => {
+      erstellen(viele(2, (i) => (i === 0 ? { oeffentlich_gepostet: 3, danke: 1 } : {})));
+
+      const echo = sichtbar();
+      expect(echo.length).toBe(1);
+      const inhalt = echo[0].textContent!.replace(/\s+/g, ' ');
+      expect(inhalt).toContain('3-mal öffentlich gepostet');
+      expect(inhalt).toContain('1 Danke');
+      expect(inhalt).not.toContain('Menschen');
+      expect(echo[0].querySelectorAll('mat-icon[aria-hidden="true"]').length).toBe(2);
+    });
+
+    it('ohne Schalter (keine Zahl) und bei 0 nichts', () => {
+      erstellen(viele(2, (i) => (i === 0 ? { oeffentlich_gepostet: 0, danke: null } : {})));
+
+      expect(sichtbar()).toEqual([]);
+    });
+  });
+
   describe('Deckel', () => {
     it('zeigt Beitraege, Nutzung mit Zuwachs und Themen, dazu den Wirkungssatz', () => {
       erstellen(viele(4, (i) => ({ usage_count: i, nutzung_letzte_7_tage: i ? 1 : 0 })), MEILENSTEIN);
@@ -122,7 +145,7 @@ describe('AlbumComponent', () => {
       expect(el().querySelector('[data-testid="zahl-genutzt"]')).toBeNull();
       expect(el().querySelector('.zahlen')).toBeNull();
       expect(el().querySelector('[data-testid="naechster-meilenstein"]')).toBeNull();
-      expect(text('.wirkung')).toBe('Deine 4 Beiträge wurden noch nicht genutzt.');
+      expect(text('.wirkung')).toBe('Sobald jemand einen deiner Beiträge nutzt, siehst du es hier.');
     });
 
     it('zeigt ohne Meilensteine mit Nutzung die drei Zahlen wie sonst', () => {
@@ -251,6 +274,10 @@ describe('AlbumComponent', () => {
       expect(koepfe.map((k) => k.querySelector('.abschnitt-name')!.textContent!.trim())).toEqual(['Klima', 'Wohnen', 'Europa']);
       expect(koepfe.map((k) => k.getAttribute('aria-expanded'))).toEqual(['true', 'false', 'false']);
       expect(koepfe[0].querySelector('.abschnitt-stand')!.textContent!.trim()).toBe('1 von 3 genutzt');
+      expect(koepfe[0].querySelector('.abschnitt-balken')).not.toBeNull();
+      // Ohne Nutzung nur die Zahl der Beiträge, kein leerer Balken (Leerzustände 26.11.)
+      expect(koepfe[1].querySelector('.abschnitt-stand')!.textContent!.trim()).toBe('3 Beiträge');
+      expect(koepfe[1].querySelector('.abschnitt-balken')).toBeNull();
       // Motiv rein dekorativ: der Name steht daneben
       const motiv = koepfe[2].querySelector('.abschnitt-motiv') as HTMLElement;
       expect(motiv.getAttribute('aria-hidden')).toBe('true');

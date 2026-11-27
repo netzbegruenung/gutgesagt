@@ -79,6 +79,12 @@ const NIE_CACHEN = [
   '/api/v1/statement/unbeantwortet',
   '/api/v1/moderation/suchanfragen',
   '/api/v1/usage/users/me/punkte',
+  // Die Rangliste laedt selbst nach (#793); ein Nein muss sofort wirken.
+  '/api/v1/rangliste',
+  // Das Spielgefuehl: ein Herabstufen muss sofort wirken.
+  '/api/v1/usage/users/me/spielgefuehl',
+  // Was sich widerrufen laesst: nach einem Widerruf (auch in einem anderen Tab) sofort aktuell.
+  '/api/v1/usage/users/me/widerrufbar',
   // Moderation: Meldungen, Sperren und Loeschauftraege muessen frisch sein (Zahl am Admin-Link, „Zu tun“).
   '/api/v1/moderation/',
 ];

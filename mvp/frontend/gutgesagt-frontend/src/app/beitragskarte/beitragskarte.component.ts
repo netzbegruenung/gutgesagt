@@ -13,6 +13,7 @@ import {
   Output,
   SimpleChanges,
   ViewChild,
+  inject,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -37,6 +38,7 @@ import {
   STUFEN,
   gueteAus,
 } from './karten-daten';
+import { MerkenKnopfComponent } from '../shared/merkliste/merken-knopf.component';
 import { KartenAktionenComponent, KopierVariante } from './karten-aktionen/karten-aktionen.component';
 import { herkunftDomain, herkunftText, tragtHerkunftsangaben } from './herkunft-text';
 import { CONTENT_TYPE_REGISTRY, typLabel } from '../shared/content-type-registry';
@@ -53,12 +55,16 @@ import { SiegelErklaerung, siegelErklaerung } from '../shared/components/siegel/
 import { siegelText } from '../shared/components/siegel/siegel-zeichnung';
 import { GLANZ_TEXT, hatGlanz } from '../shared/components/siegel/siegel-auszeichnung';
 import { ContentService } from '../services/content.service';
+import { FunktionenService } from '../services/funktionen.service';
 import { ROUTES } from '../shared/constants/app.constants';
 import { TextStueck, textStuecke } from '../shared/vorlagen-luecke';
 import { istAenderbar } from './aenderbar';
+import { TeamPilleComponent } from '../shared/teams/team-pille.component';
+import { TEAMS_AM_NAMEN, TeamAmNamen } from '../shared/teams/teams';
 
 const NEU_STUNDEN = 24;
 const BELIEBT_AB = 5;
+const BELIEBT_TOOLTIP = `Mindestens ${BELIEBT_AB}-mal genutzt`;
 
 /** Symbol je Plattform vor der Quelle der Einwurf-Karte (quellenSymbol). */
 const QUELLEN_SYMBOLE: Record<Plattform, string> = {
@@ -123,6 +129,7 @@ function nutzungsZeile(label: string, nutzung: number, zuwachs: number): Nutzung
   standalone: true,
   imports: [
     CommonModule,
+    TeamPilleComponent,
     MatButtonModule,
     MatButtonToggleModule,
     MatIconModule,
@@ -130,6 +137,7 @@ function nutzungsZeile(label: string, nutzung: number, zuwachs: number): Nutzung
     MatTooltipModule,
     RelativeTimePipe,
     KartenAktionenComponent,
+    MerkenKnopfComponent,
     FremdesBildComponent,
     SiegelComponent,
     RouterLink,
@@ -221,6 +229,7 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
   nutzungAnimiert = false;
   istNeu = false;
   istBeliebt = false;
+  readonly beliebtTooltip = BELIEBT_TOOLTIP;
   statementOffen = false;
   /** Der gewaehlte Reiter; vorgewaehlt die kuerzeste Fassung, die auf X passt (#641). */
   gewaehlteFassung: Fassung = 'mittel';
@@ -294,6 +303,23 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
 
   /** Die Aktionsleiste; nur die volle Karte hat eine. */
   @ViewChild(KartenAktionenComponent) private aktionen?: KartenAktionenComponent;
+
+  /**
+   * „Melden“ klein am Ende der Meta-Zeile (Schalter `meldeweg_sichtbar`, Standard aus),
+   * zusätzlich zum Eintrag im ⋮-Menü; in der Zeile, die es schon gibt, damit die Karte
+   * nicht höher wird (Entscheidung 26.11.).
+   */
+  readonly meldewegAn = inject(FunktionenService).an('meldeweg_sichtbar');
+
+  /** Nur an der vollen Karte mit Leiste, nie in der Vorschau und nie im eigenen Album. */
+  get meldenSichtbar(): boolean {
+    return this.meldewegAn() && this.istVoll && !this.vorschau && !this.eigenesAlbum && !!this.daten.id;
+  }
+
+  /** Derselbe Melde-Dialog wie im ⋮-Menü der Leiste. */
+  melden(): void {
+    this.aktionen?.openReportDialog();
+  }
 
   /**
    * Antippen des gelben Platzhalters (P19, Persona-Runde 2): wie "Kopieren", also der
@@ -627,21 +653,24 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
    * Nutzung je Fassung in Meine Beitraege (#355), in der Reihenfolge der Reiter. Was
    * vor der Zaehlung je Fassung genutzt wurde, steht als "ohne Fassung" dabei: Welche
    * Fassung damals kopiert wurde, weiss niemand. Ohne Kurz und Lang gibt es nur Mittel,
-   * dann sagt die Zeile nichts, was das Nutzungs-Badge nicht schon sagt.
+   * dann sagt die Zeile nichts, was das Nutzungs-Badge nicht schon sagt. Fassungen mit 0
+   * fehlen, und ganz ohne Nutzung fehlt die Leiste: kein „Kurz 0× · Mittel 0× · Lang 0×“
+   * (Leerzustände 26.11.).
    */
   get nutzungJeFassung(): NutzungsZeile[] | null {
     const je = this.daten.nutzungJeFassung;
     if (!je || !this.hatKurzOderLang) {
       return null;
     }
-    const zeilen = FASSUNGEN.filter((fassung) => je[fassung]).map((fassung) =>
+    const zeilen = FASSUNGEN.filter((fassung) => (je[fassung]?.nutzung ?? 0) > 0).map((fassung) =>
       nutzungsZeile(FASSUNG_LABEL[fassung], je[fassung]!.nutzung, je[fassung]!.letzte_7_tage),
     );
     const summe = (wert: (zeile: NutzungsZeile) => number) => zeilen.reduce((s, zeile) => s + wert(zeile), 0);
     // Der Rest je Spalte; auch Kopien vor der Zaehlung je Fassung koennen noch in die 7 Tage fallen.
     const ohneFassung = (this.nutzung ?? 0) - summe((zeile) => zeile.nutzung);
     const ohneFassungZuwachs = Math.max(0, (this.daten.nutzungLetzte7Tage ?? 0) - summe((zeile) => zeile.zuwachs));
-    return ohneFassung > 0 ? [...zeilen, nutzungsZeile('ohne Fassung', ohneFassung, ohneFassungZuwachs)] : zeilen;
+    const alle = ohneFassung > 0 ? [...zeilen, nutzungsZeile('ohne Fassung', ohneFassung, ohneFassungZuwachs)] : zeilen;
+    return alle.length ? alle : null;
   }
 
   get zeigtQuellen(): boolean {
@@ -754,6 +783,27 @@ export class BeitragskarteComponent implements OnChanges, OnDestroy {
    */
   get autorAbzeichen(): number | null {
     return this.zeigtAutor && this.daten.autorAbzeichen ? this.daten.autorAbzeichen : null;
+  }
+
+  /**
+   * Teams der aktuellen Saison am Anzeigenamen: Der Server liefert sie nur fuer
+   * Angemeldete, nur mit Schalter teams_oeffentlich und Einwilligung der Person. Die
+   * ersten TEAMS_AM_NAMEN als Pille, der Rest als „+N“; ohne Autorzeile nichts.
+   */
+  get autorTeams(): TeamAmNamen[] {
+    return this.zeigtAutor && this.daten.autorTeams?.length ? this.daten.autorTeams.slice(0, TEAMS_AM_NAMEN) : [];
+  }
+
+  /** Wie viele Teams nicht als Pille am Namen stehen („+N“). */
+  get weitereTeams(): number {
+    return this.zeigtAutor ? Math.max(0, (this.daten.autorTeams?.length ?? 0) - TEAMS_AM_NAMEN) : 0;
+  }
+
+  /** Langtext fuer „+N“: wie viele weitere Teams, und welche. */
+  weitereTeamsText(): string {
+    const weitere = (this.daten.autorTeams ?? []).slice(TEAMS_AM_NAMEN);
+    const anzahl = weitere.length === 1 ? 'und 1 weiteres Team' : `und ${weitere.length} weitere Teams`;
+    return `${anzahl}: ${weitere.map((t) => t.name).join(', ')}`;
   }
 
   abzeichenText(anzahl: number): string {

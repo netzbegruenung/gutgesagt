@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, Tuple, TYPE_CHECKING
 from fastapi import Depends, Header, HTTPException
 
 if TYPE_CHECKING:
@@ -69,6 +69,8 @@ from repositories.einwurf_repository import get_einwurf_repository
 from repositories.sperre_repository import get_sperre_repository
 from repositories.loeschauftrag_repository import get_loeschauftrag_repository
 from repositories.schalter_repository import get_schalter_repository
+from repositories.team_repository import get_team_repository
+from repositories.ankunft_repository import get_ankunft_repository
 from core.fehler import INTERNER_FEHLER
 from core.logging import get_logger
 
@@ -279,6 +281,29 @@ def get_unbeantwortete_aussagen_service(
     return UnbeantworteteAussagenService(statement_service, suchen_ohne_treffer, themen)
 
 
+# Wie viele Aussagen hoechstens fuer den Bedarf der Team-Quests gelesen werden.
+TEAM_BEDARF_HOECHSTENS = 5000
+
+
+async def team_bedarf() -> Tuple[Optional[str], int]:
+    """
+    Der Bedarf fuer die Team-Quests (#792): das Thema mit den meisten Aussagen aus "Hier
+    fehlt eine Antwort" und deren Zahl. Solange es kein Wochenthema gibt, gilt dieses
+    Thema. Die Dienste erst beim Aufruf geholt, einmal je Woche
+    (services/team_fortschritt_service.py).
+    """
+    from services.team_fortschritt_service import bedarf_aus
+
+    statement_service = get_statement_service()
+    dienst = get_unbeantwortete_aussagen_service(
+        statement_service,
+        get_suchen_ohne_treffer_service(statement_service),
+        get_aussage_themen_service(statement_service),
+    )
+    liste = await dienst.liste(limit=TEAM_BEDARF_HOECHSTENS)
+    return bedarf_aus(a.themen for a in liste)
+
+
 def get_feedback_service() -> FeedbackService:
     return FeedbackService(get_feedback_repository())
 
@@ -307,12 +332,15 @@ def get_punkte_service(
 ) -> PunkteService:
     from repositories.punkte_repository import get_punkte_repository
     from repositories.usage_tracking_repository import get_usage_repository
+    from services.team_fortschritt_service import get_team_fortschritt_service
 
     return PunkteService(
         _sichtbare_beitraege(settings),
         get_usage_repository(),
         get_punkte_repository(),
         settings,
+        # Team-Quests (#792): Der Dienst fragt seinen Schalter selbst.
+        quest_tage=get_team_fortschritt_service().quest_tage,
     )
 
 
@@ -329,8 +357,22 @@ def abzeichen_service_bauen(settings: Settings) -> "AbzeichenService":
         # Wegmarken zaehlen fuers Abzeichen nicht; ihre Abfragen spart der Takt.
         return await meilensteine.meilensteine(user_id, mit_wegmarken=False)
 
+    from domain.spielgefuehl import in_rangliste
+    from repositories.spielgefuehl_repository import get_spielgefuehl_repository
+    from services.spielgefuehl_service import buehne_aktiv
+
+    def spielt_mit(user_id: str) -> bool:
+        antwort = get_spielgefuehl_repository().lesen(user_id)
+        return antwort is not None and in_rangliste(antwort.wirksame_stufe)
+
     return AbzeichenService(
-        get_abzeichen_sichtbarkeit_repository(), ohne_wegmarken, settings
+        get_abzeichen_sichtbarkeit_repository(),
+        ohne_wegmarken,
+        settings,
+        # Spielgefuehl-Modell: Abzeichen nur in der Rangliste (domain/spielgefuehl.py)
+        buehne_aktiv=lambda: buehne_aktiv(settings),
+        mitspielende=lambda: list(get_spielgefuehl_repository().teilnehmende()),
+        spielt_mit=spielt_mit,
     )
 
 
@@ -354,10 +396,34 @@ def get_meilensteine_service(
     )
 
 
+def _punkte_eingewilligte(kennungen):
+    from services.spielgefuehl_service import punkte_eingewilligte
+
+    return punkte_eingewilligte(kennungen)
+
+
+def _stimmen_eingewilligte(kennungen):
+    from services.spielgefuehl_service import stimmen_eingewilligte
+
+    return stimmen_eingewilligte(kennungen)
+
+
 def get_muster_hinweise_service() -> MusterHinweiseService:
+    """
+    Mit den Bedingungen fuer den Abgleich im Loeschlauf: Nutzungen wie im
+    Admin-Dashboard ("Punkte und Meilensteine" bzw. Spielgefuehl ab "Nur fuer mich"),
+    Zustimmungen Wortlaut -27 ab "Nur fuer mich" und Art.-9-Einwilligung.
+    """
     from repositories.muster_hinweis_repository import get_muster_hinweis_repository
 
-    return MusterHinweiseService(get_muster_hinweis_repository())
+    from services.schalter_service import get_schalter_service
+
+    return MusterHinweiseService(
+        get_muster_hinweis_repository(),
+        eingewilligte=_punkte_eingewilligte,
+        stimmen_eingewilligte=_stimmen_eingewilligte,
+        stand_sichern=lambda: get_schalter_service().admin_werte_streng(),
+    )
 
 
 def _keycloak_konten() -> Optional[KeycloakKonten]:
@@ -383,7 +449,11 @@ def get_einladung_service() -> EinladungService:
     Ohne Zugang zur Keycloak-Admin-Schnittstelle lassen sich Einladungen verwalten,
     aber nicht einloesen (503).
     """
-    return EinladungService(get_einladung_repository(), _keycloak_konten())
+    from services.team_service import get_team_service
+
+    return EinladungService(
+        get_einladung_repository(), _keycloak_konten(), get_team_service()
+    )
 
 
 _gegenlesen_service: Optional[GegenlesenService] = None
@@ -401,6 +471,39 @@ def get_nutzung_rate_limiter() -> RateLimiter:
             window_minutes=settings.nutzung_rate_limit_minuten,
         )
     return _nutzung_rate_limiter
+
+
+_ereignis_rate_limiter: Optional[RateLimiter] = None
+
+
+def get_ereignis_rate_limiter() -> RateLimiter:
+    """
+    Drosselung von POST /api/v1/ereignis (#799): ein Schluessel fuer alle, Fenster
+    eine Sekunde, nur im Arbeitsspeicher; keine Adresse, kein Wochenbezug.
+    """
+    global _ereignis_rate_limiter
+    if _ereignis_rate_limiter is None:
+        _ereignis_rate_limiter = RateLimiter(
+            max_requests=settings.ereignis_je_sekunde, window_seconds=1
+        )
+    return _ereignis_rate_limiter
+
+
+_ankunft_rate_limiter: Optional[RateLimiter] = None
+
+
+def get_ankunft_rate_limiter() -> RateLimiter:
+    """
+    Drosselung von POST /api/v1/ankunft (Ankuenfte je Kampagnenwort): wie bei
+    /api/v1/ereignis ein Schluessel fuer alle, Fenster eine Sekunde, nur im
+    Arbeitsspeicher; keine Adresse.
+    """
+    global _ankunft_rate_limiter
+    if _ankunft_rate_limiter is None:
+        _ankunft_rate_limiter = RateLimiter(
+            max_requests=settings.ankunft_je_sekunde, window_seconds=1
+        )
+    return _ankunft_rate_limiter
 
 
 def get_gegenlesen_service() -> GegenlesenService:
@@ -489,6 +592,10 @@ def get_loeschfristen_service() -> LoeschfristenService:
         get_loeschauftrag_repository(),
         # Verlauf der Schalter nach einem Jahr (#708).
         get_schalter_repository(),
+        # Teamdaten nie benutzter Konten gehen mit dem Konto.
+        get_team_repository(),
+        # Ankuenfte je Kampagnenwort und Tag nach zwoelf Monaten.
+        ankuenfte=get_ankunft_repository(),
     )
 
 
@@ -539,6 +646,12 @@ def get_beitrag_aendern_service(
             else None
         ),
         stimmen_loeschen=VoteRepository().loeschen_fuer_beitrag,
+        # ... und bei gleichem Titel, wenn der Text ein ganz anderer ist (#636).
+        gleicher_text=(
+            statement_service_instance.gleicher_text
+            if statement_service_instance is not None
+            else None
+        ),
     )
 
 

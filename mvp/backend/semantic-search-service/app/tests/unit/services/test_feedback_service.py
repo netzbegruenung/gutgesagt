@@ -2,7 +2,8 @@
 Unit-Tests fuer Feedback an das Team (#343).
 
 Das Repository ist gemockt. Geprueft werden der Tag beim Senden, Erledigt-Setzen
-und Einzelloeschen (#425), die Frist von AUFBEWAHRUNG_TAGE und der Hintergrund-Task,
+und Einzelloeschen (#425), die Frist von AUFBEWAHRUNG_TAGE, die eigene Frist der
+Kategorie "gestoert" (Knopf "Was hat dich gestört?") und der Hintergrund-Task,
 der nach einem Fehler weiterlaeuft.
 """
 
@@ -14,6 +15,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from domain.feedback_gestoert import GESTOERT_GELOESCHT_AB, gestoert_offen
 from services.feedback_service import (
     AUFBEWAHRUNG_TAGE,
     FeedbackEintrag,
@@ -37,12 +39,26 @@ class TestSenden:
         with patch("services.feedback_service.heute_utc", return_value=HEUTE):
             FeedbackService(repository).senden("Hallo", "anna@example.org")
 
-        repository.anlegen.assert_called_once_with("Hallo", "anna@example.org", HEUTE)
+        repository.anlegen.assert_called_once_with(
+            "Hallo", "anna@example.org", HEUTE, None
+        )
 
     def test_senden_ohne_kontakt_speichert_keinen(self, repository):
         FeedbackService(repository).senden("Hallo", None, heute=HEUTE)
 
-        repository.anlegen.assert_called_once_with("Hallo", None, HEUTE)
+        repository.anlegen.assert_called_once_with("Hallo", None, HEUTE, None)
+
+    def test_gestoert_speichert_die_kategorie_und_nie_einen_kontakt(self, repository):
+        FeedbackService(repository).senden(
+            "Die Suche war langsam",
+            "anna@example.org",
+            heute=HEUTE,
+            kategorie="gestoert",
+        )
+
+        repository.anlegen.assert_called_once_with(
+            "Die Suche war langsam", None, HEUTE, "gestoert"
+        )
 
 
 class TestNeueste:
@@ -55,13 +71,16 @@ class TestNeueste:
                 kontakt=None,
                 eingegangen_am=HEUTE,
                 erledigt=False,
+                kategorie="gestoert",
             )
         ]
 
         eintraege = FeedbackService(repository).neueste(limit=5)
 
         repository.neueste.assert_called_once_with(5, None)
-        assert eintraege == [FeedbackEintrag(kennung, "Gut", None, HEUTE, False)]
+        assert eintraege == [
+            FeedbackEintrag(kennung, "Gut", None, HEUTE, False, "gestoert")
+        ]
 
     def test_neueste_reicht_den_filter_weiter(self, repository):
         repository.neueste.return_value = []
@@ -75,7 +94,12 @@ class TestErledigtUndLoeschen:
     def test_erledigt_setzen_liefert_eintrag_ohne_zeilenobjekt(self, repository):
         kennung = uuid.uuid4()
         repository.erledigt_setzen.return_value = SimpleNamespace(
-            id=kennung, text="Gut", kontakt=None, eingegangen_am=HEUTE, erledigt=True
+            id=kennung,
+            text="Gut",
+            kontakt=None,
+            eingegangen_am=HEUTE,
+            erledigt=True,
+            kategorie=None,
         )
 
         eintrag = FeedbackService(repository).erledigt_setzen(kennung, True)
@@ -107,6 +131,27 @@ class TestFrist:
 
         assert FeedbackService(repository).alte_loeschen(heute=HEUTE) == 3
         repository.loeschen_vor.assert_called_once_with(date(2026, 4, 30))
+        repository.loeschen_kategorie.assert_not_called()
+
+    def test_gestoert_bleibt_bis_zum_letzten_tag_der_startphase(self, repository):
+        repository.loeschen_vor.return_value = 0
+
+        FeedbackService(repository).alte_loeschen(heute=date(2026, 12, 30))
+
+        repository.loeschen_kategorie.assert_not_called()
+
+    @pytest.mark.parametrize("heute", [date(2026, 12, 31), date(2027, 1, 5)])
+    def test_gestoert_wird_ab_dem_31_12_ganz_geloescht(self, repository, heute):
+        repository.loeschen_vor.return_value = 2
+        repository.loeschen_kategorie.return_value = 5
+
+        assert FeedbackService(repository).alte_loeschen(heute=heute) == 7
+        repository.loeschen_kategorie.assert_called_once_with("gestoert")
+
+    def test_startphase_endet_am_31_12_2026(self):
+        assert GESTOERT_GELOESCHT_AB == date(2026, 12, 31)
+        assert gestoert_offen(date(2026, 12, 30)) is True
+        assert gestoert_offen(date(2026, 12, 31)) is False
 
     @pytest.mark.asyncio
     async def test_loeschen_im_takt_loescht_sofort_und_laeuft_nach_fehler_weiter(

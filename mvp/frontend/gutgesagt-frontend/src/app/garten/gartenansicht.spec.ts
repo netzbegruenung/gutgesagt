@@ -1,0 +1,216 @@
+import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
+import { BehaviorSubject, of } from 'rxjs';
+
+import { environment } from '../../environments/environment';
+import { AuthService, UserInfo } from '../auth/auth.service';
+import { FunktionenService } from '../services/funktionen.service';
+import { SUCHTEXT_PARAM } from '../shared/formular-adresse';
+import { GartenansichtComponent } from './gartenansicht.component';
+import { GartenHinweisComponent } from './garten-hinweis.component';
+import { Beet, antwortenText, beeteGruppieren, ohneAntwortText } from './garten.service';
+
+const URL = `${environment.baseUrl}/api/v1/search/garten`;
+
+const BEETE: Beet[] = [
+  { schluessel: 'klima', name: 'Klima', motiv: 'themen/klima.svg', antworten: 12, ohne_antwort: 3 },
+  { schluessel: 'verkehr', name: 'Verkehr', motiv: 'themen/verkehr.svg', antworten: 1, ohne_antwort: 0 },
+  { schluessel: 'europa', name: 'Europa', motiv: null, antworten: 0, ohne_antwort: 1 },
+];
+
+describe('Gartenansicht (#783)', () => {
+  it('nennt Zahlen ehrlich in Einzahl und Mehrzahl', () => {
+    expect([antwortenText(0), antwortenText(1), antwortenText(12)]).toEqual(['wartet auf die erste Antwort', '1 Antwort', '12 Antworten']);
+    expect([ohneAntwortText(0), ohneAntwortText(1), ohneAntwortText(3)]).toEqual(['', '1 Spruch ohne Antwort', '3 Sprüche ohne Antwort']);
+    // Ueber der Grenze der Liste „Hier fehlt eine Antwort“ wie dort „50+“
+    expect([ohneAntwortText(50), ohneAntwortText(51)]).toEqual(['50 Sprüche ohne Antwort', '50+ Sprüche ohne Antwort']);
+  });
+
+  it('sammelt Themen ohne Antwort unter den anderen, je in der Reihenfolge des Servers', () => {
+    const umwelt: Beet = { schluessel: 'umwelt', name: 'Umwelt', antworten: 0, ohne_antwort: 0 };
+    const { mitAntworten, nochPlatz } = beeteGruppieren([BEETE[2], BEETE[0], umwelt, BEETE[1]]);
+    expect(mitAntworten.map((b) => b.schluessel)).toEqual(['klima', 'verkehr']);
+    expect(nochPlatz.map((b) => b.schluessel)).toEqual(['europa', 'umwelt']);
+    expect(beeteGruppieren([])).toEqual({ mitAntworten: [], nochPlatz: [] });
+  });
+
+  describe('Seite', () => {
+    let http: HttpTestingController;
+    /** Was FunktionenService zum Schalter gartenansicht meldet; null: unbekannt. */
+    let schalter: boolean | null = true;
+
+    afterEach(() => {
+      schalter = true;
+    });
+
+    function starten(angemeldet: boolean) {
+      const nutzer = new BehaviorSubject<UserInfo | null>({ isAuthenticated: angemeldet, userId: null, userName: null, claims: null });
+      TestBed.configureTestingModule({
+        imports: [GartenansichtComponent],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([]),
+          { provide: AuthService, useValue: { userInfo$: nutzer } },
+          { provide: FunktionenService, useValue: { stand$: () => of(schalter) } },
+        ],
+      });
+      http = TestBed.inject(HttpTestingController);
+      const fixture = TestBed.createComponent(GartenansichtComponent);
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    afterEach(() => {
+      http.verify();
+      TestBed.resetTestingModule();
+    });
+
+    function beete(fixture: { nativeElement: HTMLElement }): HTMLElement[] {
+      return Array.from(fixture.nativeElement.querySelectorAll('.beet'));
+    }
+
+    it('zeigt je Thema Motiv mit Namen und die Zahlen, Besuchern ohne Link auf die Liste', () => {
+      const fixture = starten(false);
+      expect(fixture.nativeElement.querySelector('mat-spinner')).not.toBeNull();
+      http.expectOne(URL).flush({ beete: BEETE });
+      fixture.detectChanges();
+
+      const [klima, verkehr, europa] = beete(fixture);
+      expect(klima.querySelector('.beet-name')!.textContent).toBe('Klima');
+      const motiv = klima.querySelector('img.beet-motiv') as HTMLImageElement;
+      expect(motiv.getAttribute('src')).toBe('themen/klima.svg');
+      expect(motiv.getAttribute('alt')).toBe('');
+      expect(klima.textContent).toContain('12 Antworten');
+      expect(klima.textContent).toContain('3 Sprüche ohne Antwort');
+      expect(verkehr.textContent).toContain('1 Antwort');
+      expect(verkehr.querySelector('.beet-ohne')).toBeNull();
+      expect(europa.querySelector('img')).toBeNull();
+      expect(europa.textContent).toContain('Europa');
+      expect(europa.textContent).toContain('wartet auf die erste Antwort');
+      expect(fixture.nativeElement.querySelector('.beet-antworten')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.garten-konto')).not.toBeNull();
+    });
+
+    it('zeigt leere Themen gesammelt unten unter „Hier ist noch Platz“', () => {
+      const fixture = starten(false);
+      http.expectOne(URL).flush({ beete: [BEETE[2], BEETE[0], BEETE[1]] });
+      fixture.detectChanges();
+
+      expect(beete(fixture).map((b) => b.querySelector('.beet-name')!.textContent)).toEqual(['Klima', 'Verkehr', 'Europa']);
+      const listen = Array.from(fixture.nativeElement.querySelectorAll('ul.beete')) as HTMLElement[];
+      expect(listen.length).toBe(2);
+      const platz = fixture.nativeElement.querySelector('[data-testid="noch-platz"]') as HTMLElement;
+      expect(platz.textContent!.trim()).toBe('Hier ist noch Platz');
+      // Die Überschrift steht direkt vor der Liste der leeren Themen
+      expect(platz.nextElementSibling).toBe(listen[1]);
+      expect(listen[1].textContent).toContain('Europa');
+    });
+
+    it('ohne leere Themen keine Überschrift „Hier ist noch Platz“', () => {
+      const fixture = starten(false);
+      http.expectOne(URL).flush({ beete: [BEETE[0], BEETE[1]] });
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="noch-platz"]')).toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('ul.beete').length).toBe(1);
+    });
+
+    it('führt mit dem Namen des Themas zur Suche, also zu „Alles zum Thema“', () => {
+      const fixture = starten(false);
+      http.expectOne(URL).flush({ beete: BEETE });
+      fixture.detectChanges();
+      const link = beete(fixture)[0].querySelector('a.beet-link') as HTMLAnchorElement;
+      const adresse = new window.URL(link.href);
+      expect(adresse.pathname).toBe('/result');
+      expect(adresse.searchParams.get(SUCHTEXT_PARAM)).toBe('Klima');
+    });
+
+    it('gibt Angemeldeten bei Sprüchen ohne Antwort den Weg zur gefilterten Liste', () => {
+      const fixture = starten(true);
+      http.expectOne(URL).flush({ beete: BEETE });
+      fixture.detectChanges();
+
+      const links = Array.from(fixture.nativeElement.querySelectorAll('a.beet-antworten')) as HTMLAnchorElement[];
+      expect(links.length).toBe(2);
+      const adresse = new window.URL(links[0].href);
+      expect(adresse.pathname).toBe('/hier-fehlt-eine-antwort');
+      expect(adresse.searchParams.get('thema')).toBe('klima');
+      // Der Name beginnt mit dem sichtbaren Text (WCAG 2.5.3)
+      expect(links[0].textContent!.replace(/\s+/g, ' ').trim()).toBe('Jetzt antworten im Thema Klima');
+      expect(fixture.nativeElement.querySelector('.garten-konto')).toBeNull();
+    });
+
+    it('fragt den Endpunkt nicht, solange der Schalter sicher aus ist, und sagt das (Saal, kein 404)', () => {
+      schalter = false;
+      const fixture = starten(false);
+      http.expectNone(URL);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Diese Übersicht ist gerade nicht eingeschaltet.');
+      expect(beete(fixture).length).toBe(0);
+    });
+
+    it('sagt bei aktiv false vom Server, dass die Übersicht aus ist', () => {
+      schalter = null;
+      const fixture = starten(false);
+      http.expectOne(URL).flush({ beete: [], aktiv: false });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Diese Übersicht ist gerade nicht eingeschaltet.');
+      expect(fixture.nativeElement.querySelector('mat-spinner')).toBeNull();
+    });
+
+    it('sagt bei 404 eines älteren Backends, dass die Übersicht aus ist, und fragt nicht weiter', () => {
+      const fixture = starten(false);
+      http.expectOne(URL).flush('weg', { status: 404, statusText: 'Not Found' });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Diese Übersicht ist gerade nicht eingeschaltet.');
+      expect(beete(fixture).length).toBe(0);
+    });
+
+    it('verspricht nach 403 keinen neuen Versuch und zeigt keinen Spinner', () => {
+      const fixture = starten(false);
+      http.expectOne(URL).flush('nein', { status: 403, statusText: 'Forbidden' });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Diese Übersicht ist gerade nicht erreichbar.');
+      expect(fixture.nativeElement.textContent).not.toContain('Wir versuchen es gleich noch einmal.');
+      expect(fixture.nativeElement.querySelector('mat-spinner')).toBeNull();
+    });
+
+    it('meldet einen Ladefehler ohne „neu laden“', () => {
+      const fixture = starten(false);
+      http.expectOne(URL).flush('weg', { status: 500, statusText: 'Fehler' });
+      fixture.detectChanges();
+      const status = fixture.nativeElement.querySelector('.garten-fehler') as HTMLElement;
+      expect(status.getAttribute('role')).toBe('status');
+      expect(status.textContent).toContain('Wir versuchen es gleich noch einmal.');
+      expect(status.textContent).not.toMatch(/neu laden/i);
+    });
+  });
+
+  describe('Hinweis auf der Startseite', () => {
+    function hinweis(schalter: boolean) {
+      TestBed.configureTestingModule({
+        imports: [GartenHinweisComponent],
+        providers: [provideRouter([]), { provide: FunktionenService, useValue: { an: () => signal(schalter) } }],
+      });
+      const fixture = TestBed.createComponent(GartenHinweisComponent);
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    afterEach(() => TestBed.resetTestingModule());
+
+    it('fehlt ohne Schalter', () => {
+      expect(hinweis(false).querySelector('a')).toBeNull();
+    });
+
+    it('führt mit Schalter zur Gartenansicht', () => {
+      const link = hinweis(true).querySelector('a') as HTMLAnchorElement;
+      expect(new window.URL(link.href).pathname).toBe('/garten');
+      expect(link.textContent).toContain('Themen im Überblick');
+    });
+  });
+});

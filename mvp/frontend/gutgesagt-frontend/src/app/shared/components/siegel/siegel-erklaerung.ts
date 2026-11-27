@@ -38,7 +38,7 @@ export interface SiegelErklaerung {
 export function siegelErklaerung(guete: number | null, erfuellt: string[], stimmenZaehlen: boolean): SiegelErklaerung {
   const g = normierteGuete(guete);
   return {
-    ueberschrift: g === null ? 'Neu: noch keine Güte' : `Güte ${g} von ${HOECHSTE_GUETE}`,
+    ueberschrift: g === null ? 'Neu: die Güte kommt mit den ersten Stimmen' : `Güte ${g} von ${HOECHSTE_GUETE}`,
     kriterien: erfuellt
       .filter((art): art is Anmerkung['art'] => Object.hasOwn(KRITERIUM_ERFUELLT, art))
       .map((art) => KRITERIUM_ERFUELLT[art]),

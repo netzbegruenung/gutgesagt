@@ -20,6 +20,9 @@
                 @if (!rundgang()) {
                     <h2 class="mk-titel" id="mk-titel">Das erwartet dich mit Konto</h2>
                     <p class="mk-einleitung">Suchen und kopieren geht ohne Konto. Mit Konto machst du selbst mit.</p>
+                    @if (gartenAn()) {
+                        <p class="mk-einleitung mk-garten">{{ gartenSatz }}</p>
+                    }
                 } @else {
                     <!-- Der Kopf heisst schon "Selbst beitragen" -->
                     <h2 class="mk-titel" id="mk-titel">So machst du mit Konto mit</h2>

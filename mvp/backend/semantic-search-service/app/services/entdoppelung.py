@@ -27,6 +27,8 @@ beginnt neu. Wie beim Tagesschluessel setzt das einen uvicorn-Worker voraus.
   zwei Bloecke, also liegt jeder Wert aus dem Fenster unter dem aktuellen oder dem
   vorigen Schluessel. Gemerkt wird mit dem aktuellen, verglichen mit beiden
   (paar_pruefwerte_im_fenster); nach zwei Bloecken ist ein Schluessel weg.
+  Zustimmungen (Schalter muster_stimmen) nutzen dieselben Schluessel und dieselbe
+  Tabelle mit eigenem Praefix im HMAC-Text.
 """
 
 import asyncio
@@ -115,23 +117,82 @@ def pruefwert(
     )
 
 
-def paar_pruefwert(nutzende: str, autor: str, tag: date) -> str:
+def deckel_pruefwerte(
+    content_id: uuid.UUID, anzahl: int, moment: Optional[datetime] = None
+) -> List[str]:
     """
-    Der Pruefwert fuer "``nutzende`` hat einen Beitrag von ``autor`` genutzt", wie er
-    an ``tag`` gemerkt wird (Schluessel des laufenden Blocks).
+    Die Plaetze des Tagesdeckels fuer Nutzung ohne Anmeldung (Gamification-Check
+    26.11., Befund 9): ``anzahl`` Pruefwerte je Beitrag und UTC-Tag, gebildet nur aus
+    Beitrag, Tag und Platznummer, ohne Merkmal der Besuchenden (Bedingung Jura,
+    § 25 TDDDG). Eine Nutzung ohne Anmeldung zaehlt nur entdoppelt, wenn sie einen
+    freien Platz belegt; so bringen hoechstens die ersten ``anzahl`` am Tag Punkte,
+    egal von wem. Verworfen wie alle Pruefwerte nach dem Tageswechsel.
+
+    Ohne geheimen Schluessel (Review): In den Plaetzen steckt keine Person, nur Beitrag
+    und Tag, die ohnehin an der Nutzung stehen. So gilt der Deckel auch ueber einen
+    Neustart am selben Tag hinweg, statt mit dem Tagesschluessel neu zu beginnen.
+    """
+    tag = (moment or datetime.now(timezone.utc)).astimezone(timezone.utc).date()
+    return [
+        hashlib.sha256(
+            f"ohne-anmeldung|{platz}|{content_id}|{tag.isoformat()}".encode("utf-8")
+        ).hexdigest()
+        for platz in range(1, anzahl + 1)
+    ]
+
+
+def danke_pruefwert(
+    user_id: Optional[str],
+    besucher_merkmal: Optional[str],
+    content_id: uuid.UUID,
+    moment: Optional[datetime] = None,
+) -> Optional[str]:
+    """
+    Der Pruefwert eines "Danke an die Autorin" (#791): wie ``pruefwert``, mit
+    demselben Tagesschluessel und in derselben Tabelle ``nutzung_heute``, aber mit
+    eigenem Praefix. So entdoppelt das Danke wie die Nutzung (hoechstens eins je
+    Person, Beitrag und Tag), ohne dass eine Nutzung ein Danke verbraucht oder
+    umgekehrt; verworfen wird es mit den Nutzungs-Pruefwerten nach dem Tageswechsel.
+    """
+    if user_id and user_id != ANONYM:
+        person = f"konto:{user_id}"
+    elif besucher_merkmal:
+        person = f"besucher:{besucher_merkmal}"
+    else:
+        return None
+    tag = (moment or datetime.now(timezone.utc)).astimezone(timezone.utc).date()
+    return _hmac(
+        _NUTZUNG_SCHLUESSEL.fuer(tag),
+        f"danke|{person}|{content_id}|{tag.isoformat()}",
+    )
+
+
+# Praefix je Art des Paar-Pruefwerts: "paar" fuer Nutzung (wie seit #352), eigenes fuer
+# Zustimmung (Schalter muster_stimmen), damit eine Nutzung nie auf eine Zustimmung der
+# Gegenrichtung trifft.
+_PAAR_PRAEFIX = {"nutzung": "paar", "zustimmung": "zustimmung"}
+
+
+def paar_pruefwert(nutzende: str, autor: str, tag: date, art: str = "nutzung") -> str:
+    """
+    Der Pruefwert fuer "``nutzende`` hat einen Beitrag von ``autor`` genutzt" (oder mit
+    ``art="zustimmung"``: ihm zugestimmt), wie er an ``tag`` gemerkt wird (Schluessel
+    des laufenden Blocks).
     """
     aktuell, _ = _PAAR_SCHLUESSEL.fuer(tag)
-    return _hmac(aktuell, f"paar|{nutzende}|{autor}")
+    return _hmac(aktuell, f"{_PAAR_PRAEFIX[art]}|{nutzende}|{autor}")
 
 
-def paar_pruefwerte_im_fenster(nutzende: str, autor: str, tag: date) -> List[str]:
+def paar_pruefwerte_im_fenster(
+    nutzende: str, autor: str, tag: date, art: str = "nutzung"
+) -> List[str]:
     """
     Alle Werte, unter denen "``nutzende`` hat einen Beitrag von ``autor`` genutzt"
-    seit ``tag`` - MUSTER_FENSTER_TAGE + 1 gemerkt sein kann: mit dem aktuellen und,
-    falls noch im Speicher, dem vorigen Schluessel.
+    (bzw. ihm zugestimmt) seit ``tag`` - MUSTER_FENSTER_TAGE + 1 gemerkt sein kann: mit
+    dem aktuellen und, falls noch im Speicher, dem vorigen Schluessel.
     """
     return [
-        _hmac(schluessel, f"paar|{nutzende}|{autor}")
+        _hmac(schluessel, f"{_PAAR_PRAEFIX[art]}|{nutzende}|{autor}")
         for schluessel in _PAAR_SCHLUESSEL.fuer(tag)
         if schluessel is not None
     ]

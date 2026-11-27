@@ -35,7 +35,15 @@ describe('PunkteEinwilligungComponent (#351)', () => {
 
   afterEach(() => http.verify());
 
-  it('bietet ohne eingeschaltete Punkte (404) nichts an', () => {
+  it('bietet ohne eingeschaltete Punkte (200, aktiv false) nichts an', () => {
+    const fixture = erstellen();
+    http.expectOne(URL).flush({ ...stand(true), aktiv: false });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('mat-checkbox')).toBeNull();
+  });
+
+  it('bietet ohne eingeschaltete Punkte (404, älteres Backend) nichts an', () => {
     const fixture = erstellen();
     http.expectOne(URL).flush('', { status: 404, statusText: 'Not Found' });
     fixture.detectChanges();

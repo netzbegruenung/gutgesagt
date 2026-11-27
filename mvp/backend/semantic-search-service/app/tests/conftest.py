@@ -152,6 +152,151 @@ def schalter_admin_alle_an():
 
 
 @pytest.fixture(autouse=True)
+def gepostet_ohne_konto_ohne_datenbank(monkeypatch):
+    """
+    Meldungen ohne Konto (#799) ohne Datenbank: keine Zahlen. Tests mit Zahlen stellen
+    ``gepostet_ohne_konto_ohne_datenbank.wochen.return_value`` ein.
+    """
+    import services.gepostet_ohne_konto_service as modul
+
+    repository = MagicMock()
+    repository.wochen.return_value = {}
+    monkeypatch.setattr(modul, "_service", modul.GepostetOhneKontoService(repository))
+    yield repository
+
+
+@pytest.fixture(autouse=True)
+def wirkung_ohne_datenbank(monkeypatch):
+    """
+    Wirkungs-Echo und Danke (#790, #791) ohne Datenbank: keine Summen. Tests mit
+    Summen stellen ``wirkung_ohne_datenbank.je_beitrag.return_value`` ein.
+    """
+    import services.wirkung_service as modul
+
+    repository = MagicMock()
+    repository.je_beitrag.return_value = {}
+    repository.danke_zaehlen.return_value = True
+    monkeypatch.setattr(modul, "_service", modul.WirkungService(repository))
+    yield repository
+
+
+@pytest.fixture(autouse=True)
+def einstellungen_ohne_datenbank():
+    """
+    Admin-Einstellungen mit Textwert (services/einstellungen_service.py) ohne
+    Datenbank: keine gespeicherten Werte, es gilt der Standard. Tests setzen Werte
+    ueber das zurueckgegebene Dict.
+    """
+    from services.einstellungen_service import (
+        EinstellungenService,
+        einstellungen_service_setzen,
+    )
+
+    werte: dict = {}
+    einstellungen_service_setzen(
+        EinstellungenService(
+            lesen=lambda: werte,
+            setzen=lambda name, wert, admin: werte.__setitem__(name, wert),
+        )
+    )
+    yield werte
+    einstellungen_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
+def saisons_ohne_datenbank():
+    """
+    Saisons (services/saison_service.py, #782) ohne Datenbank: keine Saison, keine
+    Wochenzahlen. Die aktuelle Saison der Teams fragt sie bei wirksamem Schalter;
+    Tests mit Saisons setzen einen eigenen Dienst (saison_service_setzen).
+    """
+    from services.saison_service import SaisonService, saison_service_setzen
+
+    repository = MagicMock()
+    repository.alle.return_value = []
+    saison_service_setzen(SaisonService(repository, lambda von, laufende: {}))
+    yield repository
+    saison_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
+def rangliste_ohne_datenbank(monkeypatch):
+    """
+    Die Einwilligung zur Rangliste (#793) ohne Datenbank: niemand hat geantwortet.
+    Der Widerruf der Art.-9-Einwilligung fragt sie; Tests mit Antworten stellen
+    ``rangliste_ohne_datenbank.lesen.return_value`` ein.
+    """
+    import repositories.rangliste_einwilligung_repository as modul
+    from services.rangliste_service import rangliste_service_setzen
+
+    repository = MagicMock()
+    repository.lesen.return_value = None
+    repository.teilnehmende.return_value = {}
+    monkeypatch.setattr(modul, "_repository", repository)
+    yield repository
+    rangliste_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
+def spielgefuehl_ohne_datenbank(monkeypatch):
+    """
+    Die Antworten auf die Frage "Spielgefuehl" (services/spielgefuehl_service.py) ohne
+    Datenbank: niemand hat geantwortet. Der Widerruf der Art.-9-Einwilligung fragt
+    sie auch bei ausgeschaltetem Schalter; Tests mit Antworten stellen
+    ``spielgefuehl_ohne_datenbank.lesen.return_value`` ein.
+    """
+    import repositories.spielgefuehl_repository as modul
+    from services.spielgefuehl_service import spielgefuehl_service_setzen
+
+    repository = MagicMock()
+    repository.lesen.return_value = None
+    repository.teilnehmende.return_value = {}
+    repository.wirksame_stufen.return_value = {}
+    repository.stimmen_eingewilligte.return_value = set()
+    repository.vergebene_namen.return_value = set()
+    monkeypatch.setattr(modul, "_repository", repository)
+    spielgefuehl_service_setzen(None)
+    yield repository
+    spielgefuehl_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
+def teams_ohne_datenbank():
+    """
+    Der TeamService haengt an Antworten mit Anzeigenamen (Teams am Namen). Ohne Ersatz
+    baute er bei wirksamem Schalter das echte Repository; der Ersatz kennt keine
+    Teams. Tests mit Teams setzen einen eigenen Dienst (team_service_setzen).
+    """
+    from services.team_service import TeamService, team_service_setzen
+
+    repository = MagicMock()
+    repository.oeffentliche_teams.return_value = {}
+    team_service_setzen(TeamService(repository))
+    yield repository
+    team_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
+def team_fortschritt_ohne_datenbank():
+    """
+    Der Wochenzaehler der Teams (services/team_fortschritt_service.py) haengt an den
+    Endpunkten fuer Beitraege, Stimmen und "Ja, gepostet". Ohne Ersatz baute er bei
+    wirksamem Schalter das echte Repository. Der Ersatz kennt keine Teams; Tests mit
+    Teams setzen einen eigenen Dienst (team_fortschritt_service_setzen).
+    """
+    from services.team_fortschritt_service import (
+        TeamFortschrittService,
+        team_fortschritt_service_setzen,
+    )
+
+    repository = MagicMock()
+    repository.eigene_teams.return_value = []
+    team_fortschritt_service_setzen(TeamFortschrittService(repository))
+    yield repository
+    team_fortschritt_service_setzen(None)
+
+
+@pytest.fixture(autouse=True)
 def anzeigenamen_ohne_datenbank(monkeypatch):
     """
     Der AnzeigenameService haengt an jeder angemeldeten Antwort. Ohne diesen Ersatz
@@ -167,6 +312,22 @@ def anzeigenamen_ohne_datenbank(monkeypatch):
     monkeypatch.setattr(
         modul, "_anzeigename_service", modul.AnzeigenameService(repository)
     )
+    yield repository
+
+
+@pytest.fixture(autouse=True)
+def merkliste_ohne_datenbank(monkeypatch):
+    """
+    Das endgueltige Entfernen eines Beitrags und der Widerruf raeumen die Merkliste mit
+    auf (#758). Ohne diesen Ersatz verbaende sich ``get_merkliste_repository()`` mit dem
+    PostgreSQL aus den Settings (siehe anzeigenamen_ohne_datenbank). Tests gegen
+    PostgreSQL bauen ihr eigenes ``MerklisteRepository(datenbank)``.
+    """
+    import repositories.merkliste_repository as modul
+
+    repository = MagicMock()
+    repository.liste.return_value = []
+    monkeypatch.setattr(modul, "_repository", repository)
     yield repository
 
 
@@ -190,6 +351,8 @@ def art9_einwilligung_ohne_datenbank(monkeypatch):
         widerrufen_am=None,
     )
     repository.ohne_lesen.return_value = None
+    # Wie lesen: alle eingewilligt (eine Abfrage fuer viele Kennungen)
+    repository.zaehlende.side_effect = lambda kennungen: set(kennungen)
     monkeypatch.setattr(modul, "_service", modul.Art9EinwilligungService(repository))
     yield repository
 
@@ -227,7 +390,25 @@ def punkte_einwilligung_ohne_datenbank(monkeypatch):
 
     repository = MagicMock()
     repository.eingewilligt.return_value = True
+    repository.eingewilligte.side_effect = lambda kennungen: set(kennungen)
     repository.lesen.return_value = None
+    monkeypatch.setattr(modul, "_repository", repository)
+    yield repository
+
+
+@pytest.fixture(autouse=True)
+def muster_hinweise_ohne_datenbank(monkeypatch):
+    """
+    Muster-Hinweise (services/muster_hinweise_service.py) ohne Datenbank: keine
+    Hinweise. Ein Widerruf ("Punkte und Meilensteine" Nein, Spielgefuehl aus) loescht
+    die Hinweise der Person; Tests pruefen das ueber
+    ``muster_hinweise_ohne_datenbank.vergessen``.
+    """
+    import repositories.muster_hinweis_repository as modul
+
+    repository = MagicMock()
+    repository.hinweise.return_value = []
+    repository.vergessen.return_value = 0
     monkeypatch.setattr(modul, "_repository", repository)
     yield repository
 
@@ -269,6 +450,8 @@ def suchen_ohne_treffer_ohne_datenbank(monkeypatch):
     repository.haeufigste.return_value = []
     # Keine Suchanfrage ueber der Schwelle (und damit keine fuer alle sichtbar).
     repository.ueber_der_schwelle.return_value = []
+    # Niemand hat schon ohne Treffer gesucht (#362, schon_gesucht).
+    repository.personen.return_value = 0
     monkeypatch.setattr(modul, "_repository", repository)
     yield repository
 

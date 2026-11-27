@@ -9,7 +9,11 @@ from datetime import date, datetime, time, timedelta, timezone
 
 import pytest
 
-from repositories.muster_hinweis_repository import MusterHinweisRepository
+from repositories.muster_hinweis_repository import (
+    NUTZUNG,
+    ZUSTIMMUNG,
+    MusterHinweisRepository,
+)
 from services.muster_hinweise_service import (
     MUSTER_FENSTER_TAGE,
     MUSTER_FRIST_TAGE,
@@ -134,3 +138,141 @@ class TestMusterHinweise:
         dienst.fristen_anwenden(MONTAG + timedelta(1))
 
         assert [h.letzter_tag for h in dienst.hinweise()] == [MONTAG]
+
+    def test_vergessen_loescht_alle_hinweise_mit_der_person(self, dienst):
+        """Widerruf: Hinweise mit der Person gehen, die anderer Paare bleiben."""
+        for a, b in [("kim-1", "bo-2"), ("ali-3", "kim-1"), ("ali-3", "bo-2")]:
+            dienst.nutzung_melden(a, b, _um(MONTAG))
+            dienst.nutzung_melden(b, a, _um(MONTAG))
+        assert len(dienst.hinweise()) == 3
+
+        dienst.vergessen("kim-1")
+
+        assert [(h.konto_a, h.konto_b) for h in dienst.hinweise()] == [
+            ("ali-3", "bo-2")
+        ]
+
+
+def _gegenseitig(dienst, melden):
+    melden("kim-1", "bo-2", _um(MONTAG))
+    melden("bo-2", "kim-1", _um(MONTAG))
+
+
+class TestZustimmungen:
+    """
+    Gegenseitige Zustimmungen (Schalter muster_stimmen): dieselbe Schwelle und Frist
+    wie bei der Nutzung, ein eigener Hinweis je Art.
+    """
+
+    def test_gegenseitig_im_fenster_wird_eigener_hinweis(self, dienst):
+        spaeter = MONTAG + timedelta(MUSTER_FENSTER_TAGE - 1)
+        dienst.zustimmung_melden("kim-1", "bo-2", _um(MONTAG))
+        assert dienst.hinweise() == []
+
+        dienst.zustimmung_melden("bo-2", "kim-1", _um(spaeter))
+
+        [hinweis] = dienst.hinweise()
+        assert (hinweis.konto_a, hinweis.konto_b, hinweis.art) == (
+            "bo-2",
+            "kim-1",
+            ZUSTIMMUNG,
+        )
+        assert (hinweis.tage, hinweis.erster_tag, hinweis.letzter_tag) == (
+            1,
+            spaeter,
+            spaeter,
+        )
+
+    def test_nach_dem_fenster_kein_hinweis(self, dienst):
+        dienst.zustimmung_melden("kim-1", "bo-2", _um(MONTAG))
+        dienst.zustimmung_melden(
+            "bo-2", "kim-1", _um(MONTAG + timedelta(MUSTER_FENSTER_TAGE))
+        )
+
+        assert dienst.hinweise() == []
+
+    def test_einseitig_kein_hinweis(self, dienst):
+        for tag in range(3):
+            dienst.zustimmung_melden("kim-1", "bo-2", _um(MONTAG + timedelta(tag)))
+
+        assert dienst.hinweise() == []
+
+    def test_nutzung_und_zustimmung_mischen_sich_nicht(self, dienst):
+        """A nutzt B, B stimmt A zu: keine der beiden Arten ist gegenseitig."""
+        dienst.nutzung_melden("kim-1", "bo-2", _um(MONTAG))
+        dienst.zustimmung_melden("bo-2", "kim-1", _um(MONTAG))
+
+        assert dienst.hinweise() == []
+
+    def test_beide_arten_stehen_nebeneinander(self, dienst):
+        _gegenseitig(dienst, dienst.nutzung_melden)
+        _gegenseitig(dienst, dienst.zustimmung_melden)
+
+        assert sorted(h.art for h in dienst.hinweise()) == [NUTZUNG, ZUSTIMMUNG]
+
+    def test_frist_gilt_auch_fuer_zustimmungen(self, dienst):
+        _gegenseitig(dienst, dienst.zustimmung_melden)
+
+        dienst.fristen_anwenden(MONTAG + timedelta(MUSTER_FRIST_TAGE + 1))
+
+        assert dienst.hinweise() == []
+
+    def test_widerruf_loescht_beide_arten(self, dienst):
+        _gegenseitig(dienst, dienst.nutzung_melden)
+        _gegenseitig(dienst, dienst.zustimmung_melden)
+
+        dienst.vergessen("kim-1")
+
+        assert dienst.hinweise() == []
+
+    def test_widerruf_nur_des_zwecks_zustimmungen(self, dienst):
+        _gegenseitig(dienst, dienst.nutzung_melden)
+        _gegenseitig(dienst, dienst.zustimmung_melden)
+
+        dienst.vergessen("kim-1", art=ZUSTIMMUNG)
+
+        assert [h.art for h in dienst.hinweise()] == [NUTZUNG]
+
+
+class TestAbgleichMitDerEinwilligung:
+    """Bedingung Jura zu #863: Der Lauf loescht Hinweise ohne Einwilligung beider."""
+
+    def test_lauf_loescht_je_art_nach_eigener_bedingung(self, datenbank):  # noqa: F811
+        repository = MusterHinweisRepository(datenbank)
+        melden = MusterHinweiseService(repository)
+        for a, b in [("kim-1", "bo-2"), ("ali-3", "bo-2")]:
+            for art in (melden.nutzung_melden, melden.zustimmung_melden):
+                art(a, b, _um(MONTAG))
+                art(b, a, _um(MONTAG))
+        assert len(repository.paare()) == 4
+        # kim-1 hat waehrend einer Meldung widerrufen: weder Punkte noch -27
+        dienst = MusterHinweiseService(
+            repository,
+            eingewilligte=lambda ks: set(ks) - {"kim-1"},
+            stimmen_eingewilligte=lambda ks: set(ks) - {"kim-1"},
+        )
+
+        dienst.fristen_anwenden(MONTAG)
+
+        assert sorted(repository.paare()) == [
+            ("ali-3", "bo-2", NUTZUNG),
+            ("ali-3", "bo-2", ZUSTIMMUNG),
+        ]
+
+    def test_loeschen_paare_in_stuecken(self, datenbank, monkeypatch):  # noqa: F811
+        import repositories.muster_hinweis_repository as modul
+
+        monkeypatch.setattr(modul, "LOESCH_STUECK", 2)
+        repository = MusterHinweisRepository(datenbank)
+        melden = MusterHinweiseService(repository)
+        for i in range(5):
+            _gegenseitig_paar(melden, f"a-{i}", f"b-{i}")
+
+        assert repository.loeschen_paare(repository.paare()[:4]) == 4
+        assert len(repository.paare()) == 1
+        assert repository.loeschen_paare([]) == 0
+
+
+def _gegenseitig_paar(dienst, a, b):
+    dienst.nutzung_melden(a, b, _um(MONTAG))
+    dienst.nutzung_melden(b, a, _um(MONTAG))

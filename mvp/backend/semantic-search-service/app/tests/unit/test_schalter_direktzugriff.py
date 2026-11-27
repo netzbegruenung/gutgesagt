@@ -25,7 +25,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import api.v1.funktionen as funktionen_module
+import api.v1.merkliste as merkliste_module
 import api.v1.metrics as metrics_module
+import api.v1.rangliste as rangliste_module
 import api.v1.usage as usage_module
 from core.config import Settings
 from dependencies import (
@@ -52,8 +54,10 @@ ALLE_OBERGRENZEN_AN = dict(
     punkte_aktiv=True,
     abzeichen_sichtbar_aktiv=True,
     gepostet_aktiv=True,
+    merkliste_aktiv=True,
     abkuerzungen_aktiv=True,
     sharepic_aktiv=True,
+    rangliste_aktiv=True,
 )
 
 
@@ -92,11 +96,13 @@ def abzeichen():
 
 
 @pytest.fixture
-def client(muster, abzeichen):
+def client(muster, abzeichen, art9_einwilligung_ohne_datenbank):
     app = FastAPI()
     app.include_router(usage_module.router, prefix="/api/v1/usage")
     app.include_router(metrics_module.router, prefix="/api/v1/metrics")
+    app.include_router(merkliste_module.router, prefix="/api/v1/merkliste")
     app.include_router(funktionen_module.router, prefix="/api/v1/funktionen")
+    app.include_router(rangliste_module.router, prefix="/api/v1/rangliste")
     app.dependency_overrides[get_settings] = lambda: Settings(**ALLE_OBERGRENZEN_AN)
     app.dependency_overrides[get_punkte_service] = lambda: Mock(
         punkte=AsyncMock(side_effect=RuntimeError("nur bis hierher"))
@@ -125,6 +131,10 @@ def client(muster, abzeichen):
         usage_module, "get_muster_hinweise_service", return_value=muster
     ), patch.object(
         usage_module, "get_gepostet_service", return_value=gepostet
+    ), patch.object(
+        merkliste_module,
+        "get_merkliste_repository",
+        return_value=Mock(**{"liste.return_value": []}),
     ):
         yield TestClient(app, raise_server_exceptions=False)
 
@@ -137,9 +147,12 @@ def _status_aus(feld):
     return pruefen
 
 
-def _404(pfad, kopf=PERSON):
+def _feld_aus(pfad, feld="aktiv"):
+    """Automatisch abgefragte Endpunkte: 200 mit ``feld`` false statt 404 (Gateway)."""
+
     def pruefen(client, muster, abzeichen):
-        return client.get(pfad, headers=kopf).status_code == 404
+        antwort = client.get(pfad, headers=PERSON)
+        return antwort.status_code == 200 and antwort.json()[feld] is False
 
     return pruefen
 
@@ -178,10 +191,10 @@ def _takt_rechnet_nicht(client, muster, abzeichen):
 
 STELLEN = {
     "status_punkte": (_status_aus("aktiv"), ("punkte",)),
-    "eigene_punkte": (_404("/api/v1/usage/users/me/punkte"), ("punkte",)),
-    "meilensteine": (_404("/api/v1/usage/users/me/meilensteine"), ("punkte",)),
+    "eigene_punkte": (_feld_aus("/api/v1/usage/users/me/punkte"), ("punkte",)),
+    "meilensteine": (_feld_aus("/api/v1/usage/users/me/meilensteine"), ("punkte",)),
     "punkte_einwilligung": (
-        _404("/api/v1/usage/users/me/punkte-einwilligung"),
+        _feld_aus("/api/v1/usage/users/me/punkte-einwilligung"),
         ("punkte",),
     ),
     "muster_hinweise_melden": (_kein_muster_hinweis, ("punkte",)),
@@ -195,15 +208,21 @@ STELLEN = {
         ("abzeichen_sichtbar", "punkte"),
     ),
     "abzeichen_sichtbarkeit": (
-        _404("/api/v1/usage/users/me/abzeichen-sichtbarkeit"),
+        _feld_aus("/api/v1/usage/users/me/abzeichen-sichtbarkeit"),
         ("abzeichen_sichtbar", "punkte"),
     ),
     "abzeichen_am_namen": (_keine_abzeichen, ("abzeichen_sichtbar", "punkte")),
     "abzeichen_takt": (_takt_rechnet_nicht, ("abzeichen_sichtbar", "punkte")),
-    "gepostet_rueckfrage": (_404("/api/v1/usage/users/me/gepostet"), ("gepostet",)),
+    "gepostet_rueckfrage": (
+        _feld_aus("/api/v1/usage/users/me/gepostet", "angeboten"),
+        ("gepostet",),
+    ),
     "gepostet_admin": (_admin_aktiv_aus("/api/v1/metrics/gepostet"), ("gepostet",)),
+    "merkliste": (_feld_aus("/api/v1/merkliste"), ("merkliste",)),
     "abkuerzungen": (_funktion_aus("abkuerzungen"), ("abkuerzungen",)),
     "sharepic": (_funktion_aus("sharepic"), ("sharepic",)),
+    # Rangliste je Saison (#793): wirkt nur zusammen mit den Punkten.
+    "rangliste": (_feld_aus("/api/v1/rangliste"), ("rangliste", "punkte")),
 }
 
 FAELLE = [
@@ -227,6 +246,62 @@ class TestObergrenzeAnAdminAus:
         assert not STELLEN[stelle][0](client, muster, abzeichen)
 
 
+class TestZustimmungFuerMusterAdminAus:
+    """
+    Muster-Hinweise aus Zustimmungen (muster_stimmen): Obergrenzen an, je ein
+    Admin-Wert der Kette punkte -> spielgefuehl_buehne -> muster_stimmen aus, keine
+    Meldung. Eigener Client, weil das Spielgefuehl-Modell die anderen Stellen oben
+    umschaltet.
+    """
+
+    @pytest.fixture
+    def abstimmen(self, admin_werte, spielgefuehl_ohne_datenbank):
+        import api.v1.voting as voting_module
+        from domain.models.vote import VoteResponse
+        from dependencies import get_voting_service
+
+        dienst = Mock()
+        dienst.set_like.return_value = VoteResponse(
+            content_id=BEITRAG_ID, vote_type=None, message="ok"
+        )
+
+        async def laden(content_id):
+            return SimpleNamespace(id=content_id, original_author="kim-1")
+
+        app = FastAPI()
+        app.include_router(voting_module.router, prefix="/api/v1/voting")
+        app.dependency_overrides[get_settings] = lambda: Settings(
+            punkte_aktiv=True, spielgefuehl_buehne_aktiv=True, muster_stimmen_aktiv=True
+        )
+        app.dependency_overrides[get_beitrag_laden] = lambda: laden
+        app.dependency_overrides[get_voting_service] = lambda: dienst
+        spielgefuehl_ohne_datenbank.stimmen_eingewilligte.side_effect = set
+        muster = Mock()
+        with patch.object(
+            voting_module, "get_muster_hinweise_service", return_value=muster
+        ):
+            yield TestClient(app), muster
+
+    def _gemeldet(self, abstimmen) -> bool:
+        client, muster = abstimmen
+        antwort = client.put(
+            f"/api/v1/voting/content/{BEITRAG_ID}/like", headers=PERSON
+        )
+        assert antwort.status_code == 200
+        return muster.zustimmung_melden.called
+
+    @pytest.mark.parametrize(
+        "schalter", ["muster_stimmen", "spielgefuehl_buehne", "punkte"]
+    )
+    def test_aus(self, schalter, admin_werte, abstimmen):
+        admin_werte[schalter] = False
+
+        assert not self._gemeldet(abstimmen)
+
+    def test_gegenprobe_alle_admin_werte_an(self, abstimmen):
+        assert self._gemeldet(abstimmen)
+
+
 # Felder der Obergrenze in Settings (und die Property, die zwei davon verknuepft).
 FELDER = {schalter.feld for schalter in SCHALTER.values()}
 OBERGRENZE = FELDER | {"abzeichen_sichtbar"}
@@ -236,7 +311,13 @@ OBERGRENZE = FELDER | {"abzeichen_sichtbar"}
 ERLAUBT = {
     Path("core/config.py"): None,
     Path("services/schalter_service.py"): None,
-    Path("main.py"): {"settings.abzeichen_sichtbar"},
+    Path("main.py"): {
+        "settings.abzeichen_sichtbar",
+        # Im Spielgefuehl-Modell rechnet der Takt die Abzeichen fuer die Rangliste.
+        "settings.spielgefuehl_buehne_aktiv",
+        "settings.punkte_aktiv",
+        "settings.rangliste_aktiv",
+    },
 }
 
 

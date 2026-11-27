@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, AfterViewInit, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, AfterViewInit, Injector, afterNextRender, inject } from '@angular/core';
 import { SearchComponent } from '../search/search.component';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,6 +14,14 @@ import { AuthService } from '../auth/auth.service';
 import { map } from 'rxjs/operators';
 import { RundgangBandComponent } from '../rundgang/rundgang-band.component';
 import { SeitLetztemBesuchComponent } from '../seit-letztem-besuch/seit-letztem-besuch.component';
+import { NaechsterSchrittComponent } from '../naechster-schritt/naechster-schritt.component';
+import { SaalSpruchComponent } from '../saal-spruch/saal-spruch.component';
+import { GartenHinweisComponent } from '../garten/garten-hinweis.component';
+import { GestoertEinstiegComponent } from '../shared/feedback/gestoert-einstieg.component';
+import { SaisonZielComponent } from '../saison-ziel/saison-ziel.component';
+import { HeroUnterzeileComponent } from './hero-unterzeile.component';
+import { KonterProbeEinstiegComponent } from '../konter-probe/konter-probe-einstieg.component';
+import { SUCHFELD_FOKUS_FRAGMENT, SUCHFELD_ID } from '../naechster-schritt/naechster-schritt';
 
 /**
  * Am Desktop mit Maus springt der Fokus beim Laden ins Suchfeld; auf Touch-Geraeten
@@ -36,6 +44,13 @@ export const AUTOFOKUS_MEDIEN = '(min-width: 960px) and (hover: hover) and (poin
     AboutTeaserComponent,
     RundgangBandComponent,
     SeitLetztemBesuchComponent,
+    NaechsterSchrittComponent,
+    SaalSpruchComponent,
+    GartenHinweisComponent,
+    GestoertEinstiegComponent,
+    SaisonZielComponent,
+    HeroUnterzeileComponent,
+    KonterProbeEinstiegComponent,
   ],
   templateUrl: './search-view.component.html',
   styleUrls: ['./search-view.component.scss']
@@ -45,6 +60,7 @@ export class SearchViewComponent implements AfterViewInit {
   readonly autofokus = typeof window !== 'undefined' && !!window.matchMedia?.(AUTOFOKUS_MEDIEN).matches;
   /** Erst wenn feststeht, dass niemand angemeldet ist: kein Aufblitzen fuer Angemeldete. */
   readonly anonym$ = inject(AuthService).userInfo$.pipe(map((info) => info?.isAuthenticated === false));
+  private readonly injector = inject(Injector);
 
   constructor(
     private logger: LoggingService,
@@ -88,6 +104,27 @@ export class SearchViewComponent implements AfterViewInit {
     this.route.fragment.subscribe(fragment => {
       const fragTimestamp = new Date().toISOString();
       this.logger.debug(`[${fragTimestamp}] Fragment received:`, fragment);
+
+      // „Spruch suchen“ nach einer Einladung: Fokus ins Suchfeld, auch auf Touch-Geräten,
+      // denn die Person hat genau das angetippt. Ob die Bildschirmtastatur gleich aufgeht,
+      // entscheidet der Browser: iOS Safari öffnet sie nach einer Navigation erst beim Antippen.
+      if (fragment === SUCHFELD_FOKUS_FRAGMENT) {
+        afterNextRender(
+          () => {
+            // Ohne preventScroll: Der Browser scrollt nur, wenn das Feld nicht zu sehen ist.
+            document.getElementById(SUCHFELD_ID)?.focus();
+            // Das Fragment wieder aus der Adresse: Zurück, Neuladen oder ein geteilter Link
+            // setzen den Fokus sonst erneut, ohne dass jemand das Feld angetippt hat.
+            void this.router.navigate([], {
+              queryParamsHandling: 'preserve',
+              fragment: undefined,
+              replaceUrl: true,
+            });
+          },
+          { injector: this.injector },
+        );
+        return;
+      }
 
       if (fragment === 'recent-content') {
         this.logger.info('Will scroll to recent-content after minimal delay for DOM rendering');

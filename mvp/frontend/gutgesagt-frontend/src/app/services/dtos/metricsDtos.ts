@@ -6,11 +6,20 @@
 
 // GetMetrics
 
+/** Zuwachs zur Bestandszahl (Schalter bestandszahl_zuwachs); fehlt bei älterem Server. */
+export interface ZuwachsDto {
+    /** Neue Kommentare der letzten 7 Tage, genau, nur ab 3 */
+    neu_7_tage: number | null;
+    /** Tag (JJJJ-MM-TT, deutsche Zeit) des neuesten Kommentars, nur unter 3 neuen */
+    zuletzt_ergaenzt: string | null;
+}
+
 export interface GetMetricsResponse {
     content_count: number;
     statement_count: number;
     commentary_count: number;
     reference_count: number;
+    zuwachs?: ZuwachsDto | null;
 }
 
 
@@ -35,7 +44,9 @@ export interface MusterHinweis {
     name_a: string | null;
     konto_b: string;
     name_b: string | null;
-    /** Tage mit gegenseitiger Nutzung. */
+    /** Woran das Muster auffiel: gegenseitig genutzt oder einander zugestimmt (muster_stimmen). */
+    art?: 'nutzung' | 'zustimmung';
+    /** Tage mit gegenseitiger Nutzung bzw. Zustimmung. */
     tage: number;
     erster_tag: string;
     letzter_tag: string;

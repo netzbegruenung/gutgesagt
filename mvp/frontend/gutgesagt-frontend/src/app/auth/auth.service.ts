@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 import { merkerEntfernen } from '../meine-beitraege/meilenstein-merker';
 import { kommentarEntwurfLoeschen } from '../beitragsformular/kommentar-entwurf';
+import { weggeklicktEntfernen } from '../naechster-schritt/naechster-schritt';
 import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { ANLASS_PARAM, Anmeldeanlass } from './anmeldeanlass';
 import { meldetAnmeldung } from './sitzung';
@@ -80,6 +81,8 @@ export class AuthService {
     merkerEntfernen();
     // Der Kommentar-Entwurf im Tab gehört zu dieser Anmeldung (E1).
     kommentarEntwurfLoeschen();
+    // Was auf der Karte „Dein nächster Schritt“ weggeklickt ist, gehört zu dieser Anmeldung (#789).
+    weggeklicktEntfernen();
     // Use the API logout endpoint which properly handles both Keycloak and managed users
     this.http.post(`${environment.baseUrl}/api/auth/logout`, {}, {
       withCredentials: true

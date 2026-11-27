@@ -65,6 +65,8 @@ def test_liste_ohne_eintrag_aus(werte):
     assert stand["punkte"]["wirksam"] is False
     assert stand["punkte"]["umgebungsvariable"] == "SEMANTIC_SEARCH_PUNKTE_AKTIV"
     assert stand["punkte"]["erklaerung"]
+    assert stand["punkte"]["gruppe"] == "Punkte & Anerkennung"
+    assert stand["punkte"]["wartet_auf_recht"] is True
     assert stand["gepostet"]["obergrenze"] is False
 
 

@@ -37,9 +37,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Protocol, Set
 
 from core.config import Settings
 from domain.meilensteine import Meilenstein, Meilensteindaten, meilensteine_berechnen
-from repositories.punkte_einwilligung_repository import (
-    get_punkte_einwilligung_repository,
-)
+from services import spielgefuehl_service
 from domain.models.content_type import ContentType
 from services.punkte_service import (
     BEITRAG_WARTEZEIT,
@@ -86,7 +84,7 @@ class MeilensteineService:
         self._jetzt = jetzt
         # Spaet geholt wie in PunkteService, damit Tests das Repository ersetzen koennen.
         self._eingewilligt = eingewilligt or (
-            lambda user_id: get_punkte_einwilligung_repository().eingewilligt(user_id)
+            lambda user_id: spielgefuehl_service.punkte_eingewilligt(user_id)
         )
 
     async def meilensteine(

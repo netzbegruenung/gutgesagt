@@ -5,6 +5,7 @@ import { AdminGuard } from './auth/admin.guard';
 import { PublicGuard } from './auth/public.guard';
 import { ShareTargetGuard } from './share-target/share-target.guard';
 import { abkuerzungGuard } from './abkuerzung/abkuerzung.guard';
+import { konterProbeGuard } from './konter-probe/konter-probe.guard';
 import {
     gespeichertEltern,
     vonHierFehltEineAntwort,
@@ -132,9 +133,24 @@ export const routes: Routes = [
         data: { parent: '/search' }
     },
     {
+        // Konter-Probe (#786): ohne Konto spielbar; ist der Schalter aus, fuehrt die
+        // Adresse auf die Startseite (konterProbeGuard).
+        path: 'konter-probe',
+        loadComponent: () => import('./konter-probe/konter-probe.component').then(m => m.KonterProbeComponent),
+        canActivate: [PublicGuard, konterProbeGuard],
+        data: { parent: '/search' }
+    },
+    {
         path: 'hier-fehlt-eine-antwort',
         loadComponent: () => import('./hier-fehlt-eine-antwort/hier-fehlt-eine-antwort.component').then(m => m.HierFehltEineAntwortComponent),
         canActivate: [AuthGuard],
+        data: { parent: '/search' }
+    },
+    {
+        // Gartenansicht (#783): fuer alle, Besucher sehen nur Zahlen (Schalter gartenansicht)
+        path: 'garten',
+        loadComponent: () => import('./garten/gartenansicht.component').then(m => m.GartenansichtComponent),
+        canActivate: [PublicGuard],
         data: { parent: '/search' }
     },
     // Diese Routen lesen ?einwurf= (Formular, Ergebnisseite, beim Bild-Formular nur der
@@ -238,6 +254,13 @@ export const routes: Routes = [
         // infrastructure/keycloak_konten.py).
         path: 'einladung/anmelden',
         loadComponent: () => import('./einladung/einladung-anmelden.component').then(m => m.EinladungAnmeldenComponent),
+        data: { parent: '/search' }
+    },
+    {
+        // Begruessung nach dem ersten Anmelden ueber eine Einladung ohne Team (UX-Review 25.11.)
+        path: 'willkommen',
+        loadComponent: () => import('./einladung/willkommen.component').then(m => m.WillkommenComponent),
+        canActivate: [AuthGuard],
         data: { parent: '/search' }
     },
     {

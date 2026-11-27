@@ -1,10 +1,11 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, Signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { ROUTES } from '../shared/constants/app.constants';
 import { Subscription, Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SearchService } from '../services/search.service';
+import { FunktionenService } from '../services/funktionen.service';
 import { PassendesThema, SearchResponse } from '../services/dtos/searchDtos';
 import { KartenlisteComponent } from '../beitragskarte/kartenliste.component';
 import { SearchComponent } from '../search/search.component';
@@ -25,6 +26,8 @@ import { NichtDabeiComponent } from '../nicht-dabei/nicht-dabei.component';
 import { OftGesuchtComponent } from '../oft-gesucht/oft-gesucht.component';
 import { AllesZumThemaComponent } from './alles-zum-thema.component';
 import { KartenDaten, KartenKennzahlen, ausSuchergebnis } from '../beitragskarte/karten-daten';
+import type { AndereTonlage } from '../beitragskarte/karten-aktionen/kopiert-erfolg';
+import { andereTonlagen } from './andere-tonlage';
 import { StatementSearchResult } from '../services/dtos/statementDtos';
 import { TeilenService, sucheLink, suchtextKuerzen } from '../shared/teilen.service';
 import {
@@ -44,6 +47,8 @@ import {
   aussageSchluessel,
   gruppieren,
 } from './ergebnis-gruppen';
+import { LadeWiederholung } from '../shared/lade-wiederholung';
+import { NOCHMAL_SUCHEN, suchFehlerTitel } from '../services/suchfehler';
 import { TESTEINGABE_AUFRUF, TESTEINGABE_BEISPIEL, testeingabeArt, testeingabeText } from '../shared/testeingabe';
 
 /** Wie viele aehnliche Aussagen die Zeile "Erkannt als" unter "Nicht gemeint?" anbietet. */
@@ -182,6 +187,11 @@ export function nachThemaGefiltert(antwort: SearchResponse, thema: string | null
   };
 }
 
+/** Schalter für „Danach wurde schon N-mal gesucht“ (#362), wie im Backend. */
+export const NULL_TREFFER_ANZAHL_SCHALTER = 'null_treffer_anzahl';
+/** Erst ab dieser Zahl (Jura vorläufig 26.11.; Backend: ANZEIGE_AB). */
+export const SCHON_GESUCHT_AB = 3;
+
 @Component({
   selector: 'app-result-view',
   standalone: true,
@@ -214,6 +224,15 @@ export class ResultViewComponent implements OnInit, OnDestroy {
   searchQuery: string = '';
   private queryParamsSubscription?: Subscription;
   private destroy$ = new Subject<void>();
+  /**
+   * Neuer Versuch nach einer gescheiterten Suche (0, 408, 429, 5xx), mit wachsendem und
+   * gestreutem Abstand: Im vollen Saal sollen nicht alle Geraete gleichzeitig wiederkommen.
+   */
+  private readonly wiederholung = new LadeWiederholung(this.destroy$, { streuung: 0.3 });
+  /** Die laufende Suchanfrage; eine neue Suche beendet die vorige. */
+  private suchAbo: Subscription | null = null;
+  readonly sucheFehlerTitel = suchFehlerTitel;
+  readonly nochmalSuchen = NOCHMAL_SUCHEN;
 
   isMobile: boolean = false;
 
@@ -244,10 +263,13 @@ export class ResultViewComponent implements OnInit, OnDestroy {
    * Aufklapper und Nutzung nicht zurueck (ngOnChanges bei neuen Daten).
    */
   private karten = new WeakMap<BaseSearchResult, KartenDaten>();
+  /** Je Kommentar eine Antwort zur selben Aussage in anderem Stil (#785), einmal je Suchantwort. */
+  private tonlagen = new Map<BaseSearchResult, AndereTonlage>();
   private readonly karteZu = (treffer: BaseSearchResult): KartenDaten => {
     let karte = this.karten.get(treffer);
     if (!karte) {
-      karte = ausSuchergebnis(treffer);
+      const andere = this.tonlagen.get(treffer);
+      karte = andere ? { ...ausSuchergebnis(treffer), andereTonlage: andere } : ausSuchergebnis(treffer);
       this.karten.set(treffer, karte);
     }
     return karte;
@@ -296,6 +318,13 @@ export class ResultViewComponent implements OnInit, OnDestroy {
    */
   ohneSuche = false;
   readonly testeingabeAufruf = TESTEINGABE_AUFRUF;
+  private readonly funktionen = inject(FunktionenService);
+  /**
+   * Schalter null_treffer_anzahl (Gruppe Spielgefühl), erst gefragt, wenn das Backend eine
+   * Zahl schickt: So fragt nicht jede Ergebnisseite GET /api/v1/funktionen. Lädt ohne
+   * Neuladen nach (FunktionenService.an).
+   */
+  private nullTrefferAnzahlAn: Signal<boolean> | null = null;
   readonly testeingabeBeispiel = TESTEINGABE_BEISPIEL;
 
   constructor(
@@ -336,6 +365,7 @@ export class ResultViewComponent implements OnInit, OnDestroy {
       .subscribe(response => {
         this.antwort = response;
         this.karten = new WeakMap();
+        this.tonlagen = andereTonlagen(response);
         // Eine neue Suche beginnt zugeklappt; den Themenfilter setzt "Alles zum Thema" weiter unten.
         this.aufgeklappt.clear();
         this.alternativenOffen = false;
@@ -443,6 +473,19 @@ export class ResultViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Ohne Treffer: wie oft schon danach gesucht wurde (#362), nur mit dem Schalter und erst
+   * ab SCHON_GESUCHT_AB; das Backend prüft beides ebenfalls (Jura vorläufig 26.11.).
+   */
+  get schonGesuchtAnzahl(): number | null {
+    const anzahl = this.antwort?.schon_gesucht_anzahl ?? null;
+    if (anzahl === null || anzahl < SCHON_GESUCHT_AB) {
+      return null;
+    }
+    this.nullTrefferAnzahlAn ??= this.funktionen.an(NULL_TREFFER_ANZAHL_SCHALTER);
+    return this.nullTrefferAnzahlAn() ? anzahl : null;
+  }
+
   /** Irgendein Treffer, gleich welchen Typs. */
   get hatTreffer(): boolean {
     return TREFFER_TYPEN.some((typ) => this.anzahlAlle[typ] > 0);
@@ -506,6 +549,7 @@ export class ResultViewComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
     this.queryParamsSubscription?.unsubscribe();
+    this.suchAbo?.unsubscribe();
   }
 
   /**
@@ -515,6 +559,10 @@ export class ResultViewComponent implements OnInit, OnDestroy {
    * Anonyme endete das mit 401 und einem Sprung auf /login.
    */
   private performSearch(): void {
+    // Ein geplanter Neuversuch und eine laufende Anfrage gelten der vorigen Suche; die neue
+    // beginnt wieder beim kurzen Abstand (erfolg() setzt den Zaehler zurueck)
+    this.wiederholung.erfolg();
+    this.suchAbo?.unsubscribe();
     // Ergebnisse und Aussage der vorigen Suche gelten nicht mehr - und zwar ab
     // sofort, nicht erst mit loading=true. Wer in diesem Fenster auf "hinzufuegen"
     // tippt, darf nicht an die alte Aussage antworten.
@@ -546,9 +594,17 @@ export class ResultViewComponent implements OnInit, OnDestroy {
     if (testeingabeArt(this.searchQuery)) {
       return;
     }
-    this.searchService.search(this.searchQuery, 10).subscribe();
+    this.wiederholung.abbrechen();
+    this.suchAbo?.unsubscribe();
+    // Mit Fehler-Rueckruf: Den Fehler zeigt der Kasten (StateManagementService.error$), sonst
+    // meldete ihn der globale Fehlerhandler zusaetzlich als Snackbar.
+    this.suchAbo = this.searchService.search(this.searchQuery, 10).subscribe({
+      next: () => this.wiederholung.erfolg(),
+      error: (fehler: unknown) => this.wiederholung.fehlgeschlagen(fehler, () => this.fetchSearchResults()),
+    });
   }
 
+  /** „Noch einmal suchen“: sofort, ein geplanter Versuch entfaellt. */
   retrySearch = (): void => {
     this.fetchSearchResults();
   }

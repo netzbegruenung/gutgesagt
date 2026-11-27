@@ -2,7 +2,8 @@ import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testin
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ApplicationRef } from '@angular/core';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { SearchViewComponent } from './search-view.component';
 import { AuthService } from '../auth/auth.service';
@@ -73,7 +74,10 @@ describe('SearchViewComponent', () => {
     const willkommen = band.nextElementSibling as HTMLElement;
 
     expect(willkommen.tagName.toLowerCase()).toBe('app-rundgang-band');
-    expect(willkommen.nextElementSibling!.tagName.toLowerCase()).toBe('app-seit-letztem-besuch');
+    // Dazwischen der Saal-Spruch (Schalter saal_spruch), nur an Tagen mit Spruch
+    const spruch = willkommen.nextElementSibling as HTMLElement;
+    expect(spruch.tagName.toLowerCase()).toBe('app-saal-spruch');
+    expect(spruch.nextElementSibling!.tagName.toLowerCase()).toBe('app-seit-letztem-besuch');
   });
 
   // Persona-Runde 18.11.: Der Weg ohne Konto (Community-Karten) kommt vor den Kacheln
@@ -141,11 +145,14 @@ describe('SearchViewComponent', () => {
     expect(suche.autofokus).toBe(window.matchMedia('(min-width: 960px) and (hover: hover) and (pointer: fine)').matches);
   });
 
-  it('zeigt keine Statistik-Kacheln und fragt keine Metriken ab', () => {
+  it('zeigt keine Statistik-Kacheln; Metriken nur für die Bestandszahl der Unterzeile', () => {
     const http = TestBed.inject(HttpTestingController);
 
     expect(fixture.nativeElement.querySelector('.metric-card')).toBeNull();
-    expect(http.match((anfrage) => anfrage.url.includes('metrics')).length).toBe(0);
+    const anfragen = http.match((anfrage) => anfrage.url.includes('metrics'));
+    expect(anfragen.map((anfrage) => anfrage.request.url)).toEqual([jasmine.stringMatching(/\/api\/v1\/metrics\/getMetrics$/)]);
+    // Die Unterzeile traegt die Schrift der Startseite (Klasse hero-subtitle)
+    expect(fixture.nativeElement.querySelector('.start-hero app-hero-unterzeile.hero-subtitle')).toBeTruthy();
   });
 });
 
@@ -173,4 +180,36 @@ describe('SearchViewComponent mit Anker #recent-content', () => {
     expect(ueberschrift.getAttribute('tabindex')).toBe('-1');
     expect(document.activeElement).toBe(ueberschrift);
   }));
+});
+
+describe('SearchViewComponent mit Anker #suchen', () => {
+  it('setzt den Fokus ins Suchfeld und nimmt das Fragment aus der Adresse, nach „Spruch suchen“ (UX-Review 25.11., Vorschlag 5)', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideAnimations(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { params: of({}), queryParams: of({}), fragment: of('suchen'), snapshot: { params: {}, queryParams: {} } },
+        },
+      ],
+      imports: [SearchViewComponent],
+    });
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    const fixture = TestBed.createComponent(SearchViewComponent);
+    // Der erste Lauf zeichnet die Seite, afterNextRender setzt nach dem nächsten Rendern den Fokus.
+    fixture.detectChanges();
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(document.activeElement?.id).toBe('suche');
+    // Danach ist das Fragment aus der Adresse, damit Zurück oder Neuladen nicht erneut fokussieren
+    expect(navigate).toHaveBeenCalledWith([], {
+      queryParamsHandling: 'preserve',
+      fragment: undefined,
+      replaceUrl: true,
+    });
+    fixture.destroy();
+  });
 });

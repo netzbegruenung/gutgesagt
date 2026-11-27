@@ -14,6 +14,34 @@
     text-align: center;
 }
 
+/* Vertrauenszeile ueber den Anmeldewegen (Jura vorlaeufig 26.11.): leise, aber gut lesbar */
+.vertrauenszeile {
+    max-width: 600px;
+    margin: 16px auto 0;
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+/* Zielflaeche mindestens 24 px hoch (WCAG 2.2, 2.5.8) */
+.vertrauenszeile-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    min-width: 24px;
+    padding: 0 2px;
+    color: var(--akzent-schrift);
+    font-weight: 600;
+    /* in beiden Modi unterstrichen, nicht nur durch Farbe erkennbar (WCAG 1.4.1) */
+    text-decoration: underline;
+}
+
+.vertrauenszeile-link:focus-visible {
+    outline: 2px solid var(--akzent-tanne);
+    outline-offset: 2px;
+}
+
 /* Registration Information Styles */
 .registration-info-container {
     max-width: 1000px;

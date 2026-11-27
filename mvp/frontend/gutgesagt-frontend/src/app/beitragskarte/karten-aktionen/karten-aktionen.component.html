@@ -90,7 +90,8 @@
             <mat-icon>call_split</mat-icon>
             <span>Als Vorlage nehmen</span>
         </button>
-        <button mat-menu-item type="button" (click)="openReportDialog()">
+        <!-- Bleibt auch mit Schalter meldeweg_sichtbar („Melden“ in der Meta-Zeile der Karte): wer den Weg über das Menü kennt, findet ihn weiter -->
+        <button mat-menu-item type="button" class="melden-eintrag" (click)="openReportDialog()">
             <mat-icon>flag</mat-icon>
             <span>Inhalt melden</span>
         </button>
@@ -102,6 +103,8 @@
         </button>
     </mat-menu>
 </div>
+<!-- Danke an die Autorin nach dem Kopieren (#791) -->
+<app-danke-knopf *ngIf="dankeSichtbar" [inhaltId]="inhaltId"></app-danke-knopf>
 
 <!--
     Eigenes Album (Meine Beitraege, Variante A 20.11.): links Aendern, in der Mitte Teilen als
@@ -163,3 +166,14 @@
         </button>
     </mat-menu>
 </div>
+
+<!--
+    Erfolgstext nach dem Kopieren (#785, Schalter kopiert_erfolg) mit der Frage „Gepostet?“ (#643, #799):
+    auch im Album, nie in der Vorschau. Steht immer bereit (leer), damit die Status-Region schon da ist,
+    wenn ohne Erfolgstext nur die Frage erscheint.
+-->
+<app-kopiert-erfolg *ngIf="!vorschau" [sichtbar]="kopiertErfolg()" [erfolgstext]="kopiertErfolgAn()"
+                    [nutzung]="nutzungBeimKopieren" [eigen]="!eigeneStimmeImZaehler" [andereTonlage]="andereTonlage"
+                    [gepostet]="gepostetStand" [gepostetDank]="gepostetDankText"
+                    [kopierLauf]="erfolgLauf" [ohneKonto]="gepostetOhneKonto"
+                    (schliessen)="kopiertErfolgSchliessen()" (jaGepostet)="jaGepostet()"></app-kopiert-erfolg>

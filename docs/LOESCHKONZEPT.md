@@ -47,8 +47,8 @@ Umgebung benutzt** — die Kommandos sind identisch, nur der eingesetzte Wert ni
   nicht nach dem Zustand.
 - **Ein Admin entfernt endgültig**
   (`DELETE /api/v1/moderation/content/{content_type}/{id}`): Der Punkt ist danach aus
-  Qdrant weg, mit ihm seine Stimmen (`votes`) und das „ausformuliert in“ der Einwürfe
-  zu ihm (`raw_input_content_links`); offene Meldungen zu ihm stehen danach auf
+  Qdrant weg, mit ihm seine Stimmen (`votes`), das „ausformuliert in“ der Einwürfe
+  zu ihm (`raw_input_content_links`) und die Einträge in Merklisten (`merkliste`, #758); offene Meldungen zu ihm stehen danach auf
   bearbeitet, bearbeitete und abgewiesene behalten ihre Entscheidung. Das ist der Weg
   für Schritt 3, wenn ein Text die Person erkennbar macht, und sonst für nichts:
   Gemeldete Beiträge sperrt ein Admin, statt sie zu entfernen. Denselben Weg nimmt die
@@ -113,10 +113,17 @@ dann jede folgende Anfrage ab, nach dem Entfernen nicht mehr.
    Einwilligung weiter“ mit dem Wortlaut, PR #670), in `abzeichen_sichtbarkeit` (jede
    Antwort auf die Frage nach der Sichtbarkeit der Abzeichen, auch ein Nein; #351), in
    `punkte_einwilligung` (jede Antwort auf die Einwilligung „Punkte und Meilensteine“, auch
-   ein Widerruf; #351), in `nutzungsbedingungen_zustimmungen` (jede Zustimmung zu den
-   Nutzungsbedingungen in der App mit Zeitpunkt und Stand) und die in
+   ein Widerruf; #351), in `rangliste_einwilligung` (jede Antwort auf die Einwilligung zur
+   Rangliste samt Wahl des Anzeigenamens und Ranglistenname, auch ein Nein; #793), in
+   `spielgefuehl` (jede Antwort auf die Frage „Spielgefühl“ samt Stufe, Namenswahl und
+   Ranglistenname, auch „Aus“), in `nutzungsbedingungen_zustimmungen` (jede Zustimmung zu den
+   Nutzungsbedingungen in der App mit Zeitpunkt und Stand), in `team_mitgliedschaften` (jede
+   Mitgliedschaft in einem Team samt Kennung des Wortlauts und Zeitpunkt der Einwilligung), in
+   `team_oeffentlich` (die Antwort auf „Team öffentlich am Namen zeigen“), in `merkliste`
+   (gemerkte Beiträge mit Zeitpunkt, #758) und die in
    `loeschauftraege` (offene und erledigte Löschaufträge nach einem Widerruf)
-   löschen, ebenso jeden Muster-Hinweis
+   löschen; in `einstellungen` die Kennung eines Admins (`geaendert_von`) auf `NULL` setzen,
+   der Wert bleibt; ebenso jeden Muster-Hinweis
    (`muster_hinweise`, #352), der die Person nennt. Der Anzeigename steht **nur dort** — weder in Qdrant
    noch in `raw_inputs` noch im Log —, die Karten lesen ihn beim Ausliefern dazu und
    zeigen nach Schritt 3 „ehemalige Person“.
@@ -161,7 +168,7 @@ dann jede folgende Anfrage ab, nach dem Entfernen nicht mehr.
 
 Widerruft eine Person ihre Art.-9-Einwilligung, fehlt für die Zuordnung ihrer Beiträge,
 Einwürfe und Sätze die Rechtsgrundlage (DSFA V2, R9; `docs/ART9_EINWILLIGUNG.md`). Der Widerruf
-löscht sofort ihre Stimmen und legt in derselben Transaktion einen **Löschauftrag** an: Kennung,
+löscht sofort ihre Stimmen und ihre Merkliste (#758) und legt in derselben Transaktion einen **Löschauftrag** an: Kennung,
 Zeitpunkt und Frist, sieben Tage später (Tabelle `loeschauftraege`,
 `Art9EinwilligungService.widerrufen`). Einen Auftrag gibt es nur, wenn dabei eine geltende
 Einwilligung widerrufen wurde; je Person höchstens einen offenen, ein zweiter Widerruf legt
@@ -219,7 +226,7 @@ macht für diese Person dasselbe wie der Ablauf oben, beschränkt auf die Mitwir
 Was **bleibt**: das Konto, der Anzeigename in `users`, die Einwilligungen samt Widerruf als
 Nachweis (Art. 7 Abs. 1; der Vermerk „ohne Einwilligung weiter“ in `art9_ohne_einwilligung`
 geht dagegen mit dem Löschablauf), Meldungen der Person und Muster-Hinweise (beide gehen mit ihrer
-Frist) sowie `gesehene_nutzung` (nur Zählerstände: Nutzung und Einwürfe anderer beim letzten Besuch, kein Zeitpunkt, ohne Frist, geht mit dem Konto). Erst Qdrant, dann PostgreSQL: Scheitert ein Schritt, bleibt der Auftrag offen,
+Frist) sowie `gesehene_nutzung` (nur Zählerstände: Nutzung, Einwürfe anderer und Wirkungs-Echo beim letzten Besuch, kein Zeitpunkt, ohne Frist, geht mit dem Konto). Erst Qdrant, dann PostgreSQL: Scheitert ein Schritt, bleibt der Auftrag offen,
 und ein zweiter Klick holt nach, was fehlt; beide Teile sind wiederholbar. Danach wie in
 Schritt 3 die Texte durchsehen; macht einer die Person erkennbar, wird er einzeln entfernt. Die
 Beiträge stehen danach nicht mehr in „Meine Beiträge“ der Person, sie kann sie also nicht mehr
@@ -237,6 +244,8 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 |---|---|---|
 | Meldungen (`content_reports`), bearbeitet oder abgewiesen | 180 Tage | Bearbeitung (`reviewed_at`; ohne sie, im Altbestand, der Eingang) |
 | Suchereignisse (`search_events`) samt Tagespseudonym | bis zum Ende ihres UTC-Tages | dann zum Tageszähler der Suchen verdichtet, ohne Pseudonym (#495, `SearchTrackingRepository.verdichten_vor`; Einzelheiten unter „Was nicht gelöscht wird“) |
+| Seitenaufrufe (`aufrufe_heute`, #761, Schalter `aufrufe_zaehlen`): Tagespseudonym und Zahl der Aufrufe | bis zum Ende ihres UTC-Tages | spätestens eine Stunde danach zu Tageszahlen verdichtet (`aufrufe_tage`: Aufrufe, Besucher, ohne Pseudonym) und gelöscht, stündlicher Task `services/aufrufe_service.py`, auch bei ausgeschaltetem Schalter |
+| Tageszahlen der Seitenaufrufe (`aufrufe_tage`) | keine | — nur zwei Zahlen je Tag, ohne Personenbezug |
 | Tagespseudonym an anonymen Meldungen (`reported_by_session_id`, `besucher:…`) | bis zum Abschluss der Meldung | Bearbeiten oder Abweisen ersetzt es durch einen Zufallswert (`anon:…`), angemeldete Meldungen verlieren den Wert (#446, `repositories/content_report_repository.py`) |
 | Meldungen, offen | keine | — sie sind Arbeit und bleiben, bis ein Admin sie bearbeitet oder ihr Beitrag endgültig entfernt wird (dann bearbeitet, Frist wie oben) |
 | Einwürfe (`raw_inputs`), die in keinem Beitrag ausformuliert sind, samt Sätzen und Themen | 365 Tage | letzte Arbeit daran: Einwerfen oder zuletzt gespeicherter Satz |
@@ -244,16 +253,29 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Gelöschte Beiträge (Zustand „gelöscht“, Qdrant) | 30 Tage, dann endgültig entfernt | Tag im Payload-Feld `geloescht_am` |
 | Sperren (`sperren`), aufgehoben, samt Widerspruch | 180 Tage | Aufhebung (`aufgehoben_am`) |
 | Sperren, aktiv | keine | — der Beitrag ist gesperrt |
-| Stimmen (`votes`) | solange der Beitrag besteht; trifft ein geänderter Titel eine andere Behauptung (NLI-Stufe, #427), sofort; widerruft die Person ihre Art.-9-Einwilligung, sofort alle ihre Stimmen (`Art9EinwilligungService.widerrufen`) | — gehen mit ihm |
+| Stimmen (`votes`) | solange der Beitrag besteht; trifft ein geänderter Titel eine andere Behauptung (NLI-Stufe, #427) oder ist der Text ein ganz anderer (#636, Schalter `stimmen_text_verfall`, Standard aus), sofort; widerruft die Person ihre Art.-9-Einwilligung, sofort alle ihre Stimmen (`Art9EinwilligungService.widerrufen`) | — gehen mit ihm |
 | Prüfwerte der entdoppelten Nutzung (`nutzung_heute`) | ihr Tag | verworfen beim ersten Lauf nach Mitternacht (UTC) |
-| Paar-Prüfwerte der Muster-Hinweise (`muster_pruefwerte`) | 7 Tage | letzte Nutzung in dieser Richtung (`tag`) |
+| Paar-Prüfwerte der Muster-Hinweise (`muster_pruefwerte`) | 7 Tage | letzte Nutzung (mit Schalter `muster_stimmen` auch letzte Zustimmung) in dieser Richtung (`tag`) |
 | Prüfwerte „Ja, gepostet“ (`gepostet_pruefwerte`, #643) | ihre Kalenderwoche | zur Zahl der Woche verdichtet und gelöscht beim ersten täglichen Lauf nach Wochenende (Montag, UTC; derselbe Task wie für `nutzung_heute`, auch bei ausgeschaltetem Schalter), spätestens bei der nächsten Meldung; der Wochenschlüssel liegt nur im Arbeitsspeicher |
 | Zahl je Woche „Ja, gepostet“ (`gepostet_wochen`) | keine | — nur eine Zahl je Woche, ohne Personenbezug |
-| Muster-Hinweise (`muster_hinweise`) | 56 Tage (8 Wochen) | letzter Tag mit gegenseitiger Nutzung (`letzter_tag`) |
+| Meldungen ohne Konto je Woche (`gepostet_ohne_konto_wochen`, #799) | keine | — nur die Zahl der Klicks je Woche, ohne Prüfwert, Beitrag oder Adresse; die Drosselung liegt nur im Arbeitsspeicher und vergisst nach einer Sekunde |
+| Ankünfte je Kampagnenwort und Tag (`ankuenfte_je_tag`) | 12 Monate (365 Tage) | der Tag (`tag`); gelöscht vom täglichen Task der Löschfristen. Nur Wort, Tag und Zahl, ohne Kennung, Konto, Adresse oder Beitrag; die Drosselung liegt nur im Arbeitsspeicher und vergisst nach einer Sekunde |
+| Wirkungs-Echo und Danke je Beitrag (`wirkung_je_beitrag`, #790, #791) | keine | — nur zwei Summen je Beitrag, ohne Kennung und Zeitpunkt; die Tages-Prüfwerte des Danke liegen in `nutzung_heute` und gehen mit ihnen nach dem Tageswechsel, die des Wirkungs-Echos nur im Arbeitsspeicher |
+| Muster-Hinweise (`muster_hinweise`) | 56 Tage (8 Wochen) | letzter Tag mit gegenseitiger Nutzung bzw. Zustimmung (`letzter_tag`, je Art eine Zeile); widerruft eine der beiden Personen den Zweck Zustimmungen oder die Art.-9-Einwilligung (die ihre Stimmen löscht), gehen die Hinweise der Art `zustimmung` sofort; haben nicht mehr beide Konten wirksam eingewilligt, löscht sie spätestens der nächste tägliche Lauf |
 | Löschaufträge (`loeschauftraege`), offen | keine | — sie sind Arbeit und bleiben, bis ein Admin den Löschablauf ausführt (Frist dafür: sieben Tage ab dem Widerruf, unter „Löschauftrag nach dem Widerruf“) |
 | Löschaufträge, erledigt | 365 Tage (entschieden 13.11.2026) | Ausführung (`erledigt_am`); mit dem Konto sofort (Schritt 2) |
+| Merkliste (`merkliste`, #758): gemerkter Beitrag und Zeitpunkt | solange die Person ihn gemerkt hat | — geht beim Entfernen aus der Merkliste, mit dem Konto (Schritt 2), beim Widerruf der Art.-9-Einwilligung und mit dem endgültig entfernten Beitrag; höchstens 500 Einträge je Person. Schaltet ein Admin den Schalter wieder aus, bleiben die Einträge, Entfernen bleibt für die Person offen |
 | Zustimmung zur Sichtbarkeit der Abzeichen (`abzeichen_sichtbarkeit`) | solange das Konto besteht | — Nachweis der Zustimmung (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
 | Einwilligung „Punkte und Meilensteine“ (`punkte_einwilligung`, #351) | solange das Konto besteht | — Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
+| Einwilligung zur Rangliste (`rangliste_einwilligung`, #793) | solange das Konto besteht | — Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2); Plätze und Punkte werden nicht gespeichert |
+| Spielgefühl (`spielgefuehl`): Kennung, Stufe, Namenswahl, Kennung des Wortlauts, Zeitpunkt, Ranglistenname | solange das Konto besteht | — Nachweis jeder gewählten Stufe (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2); ein neu gewürfelter Name ist eine neue Zeile, frühere Namen stehen nur im Nachweis. Plätze und Punkte werden nicht gespeichert |
+| Mitgliedschaften in Teams (`team_mitgliedschaften`): Kennung, Teamname, Motiv, Saison, Nummer, Tag des Beitritts, Kennung des Wortlauts und Zeitpunkt der Einwilligung | bis „Team verlassen“ (sofort gelöscht, Widerruf der Einwilligung für dieses Team) oder bis zur Löschung des Kontos | — die Einwilligung `team-2026-11-26` steht an der Mitgliedschaft und geht mit ihr; kein Bezug zur Einladung. Mit dem Konto sofort (Schritt 2), unter „Teams“ |
+| Einwilligung „Team öffentlich am Namen zeigen“ (`team_oeffentlich`): Kennung, ja/nein, Kennung des Wortlauts, Zeitpunkt | solange das Konto besteht | — nur die jüngste Antwort je Konto; Nachweis der Einwilligung und des Widerrufs (Art. 7 Abs. 1 DSGVO), geht mit dem Konto (Schritt 2) |
+| Zähler je Team und Saison (`team_nummern`): Teamname, Saison, zuletzt vergebene Nummer | keine | — kein Personenbezug (keine Kennung); hält fest, dass eine Nummer nach „Team verlassen“ nicht neu vergeben wird |
+| Saisons (`saisons`, #782): Name, erster und letzter Tag, Ziel, Anlegezeitpunkt | keine | — kein Personenbezug, auch keine Kennung des Admins; löschen lässt sich eine Saison nur vor ihrem Beginn |
+| Saal-Sprüche (`saal_sprueche`, Schalter `saal_spruch`): Tag, Text, Änderungszeit | keine | — kein Personenbezug, auch keine Kennung des Admins; nur öffentlicher Text. die Admin-Seite listet und entfernt Sprüche ab heute; vergangene bleiben stehen und werden nirgends mehr gezeigt |
+| team_wochen, team_quests: ohne Personenbezug, unbefristet; entfallen mit dem Team | keine | — Wochenzähler (Teamname, Saison, Woche, Zahl der Beiträge, Bewertungen und Meldungen „Ja, gepostet“) und Team-Quests (Teamname, Saison, Woche, Thema, Ziel), ohne Kennung, ohne Beitrag, ohne Zeitpunkt; bleiben bei „Team verlassen“ und bei der Löschung des Kontos. Entdoppelt wird über einen Wochen-Prüfwert nur im Arbeitsspeicher, der mit dem Wochenwechsel verfällt. Eine Team-Löschung gibt es noch nicht; kommt sie, gehen die Zeilen mit (`TeamFortschrittRepository.team_loeschen`) |
+| Admin-Einstellungen (`einstellungen`, etwa die aktuelle Saison): Wert, Zeitpunkt, Kennung des Admins | keine | — der Wert bleibt; die Kennung des Admins wird mit seinem Konto geleert (Schritt 2) |
 | Zustimmung zu den Nutzungsbedingungen in der App (`nutzungsbedingungen_zustimmungen`) | solange das Konto besteht | — Nachweis des Vertragsschlusses und des Stands, dem die Person zugestimmt hat (Art. 6 Abs. 1 lit. b DSGVO); geht mit dem Konto (Schritt 2) |
 | Archiv der Keycloak-Zeitpunkte der Zustimmung zu den Nutzungsbedingungen (bis 0.9.8): Kennung und Zeitpunkt | bis zur Löschung des Kontos (Entscheidung Maintainer 20.11.2026) | — am Rollout-Tag von 0.9.8 exportiert, zuletzt direkt vor dem Abschalten der Pflichtaktion, nach `/opt/gutgesagt-archiv/nb-zeitpunkte-keycloak.txt` auf dem Prod-Host (Verzeichnis 0700 root, nicht in einen Container gemountet und nicht Teil der Backups), Datei 0600 root (`mvp/scripts/manual/keycloak_nb_zeitpunkte.py --zeitpunkte`); danach wird das Attribut in Keycloak gelöscht. Mit dem Konto geht die Zeile (Schritt 4). Nachweis, wann die Person bis 0.9.8 zugestimmt hat |
 | Neue Antworten auf eigene Aussagen und „Meine Aussagen“ (#760, Schalter `antworten_hinweis`) | keine Speicherung | — beim Besuch bzw. Aufruf aus den Antwortvorschlägen der Aussagen berechnet |
@@ -300,7 +322,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
   UTC-Tag nach `geloescht_am`; die 30 Tage zählen ab dann, also höchstens einen Tag nach
   dem Löschen. Das gilt auch für Altbestand, der vor #421 gelöscht wurde. Entfernt wird
   über `ModerationService.delete_content`, denselben Weg wie beim Admin: erst Verweise der
-  Aussagen, Stimmen und „ausformuliert in“, dann der Punkt. Wie beim Admin stehen offene
+  Aussagen, Stimmen, „ausformuliert in“ und Merkliste, dann der Punkt. Wie beim Admin stehen offene
   Meldungen zum Beitrag danach auf bearbeitet, hier ohne Admin (`reviewed_by` leer), und
   ihre 180 Tage beginnen. Bearbeitete und abgewiesene behalten Entscheidung und Frist.
   Scheitert ein Schritt, bleibt der Beitrag stehen und der nächste Lauf versucht es erneut. Gesperrte Beiträge
@@ -320,7 +342,23 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
   sieben Tagen von selbst; ein gelöschtes Konto nutzt nichts mehr, ein Hinweis kann
   aus ihm also nicht mehr entstehen. Ein Muster-Hinweis nennt zwei Kennungen und soll Admins
   helfen, Punkte gegen Absprachen zu schützen; nach acht Wochen ohne neuen auffälligen
-  Tag ist er dafür nicht mehr nötig (DSFA zu #374). Prüfwerte verwirft ein eigener
+  Tag ist er dafür nicht mehr nötig (DSFA zu #374). Widerruft eine der beiden Personen
+  („Punkte und Meilensteine“ Nein, Spielgefühl „Aus“), gehen alle Hinweise, die sie nennen,
+  sofort (`MusterHinweiseService.vergessen`); das Admin-Dashboard zeigt ohnehin nur Paare, bei
+  denen beide aktuell eingewilligt haben. Ihre Paar-Prüfwerte gehen erst mit der Frist von
+  sieben Tagen (nicht per Kennung löschbar, siehe oben); ein neuer Hinweis entsteht trotzdem
+  nicht, weil beim Erzeugen die Einwilligung beider Konten geprüft wird
+  (`api/v1/usage.py`, vor `nutzung_melden`; bei Zustimmungen `api/v1/voting.py`). Entsteht ein
+  Hinweis doch genau während eines Widerrufs (Prüfung und Schreiben laufen getrennt), löscht
+  ihn der tägliche Lauf: Er löscht alle Hinweise, bei denen nicht mehr beide Konten wirksam
+  eingewilligt haben, Nutzungen nach der Einwilligung „Punkte und Meilensteine“ bzw. dem
+  Spielgefühl ab „Nur für mich“, Zustimmungen nach dem Wortlaut `spielgefuehl-2026-11-27` ab
+  „Nur für mich“ und der Art.-9-Einwilligung (`MusterHinweiseService.ohne_einwilligung_loeschen`,
+  Bedingung Jura zu #863, Art. 17 DSGVO); der Abruf des Admin-Dashboards räumt die Hinweise,
+  die er liest, nebenbei genauso auf. Welches Einwilligungsmodell gilt (Schalter
+  `spielgefuehl_buehne`), entscheidet der Stand zum Zeitpunkt des Laufs; lässt sich der Stand der
+  Schalter nicht lesen, löscht der Lauf nichts und versucht es beim nächsten Mal. Wortgleich in der Datenschutzerklärung:
+  „Die Prüfwerte, mit denen wir Muster erkennen, lassen sich keinem Konto zuordnen und verfallen nach sieben Tagen; nach deinem Widerruf werten wir sie für dich nicht mehr aus.“ Prüfwerte verwirft ein eigener
   Task (`services/entdoppelung.py`), Paar-Prüfwerte und Hinweise ein zweiter
   (`services/muster_hinweise_service.py`), beide unabhängig vom abschaltbaren Bereinigungsjob.
   Punkte selbst werden nicht gespeichert, sondern bei jedem Abruf berechnet
@@ -371,6 +409,11 @@ nicht.
   (`services/feedback_service.py`, `loeschen_im_takt`, `AUFBEWAHRUNG_TAGE`). Er hängt
   nicht am abschaltbaren Bereinigungsjob. Die Frist gilt für offenes wie für
   erledigtes Feedback; „erledigt“ ändert an ihr nichts.
+- **Frist „Was hat dich gestört?“:** Feedback mit der Kategorie `gestoert` (Knopf der
+  Startphase, Schalter `feedback_gestoert`) trägt nie einen Kontakt. Ab dem 31.12.2026
+  (UTC) löscht derselbe Task alle Zeilen dieser Kategorie, gleich wie alt
+  (`domain/feedback_gestoert.py`, `GESTOERT_GELOESCHT_AB`); ab demselben Tag wirkt der
+  Schalter nicht mehr, und der Dienst nimmt keine neuen an.
 - **Einzeln:** Ein Admin löscht ein einzelnes Feedback samt Kontakt in der
   Feedback-Karte des Admin-Dashboards („Löschen“, mit Rückfrage), etwa wenn es
   beantwortet ist und nicht bis zur Frist bleiben soll (#425). Nur Admins
@@ -425,6 +468,47 @@ und der Ablauf oben erfasst die Tabelle nicht.
   über eine Einladung entstehen; ältere mit bestätigter Adresse und ohne Passwort bleiben.
   Wird ein solches Konto später mit dem Netzbegrünung-Login verknüpft, fragt Keycloak beim
   ersten Anmelden einmal nach einem Passwort.
+
+## Teams
+
+Eine Einladung kann zu einem Team gehören (GLOSSARY „Teamlink“): An `einladungen` stehen dann
+zusätzlich Teamname, Motiv, Saison und Teamart, bei einem Team nach Gruppe dazu der Tag der
+schriftlichen Zustimmung der Gruppenleitung (Nachweis nur für Admins, ohne Namen; bleibt mit der
+Einladung stehen, siehe „Einladungen“), weiter ohne Mail-Adresse und ohne Kennung. Eine
+Mitgliedschaft (`team_mitgliedschaften`) entsteht nur, wenn die Person auf der Begrüßung
+ausdrücklich einwilligt (Wortlaut `team-2026-11-26`, gespeichert mit Kennung und Zeitpunkt an
+der Mitgliedschaft). Sie trägt **keinen Bezug zur Einladung**: Welche Einladung jemand genutzt
+hat, steht weiter nirgends. Ohne Ja zählt die Einladung wie bisher nur.
+
+- **Widerruf der Zustimmung einer Gruppe (Team nach Gruppe):** Das Team wird in einen neutralen
+  Namen nach Anlass, Ort oder Saison umbenannt (in eine andere Gruppe nur mit neuer Einwilligung
+  der Mitglieder, nicht mit dem Skript), an
+  Einladungen, Mitgliedschaften und Nummernzähler zugleich (`mvp/scripts/manual/team_umbenennen.sql`);
+  die Einladungen werden zu einem Team nach Anlass, Ort oder Saison, das Datum der Zustimmung
+  wird geleert. Mitgliedschaften, Nummern und Einwilligungen bleiben.
+- **„Team verlassen“:** Die Person löscht ihre Mitgliedschaft unter „Meine Teams“ selbst; der
+  Eintrag ist sofort gelöscht (`DELETE /api/v1/teams/meine/{id}`), auch bei ausgeschaltetem
+  Schalter `teams`. Das ist der Widerruf der Einwilligung für dieses Team. Die Nummer wird
+  nicht neu vergeben (`team_nummern` zählt weiter, ohne Kennung).
+- **Löschung des Kontos:** Alle Mitgliedschaften und die Antwort auf „Team öffentlich am
+  Namen zeigen“ gehen sofort mit (Schritt 2, `person_loeschen.sql`).
+- **Nie benutzte Konten (#538):** Die Mitgliedschaft entsteht schon beim Anlegen des Kontos,
+  vor dem ersten Anmelden. Löscht der tägliche Lauf ein nie benutztes Konto im Realm, löscht er
+  danach auch dessen Mitgliedschaften und `team_oeffentlich`
+  (`TeamRepository.konten_loeschen`), auch wenn der Lauf im Realm mittendrin abbricht.
+- **Abgeschalteter Schalter `teams`:** Vorhandene Mitgliedschaften stehen weiter unter „Meine
+  Teams“, mit „Team verlassen“; es kommen nur keine neuen hinzu.
+- **Widerruf der Art.-9-Einwilligung:** erfasst die Mitgliedschaften nicht, denn sie hängen an
+  ihrer eigenen Einwilligung; die Person widerruft sie mit „Team verlassen“.
+- **Teams am Namen:** werden nicht gespeichert, sondern beim Ausliefern eines Beitrags aus den
+  Mitgliedschaften der aktuellen Saison und `team_oeffentlich` gelesen; nach „Team verlassen“
+  oder einem Nein verschwinden sie mit der nächsten Antwort.
+- **Admins:** sehen je Team nur die Zahl der Mitglieder. Eine Liste, einen Export oder eine
+  API auf fremde Mitgliedschaften gibt es nicht; die Daten liegen nur in der Datenbank.
+- **Sicherungskopien:** Gelöschte Mitgliedschaften stehen dort bis zu deren Ablauf weiter (bis
+  zu 28 Tage, unter „Was nicht gelöscht wird“).
+- **Kennungen umstellen:** Die Tabellen `team_mitgliedschaften` und `team_oeffentlich` stellt
+  das Umstellen der Kennungen mit um (`services/wartung/kennungen_umstellen.py`).
 
 ## Vier Fallen
 
@@ -702,7 +786,7 @@ docker exec -i gutgesagt-app-postgres psql -U app_user -d gutgesagt_app \
 #   -v ON_ERROR_STOP=1 -v uid="$KENNUNG"
 
 docker exec -i gutgesagt-app-postgres psql -U app_user -d gutgesagt_app -c \
-  "VACUUM FULL votes, content_reports, raw_inputs, raw_input_content_links, raw_input_drafts, usage_events, users, gesehene_nutzung, muster_hinweise, art9_einwilligungen, art9_ohne_einwilligung, abzeichen_sichtbarkeit, punkte_einwilligung, nutzungsbedingungen_zustimmungen, loeschauftraege;"
+  "VACUUM FULL votes, content_reports, raw_inputs, raw_input_content_links, raw_input_drafts, usage_events, users, gesehene_nutzung, muster_hinweise, art9_einwilligungen, art9_ohne_einwilligung, abzeichen_sichtbarkeit, punkte_einwilligung, rangliste_einwilligung, spielgefuehl, nutzungsbedingungen_zustimmungen, team_mitgliedschaften, team_oeffentlich, merkliste, loeschauftraege;"
 ```
 
 ```bash

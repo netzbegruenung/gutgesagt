@@ -389,6 +389,17 @@ class TestWiderrufen:
         repository.widerrufen.assert_called_once()
         assert repository.widerrufen.call_args.args == ("user-001",)
 
+    def test_delete_loescht_muster_hinweise_aus_zustimmungen(
+        self, client, muster_hinweise_ohne_datenbank
+    ):
+        """Die Stimmen gehen mit dem Widerruf, also auch die Hinweise daraus."""
+        antwort = client.delete(BASIS, headers=PERSON)
+
+        assert antwort.status_code == 204
+        muster_hinweise_ohne_datenbank.vergessen.assert_called_once_with(
+            "user-001", art="zustimmung"
+        )
+
     def test_delete_nimmt_das_sichtbare_abzeichen_sofort_weg(
         self, client, repository, monkeypatch
     ):
@@ -402,6 +413,47 @@ class TestWiderrufen:
 
         assert client.delete(BASIS, headers=PERSON).status_code == 204
         dienst.zuruecknehmen.assert_called_once_with("user-001")
+
+    def test_delete_haelt_ja_zur_rangliste_als_nein_fest(
+        self, client, repository, rangliste_ohne_datenbank
+    ):
+        """Sonst stuende die Person nach neuer Einwilligung ungefragt wieder darin (#793)."""
+        from datetime import datetime, timezone
+
+        from domain.rangliste import AKTUELLER_WORTLAUT
+        from repositories.rangliste_einwilligung_repository import RanglisteAntwort
+
+        rangliste_ohne_datenbank.lesen.return_value = RanglisteAntwort(
+            True, True, AKTUELLER_WORTLAUT, datetime(2026, 12, 1, tzinfo=timezone.utc)
+        )
+
+        assert client.delete(BASIS, headers=PERSON).status_code == 204
+        rangliste_ohne_datenbank.antworten.assert_called_once_with(
+            "user-001", False, False, AKTUELLER_WORTLAUT
+        )
+        repository.widerrufen.assert_called_once()
+
+    def test_delete_nimmt_die_rangliste_im_spielgefuehl_zurueck(
+        self, client, repository, spielgefuehl_ohne_datenbank
+    ):
+        """Stufe rangliste wird zu fuer_mich, auch bei ausgeschaltetem Schalter."""
+        from datetime import datetime, timezone
+
+        from domain.spielgefuehl import AKTUELLER_WORTLAUT, Stufe
+        from repositories.spielgefuehl_repository import SpielgefuehlAntwort
+
+        spielgefuehl_ohne_datenbank.lesen.return_value = SpielgefuehlAntwort(
+            Stufe.RANGLISTE,
+            True,
+            AKTUELLER_WORTLAUT,
+            datetime(2026, 12, 1, tzinfo=timezone.utc),
+            "Kluge Eule 11",
+        )
+
+        assert client.delete(BASIS, headers=PERSON).status_code == 204
+        spielgefuehl_ohne_datenbank.antworten.assert_called_once_with(
+            "user-001", Stufe.FUER_MICH, False, AKTUELLER_WORTLAUT
+        )
 
     def test_delete_ohne_anmeldung_401(self, client, repository, stimmen):
         assert client.delete(BASIS).status_code == 401
@@ -619,6 +671,10 @@ GESPERRT = {
     # Meinung; GET mit, damit das Frontend den Knopf nur mit Einwilligung zeigt.
     ("GET", "/api/v1/usage/users/me/gepostet"),
     ("POST", "/api/v1/usage/users/me/gepostet"),
+    # Merkliste (#758): Was jemand merkt, verraet die politische Meinung; GET mit,
+    # damit die Liste nur mit Einwilligung steht. Entfernen bleibt offen (DELETE).
+    ("GET", "/api/v1/merkliste"),
+    ("PUT", "/api/v1/merkliste/{content_id}"),
 }
 
 
@@ -632,6 +688,13 @@ OFFEN = {
     # Einwilligung "Punkte und Meilensteine" (#351): eine eigene, freiwillige, nicht
     # an die Art.-9-Einwilligung gekoppelt (Art. 7 Abs. 4).
     ("PUT", "/api/v1/usage/users/me/punkte-einwilligung"),
+    # Einwilligung zur Rangliste (#793): Ein Nein ist Zuruecknehmen, ein Ja wirkt
+    # ohne Art.-9-Einwilligung nicht (Voraussetzung je Abruf).
+    ("PUT", "/api/v1/rangliste/einwilligung"),
+    # Spielgefuehl: Stufe waehlen und neu wuerfeln; ohne Art.-9-Einwilligung
+    # entsteht nichts (Punkte und Rangliste setzen sie voraus), herabstufen bleibt offen.
+    ("PUT", "/api/v1/usage/users/me/spielgefuehl"),
+    ("POST", "/api/v1/usage/users/me/spielgefuehl/ranglistenname"),
     # Die Einwilligung selbst und "ohne Einwilligung weiter" (B2)
     ("POST", "/api/v1/art9-einwilligung"),
     ("POST", "/api/v1/art9-einwilligung/ohne"),
@@ -653,6 +716,14 @@ OFFEN = {
     ("POST", "/api/v1/spracherkennung"),
     ("POST", "/api/v1/statement/themen/vorschlaege"),  # nur Vorschlag (#401)
     ("POST", "/api/v1/usage/content/{content_id}/usage"),
+    # Danke (#791): prueft die Einwilligung selbst, erst nach dem Schalter
+    ("POST", "/api/v1/usage/content/{content_id}/danke"),
+    # Meldungen ohne Konto (#799): nur ein Wochenzaehler ohne Kennung; Angemeldete
+    # zaehlen dort nicht (sie melden ueber /users/me/gepostet mit Einwilligung)
+    ("POST", "/api/v1/ereignis"),
+    # Ankuenfte je Kampagnenwort und Tag: nur eine Zahl je Wort und Tag, der Endpunkt
+    # liest keine Kennung; nichts verknuepft sie mit einem Konto oder Beitrag
+    ("POST", "/api/v1/ankunft"),
     ("POST", "/api/v1/usage/users/me/besuch"),
     ("POST", "/api/v1/statement/addReplysuggestionToStatement"),
     ("PUT", "/api/v1/statement/themen/zuordnen"),
@@ -668,6 +739,11 @@ OFFEN = {
     ("POST", "/api/v1/moderation/loeschauftraege/{auftrag_id}/ausfuehren"),
     # Schalter setzen (Admin, #708): keine Daten von Nutzenden
     ("PUT", "/api/v1/moderation/schalter/{name}"),
+    # Saisons pflegen (Admin, #782): keine Daten von Nutzenden
+    ("POST", "/api/v1/moderation/saisons"),
+    ("PUT", "/api/v1/moderation/saisons/{saison_id}"),
+    # Saal-Sprueche pflegen (Admin): oeffentlicher Text, keine Daten von Nutzenden
+    ("PUT", "/api/v1/moderation/saal-sprueche/{datum}"),
     # Herkunft pruefen anstossen (Admin, #759): keine Daten von Nutzenden
     ("POST", "/api/v1/herkunft-pruefen/lauf"),
     ("POST", "/api/v1/sperren/{sperre_id}/widerspruch"),
@@ -676,6 +752,12 @@ OFFEN = {
     ("PATCH", "/api/v1/einladungen/{einladung_id}"),
     ("POST", "/api/v1/einladungen/pruefen"),
     ("POST", "/api/v1/einladungen/einloesen"),
+    # Teams: Beitreten und "Team oeffentlich am Namen zeigen" sind eigene,
+    # ausdrueckliche Einwilligungen, nicht an die Art.-9-Einwilligung gekoppelt
+    # (domain/teams.py); die aktuelle Saison setzt ein Admin.
+    ("POST", "/api/v1/einladungen/beitreten"),
+    ("PUT", "/api/v1/teams/oeffentlich"),
+    ("PUT", "/api/v1/moderation/schalter/einstellungen/{name}"),
     ("PATCH", "/api/v1/feedback/{feedback_id}"),
     ("PUT", "/api/v1/moderation/content/{content_id}/sperren"),
     ("PUT", "/api/v1/moderation/content/{content_id}/entsperren"),
@@ -694,6 +776,8 @@ OFFEN = {
 
 
 def _gesperrte_routen():
+    from api.v1.merkliste import merkliste_angeboten
+    from api.v1.usage import gepostet_angeboten
     from main import app
 
     gesperrt = set()
@@ -701,7 +785,9 @@ def _gesperrte_routen():
         if not isinstance(route, APIRoute):
             continue
         if any(
-            d.call is require_art9_einwilligung for d in route.dependant.dependencies
+            d.call
+            in (require_art9_einwilligung, gepostet_angeboten, merkliste_angeboten)
+            for d in route.dependant.dependencies
         ):
             gesperrt |= {(methode, route.path) for methode in route.methods}
     return gesperrt

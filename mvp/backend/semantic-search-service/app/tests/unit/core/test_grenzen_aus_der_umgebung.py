@@ -18,7 +18,8 @@ pytestmark = pytest.mark.unit
 
 APP = Path(__file__).resolve().parents[3]
 
-# Feld in Settings, Standardwert, Limiter in utils/rate_limiter.py (None: Tagesdeckel)
+# Feld in Settings, Standardwert, Limiter in utils/rate_limiter.py (None: Tagesdeckel
+# bzw. Rate-Limit an den Anlege-Routen, middleware/rate_limit.py)
 GRENZEN = [
     ("tagesdeckel_beitraege", 20, None),
     ("aehnliche_aussagen_rate_limit_anfragen", 60, "aehnliche_aussagen_rate_limiter"),
@@ -27,6 +28,9 @@ GRENZEN = [
     ("meldung_rate_limit_anfragen", 5, "report_rate_limiter"),
     ("einladung_rate_limit_anfragen", 30, "einladung_rate_limiter"),
     ("einladung_pruefen_rate_limit_anfragen", 60, "einladung_pruefen_rate_limiter"),
+    ("team_beitreten_rate_limit_anfragen", 20, "team_beitreten_rate_limiter"),
+    ("anlege_rate_limit_je_minute", 10, None),
+    ("anlege_rate_limit_je_stunde", 100, None),
 ]
 
 
@@ -91,4 +95,5 @@ def test_die_limiter_lesen_die_werte_beim_start():
         "report_rate_limiter": [104, 15],
         "einladung_rate_limiter": [105, 15],
         "einladung_pruefen_rate_limiter": [106, 15],
+        "team_beitreten_rate_limiter": [107, 15],
     }

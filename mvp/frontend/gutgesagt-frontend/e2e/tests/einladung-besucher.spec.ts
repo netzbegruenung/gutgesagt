@@ -15,7 +15,7 @@ const BEITRAG = 'e2e-beitrag';
 interface Stand {
   angemeldet: boolean;
   stimmen: number;
-  einloesen: Array<{ code: string; email: string }>;
+  einloesen: Array<{ code: string; email: string; vorname?: string; nachname?: string }>;
 }
 
 async function ohneStack(page: Page): Promise<Stand> {
@@ -105,10 +105,12 @@ test('Login-Seite: Einladung einlösen, Link einfügen, Konto anlegen', async ({
   await page.getByRole('button', { name: 'Weiter' }).click();
   const mail = page.getByLabel('Mail-Adresse');
   await expect(mail).toBeVisible();
+  await page.getByLabel('Vorname').fill('Erika');
+  await page.getByLabel('Nachname').fill('Muster');
   await mail.fill('neu@example.org');
   await page.getByRole('button', { name: 'Konto anlegen' }).click();
   await expect(page.locator('app-einladung')).toContainText('Schau in dein Postfach');
-  expect(stand.einloesen).toEqual([{ code: 'E2eCode_123', email: 'neu@example.org' }]);
+  expect(stand.einloesen).toEqual([{ code: 'E2eCode_123', email: 'neu@example.org', vorname: 'Erika', nachname: 'Muster' }]);
 
   // Leere Seite ohne horizontales Scrollen bei 360 px
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);

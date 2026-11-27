@@ -84,6 +84,33 @@ listens on 5432 inside the container.
   - `environment.docker.ts` - Docker mode (baseUrl: empty for proxy)
   - `environment.prod.ts` - Production (uses placeholders replaced at runtime)
 
+#### Start page: order and priority of the cards
+
+The start page (`search-view.component.html`) stacks its cards in this fixed order. Rule: per
+visit at most one card that points the person somewhere new (review Spielgefühl 25.11.).
+
+| # | Card | Who sees it | Shown when |
+|---|------|-------------|------------|
+| 1 | Hero and search; the subtitle carries the Bestandszahl (`app-hero-unterzeile`, `/getMetrics`, no Schalter) and its growth (Schalter `bestandszahl_zuwachs`, links to card 6 „Frisch aus der Community“) | everyone | always; without a number the plain subtitle |
+| 2 | Rundgang line (`app-rundgang-band`, Willkommen) | everyone | until answered; signed in without „Ein Konto brauchst du nicht“ (`WILLKOMMEN_ANGEMELDET`) |
+| 2a | „Heute im Netz zur BDK:“ (`app-saal-spruch`) | everyone, Schalter `saal_spruch` | an admin has set a Saal-Spruch for today (Europe/Berlin); not while a Rundgang offer (`imInhalt`: Willkommen, home screen, app install) is on the start page, except the slim Willkommen line („Neu hier?“, or its Kampagnenwort greeting such as „Von der BDK?“); signed in only when card 3 shows no own news and card 4 has no suggestion |
+| 3 | „Seit deinem letzten Besuch“ | signed in | not on the very first visit (`erster_besuch` from `POST /users/me/besuch`); next to a suggestion of card 4 only with news about the person's own Beiträge (`EIGENES_NEUES`: answers, uses, Wirkungs-Echo, ausformulierte Einwürfe) |
+| 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion and card 3 shows no own news |
+| 5 | Saison goal | everyone, Schalter `saison_ziel` | from the threshold (#782) |
+| 6 | Oft genutzt, Konter-Probe, Frisch aus der Community, Mitmachen tiles, „Was hat dich gestört?“ (Schalter `feedback_gestoert`), Garten, About | everyone | as each card decides |
+
+Cards 2a, 3 and 4 are never shown together: own news wins (it is what the person caused), then
+the single suggestion, then on its days the Saal-Spruch; the general numbers (new Einwürfe of others, Aussagen waiting,
+new Beiträge) step back (proposal, open as Fachfrage in #829). One place decides:
+`SeitLetztemBesuchService.start$` (rule in `seit-letztem-besuch/neues-liste.ts`, `startVorrang`);
+the cards only read it, card 4 reports whether it has a suggestion through `naechsterSchrittDa$`,
+card 2a whether it has a Saal-Spruch today through `saalSpruchDa$` (without card 2a nothing waits
+for it). Visitors without an account never see cards 3 and 4, so card 2a shows for them as soon as
+its answer is in.
+Until both answers (Besuch, suggestions) are in, neither card shows, at most `START_WARTEZEIT_MS`
+(1.5 s), so no card appears and vanishes under the finger. Back on the start page the last
+answers apply at once (kept in the service) and are refreshed silently; nothing needs a reload.
+
 ### BFF (Backend-for-Frontend)
 - **Technology**: .NET 9.0, YARP reverse proxy
 - **Purpose**:
@@ -120,7 +147,7 @@ listens on 5432 inside the container.
 
 ### PostgreSQL
 - **Purpose**: Application data — votes, usage tracking, search tracking, moderation reports,
-  Sperren with Sperrgrund and Widerspruch (`sperren`), and per person the usage last shown in the Rückmeldung (`gesehene_nutzung`); for the entdoppelte Nutzung the check values of the current day (`nutzung_heute`, HMAC only), the pair check values of the last seven days (`muster_pruefwerte`, HMAC only) and the Muster-Hinweise for admins (`muster_hinweise`, #352); for „Ja, gepostet“ after copying the check values of the current calendar week (`gepostet_pruefwerte`, HMAC only) and one number per past week (`gepostet_wochen`, #643, switch `SEMANTIC_SEARCH_GEPOSTET_AKTIV`, default off).
+  Sperren with Sperrgrund and Widerspruch (`sperren`), and per person the usage last shown in the Rückmeldung (`gesehene_nutzung`); for the entdoppelte Nutzung the check values of the current day (`nutzung_heute`, HMAC only), the pair check values of the last seven days (`muster_pruefwerte`, HMAC only) and the Muster-Hinweise for admins (`muster_hinweise`, #352); for „Ja, gepostet“ after copying the check values of the current calendar week (`gepostet_pruefwerte`, HMAC only) and one number per past week (`gepostet_wochen`, #643, switch `SEMANTIC_SEARCH_GEPOSTET_AKTIV`, default off); for „Ja, gepostet“ without an account only the number of clicks per week (`gepostet_ohne_konto_wochen`, #799, no check value, no address, no Beitrag; switch `SEMANTIC_SEARCH_GEPOSTET_OHNE_KONTO_AKTIV`, default off, works only with `gepostet`), reported via the neutral path `POST /api/v1/ereignis` with the kind only in the body (`{"art": "gepostet_ohne_konto"}`), throttled in memory per second for all callers together (`SEMANTIC_SEARCH_EREIGNIS_JE_SEKUNDE`, default 10), without an access log line in the frontend nginx (`nginx.protokoll.conf`, like the search), shown next to the Nordstern and the Saison but never added to people or to the threshold; for the Teams the Mitgliedschaften without any reference to the invitation (`team_mitgliedschaften`), the counter per team and Saison (`team_nummern`), the answer on showing teams at the name (`team_oeffentlich`) and admin settings such as the current Saison (`einstellungen`), switch `SEMANTIC_SEARCH_TEAMS_AKTIV`, default off; per person the saved Beiträge with the time of saving (`merkliste`, #758, Schalter `merkliste`, default off).
   Content and its vector embeddings live in Qdrant, not in PostgreSQL.
 - **Image**: `postgres:16-alpine` (service `postgres-app`, container `gutgesagt-app-postgres`)
 - **Access**:
@@ -221,6 +248,48 @@ gateway, whose fail2ban bans an IP for 10 minutes after 20 responses 401 in 5 mi
 share one IP (BDK), so a 401 for every visitor would lock out the whole hall. Real 401s stay
 where a login is needed and missing: the auth gate in front of the proxy (`EndpointPolicy`).
 
+### Automatically requested endpoints never answer 401 or 404 in the normal case
+Rule for every endpoint the frontend calls without a user action (page load, start page, cards,
+self-reloading lists): in the normal case it answers 200, never 401 or 404 (the codes the
+fail2ban counts), also while its Schalter is off or there is nothing yet. The empty case is a clear field
+in the 200 answer, e.g. `{"balken": null, "aktiv": false}`, `{"proben": [], "aktiv": false}`,
+`{"teams": [], "teams_aktiv": false}` or `{"angeboten": false}`. Reason: the gateway fail2ban
+above (`haproxy-probing`: 50 × 404 in 5 minutes, `haproxy-auth-flood`: 20 × 401) counts per IP,
+and a hall WLAN is one IP; one 404 per page view of hundreds of phones locks out the hall within
+minutes. Real 404s stay for unknown resources by id (a Beitrag, a Saison) and for actions
+(`PUT`/`POST`) on a building block that is off; real 401 where a page needs a login. Exception:
+a withdrawal (no, `aus`, a lower Spielgefühl level) is always accepted, also while its switch is
+off (Art. 7 Abs. 3 DSGVO: as easy as giving consent, at any time); only a yes is refused then,
+with 409 rather than 404 (points consent, badge visibility, Rangliste, Spielgefühl, Team
+öffentlich). A 403
+for missing consent is not counted, but stays the exception (only `gepostet`, and only while
+it is on).
+
+The frontend asks building blocks behind a public Schalter only when the Schalter is not
+surely off, which saves the request: either through `FunktionenService.stand$()` (one shared
+`GET /api/v1/funktionen`, cached 5 minutes; unknown after an error or timeout, then the card
+asks its endpoint and relies on the 200; Saisonbalken, Gartenansicht) or through
+`FunktionenService.an()`, which treats unknown as off (Konter-Probe, Nächster Schritt). Where a
+page treats "off" as a safe signal (#812, Einwilligung im Moment des Gewinns), only the
+endpoint's own `aktiv: false` counts, not a cached `/api/v1/funktionen`; an error or timeout
+stays "unknown". A 404 from an older backend is still read as off. Cards whose Schalter is
+reported off reload every 5 minutes instead of every 30 seconds (`AUS_NACHLADEN_MS`).
+
+| Endpoint | Asked by | Empty or off |
+|----------|----------|--------------|
+| `GET /api/v1/saisons/aktuell` | start page, every 5 min | `balken: null`, `aktiv: false` |
+| `GET /api/v1/metrics/getMetrics` | start page (Bestandszahl in the subtitle), every 5 min | always 200 with counts; 0 on a failed count (the last number stays); `zuwachs: null` while `bestandszahl_zuwachs` is off |
+| `GET /api/v1/konter-probe` | start page, page Konter-Probe | `proben: []`, `aktiv: false` |
+| `GET /api/v1/search/garten` | page Gartenansicht, every 30 s | `beete: []`, `aktiv: false` |
+| `GET /api/v1/usage/users/me/naechster-schritt` | start page (signed in) | `vorschlaege: []`, `aktiv: false` |
+| `GET /api/v1/usage/users/me/einwilligungs-moment` | Meine Beiträge | `aktiv: false` |
+| `GET /api/v1/teams/meine` | Meine Beiträge, every 30 s | `teams: []`, `teams_aktiv: false` |
+| `GET /api/v1/rangliste` | Meine Beiträge, every 30 s | `aktiv: false`, nothing asked |
+| `GET /api/v1/funktionen/muster_stimmen/seit` | privacy policy page, only while `muster_stimmen` is reported on | `seit: null` (also on a read error); 404 only for names other than `muster_stimmen` |
+| `GET /api/v1/usage/users/me/punkte`, `/meilensteine`, `/abzeichen-sichtbarkeit`, `/punkte-einwilligung` | Meine Beiträge, Einwilligungen | `aktiv: false` |
+| `GET /api/v1/usage/users/me/gepostet` | after a copy, once per signed-in person until reload | `angeboten: false`; consent checked (403) only while on |
+| `POST /api/v1/ankunft` | app start with `?k=<word>`, once per page load, only while `k_ankuenfte` is not surely off | `gezaehlt: false` (switch off or word not on the allow list); 429 above the throttle |
+
 ## Deployment Configurations
 
 ### Docker Compose Files
@@ -299,11 +368,24 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
 - `SEMANTIC_SEARCH_TAGESDECKEL_BEITRAEGE` - Tagesdeckel (GLOSSARY.md): Beiträge, Aussagen and
   Einwürfe a person may create per UTC day (default 20; admins and Startkonten exempt). Above it
   the creating routes answer 429 with `"error": "TAGESDECKEL"` (`middleware/tagesdeckel.py`).
+- `SEMANTIC_SEARCH_OFT_GENUTZT_MINDEST_NUTZUNGEN` (default 2, at least 2) and
+  `SEMANTIC_SEARCH_OFT_GENUTZT_MINDEST_BEITRAEGE` (default 2, 1 to 5) - „Diese Woche oft genutzt“
+  (GLOSSARY.md „Oft genutzt“): a Beitrag counts from that many entdoppelte Nutzungen in seven days,
+  and the section appears from that many such Beiträge (`services/oft_genutzt_service.py`). The
+  defaults suit the start phase with few active people; raise them once usage grows. Entdoppelt
+  means per person and day, so one person alone can make the section appear by copying the needed
+  Beiträge on two days; the section never shows who copied what.
+- `SEMANTIC_SEARCH_ANLEGE_RATE_LIMIT_JE_MINUTE` / `_JE_STUNDE` - rate limit per person on the
+  creating routes (`middleware/rate_limit.py`, default 10 / 100). Startkonten are exempt (import
+  of the Startbestand), admins are not. Above it: 429 `"error": "TOO_MANY_REQUESTS"`.
 - `SEMANTIC_SEARCH_<LIMIT>_RATE_LIMIT_ANFRAGEN` - requests per window of the rate limits without
   login, counted per Anschluss (`utils/rate_limiter.py`). In a venue WLAN all visitors share one
   address, so operations raise them there. `<LIMIT>` and default: `AEHNLICHE_AUSSAGEN` 60 and
   `SUCHAUSSAGE` 60 (10 min), `FEEDBACK` 5, `MELDUNG` 5, `EINLADUNG` 30, `EINLADUNG_PRUEFEN` 60
   (15 min each). The windows are fixed: the privacy policy names the periods that follow from them.
+  `SEMANTIC_SEARCH_TEAM_BEITRETEN_RATE_LIMIT_ANFRAGEN` (default 20 in 15 min) limits
+  `POST /api/v1/einladungen/beitreten` per logged-in person instead of per Anschluss, so joins in a
+  venue WLAN do not use up the budget for redeeming without an account.
 - `SEMANTIC_SEARCH_DIESELBE_AUSSAGE_NLI` - NLI-Stufe (#387): `aus`, `schatten` (for the
   same-Aussage check the similarity threshold decides and the NLI model only counts along) or
   `an` (default since #575, as on test and production: the NLI model decides whether a new text
@@ -344,6 +426,7 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   (0.92), direct raw score above 0.82 to below `…_INHALTSTOR_DIREKT_BIS` (0.90). spaCy model
   of Gegenlesen; open without nouns or before the model is loaded. Measured in
   `tests/regression/SUCHTESTSET.md`, section Inhaltstor.
+- `SEMANTIC_SEARCH_BESTANDSZAHL_ZUWACHS_AKTIV` - upper bound of the Schalter `bestandszahl_zuwachs` (growth next to the Bestandszahl in `/getMetrics`), default `true`
 - `SEMANTIC_SEARCH_HERKUNFT_PRUEFEN_AKTIV` - upper bound of the Schalter `herkunft_pruefen`
   (#759, default `true`: no personal data); takes effect only when an admin switches it on.
   Then the service fetches the links of all visible Herkünfte once a night between 02:00 and
@@ -353,14 +436,369 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   semantic service to arbitrary hosts; only http/https, every resolved address must be global,
   also after redirects, IPv4 embedded in IPv6 included (`utils/sicherer_abruf.py`). No proxy
   from the environment is used. Switched off, the hourly task empties the table once.
+- `SEMANTIC_SEARCH_MERKLISTE_AKTIV` - upper bound of the Schalter `merkliste` (#758, default
+  `false` until a consent wording, a DSFA section and a privacy policy paragraph name it);
+  takes effect only when an admin switches it on too. Then signed-in persons with the Art. 9
+  consent save Beiträge (`/api/v1/merkliste`, table `merkliste`); withdrawing the consent
+  deletes the list. Off, `GET` answers 200 with `aktiv: false` and an empty list, saving
+  answers 404 (both without touching the database), removing stays open so entries from a time
+  „on“ can always be taken back, and the frontend hides the button and the tab „Gemerkt“. On,
+  `GET` marks each entry `sichtbar` (one Qdrant lookup for the list), so the tab does not
+  request blocked or deleted Beiträge (no 404 on every opening).
 - `SEMANTIC_SEARCH_ANTWORTEN_HINWEIS_AKTIV` - upper bound of the Schalter `antworten_hinweis`
   (#760, default `false` until the privacy policy names it; nothing is stored); takes effect
   only when an admin switches it on too.
   Then the Besuch (`POST /api/v1/usage/users/me/besuch`) also returns
   `antworten_auf_eigene_aussagen` (answers by others to one's own Aussagen, linked in the last
   7 days; `null` while off) and `GET /api/v1/usage/users/me/aussagen` lists one's own Aussagen
-  with their answers (404 while off), `services/antworten_hinweis.py`.
+  with their answers (404 while off; only opened by a click on its tab, which shows only
+  while on), `services/antworten_hinweis.py`.
+- `SEMANTIC_SEARCH_SHAREPIC_AKTIV` - upper bound of the Schalter `sharepic` (#756, default `true`:
+  the card draws the image in the browser and hands it to the device's share menu, nothing is
+  sent or stored); takes effect only when an admin switches it on.
+- `SEMANTIC_SEARCH_MELDEWEG_SICHTBAR_AKTIV` - upper bound of the Schalter `meldeweg_sichtbar`
+  (default `false`): "Melden" in the meta line of every Beitrag card and "Melden & Kontakt" in the
+  footer, display only; details below (section "Schalter für das Spielgefühl").
+- `SEMANTIC_SEARCH_DSE_KURZFASSUNG_AKTIV` - upper bound of the Schalter `dse_kurzfassung`
+  (default `false`, public via `GET /api/v1/funktionen`): box "Kurz gesagt" at the top of the
+  privacy policy with three sentences, each linking to its paragraph in the full text
+  (`datenschutz/dse-kurzfassung.ts`). The wording comes from the legal review; while any
+  sentence still carries the placeholder, the box stays hidden even when switched on.
+- `SEMANTIC_SEARCH_STIMMEN_TEXT_VERFALL_AKTIV` - upper bound of the Schalter
+  `stimmen_text_verfall` (#636, default `false`: deleted Stimmen do not come back; switch on
+  only after the final legal OK on the privacy policy half-sentence "Bewertungen"); takes effect
+  only when an admin switches it on too and `dieselbe_aussage_nli` is `an`. Then editing a
+  Beitrag also deletes its Stimmen when the new text is an entirely different one
+  (`StatementService.gleicher_text`). Public in `GET /api/v1/funktionen`, so that the privacy
+  policy shows its half-sentence only while on; no endpoint of its own.
+- `SEMANTIC_SEARCH_TEAMS_AKTIV` - upper bound of the Schalter `teams` (Teams over
+  invitations, GLOSSARY.md "Team", "Teamlink", "Mitgliedschaft", "Saison"; default `false`: a
+  Mitgliedschaft may reveal political leaning and place, so it needs its own consent, the DSFA
+  addendum and the privacy policy section "Teams"); takes effect only when an admin switches it
+  on too (`services/team_service.py`, `domain/teams.py`). While off, team fields of invitations
+  are ignored, every invitation is a plain account link, and `POST /api/v1/einladungen/beitreten`
+  answers 404. `GET /api/v1/teams/meine` answers an empty list when the person has no
+  Mitgliedschaft (200, never 404, see "Automatically requested endpoints"); existing ones are
+  still listed (`teams_aktiv: false`, no public toggle) so that leaving a team
+  stays as easy as joining (Art. 7(3) GDPR). While on:
+  - Admin: `GET /api/v1/einladungen` adds `team` `{name, motiv, saison, art, zustimmung_am,
+    mitglieder}` per invitation (`mitglieder` is only a count; no member list, export or API on
+    other people's memberships exists, admins included), plus `teams_aktiv`, `aktuelle_saison`,
+    `motive` and `teamname_hinweis`; `POST` and `PATCH /api/v1/einladungen` accept `team_name`
+    (at most 40 characters, requires `team_motiv`), `team_motiv` (one of the Meilenstein motifs),
+    `team_saison` (at most 20, default the current Saison), `team_art` (`anlass`, the default,
+    or `gruppe`, GLOSSARY.md "Team") and `team_zustimmung_am` (date the written consent of the
+    group's leadership was given; required with `gruppe`, not in the future, rejected with
+    `anlass`). Stored at the invitation (`einladungen.team_art`, `team_zustimmung_am`,
+    migration `2026-11-26-teams-nach-gruppe.sql`) as evidence for admins only, no names; the
+    Mitgliedschaft carries neither. A `PATCH` with `team_name` replaces the whole team: without
+    `team_art` it becomes `anlass` and the date is cleared, like a missing `team_motiv` is
+    rejected. With `gruppe` the team name is exactly the group's public name (no place or
+    year, the Saison is separate); the greeting uses it as {gruppe}. Renaming a team
+    everywhere (invitations, memberships, number counter) after a group withdraws its
+    consent: `mvp/scripts/manual/team_umbenennen.sql`, only into a neutral name (requires
+    `-v art=anlass`, aborts otherwise; renaming into another group needs new consent of the
+    members).
+  - Redeeming: `POST /api/v1/einladungen/pruefen` returns `team` with the greeting, the next
+    number, `art` (with `gruppe` the greeting shows the sentence that the team is named after the
+    group with its consent; `zustimmung_am` is never sent here) and the consent wording
+    `team-2026-11-26` plus both button texts. For a logged-in
+    member it returns `team` with `eigene_nummer` even when the invitation is no longer
+    redeemable ("schon dabei"); everyone else gets no team then.
+    `POST /api/v1/einladungen/einloesen` stores a Mitgliedschaft only with
+    `team_einwilligung: true` plus `team_einwilligung_kennung` (the wording id shown; unknown, earlier
+    or missing: 422) and only when Keycloak creates a new account. New consents accept only the
+    ids in `EINWILLIGUNG_GELTEND` (the current one); earlier ids stay in `EINWILLIGUNG_WORTLAUTE`
+    for existing memberships, which keep them.
+  - Joining while logged in: `POST /api/v1/einladungen/beitreten` `{code, einwilligung: true,
+    einwilligung_kennung, oeffentlich?, oeffentlich_kennung?}` counts against the invitation's
+    limit once; a second join returns the existing number (`neu: false`). Own rate limit per
+    person (see above).
+  - Own teams only: `GET /api/v1/teams/meine` (all Saisons, newest first),
+    `DELETE /api/v1/teams/meine/{id}` ("Team verlassen", deletes at once, also with the switch
+    off; the number is never reassigned) and `PUT /api/v1/teams/oeffentlich` (second consent
+    `team-oeffentlich-2026-11-25`; withdrawing always works).
+  - Admin setting `aktuelle_saison` (table `einstellungen`, default the current UTC year):
+    `GET /api/v1/moderation/schalter` lists it under `einstellungen`,
+    `PUT /api/v1/moderation/schalter/einstellungen/{name}` `{wert}` changes it.
+- `SEMANTIC_SEARCH_TEAM_FORTSCHRITT_AKTIV` / `SEMANTIC_SEARCH_TEAM_QUESTS_AKTIV` - upper bounds
+  of the Schalter `team_fortschritt` (#784) and `team_quests` (#792), default `false`; switch on
+  only after DSFA addendum V29 and the legal OK. `team_fortschritt` works only with `teams`,
+  `team_quests` only with `team_fortschritt`. While on, the endpoints for Beiträge, Stimmen and
+  "Ja, gepostet" raise the weekly counter `team_wochen` (team, Saison, week, no Kennung), and
+  `GET /api/v1/teams/meine` carries `wirkung` (last closed week, rounded texts, from 5 members)
+  and `quest` per own team of the current Saison (`services/team_fortschritt_service.py`). The
+  first `GET /api/v1/teams/meine` of a week writes that week's quest (`team_quests`). The weekly
+  check values for deduplication live in process memory, so this assumes one uvicorn worker
+  (as "Ja, gepostet" does); a restart mid-week can count something twice (too high, never too
+  low). `team_wochen` and `team_quests` go with the team (docs/LOESCHKONZEPT.md). Deleting a
+  team does not exist yet (invitations can only be switched off or changed, memberships go one
+  by one); when it comes, the rows must go with it via `TeamFortschrittRepository.team_loeschen`
+  (pass the caller's session to keep one transaction).
+  `tests/unit/test_team_loeschung_nimmt_zaehler_mit.py` fails on Python, SQL and shell code that
+  deletes `einladungen` or `team_nummern` in the usual forms without them (not on table names
+  built at run time).
+- `SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV` - upper bound of the Schalter `teams_oeffentlich`
+  (default `false`; stays off on production until the data protection officer has advised).
+  Own bound, deliberately not coupled to `SEMANTIC_SEARCH_ABZEICHEN_SICHTBAR_AKTIV`; works only
+  together with `teams`, and an admin has to switch it on too. While on, logged-in viewers get
+  `autor_teams` `[{name, motiv, motiv_name}]` at a post, the teams of the current Saison of
+  authors who gave the second consent (no number); visitors never. While off, the second
+  question is not asked, `GET /api/v1/teams/meine` reports `oeffentlich_verfuegbar: false` and
+  `autor_teams` stays `null`.
+- `SEMANTIC_SEARCH_VERTRAUENSZEILE_AKTIV` - upper bound of the Schalter `vertrauenszeile`
+  (group Grundfunktionen, public, default `false`): the trust line above the login options on
+  `/login` with the wording of the preliminary legal assessment of 26.11.2026 and a link to the
+  privacy policy (`login/login-selector.component.ts`, `VERTRAUENSZEILE`). Text only, nothing
+  is stored or counted. Condition for switching on, shown on the admin page: the sentence holds
+  only while Rangliste and Team-Fortschritt are off or voluntary; extend it after the board's go.
+- `SEMANTIC_SEARCH_TEAMLINK_VERTRAUENSSATZ_AKTIV` - upper bound of the Schalter
+  `teamlink_vertrauenssatz` (default `false`; switch on only after legal has checked what team
+  members see of each other, preliminary legal assessment of 26.11.2026, point d). Text only,
+  stores nothing; public (`GET /api/v1/funktionen`), works only together with `team_fortschritt`
+  (and thus `teams`), because the sentence promises a team sum, and an admin has to switch it on
+  too. While on, the greeting of a team link shows the trust sentence
+  after the sentences before the question (`shared/team-texte.ts`, `teamVertrauenssatz`): for a
+  team named after a group both sentences, otherwise only the first. The page asks
+  `/funktionen` only when the invitation carries a team.
+- `SEMANTIC_SEARCH_FEEDBACK_GESTOERT_AKTIV` - upper bound of the Schalter `feedback_gestoert`
+  (default `false`, group Grundfunktionen, public): the button „Was hat dich gestört?“ on the
+  start page for the launch phase. It opens the Feedback form with category `gestoert`, free
+  text only, no contact (`POST /api/v1/feedback/senden` with `kategorie: "gestoert"`; with a
+  contact 422, while the switch is off 409, never 404). Switch on only with the privacy policy
+  paragraph (legal package 27.11.). From 31.12.2026 (UTC) the switch is no longer effective and
+  the feedback cleanup deletes all entries of the category (`domain/feedback_gestoert.py`).
+- `SEMANTIC_SEARCH_AUFRUFE_ZAEHLEN_AKTIV` - upper bound of the Schalter `aufrufe_zaehlen`
+  (#761, default `false`, own switch-on hint: DPO answer on § 25 TDDDG and the DSFA line); takes
+  effect only when an admin switches it on too. Then `middleware/aufrufe_zaehlen.py` counts, after
+  a successful response, requests the app makes anyway (`GET /api/v1/content/recent`,
+  `GET /api/v1/content/beitrag/{id}`, `POST /api/v1/search/searchByText`,
+  `GET /api/v1/search/thema/{key}`); the browser sends no extra request. The same page of the
+  same visitor within 5 minutes counts once (in-memory check value until midnight). The service
+  counts per day pseudonym of the visitor (`aufrufe_heute`, Anschluss with its own prefix, no IP,
+  no cookie) and an hourly task condenses past days into `aufrufe_tage` (views, visitors).
+  Admins read them via `GET /api/v1/aufrufe` (Kennzahlen).
 - `DOCKER_CONTAINER` - set to `true` inside containers to enforce strict path validation
+
+#### Schalter für das Spielgefühl (#782 to #793)
+
+One Schalter per building block for the BDK, registered in `SPIEL_SCHALTER`
+(`services/schalter_service.py`). Upper bound `SEMANTIC_SEARCH_<NAME>_AKTIV`, default `false`
+everywhere; like every Schalter it also needs the admin value (Admin, "Schalter"), which is off
+without an entry. The building blocks arrive in their own PRs; until then a switch changes
+nothing. "public" means `GET /api/v1/funktionen` reports the effective value without login.
+Team progress (#784) and team quests (#792) get their switches later.
+
+The admin page groups all switches by `Schalterart.gruppe` (Grundfunktionen, Teams, Spielgefühl,
+Punkte & Anerkennung, order in `GRUPPEN`) and shows a status per switch: on, free to switch on,
+waiting for legal clearance (`wartet_auf_recht`: a hint is set and the switch is not
+`rechtlich_freigegeben`) or locked by the server. `teams` is legally cleared (25.11.) and may be
+switched on before the DSFA is adopted; `teams_oeffentlich` stays off until the data protection
+officer has advised.
+
+| Schalter | Upper bound | Default | Public | Condition for switching on (issue) |
+|----------|-------------|---------|--------|------------------------------------|
+| `saison_ziel` | `SEMANTIC_SEARCH_SAISON_ZIEL_AKTIV` | off | yes | none; privacy policy sentence ships with #782 (see below) |
+| `gartenansicht` | `SEMANTIC_SEARCH_GARTENANSICHT_AKTIV` | off | yes | none (#783) |
+| `kopiert_erfolg` | `SEMANTIC_SEARCH_KOPIERT_ERFOLG_AKTIV` | off | yes | none (#785) |
+| `konter_probe` | `SEMANTIC_SEARCH_KONTER_PROBE_AKTIV` | off | yes | none (#786) |
+| `luecke_zu_gross` | `SEMANTIC_SEARCH_LUECKE_ZU_GROSS_AKTIV` | off | yes | none; while on (or while the browser holds the entry), the privacy policy shows the paragraph on the browser entry `gutgesagt-ton-bei-erfolgen`, DSFA V21 names it (#787) |
+| `einwilligung_im_gewinn` | `SEMANTIC_SEARCH_EINWILLIGUNG_IM_GEWINN_AKTIV` | off | yes | none, wordings stay (#788) |
+| `naechster_schritt` | `SEMANTIC_SEARCH_NAECHSTER_SCHRITT_AKTIV` | off | yes | DSFA addendum Spielgefühl (V10); privacy policy sentences ship with #789 |
+| `null_treffer_anzahl` | `SEMANTIC_SEARCH_NULL_TREFFER_ANZAHL_AKTIV` | off | yes | legal OK, preliminary 26.11.: only from N ≥ 3, wording „N-mal gesucht“, privacy policy paragraph „Suchen ohne Treffer“ (ships with #763, shown while on); final with the legal package 27.11. (#362) |
+| `wirkungs_echo` | `SEMANTIC_SEARCH_WIRKUNGS_ECHO_AKTIV` | off | yes | DSFA addendum V31 (#790); works only together with `danke_knopf` |
+| `danke_knopf` | `SEMANTIC_SEARCH_DANKE_KNOPF_AKTIV` | off | yes | DSFA addendum V31 (#791); works only together with `wirkungs_echo` |
+| `danke_ohne_konto` | `SEMANTIC_SEARCH_DANKE_OHNE_KONTO_AKTIV` | off | yes | V31 and visitor marker (#495); works only with `danke_knopf` |
+| `rangliste` | `SEMANTIC_SEARCH_RANGLISTE_AKTIV` | off | yes | legal OK (wording, DSFA V28, privacy policy) and Punkte on (#793); works only with `punkte` |
+| `saal_spruch` | `SEMANTIC_SEARCH_SAAL_SPRUCH_AKTIV` | off | yes | none: public text only, nothing about the person (see "Saal-Spruch" below) |
+| `muster_stimmen` | `SEMANTIC_SEARCH_MUSTER_STIMMEN_AKTIV` | off | yes | wording `spielgefuehl-2026-11-27` by the legal review 27.11. (in the code), privacy policy sentence shown while on, DSFA V11 addendum; works only with `spielgefuehl_buehne` (see "Spielgefühl as one setting") |
+
+#### Saal-Spruch
+
+On BDK days an admin picks each morning the saying currently circulating under BDK posts
+online (card „Heute im Netz zur BDK:“; the name Saal-Spruch stays for switch, paths and table).
+Table `saal_sprueche` (day in Europe/Berlin, text up to 200 characters, time of the last change;
+no personal data, not even which admin set it), `repositories/saal_spruch_repository.py`,
+`services/saal_spruch_service.py` (today's text cached 60 s; a read error means no Saal-Spruch).
+
+- `GET /api/v1/saal-spruch/heute` (anonymous at the BFF): `{"spruch": "…"}`, `{"spruch": null}`
+  without one for today, `{"spruch": null, "aktiv": false}` while the switch is off (never 404,
+  the start page asks on every view). The frontend skips it while `GET /api/v1/funktionen`
+  reports the switch off.
+- `/api/v1/moderation/saal-sprueche` (admin): `GET` lists today and later, `PUT /{datum}`
+  `{"text": …}` sets or replaces the text of a day (not for past days), `DELETE /{datum}` removes
+  it. Works with the switch off, so the texts are ready before switching on. UI: section
+  „Saal-Sprüche“ on the admin page „Schalter“.
+
+#### Short hint line under the search button (`hinweiszeile_kurz`)
+
+`SEMANTIC_SEARCH_HINWEISZEILE_KURZ_AKTIV`, default `false`, public, group Grundfunktionen. On,
+the search field shows one line "Ohne Namen gespeichert · Datenschutz" instead of the wording
+agreed on 16.11.; "Nach Prüfung können Suchtexte öffentlich werden." folds out behind an info
+button and is always part of the field's `aria-describedby`. Condition for switching on: legal OK
+on the short wording and on the folded sentence.
+
+#### Kampagnenwort ?k= (preliminary legal assessment 26.11.2026)
+
+The app reads `?k=<word>` once at start (`shared/kampagnenwort.service.ts`), lower case,
+`[a-z0-9-]{1,20}`, and keeps it in memory only. Two switches in `K_SCHALTER`
+(`services/schalter_service.py`), group Grundfunktionen, both public, upper bound default
+`false`; like every switch they also need the admin value.
+
+| Schalter | Upper bound | Default | Public | Condition for switching on |
+|----------|-------------|---------|--------|----------------------------|
+| `k_begruessung` | `SEMANTIC_SEARCH_K_BEGRUESSUNG_AKTIV` | off | yes | final legal OK; display only, nothing stored |
+| `k_ankuenfte` | `SEMANTIC_SEARCH_K_ANKUENFTE_AKTIV` | off | yes | legal: only arrivals per word and day, never linked to an account or Beitrag |
+
+- `k_begruessung`: for `sticker` and `bdk` the Willkommen line shows a matching greeting
+  (`K_BEGRUESSUNG` in `rundgang/rundgang-daten.ts`) instead of "Neu hier?"; same tour, same
+  browser entry, same "Ausblenden". Other words change nothing.
+- `k_ankuenfte`: once per page load `POST /api/v1/ankunft` with `{"k": "<word>"}` in the body
+  (unknown fields 422), only when `/api/v1/funktionen` reports the switch on; an unknown state
+  (older server, failed request) sends nothing, so a mixed rollout cannot produce 401/404. The service counts only words of `SEMANTIC_SEARCH_K_WOERTER` (default
+  `vorhut,g1,g2,g3,g4,bdk,sticker,karte,technik`, at most 20 characters each) into `ankuenfte_je_tag`
+  (word, UTC day, count; no identifier, account, address or Beitrag), throttled in memory per
+  second for all callers together (`SEMANTIC_SEARCH_ANKUNFT_JE_SEKUNDE`, default 20). The
+  endpoint does not read the caller; the frontend nginx writes no access line for it
+  (`nginx.protokoll.conf`), like `/api/v1/ereignis`. The upstream web server outside this
+  repository may still log the page request `GET /?k=<word>` with address and time; whether it
+  drops the query string is an open question for the legal check (PR #845). Counts are
+  indicative only: reloads count again and anyone can inflate them within the throttle. Admins see the last 30 days under
+  Admin → Übersicht (`GET /api/v1/ankuenfte`, `{"aktiv": false, "tage": []}` while off);
+  rows are deleted 365 days after their day (`docs/LOESCHKONZEPT.md`).
+
+`meldeweg_sichtbar` (group Grundfunktionen, upper bound `SEMANTIC_SEARCH_MELDEWEG_SICHTBAR_AKTIV`,
+default off, public, no condition for switching on: preliminary legal assessment 26.11. without
+conditions): "Melden" as a small button at the end of the meta line of every Beitrag card (no extra height), in
+addition to the ⋮ menu entry, and "Melden & Kontakt" in the footer with the reporting route and only the
+function address from the imprint (`LEGAL_ENTITY.KONTAKT_MAIL`), linking to the imprint section
+DSA-Kontaktstelle (Art. 11/12, with reports under Art. 16; `/impressum#melden`). Display only: the
+report dialog and what it stores stay as they are. Because the footer reads the Schalter,
+`GET /api/v1/funktionen` is now also requested on pages without cards (imprint, privacy policy);
+it stays public, always 200 and shared through the 5-minute cache.
+
+#### Saisons and Gemeinschaftsziel (#782)
+
+Table `saisons` (name, first and last day, goal in Widerspruchs-Wochen; no personal data),
+rules in `domain/saisons.py`, `repositories/saison_repository.py` (overlap check under a table
+lock, so at most one season runs on any day) and `services/saison_service.py`. The running season
+replaces the setting "aktuelle Saison" for teams (`einstellungen_service.aktuelle_saison()`),
+whether or not `saison_ziel` is effective (the switch only governs the bar); in a gap between two
+seasons the last ended season stays the current one until the next begins, before the first season
+the setting applies. New team links get the running or else the next planned season as suggestion
+(`einstellungen_service.saison_vorschlag()`, field `saison_vorschlag` of `GET /api/v1/einladungen`,
+also used when the admin leaves the season empty); "Meine Teams" does not count teams of that next
+season as past. The
+count is the sum of the existing weekly numbers of "Ja, gepostet" (`gepostet_wochen`) over the
+closed weeks of the season; a boundary week shared by two seasons counts only for the season that
+contains its Monday (`domain.saisons.wochen_der_saison`); nothing new is stored.
+
+- `GET /api/v1/saisons/aktuell` (anonymous at the BFF): `{"balken": {name, ziel, erreicht}}`,
+  `{"balken": null}` without a running season or below the threshold, `{"balken": null,
+  "aktiv": false}` while the switch is off (never 404, the start page asks on every view).
+- `GET|POST /api/v1/moderation/saisons`, `PUT|DELETE /api/v1/moderation/saisons/{id}` (admins):
+  list with state, create, change (running: only goal and end), delete (only before the start).
+- Threshold for the public bar: `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_WOCHEN` (default 3) closed
+  weeks in a row with at least `SEMANTIC_SEARCH_SAISON_ZIEL_SCHWELLE_MENSCHEN` (default 25) people
+  each, reached once at any time. The privacy notice names these numbers (section „Rückmeldung
+  ‚Ja, gepostet‘“, wording by the legal review 25.11.): whoever changes either variable must update
+  that sentence in `datenschutz.component.html` in the same change.
+- For later building blocks (Rangliste per season): `SaisonService.alle()`, `.laufende(heute)`
+  and the dataclass `domain.saisons.Saison` (`id`, `name`, `beginn`, `ende`, `ziel`, `wochen()`).
+
+#### Rangliste per season (#793)
+
+Consent table `rangliste_einwilligung` (yes/no, choice of the display name, wording id, time,
+the random Ranglistenname rolled on the first yes and carried into every later row; newest row
+counts, every change is a new row), rules in `domain/rangliste.py`, assembly in
+`services/rangliste_service.py`. Who is in is decided on every request: newest answer yes, Art. 9
+consent and "Punkte und Meilensteine" both valid (one query each for all participants), no
+Startkonto. Points are those of ADR 0004
+within the days of the running season (`PunkteService.punkte(user, zeitraum)`): usage from
+`usage_events` with `entdoppelt` (so only within their retention, `usage_retention_days` while
+the cleanup job runs), approvals by the day of their last change, Tun and ratings by their day,
+Team-Quest points by their quest week (its Monday within the season, not the Monday they are
+credited, so a quest of the last season week still counts for that season).
+A season used with the Rangliste should therefore not be longer than that retention, otherwise
+usage from its first days drops out near its end. Points that miss a source (Team-Quests not
+readable, `Punktestand.vollstaendig`) are used for that request only and not cached, so nobody
+sits too low for 120 s. Season points of all participants are cached
+in memory once per season for 120 s; one request recomputes (at most 8 people in parallel), the
+others wait for it. Neither points nor places are stored.
+
+- `GET /api/v1/rangliste` (signed in; while `rangliste` is not effective 200 with `aktiv: false`
+  and nothing asked, never 404; a yes via `PUT` answers 409 then): own answer, random
+  Ranglistenname, and for participants the top 10 plus the own place (only from 10 participants)
+  and past seasons as own sums (only seasons that started within the retention). If the own points
+cannot be computed, the request fails with 500 instead of showing a list without the person.
+- `PUT /api/v1/rangliste/einwilligung` `{teilnehmen, mit_anzeigename, wortlaut}`: yes only to the
+  current wording and only while the question is offered (else 409); no always, to any known
+  wording, also with the switch off or in the Spielgefühl model, where it also records a level
+  `rangliste` as `fuer_mich`. Withdrawing the Art. 9 consent or "Punkte und Meilensteine" records
+  an earlier yes as no.
+
+#### Spielgefühl as one setting (switch `spielgefuehl_buehne`)
+
+One question in three levels (`aus`, `fuer_mich`, `rangliste`) replaces the consents "Punkte und
+Meilensteine", badge visibility and Rangliste while the switch is effective (`domain/spielgefuehl.py`,
+`services/spielgefuehl_service.py`, table `spielgefuehl`: level, choice of display name or random
+name, wording id, time, Ranglistenname; newest row counts). The switch is effective only together
+with `punkte` (`schalter_service._wirksam`): without points there is no question, and the admin
+page must not report it as on. While it is effective, `abzeichen_sichtbar` is not effective
+either (no badges at the name). Switching `punkte` off (emergency stop) therefore also selects
+the old model; everything that depends on points is off then anyway, only the consent budget
+(`einwilligungs_moment`) counts the old answers meanwhile. Switch off: the old model, unchanged.
+Switch on: only the new table counts, old answers stay as proof but are neither read nor carried
+over, so everyone is asked again. Points ⇔ level ≥ `fuer_mich`; Rangliste ⇔ level `rangliste`
+(still only with the switches `punkte` and `rangliste`); badges never at the display name
+(`AbzeichenService.abzeichen` empty), only in the Rangliste (`in_rangliste`, computed in the
+15-minute cycle for participants). Pair check values and Muster-Hinweise as before for both
+levels above `aus` (the wording names them in a sentence below the three levels). The old endpoints for points consent, badge visibility and `PUT /rangliste/einwilligung`
+answer `aktiv: false` to reads and 409 to a yes; a no is still recorded (withdrawal). Withdrawals
+carry over between the models in both directions, upgrades never: a level answer records an
+earlier yes to badges at the name as no (also level `rangliste`, so the badge does not come back
+when the switch goes off), below `rangliste` the Rangliste, at `aus` the points consent; a no to
+the old points consent records a level above `aus` as `aus`, a no to the old Rangliste caps the
+level at `fuer_mich`.
+
+Mutual approvals (switch `muster_stimmen`, upper bound `SEMANTIC_SEARCH_MUSTER_STIMMEN_AKTIV`,
+default off, effective only with `spielgefuehl_buehne`; decision of the maintainer 27.11., wording
+by the legal review 27.11.): while effective, the question shows the wording
+`spielgefuehl-2026-11-27` (same levels, the sentence on Absprachen adds "oder einander
+zustimmen"), and an answer above `aus` to `-26` is reported as level null, so the app asks again
+(`domain/spielgefuehl.py` `neu_fragen`); until then `-26` keeps counting for points, Rangliste and
+mutual usage. Both wordings stay valid, so switching off asks nobody again. A Zustimmung (`PUT
+…/like`, not a dislike) reports a pair check value of its own kind (`zustimmung|…`, same window
+key, same table `muster_pruefwerte`) only if both accounts' newest answer is `-27` at level
+`fuer_mich` or above, checked on every report; mutual approvals within seven days give a
+Muster-Hinweis of kind `zustimmung` (column `art` of `muster_hinweise`), with the same 56-day
+retention. The admin dashboard shows those only while the switch is effective and both accounts
+still have `-27` and a valid Art. 9 consent. The daily retention run (`loeschen_im_takt`) also
+deletes every Muster-Hinweis whose two accounts no longer both consent (usage: points consent or
+Spielgefühl ≥ `fuer_mich`; approvals: `-27` ≥ `fuer_mich` plus Art. 9), so a hint written during a
+withdrawal goes within one run; the dashboard request cleans up the rows it reads the same way.
+No effect on points or the Rangliste. An answer without the purpose after one
+with it (e.g. `fuer_mich` to `-26` after the switch went off) deletes only the hints of kind
+`zustimmung`; `aus` deletes all. `GET /api/v1/funktionen/muster_stimmen/seit` (no sign-in, always
+200) gives the day (German time) the admin value was last switched on, for the sentence in the
+privacy policy; `seit: null` while not effective.
+
+- `GET /api/v1/usage/users/me/spielgefuehl`: level (null = not asked yet), name choice,
+  Ranglistenname, wording in button order (community first), one-time badge note; 200 with
+  `aktiv: false` without the switches `spielgefuehl_buehne` and `punkte`.
+- `PUT …/spielgefuehl` `{stufe, mit_anzeigename, wortlaut}`: level `rangliste` needs the name
+  choice (no preset, 422 without); the first time rolls the random name; downgrading takes the
+  badges out of the Rangliste immediately. Without the switches only a withdrawal is accepted
+  (`aus` always, `fuer_mich` from `rangliste`), an upgrade answers 409. `aus` also deletes the
+  Muster-Hinweise naming the person. Withdrawing Art. 9 records a level above `aus` as `aus`.
+- `GET /api/v1/usage/users/me/widerrufbar` (signed in, always 200, no switch): the stored
+  answers above no/`aus` (Spielgefühl level with its title, old points, Rangliste and badge
+  consents, „Team öffentlich am Namen zeigen" via `PUT /api/v1/teams/oeffentlich`) with their
+  wording; the privacy settings page, the privacy policy (box `#einwilligung-widerrufen`, signed
+  in only) and „Meine Beiträge" show one "Ausschalten" line each and send the no to the `PUT`
+  endpoints above (`einwilligung/widerrufbar.component.ts`, reloads itself with silent requests).
+- `POST …/spielgefuehl/ranglistenname`: rolls a new random name (only with level `rangliste`, else
+  409), a new proof row.
 
 ## Startup Scripts
 

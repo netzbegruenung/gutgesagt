@@ -36,6 +36,21 @@ class TestPunkteEinwilligung:
             ).scalar_one()
         assert anzahl == 2
 
+    def test_nein_ohne_vorherige_einwilligung_ist_ein_nachweis(
+        self, datenbank  # noqa: F811
+    ):
+        # #788: Ein Nein auf die Frage gilt dauerhaft; es steht wie das Haekchen auf dem
+        # Server, mit Kennung des Wortlauts und Zeitpunkt, und die App fragt danach nie mehr.
+        repo = PunkteEinwilligungRepository(datenbank)
+        repo.antworten("kim-1", False, AKTUELLER_WORTLAUT)
+
+        stand = repo.lesen("kim-1")
+        assert stand is not None
+        assert stand.eingewilligt is False
+        assert stand.wortlaut == AKTUELLER_WORTLAUT
+        assert stand.beantwortet_am is not None
+        assert repo.eingewilligt("kim-1") is False
+
     def test_dieselbe_antwort_zweimal_ist_eine_zeile(self, datenbank):  # noqa: F811
         repo = PunkteEinwilligungRepository(datenbank)
         repo.antworten("kim-1", True, AKTUELLER_WORTLAUT)

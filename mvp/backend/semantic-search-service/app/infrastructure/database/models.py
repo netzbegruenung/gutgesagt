@@ -21,6 +21,7 @@ from sqlalchemy import (
     UUID as SQLUUID,
     Text,
     CheckConstraint,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.ext.declarative import declarative_base
@@ -230,10 +231,59 @@ class GepostetWoche(Base):
     personen = Column(Integer, nullable=False)
 
 
+class GepostetOhneKontoWoche(Base):
+    """
+    Meldungen ohne Konto (#799): je Kalenderwoche nur die Zahl der Klicks auf "Ja,
+    gepostet" ohne Anmeldung. Keine Kennung, kein Pruefwert, kein Beitrag, keine
+    Adresse; getrennt von ``gepostet_wochen``, weil sie keine Menschen zaehlt
+    (GLOSSARY.md "Meldung ohne Konto").
+    """
+
+    __tablename__ = "gepostet_ohne_konto_wochen"
+
+    woche = Column(Date, primary_key=True)
+    meldungen = Column(Integer, nullable=False)
+
+
+class AnkunftJeTag(Base):
+    """
+    Ankuenfte je Kampagnenwort und Tag (GLOSSARY.md "Ankunft"): wie oft die App mit
+    ``?k=<wort>`` geoeffnet wurde, nur die Zahl. Keine Kennung, kein Konto, keine
+    Adresse, kein Beitrag; nichts, womit sich eine Zeile einer Person zuordnen liesse
+    (vorlaeufige Jura-Einschaetzung 26.11.2026). Frist: services/ankunft_service.py.
+    """
+
+    __tablename__ = "ankuenfte_je_tag"
+
+    k = Column(String(20), primary_key=True)
+    tag = Column(Date, primary_key=True)
+    anzahl = Column(Integer, nullable=False)
+
+
+class WirkungJeBeitrag(Base):
+    """
+    Was andere mit einem Beitrag tun, nur als Summe je Beitrag fuer die Autorin:
+    wie oft er als "oeffentlich gepostet" gemeldet wurde (Wirkungs-Echo, #790) und
+    wie oft jemand "Danke an die Autorin" gesagt hat (#791). Keine Kennung, kein
+    Pruefwert, kein Zeitpunkt; wer gepostet oder gedankt hat, steht nirgends
+    (services/wirkung_service.py). Getrennt von der Wochenzahl "Ja, gepostet"
+    (``gepostet_wochen``), die keinen Beitrag kennt.
+    """
+
+    __tablename__ = "wirkung_je_beitrag"
+
+    content_id = Column(SQLUUID(as_uuid=True), primary_key=True)
+    oeffentlich_gepostet = Column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    danke = Column(Integer, default=0, server_default="0", nullable=False)
+
+
 class MusterHinweisZeile(Base):
     """
     Ein auffaelliges Muster fuer Admins (ADR 0004, #352): zwei Konten, die innerhalb
-    von sieben Tagen jeweils einen Beitrag des anderen genutzt haben. Ein Hinweis,
+    von sieben Tagen jeweils einen Beitrag des anderen genutzt (oder, mit dem Schalter
+    muster_stimmen, einem Beitrag des anderen zugestimmt) haben. Ein Hinweis,
     keine Automatik; niemand verliert dadurch Punkte.
 
     konto_a ist die kleinere Kennung, konto_b die groessere. tage zaehlt die Tage, an
@@ -245,6 +295,12 @@ class MusterHinweisZeile(Base):
 
     konto_a = Column(String(255), primary_key=True)
     konto_b = Column(String(255), primary_key=True)
+    # Woran das Muster auffiel: "nutzung" (gegenseitig genutzt) oder "zustimmung"
+    # (einander zugestimmt, Schalter muster_stimmen); je Art ein eigener Hinweis
+    # (Migration 2026-11-27-muster-stimmen.sql)
+    art = Column(
+        String(16), primary_key=True, default="nutzung", server_default="nutzung"
+    )
     tage = Column(Integer, nullable=False)
     erster_tag = Column(Date, nullable=False)
     letzter_tag = Column(Date, nullable=False)
@@ -387,6 +443,9 @@ class FeedbackZeile(Base):
     # Von Admins gesetzt, wenn das Feedback erledigt ist (#425); nur ein Merker,
     # ohne Zeitpunkt und ohne wer.
     erledigt = Column(Boolean, nullable=False, default=False, server_default="false")
+    # None: der Knopf "Feedback"; "gestoert": der Knopf "Was hat dich gestört?" der
+    # Startphase, ohne Kontakt und mit eigener Frist (domain/feedback_gestoert.py).
+    kategorie = Column(Text, nullable=True)
 
     __table_args__ = (Index("idx_feedback_eingegangen_am", "eingegangen_am"),)
 
@@ -410,6 +469,133 @@ class EinladungZeile(Base):
     gueltig_bis = Column(Date, nullable=False)
     abgeschaltet = Column(Boolean, nullable=False, server_default=text("false"))
     angelegt_am = Column(Date, nullable=False)
+    # Team an der Einladung (GLOSSARY.md "Team"): ohne Namen ein reiner Kontolink.
+    # Die Saison ist Pflicht, sobald ein Name steht (services/team_service.py).
+    # Spalten aus postgres-app/migrations/2026-11-25-teams.sql.
+    team_name = Column(String(40), nullable=True)
+    team_motiv = Column(String(32), nullable=True)
+    team_saison = Column(String(20), nullable=True)
+    # Die Saison per ID (Befund 6, postgres-app/migrations/2026-11-26-teamlink-saison-id.sql);
+    # leer bei Links ohne passende Saison. team_saison bleibt die Kopie ihres Namens.
+    # Ohne Fremdschluessel, wie team_saison: Einladungen gab es vor den Saisons; beim
+    # Loeschen einer Saison leert repositories/saison_repository.py die ID.
+    team_saison_id = Column(SQLUUID(as_uuid=True), nullable=True)
+    # Teamart ("anlass" oder "gruppe", domain/teams.py; leer heisst "anlass") und bei
+    # "gruppe" der Tag, an dem die schriftliche Zustimmung der Gruppenleitung vorlag:
+    # nur ein Nachweis fuer Admins, kein Name. Spalten aus
+    # postgres-app/migrations/2026-11-26-teams-nach-gruppe.sql.
+    team_art = Column(String(16), nullable=True)
+    team_zustimmung_am = Column(Date, nullable=True)
+
+
+class TeamMitgliedschaftZeile(Base):
+    """
+    Eine Mitgliedschaft in einem Team, nur mit ausdruecklicher Einwilligung der Person
+    (Kennung des Wortlauts und Zeitpunkt, domain/teams.py).
+
+    Bewusst ohne Bezug zur Einladung: Gespeichert sind Teamname, Motiv und Saison als
+    Kopie, nicht welcher Link genutzt wurde. Die Nummer ist laufend je Team und Saison
+    (team_nummern) und wird nach "Team verlassen" nicht neu vergeben. Geloescht wird
+    die Zeile bei "Team verlassen" und mit dem Konto
+    (mvp/scripts/manual/person_loeschen.sql).
+    """
+
+    __tablename__ = "team_mitgliedschaften"
+
+    id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    konto_kennung = Column(String(255), nullable=False)
+    team_name = Column(String(40), nullable=False)
+    team_motiv = Column(String(32), nullable=True)
+    saison = Column(String(20), nullable=False)
+    nummer = Column(Integer, nullable=False)
+    eingetreten_am = Column(Date, nullable=False)
+    einwilligung_kennung = Column(String(64), nullable=False)
+    einwilligung_zeitpunkt = Column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "konto_kennung",
+            "team_name",
+            "saison",
+            name="uq_team_mitgliedschaften_konto_team_saison",
+        ),
+        UniqueConstraint(
+            "team_name",
+            "saison",
+            "nummer",
+            name="uq_team_mitgliedschaften_team_saison_nummer",
+        ),
+    )
+
+
+class TeamNummerZeile(Base):
+    """
+    Die zuletzt vergebene Nummer je Team und Saison. Ein eigener Zaehler, weil die
+    hoechste Nummer unter den Mitgliedschaften nach "Team verlassen" sinken koennte und
+    eine Nummer nie zweimal vergeben wird. Nichts zur Person.
+    """
+
+    __tablename__ = "team_nummern"
+
+    team_name = Column(String(40), primary_key=True)
+    saison = Column(String(20), primary_key=True)
+    letzte_nummer = Column(Integer, nullable=False)
+
+
+class TeamOeffentlichZeile(Base):
+    """
+    Die eigene Einwilligung "Team öffentlich am Namen zeigen", getrennt von der
+    Einwilligung zur Mitgliedschaft: eine Zeile je Konto mit der juengsten Antwort,
+    der Kennung des Wortlauts und dem Zeitpunkt (domain/teams.py). Wirkt nur, solange
+    der Schalter teams_oeffentlich an ist. Geloescht mit dem Konto.
+    """
+
+    __tablename__ = "team_oeffentlich"
+
+    konto_kennung = Column(String(255), primary_key=True)
+    zeigen = Column(Boolean, nullable=False)
+    einwilligung_kennung = Column(String(64), nullable=False)
+    beantwortet_am = Column(DateTime(timezone=True), nullable=False)
+
+
+class TeamWocheZeile(Base):
+    """
+    Der Wochenzaehler eines Teams (Team-Fortschritt, #784): je Team, Saison und Woche
+    nur die Zahl der Beitraege, Bewertungen und Meldungen "Ja, gepostet" seiner
+    Mitglieder mit Einwilligung. Bewusst ohne Kennung, ohne Beitrag und ohne
+    Zeitpunkt: Wer gezaehlt hat, steht nirgends, auch nicht ueber einen Pruefwert in
+    der Datenbank (entdoppelt wird im Arbeitsspeicher,
+    services/team_fortschritt_service.py). Bleibt deshalb bei "Team verlassen" und
+    bei der Loeschung eines Kontos stehen.
+    """
+
+    __tablename__ = "team_wochen"
+
+    team_name = Column(String(40), primary_key=True)
+    saison = Column(String(20), primary_key=True)
+    # Der Montag der Kalenderwoche (UTC).
+    woche = Column(Date, primary_key=True)
+    beitraege = Column(Integer, nullable=False, server_default=text("0"))
+    bewertungen = Column(Integer, nullable=False, server_default=text("0"))
+    gepostet = Column(Integer, nullable=False, server_default=text("0"))
+
+
+class TeamQuestZeile(Base):
+    """
+    Die Team-Quest einer Woche (#792): Thema und Ziel, festgelegt beim ersten Abruf in
+    der Woche aus dem Bedarf. Erreicht ist sie, wenn der Wochenzaehler (team_wochen)
+    nach Wochenende das Ziel erreicht; das steht nicht hier, sondern wird gerechnet.
+    Nichts zur Person.
+    """
+
+    __tablename__ = "team_quests"
+
+    team_name = Column(String(40), primary_key=True)
+    saison = Column(String(20), primary_key=True)
+    woche = Column(Date, primary_key=True)
+    # Schluessel aus domain/themen.py; leer, wenn es keinen Bedarf gab.
+    thema = Column(String(64), nullable=True)
+    ziel = Column(Integer, nullable=False)
 
 
 class VarianteZeile(Base):
@@ -775,6 +961,10 @@ class GeseheneNutzung(Base):
     # NULL: noch nie gezaehlt; der erste Besuch nennt dann nichts als neu.
     # Migration: postgres-app/migrations/2026-11-13-gesehene-einwuerfe.sql.
     einwuerfe = Column(Integer, nullable=True)
+    # Wirkungs-Echo (#790): die Summe "oeffentlich gepostet" der eigenen Beitraege beim
+    # letzten Besuch; die Startseite nennt nur den Zuwachs. NULL: noch nie gezeigt (0).
+    # Migration: postgres-app/migrations/2026-11-25-790-gesehenes-echo.sql.
+    echo = Column(Integer, nullable=True)
 
 
 class Art9EinwilligungZeile(Base):
@@ -885,7 +1075,9 @@ class PunkteEinwilligungZeile(Base):
     """
     Eine Antwort auf die Einwilligung "Punkte und Meilensteine" (#351,
     domain/punkte_einwilligung.py): ``eingewilligt`` ja oder nein, ``wortlaut`` die
-    Kennung des Wortlauts, ``beantwortet_am`` der Zeitpunkt. Es gilt die juengste Zeile
+    Kennung des Wortlauts, ``beantwortet_am`` der Zeitpunkt, ``ranglistenname`` der
+    zufaellige Name (beim ersten Ja gewuerfelt, in jede weitere Zeile uebernommen,
+    None vor dem ersten Ja). Es gilt die juengste Zeile
     der Kennung; ein Widerruf ist eine neue Zeile mit nein, damit belegt bleibt, wann
     die Person eingewilligt und wann sie widerrufen hat (Art. 7 Abs. 1 DSGVO).
 
@@ -905,6 +1097,68 @@ class PunkteEinwilligungZeile(Base):
     __table_args__ = (
         Index("idx_punkte_einwilligung_user", "user_id", "beantwortet_am"),
     )
+
+
+class RanglisteEinwilligungZeile(Base):
+    """
+    Eine Antwort auf die Einwilligung zur Rangliste (#793, domain/rangliste.py):
+    ``teilnehmen`` ja oder nein, ``mit_anzeigename`` ob die Person statt des
+    zufaelligen Ranglistennamens ihren Anzeigenamen gewaehlt hat, ``wortlaut`` die
+    Kennung des Wortlauts, ``beantwortet_am`` der Zeitpunkt, ``ranglistenname`` der
+    zufaellige Name (beim ersten Ja gewuerfelt, in jede weitere Zeile uebernommen,
+    None vor dem ersten Ja). Es gilt die juengste Zeile
+    der Kennung; jede Aenderung ist eine neue Zeile, damit belegt bleibt, wann die
+    Person eingewilligt und wann sie widerrufen hat (Art. 7 Abs. 1 DSGVO, wie V22).
+    Plaetze und Punkte stehen hier nicht, sie werden je Abruf berechnet.
+
+    Neue Tabelle: create_all legt sie beim Start an. Das Skript
+    postgres-app/migrations/2026-11-26-rangliste-einwilligung.sql dokumentiert das
+    Schema. Loeschen: docs/LOESCHKONZEPT.md, Schritt 2.
+    """
+
+    __tablename__ = "rangliste_einwilligung"
+
+    id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(String(255), nullable=False)
+    teilnehmen = Column(Boolean, nullable=False)
+    mit_anzeigename = Column(Boolean, nullable=False)
+    wortlaut = Column(String(64), nullable=False)
+    beantwortet_am = Column(DateTime(timezone=True), nullable=False)
+    ranglistenname = Column(String(64), nullable=True)
+
+    __table_args__ = (
+        Index("idx_rangliste_einwilligung_user", "user_id", "beantwortet_am"),
+    )
+
+
+class SpielgefuehlZeile(Base):
+    """
+    Eine Antwort auf die Frage "Spielgefuehl" (domain/spielgefuehl.py): ``stufe`` eine
+    von aus, fuer_mich, rangliste; ``mit_anzeigename`` ob die Person in der Rangliste
+    mit ihrem Anzeigenamen statt mit dem Zufallsnamen steht (nur bei Stufe rangliste
+    wahr); ``wortlaut`` die Kennung des Wortlauts; ``beantwortet_am`` der Zeitpunkt;
+    ``ranglistenname`` der zufaellige Name (beim ersten Mitspielen gewuerfelt, auf
+    Wunsch neu gewuerfelt, in jede weitere Zeile uebernommen; None davor). Es gilt die
+    juengste Zeile der Kennung; jede Aenderung ist eine neue Zeile, damit belegt
+    bleibt, wann die Person welche Stufe gewaehlt hat (Art. 7 Abs. 1 DSGVO). Punkte
+    und Plaetze stehen hier nicht, sie werden je Abruf berechnet.
+
+    Neue Tabelle: create_all legt sie beim Start an. Das Skript
+    postgres-app/migrations/2026-11-26-spielgefuehl.sql dokumentiert das Schema.
+    Loeschen: docs/LOESCHKONZEPT.md, Schritt 2.
+    """
+
+    __tablename__ = "spielgefuehl"
+
+    id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(String(255), nullable=False)
+    stufe = Column(String(16), nullable=False)
+    mit_anzeigename = Column(Boolean, nullable=False)
+    wortlaut = Column(String(64), nullable=False)
+    beantwortet_am = Column(DateTime(timezone=True), nullable=False)
+    ranglistenname = Column(String(64), nullable=True)
+
+    __table_args__ = (Index("idx_spielgefuehl_user", "user_id", "beantwortet_am"),)
 
 
 class LoeschauftragZeile(Base):
@@ -981,6 +1235,74 @@ class SchalterVerlaufZeile(Base):
     __table_args__ = (Index("idx_schalter_verlauf_geaendert_am", "geaendert_am"),)
 
 
+class EinstellungZeile(Base):
+    """
+    Eine Admin-Einstellung mit Textwert (Seite "Schalter"), etwa die aktuelle Saison
+    der Teams (services/einstellungen_service.py). Fehlt die Zeile, gilt der Standard.
+    """
+
+    __tablename__ = "einstellungen"
+
+    name = Column(String(64), primary_key=True)
+    wert = Column(String(255), nullable=False)
+    geaendert_am = Column(DateTime(timezone=True), nullable=False)
+    # Kennung des Admins; leer, wenn sein Konto geloescht ist (person_loeschen.sql)
+    geaendert_von = Column(String(255), nullable=True)
+
+
+class SaisonZeile(Base):
+    """
+    Eine Saison mit Gemeinschaftsziel (#782, domain/saisons.py): Name, erster und
+    letzter Tag (UTC, beide eingeschlossen) und das Ziel in Widerspruchs-Wochen.
+    Saisons ueberschneiden sich nie (prueft repositories/saison_repository.py unter
+    einer Tabellensperre), deshalb laeuft an jedem Tag hoechstens eine. Nichts zur
+    Person, auch nicht, welcher Admin sie angelegt hat.
+
+    Teamlinks und Mitgliedschaften tragen den Namen als Kopie (Spalte saison), keinen
+    Fremdschluessel: Teams gab es vor den Saisons, und vergangene Teams bleiben, auch
+    wenn es zu ihrem Saisonnamen keine Zeile hier gibt. Teamlinks tragen dazu die ID
+    (einladungen.team_saison_id, Befund 6); benennt ein Admin eine geplante Saison um,
+    zieht repositories/saison_repository.py alle Kopien des Namens nach.
+    """
+
+    __tablename__ = "saisons"
+
+    id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(20), nullable=False)
+    beginn = Column(Date, nullable=False)
+    ende = Column(Date, nullable=False)
+    ziel = Column(Integer, nullable=False)
+    angelegt_am = Column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("name", name="uq_saisons_name"),
+        CheckConstraint("ende >= beginn", name="ck_saisons_ende_nach_beginn"),
+        CheckConstraint("ziel > 0", name="ck_saisons_ziel_positiv"),
+    )
+
+
+# Hoechstlaenge eines Saal-Spruchs (services/saal_spruch_service.py, Spalte text)
+SAAL_SPRUCH_MAX = 200
+
+
+class SaalSpruchZeile(Base):
+    """
+    Der Saal-Spruch eines Tages (services/saal_spruch_service.py): ein oeffentlicher
+    Spruch, den ein Admin fuer einen Tag (Europe/Berlin) festlegt, an BDK-Tagen jeden
+    Morgen den, der gerade unter BDK-Beitraegen im Netz kursiert. Je Tag hoechstens einer. Nichts zur Person, auch nicht, welcher Admin
+    ihn festgelegt hat.
+
+    Neue Tabelle: create_all legt sie beim Start an. Das Skript
+    postgres-app/migrations/2026-11-26-saal-sprueche.sql dokumentiert das Schema.
+    """
+
+    __tablename__ = "saal_sprueche"
+
+    datum = Column(Date, primary_key=True)
+    text = Column(String(SAAL_SPRUCH_MAX), nullable=False)
+    geaendert_am = Column(DateTime(timezone=True), nullable=False)
+
+
 class HerkunftPruefungZeile(Base):
     """
     Ergebnis von "Herkunft pruefen" (#759) je Herkunft mit Link: zuletzt gesehener
@@ -1008,6 +1330,33 @@ class HerkunftPruefungZeile(Base):
     __table_args__ = (Index("idx_herkunft_pruefung_ergebnis", "ergebnis"),)
 
 
+class AufrufHeuteZeile(Base):
+    """
+    Seitenaufrufe des laufenden Tages je Tagespseudonym (#761,
+    services/aufrufe_service.py). Das Pseudonym lebt nur bis zum Ende seines Tages:
+    Danach verdichtet der Takt den Tag zu ``aufrufe_tage`` und loescht die Zeilen.
+
+    Neue Tabelle: create_all legt sie beim Start an. Das Skript
+    postgres-app/migrations/2026-11-22-761-aufrufe.sql dokumentiert das Schema.
+    """
+
+    __tablename__ = "aufrufe_heute"
+
+    tag = Column(Date, primary_key=True)
+    pseudonym = Column(String(64), primary_key=True)
+    aufrufe = Column(Integer, nullable=False)
+
+
+class AufrufTagZeile(Base):
+    """Seitenaufrufe und Besucher je vergangenem Tag (#761), ohne Personenbezug."""
+
+    __tablename__ = "aufrufe_tage"
+
+    tag = Column(Date, primary_key=True)
+    aufrufe = Column(Integer, nullable=False)
+    besucher = Column(Integer, nullable=False)
+
+
 class MigrationsprotokollZeile(Base):
     """
     Welche Migration aus postgres-app/migrations eingespielt ist, eine Zeile je Datei.
@@ -1030,3 +1379,27 @@ class MigrationsprotokollZeile(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     fehler = Column(Text, nullable=True)
+
+
+class MerklisteZeile(Base):
+    """
+    Ein gemerkter Beitrag (#758, GLOSSARY.md "Merkliste"): wer ihn wann zuletzt gemerkt
+    hat. Nur die Person selbst sieht ihre Merkliste; Zaehler fuer andere gibt es nicht.
+    Erneutes Merken setzt ``gemerkt_am`` neu, die Liste steht nach zuletzt gemerkt.
+
+    Neue Tabelle: create_all legt sie beim Start an. Das Skript
+    postgres-app/migrations/2026-11-23-758-merkliste.sql dokumentiert das Schema.
+    Loeschen: docs/LOESCHKONZEPT.md, Schritt 2 (mit dem Konto), beim Widerruf der
+    Art.-9-Einwilligung und mit dem endgueltig entfernten Beitrag.
+    """
+
+    __tablename__ = "merkliste"
+
+    user_id = Column(String(255), primary_key=True)
+    content_id = Column(SQLUUID(as_uuid=True), primary_key=True)
+    gemerkt_am = Column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        Index("idx_merkliste_user_gemerkt", "user_id", "gemerkt_am"),
+        Index("idx_merkliste_content", "content_id"),
+    )

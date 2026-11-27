@@ -5,7 +5,22 @@
   </div>
 
   <div class="content-section inhalt-spalte inhalt-spalte--lesen">
-    <section class="legal-section">
+    @if (kurzfassungZeigen()) {
+      <section class="kurzfassung" aria-labelledby="kurzfassung-titel" data-testid="dse-kurzfassung">
+        <h2 id="kurzfassung-titel">Kurz gesagt</h2>
+        <ul>
+          @for (satz of kurzfassungSaetze; track satz.anker) {
+            <li>
+              {{ satz.text }}
+              <a [href]="'/datenschutz#' + satz.anker" (click)="springen($event, satz.anker)">{{ satz.linkText }}</a>
+            </li>
+          }
+        </ul>
+        <p>{{ kurzfassungSchluss }}</p>
+      </section>
+    }
+
+    <section class="legal-section" id="verantwortlicher" tabindex="-1">
       <h2>Verantwortlicher</h2>
       <p>
         Verantwortlich für die Verarbeitung personenbezogener Daten auf dieser Plattform im
@@ -40,7 +55,7 @@
 
     <mat-divider></mat-divider>
 
-    <section class="legal-section">
+    <section class="legal-section" id="was-diese-erklaerung-abdeckt" tabindex="-1">
       <h2>Was diese Erklärung abdeckt</h2>
       <p>
         Diese Erklärung beschreibt die Verarbeitungen auf dieser Plattform. Sie beschreibt
@@ -148,6 +163,8 @@
         wie oft sie eingelöst wurde, auch wenn es zur Adresse schon ein Konto gab; eine
         E-Mail-Adresse steht dort nicht. Am Konto steht nicht, über welche Einladung es
         entstand. Eine Einladung für eine bestimmte Gruppe verriete sonst, wer zu ihr gehört.
+        Nur wenn eine Einladung zu einem Team gehört und du ausdrücklich zustimmst, speichern
+        wir dein Team (siehe „Teams“), nicht aber die Einladung.
         Ganz ausschließen lässt sich dieser Bezug bei einer Einladung für eine einzelne Person
         nicht: Wer den Anmeldedienst verwaltet oder die Protokolle des vorgelagerten
         Webservers sieht, kann den Zeitpunkt, zu dem ein Konto entstand, mit dem Zähler
@@ -187,6 +204,52 @@
         automatisch 30 Tage nach Ablauf des Links, also etwa 33 Tage nach dem Einlösen der
         Einladung; sag uns Bescheid, dann löschen wir es früher. Der Zähler an der Einladung trägt keinen Bezug zu dir und
         bleibt stehen.
+      </p>
+
+      <h3 id="teams">Teams</h3>
+      <p>
+        Manche Einladungen gehören zu einem Team, etwa einem Treffen, einem Ort oder einer Gruppe,
+        die zugestimmt hat. Die Gruppe bekommt keine Daten über dich. Öffnest du
+        so eine Einladung, fragen wir dich, ob wir an deinem Konto speichern dürfen, dass du in
+        diesem Team bist. Sagst du ja, speichern wir deine Kennung, den Namen des Teams, deine
+        laufende Nummer im Team und den Tag, an dem du beigetreten bist. Welche Einladung du
+        genutzt hast, speichern wir nicht. Sagst du nein, speichern wir nichts davon, und an der
+        Einladung zählen wir wie sonst nur, wie oft sie eingelöst wurde.
+      </p>
+      <p>
+        Deine Teams siehst nur du, unter „Meine Teams“. Unsere Administratorinnen und
+        Administratoren sehen je Team nur, wie viele dabei sind, keine Namen und keine Liste.
+        Andere sehen deine Teams nicht. Sollen sie später an deinem Namen erscheinen können,
+        fragen wir dich vorher gesondert. Diese Anzeige am Namen ist noch nicht eingeschaltet.
+      </p>
+      <p>
+        Mit derselben Einwilligung darf die Zahl deiner Beiträge, Bewertungen und Kommentare und
+        deiner Meldungen „Ja, gepostet“ in eine Summe deines Teams eingehen. Diese Summe sehen nur Mitglieder des Teams, nur für
+        abgeschlossene Wochen, erst wenn mindestens fünf Mitglieder eingewilligt haben, gerundet
+        und nie mit einzelnen Namen.<ng-container *ngIf="!teamFortschritt()"> Die Team-Summe ist noch nicht eingeschaltet.</ng-container>
+      </p>
+      <!-- Team-Quests (Schalter team_quests, wirkt nur mit team_fortschritt), Jura vorläufig 26.11. -->
+      <p *ngIf="teamQuests()" data-testid="dse-team-quests">
+        In Teams gibt es gemeinsame Wochenaufgaben (Quests). Am Team speichern wir je Woche nur
+        Thema und Ziel der Quest, ohne Namen. Ob das Team sie schafft, berechnen wir bei jedem
+        Abruf aus der Mitwirkung der Mitglieder; die Mitglieder sehen nur die Summe des Teams, und
+        erst ab fünf Mitgliedern. Hast du Punkte eingeschaltet, bringen dir erfüllte Quests auch
+        Punkte.
+      </p>
+      <p>
+        <strong>Zweck:</strong> dir zu zeigen, in welchen Teams du dabei bist, und die Nummer in
+        deinem Team zu vergeben und die Summe deines Teams zu bilden.<br>
+        <strong>Rechtsgrundlage:</strong> deine ausdrückliche Einwilligung nach Artikel 6 Absatz
+        1 Buchstabe a und Artikel 9 Absatz 2 Buchstabe a DSGVO, denn zusammen mit dem Namen des
+        Teams kann die Angabe auf deine politische Haltung und deinen Ort schließen lassen. Du
+        gibst sie mit dem Knopf „Ja, speichert …“, nichts ist vorausgewählt. Sie ist getrennt
+        von der Einwilligung zu deiner Mitwirkung und von „Punkte und Meilensteine“; ohne sie
+        kannst du genauso mitmachen. Deine Antwort speichern wir mit der Kennung des Wortlauts
+        und dem Zeitpunkt als Nachweis, solange du im Team bist.<br>
+        <strong>Dauer:</strong> bis du das Team verlässt (unter „Meine Teams“, „Team
+        verlassen“; damit widerrufst du die Einwilligung für dieses Team, und wir löschen den
+        Eintrag sofort) oder bis dein Konto gelöscht wird. Deine Nummer vergeben wir nicht neu.
+        In Sicherungskopien bleibt der Eintrag bis zu deren Ablauf (siehe „Sicherungskopien“).
       </p>
     </section>
 
@@ -415,6 +478,22 @@
         selben Anschluss kommen. Das ist
         weniger als ein Name, aber mehr als anonym — deshalb steht es hier.
       </p>
+      <!-- Kampagnenwort ?k= (Schalter k_begruessung, Jura vorläufig 26.11.): nur der Begrüßungssatz;
+           Ankünfte je Wort (k_ankuenfte) bleiben aus und stehen deshalb nicht hier -->
+      <p *ngIf="kBegruessung()" data-testid="dse-kampagnenwort">
+        Öffnest du Gut gesagt über einen Link oder QR-Code mit einem Kampagnenwort, etwa von einem
+        Sticker, begrüßen wir dich passend dazu; das geschieht nur in deinem Browser.
+      </p>
+
+      <!-- Bestandszahl samt Zuwachs (Schalter bestandszahl_zuwachs, Jura vorläufig 26.11.); die
+           Erklärung hat keinen eigenen Abschnitt zur Startseite, deshalb hier -->
+      <ng-container *ngIf="bestandszahlZuwachs()">
+        <h3>Startseite</h3>
+        <p data-testid="dse-bestandszahl">
+          Wie viele Antworten es gibt und wie viele in den letzten sieben Tagen dazukamen,
+          berechnen wir beim Aufruf aus den öffentlichen Beiträgen; dafür speichern wir nichts.
+        </p>
+      </ng-container>
 
       <h3>Suchvorgänge</h3>
       <p>
@@ -510,6 +589,21 @@
           das Moderationsteam, zusätzlich mit der Zahl der Suchen.
         </li>
       </ul>
+      <p *ngIf="nullTrefferAnzahl()" data-testid="dse-null-treffer-kurz">
+        Findest du zu einer Aussage keine Antwort, zeigen wir, wie oft schon danach gesucht wurde,
+        sobald es mindestens dreimal war. Die Zahl führen wir an der Aussage mit; wer gesucht
+        hat, zeigen wir nicht (Einzelheiten im Absatz darunter).
+      </p>
+      <p *ngIf="nullTrefferAnzahl()">
+        Findet deine Suche nichts und gehört sie zu einem Eintrag, den alle sehen können
+        (mit Antwort oder vom Moderationsteam freigegeben), nennt dir die Ergebnisseite auch
+        ohne Anmeldung, wie oft in den letzten vier Wochen ohne Treffer danach gesucht wurde,
+        deine Suche eingerechnet und erst ab drei: „Danach wurde in den letzten vier Wochen
+        schon n-mal gesucht.“ Gezählt wird wie auf den Listen je Person im obigen Sinn, also
+        je Pseudonym und Tag; die Zahl sagt deshalb nicht, wie viele verschiedene Menschen
+        gesucht haben. Wer gesucht hat, erfährst du nicht; gespeichert wird dafür nichts
+        zusätzlich.
+      </p>
       <p>
         Wer gesucht hat, sieht niemand. Legt eine angemeldete Person auf „Hier fehlt eine
         Antwort“ selbst eine Aussage an, die einer für alle sichtbaren (freigegebenen), noch
@@ -550,14 +644,28 @@
       </p>
       <p>
         Um die erste Kopie zu erkennen, speichern wir <strong>bis zum Ende des Tages einen
-        Prüfwert</strong>: einen Kurzwert, berechnet aus deiner Kennung (ohne Anmeldung aus
-        deiner IP-Adresse, bei IPv6 nur ihrem vorderen Teil, wie bei den Suchvorgängen), dem
-        Beitrag und dem Datum. Der Server bildet ihn
+        Prüfwert</strong>: einen Kurzwert, berechnet aus deiner Kennung, dem Beitrag und dem
+        Datum.
+        <!-- Jura 27.11. (vorläufig), ersetzt die Klammer „ohne Anmeldung aus deiner IP-Adresse“;
+             steht vor dem Satz zum Neustart (Review). Prüfwert aus Anschluss und Tagesschlüssel (utils/besucher_pseudonym.py,
+             services/entdoppelung.py), Deckel aus #857 (deckel_pruefwerte) -->
+        <span data-testid="dse-entdoppelung-ohne-anmeldung">Ohne Anmeldung erkennen wir dich dabei
+        nur für einen Tag an deinem Anschluss: Daraus bilden wir mit einem täglich wechselnden
+        Schlüssel einen Prüfwert, den wir nach dem Tageswechsel verwerfen; deine Adresse speichern
+        wir nicht. So zählt ohne Anmeldung höchstens eine erste Kopie je Anschluss, Beitrag und Tag,
+        und insgesamt höchstens drei je Beitrag und Tag, egal von wem.</span> Der Server bildet ihn
         mit einem geheimen Schlüssel, den er <strong>jeden Tag neu zufällig erzeugt, nur im
-        Arbeitsspeicher hält und nirgends speichert</strong>. Auch wer die gespeicherten Daten
-        hat, kann deshalb einen Prüfwert weder auf dich noch auf den Beitrag zurückführen.
-        Nach Mitternacht (UTC) verwirft der Server die Prüfwerte des Vortags; startet er neu,
-        passt keiner mehr, und eine weitere Kopie am selben Tag zählt noch einmal. Kopien
+        Arbeitsspeicher hält und nirgends speichert</strong>.
+        <!-- Jura 27.11. (vorläufig), Deckel-Plätze ohne Schlüssel, über Neustart erhalten
+             (deckel_pruefwerte in services/entdoppelung.py; verworfen mit den Prüfwerten in
+             nutzung_heute, vergangene_tage_verwerfen) -->
+        Auch wer die gespeicherten Daten hat, kann deshalb einen solchen Prüfwert weder auf dich
+        noch auf den Beitrag zurückführen. Für den Deckel ohne Anmeldung merken wir uns
+        zusätzlich bis zu drei Plätze je Beitrag und Tag; sie bestehen nur aus Beitrag, Tag und
+        Platznummer und sagen nichts darüber, wer kopiert hat. Nach Mitternacht (UTC) verwirft
+        der Server alle Prüfwerte und Plätze des Vortags. Startet er am selben Tag neu, passen
+        die Prüfwerte nicht mehr und eine weitere Kopie zählt noch einmal; belegte Plätze
+        bleiben belegt. Kopien
         angemeldeter Konten ohne Einwilligung (siehe „Rückschlüsse auf deine politische
         Haltung“) bekommen keinen Prüfwert. Sie zählen deshalb nur bei allen Kopien des
         Beitrags mit, nicht für „Diese Woche oft genutzt“ und nicht für Punkte.
@@ -584,14 +692,17 @@
         als null ist. Eigene Kopien zählen dabei nicht mit.
       </p>
       <p>
-        Damit wir das berechnen können, speichern wir zu deiner Kennung <strong>nur zwei
-        Zahlen</strong>: wie oft deine Beiträge insgesamt genutzt waren und wie viele Einwürfe
-        anderer es im Fangkorb gab, als du zuletzt da warst. Mit der zweiten zeigt dir die
+        Damit wir das berechnen können, speichern wir zu deiner Kennung <strong>nur
+        {{ wirkungsEcho() ? 'drei' : 'zwei' }} Zahlen</strong>: wie oft deine Beiträge insgesamt
+        genutzt waren<ng-container *ngIf="wirkungsEcho()">, wie viele Einwürfe anderer es im
+        Fangkorb gab, als du zuletzt da warst, und wie viel Echo deine Beiträge beim letzten
+        Besuch hatten.</ng-container><ng-container *ngIf="!wirkungsEcho()"> und wie viele Einwürfe
+        anderer es im Fangkorb gab, als du zuletzt da warst.</ng-container> Mit der zweiten zeigt dir die
         Startseite unter „Seit deinem letzten Besuch“, wie viele Einwürfe seitdem
         dazugekommen sind. Wann du da warst, speichern wir nicht. Die Gesamtzahl und die Zahl seit deinem
         letzten Besuch siehst nur du selbst; wie oft ein einzelner Beitrag genutzt wurde,
         steht wie bisher auch an ihm. Wer deine Beiträge genutzt hat, wissen wir nicht und
-        zeigen wir nicht. Einzige Ausnahme, sobald Punkte eingeschaltet sind: Nutzen sich zwei
+        zeigen wir nicht. Einzige Ausnahme<ng-container *ngIf="!punkte()">, sobald Punkte eingeschaltet sind</ng-container>: Nutzen sich zwei
         Konten gegenseitig, sehen unsere Administratorinnen und Administratoren das in einem
         Muster-Hinweis, ohne die genutzten Beiträge (siehe „Punkte“).
       </p>
@@ -600,6 +711,34 @@
         sie nicht: wie viele deiner Einwürfe andere in den letzten sieben Tagen ausformuliert
         haben und wie viele neue Kommentare und Hintergrundinfos anderer es in dieser Zeit auf
         der Plattform gab.
+      </p>
+      <!-- Neue Antworten auf eigene Aussagen (Schalter antworten_hinweis, #760), Jura 25.11. -->
+      <p *ngIf="antwortenHinweis()" data-testid="dse-antworten-hinweis">
+        Hat jemand auf eine deiner Aussagen geantwortet, zeigen wir dir auf der Startseite, wie
+        viele Antworten anderer in den letzten sieben Tagen dazugekommen sind, und im Reiter
+        „Meine Aussagen“ deine Aussagen mit ihren Antworten. Dafür lesen wir beim Aufruf deine
+        Aussagen, die Antworten daran und den Tag, an dem sie als Antwort verknüpft wurden. Ob
+        eine Antwort von dir ist, zeigen wir dir; wer sie sonst geschrieben hat, nennen wir dort
+        nicht. Auch das speichern wir nicht.
+      </p>
+      <p *ngIf="naechsterSchritt()">
+        Unter „Dein nächster Schritt“ lesen wir dafür deine Einwürfe, deine Bewertungen und deine
+        Beiträge samt ihrer Nutzung und schlagen dir aus deinen eigenen Beiträgen einen nächsten
+        Schritt vor; wir speichern dafür nichts zusätzlich.
+      </p>
+      <!-- Wirkungs-Echo und Danke (#790, #791), Jura vorläufig 26.11.: der Zählerstand des Echos
+           hängt an wirkungs_echo, die Sätze zum Danke an danke_knopf. Ein Satz für Danke ohne
+           Konto fehlt bewusst: danke_ohne_konto erfüllt Variante B nicht und bleibt aus. -->
+      <p *ngIf="wirkungsEcho() || dankeKnopf()" data-testid="dse-wirkungs-echo">
+        An deinen Beiträgen zeigen wir dir, wie oft andere sie verwendet und sich dafür bedankt
+        haben.<ng-container *ngIf="dankeKnopf()"> Hast du einen fremden Beitrag kopiert, kannst du
+        mit „Danke“ der Person danken, die ihn geschrieben hat; sie sieht nur die Summe, nie, wer
+        gedankt hat.</ng-container> Dafür speichern wir je Beitrag nur zwei Summen, ohne Kennung und
+        ohne Zeitpunkt.<ng-container *ngIf="dankeKnopf()"> Damit dein Danke je Beitrag und Tag nur
+        einmal zählt, nutzen wir einen eigenen Tages-Prüfwert, gebildet wie beim Kopieren und wie
+        dieser mit dem Tageswechsel gelöscht.</ng-container><ng-container *ngIf="wirkungsEcho()"> Was seit
+        deinem letzten Besuch an Echo dazukam, merken wir uns als weiteren Zählerstand zu deiner
+        Kennung.</ng-container>
       </p>
       <p>
         <strong>Zweck:</strong> dir zeigen, dass deine Beiträge anderen helfen.<br>
@@ -617,13 +756,25 @@
         Woche ändert nichts. Dafür merken wir uns bis zum Ende der Woche <strong>nur einen
         Prüfwert</strong>, den wir ohne einen Schlüssel, der nur im Arbeitsspeicher liegt und
         jede Woche neu entsteht, nicht auf dich zurückführen können; danach nur die Zahl der
-        Personen dieser Woche. Deine Kennung und welchen Beitrag du gepostet hast, speichern
-        wir nicht. Einen Link zu
+        Personen dieser Woche.<ng-container *ngIf="!wirkungsEcho()"> Deine Kennung und welchen
+        Beitrag du gepostet hast, speichern wir nicht.</ng-container><ng-container *ngIf="wirkungsEcho()">
+        Welchen Beitrag du gepostet hast, speichern wir nicht; an jedem Beitrag zählen wir nur mit,
+        wie oft er insgesamt als gepostet gemeldet wurde, ohne Kennung (siehe ‚Rückmeldung zur
+        Nutzung deiner Beiträge‘).</ng-container> Einen Link zu
         deinem Post fragen wir nicht ab. Im Dank nennen wir dir die Zahl der Personen dieser
         Woche. Die Frage erscheint nur, wenn du nach Artikel 9 DSGVO eingewilligt hast (siehe
         „Rückschlüsse auf deine politische Haltung“). Widerrufst du sie, erscheint die Frage
         nicht mehr; eine Meldung aus dieser Woche bleibt als Prüfwert bis Wochenende, weil wir
         sie dir nicht zuordnen können.
+      </p>
+      <p>
+        Läuft eine <strong>Saison mit Gemeinschaftsziel</strong>, zeigen wir allen auf der
+        Startseite die Summe dieser Wochenzahlen über die abgeschlossenen Wochen der Saison
+        („Widerspruchs-Wochen“). Wer in mehreren Wochen meldet, zählt darin mehrmals. Die Summe
+        erscheint erst, wenn die Meldungen einmal eine Schwelle erreicht haben (derzeit drei
+        Wochen hintereinander, in denen jeweils mindestens 25 verschiedene Personen gemeldet
+        haben). Dafür speichern wir nichts zusätzlich, und die Summe enthält keine Angaben zu
+        dir.
       </p>
       <p>
         Weil wir am Ende nur eine Zahl behalten, stützen wir die Zählung auf unser berechtigtes
@@ -639,23 +790,58 @@
         <strong>Dauer:</strong> der Prüfwert bis kurz nach Ende der Kalenderwoche, spätestens
         bis zum nächsten täglichen Löschlauf; die Zahl je Woche enthält keine Angaben zu dir.
       </p>
+      <!-- Meldungen ohne Konto (Schalter gepostet_ohne_konto, #799), Jura vorläufig 26.11. -->
+      <p *ngIf="gepostetOhneKonto()" data-testid="dse-gepostet-ohne-konto">
+        Auch ohne Anmeldung kannst du nach dem Kopieren „Ja, gepostet“ tippen. Dann zählen wir für
+        die laufende Kalenderwoche nur eins dazu, ohne Kennung, ohne Prüfwert und ohne etwas in
+        deinem Browser zu speichern; der Knopf ist danach ausgegraut. Gegen Missbrauch begrenzen
+        wir, wie viele solcher Meldungen insgesamt in wenigen Sekunden zählen; eine Adresse
+        verwenden wir dafür nicht. Diese Meldungen
+        weisen wir getrennt von denen Angemeldeter aus. Zweck: sehen, wie oft Gut gesagt beim
+        Widersprechen hilft. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. Dauer: Die Wochensumme hat keinen Personenbezug.
+      </p>
     </section>
 
     <mat-divider></mat-divider>
 
     <section class="legal-section">
       <h2>Punkte</h2>
-      <p>
+      <!-- Mit Schalter punkte entfällt der Vorbehalt (Jura vorläufig 26.11.) -->
+      <p *ngIf="!punkte()" data-testid="dse-punkte-vorbehalt">
         <strong>Punkte sind noch nicht eingeschaltet.</strong> Dieser Abschnitt beschreibt,
         was gilt, sobald wir sie einschalten. Bis dahin entsteht nichts von dem, was hier
         steht.
       </p>
+      <!-- Spielgefuehl als eine Frage (Schalter spielgefuehl_buehne, dse-spielgefuehl.ts): ersetzt
+           die Einwilligungsteile zu Punkten, Abzeichen und Rangliste; die Rechenregeln bleiben. -->
+      <!-- Jura 26.11.: nur mit spielgefuehl_buehne und punkte (die Frage braucht beide); die Stufe
+           Rangliste nur mit rangliste (wirksam laut GET /api/v1/funktionen), sonst der Satz, dass
+           wir sie gerade nicht anbieten. Einleitung als Liste: Jura 27.11. Der Sockelsatz steht immer. -->
+      <div *ngIf="spielgefuehlBuehne() && punkte()" id="spielgefuehl" data-testid="dse-spielgefuehl">
+        <p><strong>{{ spielgefuehlTitel }}</strong> {{ spielgefuehlEinleitung }}</p>
+        <ul>
+          <li>{{ spielgefuehlAus }}</li>
+          <li>{{ spielgefuehlNurFuerMich }}</li>
+          <li *ngIf="rangliste()" data-testid="dse-spielgefuehl-stufe-rangliste">{{ spielgefuehlRangliste }}</li>
+        </ul>
+        <p><ng-container *ngIf="!rangliste()">{{ spielgefuehlOhneRangliste }} </ng-container>{{ spielgefuehlSchluss }}</p>
+      </div>
+      <p data-testid="dse-spielgefuehl-sockel">{{ spielgefuehlSockel }}</p>
+      <!-- Weg zum Widerruf (Art. 7 Abs. 3 DSGVO), auch ohne Schalter: Sprung zum Kasten unter „Deine Rechte“ -->
+      <p data-testid="dse-widerruf-verweis">
+        <a href="#einwilligung-widerrufen" (click)="springen($event, 'einwilligung-widerrufen')">Einwilligung widerrufen</a>
+      </p>
       <p>
         Mit Punkten zeigen wir dir, wie deine Mitwirkung wirkt: wenige Punkte für deine
-        Beiträge und ausformulierten Einwürfe, die meisten dafür, dass andere deine Beiträge
+        Beiträge und ausformulierten Einwürfe und einen kleinen Punkt je Bewertung eines
+        fremden Beitrags, höchstens drei am Tag; die Richtung der Bewertung zählt nicht. Die
+        meisten gibt es dafür, dass andere deine Beiträge
         nutzen (gezählt wie oben unter „Verwendung von Beiträgen“: höchstens einmal je
-        Person, Beitrag und Tag) und ihnen zustimmen. Deinen Punktestand
-        <strong>siehst nur du</strong>. Wir speichern ihn nicht, sondern berechnen ihn bei
+        Person, Beitrag und Tag) und ihnen zustimmen. Kopiert oder nutzt jemand ohne
+        Anmeldung deinen Beitrag, zählen wir das für deine Punkte höchstens dreimal je
+        Beitrag und Tag; wer das war, wissen und speichern wir nicht. Deinen Punktestand
+        <strong>siehst nur du</strong><ng-container *ngIf="rangliste()">, außer du spielst in der
+        Rangliste mit; dann sehen ihn auch die anderen Mitspielenden (siehe unten)</ng-container>. Wir speichern ihn nicht, sondern berechnen ihn bei
         jedem Abruf aus deinen sichtbaren Beiträgen und den Zählern daran. Eigene Kopien und
         Stimmen zählen nicht, ebenso wenig Kopien und Stimmen der Startkonten; ein Startkonto
         sammelt selbst keine Punkte.
@@ -667,11 +853,11 @@
         Unterstützung: der erste und 10 ausformulierte Einwürfe anderer und 10 eigene
         Einwürfe, die andere ausformuliert haben. Für dein eigenes Tun, als
         <strong>Wegmarken</strong>: dein erster Einwurf, dein erster Beitrag, der mindestens
-        drei Tage alt und heute sichtbar ist, und dein erster Kommentar, den eine Aussage als
-        Antwort führt. Dafür zählen wir auch, wie viele Einwürfe anderer du ausformuliert
+        drei Tage alt und heute sichtbar ist, dein erster Kommentar, den eine Aussage als
+        Antwort führt, und „Erste 10 Bewertungen“. Dafür zählen wir auch, wie viele Einwürfe anderer du ausformuliert
         hast und wie viele Einwürfe du eingeworfen hast (verworfene nicht), und sehen nach,
         ob eine Aussage einen deiner Kommentare als Antwort führt. Deine Meilensteine
-        <strong>siehst nur du</strong>. Wir speichern sie nicht, sondern berechnen sie bei
+        <strong>siehst nur du</strong><ng-container *ngIf="spielgefuehlBuehne()">; deine Abzeichen zeigen wir nur in der Rangliste, wenn du mitspielst</ng-container>. Wir speichern sie nicht, sondern berechnen sie bei
         jedem Abruf aus deinen gespeicherten Beiträgen, Einwürfen und den Bewertungen und
         Zählern, die wir für die Punkte ohnehin haben. Es zählen nur nicht gesperrte Beiträge;
         wird einer gesperrt oder gelöscht, kann ein Meilenstein wieder wegfallen. Startkonten
@@ -684,8 +870,8 @@
             erreicht hast, still als gesehen, und genannt wird nur, was danach dazukommt.
         </ng-container>
         Keine Erinnerungen, keine Mails. Für Meilensteine gelten Zweck und Rechtsgrundlage wie
-        für die Punkte (unten); ohne deine Einwilligung „Punkte und Meilensteine“ gibt es
-        keine, auch keine Wegmarken.
+        für die Punkte (unten); <ng-container *ngIf="!spielgefuehlBuehne()">ohne deine Einwilligung „Punkte und Meilensteine“ gibt es
+        keine</ng-container><ng-container *ngIf="spielgefuehlBuehne()">ohne die Stufe ‚Nur für mich‘ oder ‚In der Saison-Rangliste mitspielen‘ beim Spielgefühl gibt es keine</ng-container>, auch keine Wegmarken.
       </p>
       <p>
         Damit Punkte nicht durch Absprachen entstehen, achten wir darauf, ob sich zwei Konten
@@ -706,13 +892,20 @@
         einen gibt, Anzeigename der beiden Konten. Ein Muster-Hinweis ist kein Urteil: Er
         zieht keine Punkte ab und sperrt niemanden; ein Mensch prüft ihn.
         Nutzung ohne Anmeldung zählt hier nicht.
+        Widerrufst du, löschen wir sofort auch bestehende Muster-Hinweise, an denen du beteiligt bist.
+        Die Prüfwerte, mit denen wir Muster erkennen, lassen sich keinem Konto zuordnen und verfallen nach sieben Tagen; nach deinem Widerruf werten wir sie für dich nicht mehr aus.
       </p>
+      <!-- Zustimmungen in den Muster-Hinweisen, nur mit Schalter muster_stimmen (dse-muster-stimmen.ts) -->
+      <p *ngIf="musterStimmen()" data-testid="dse-muster-stimmen">{{ musterStimmenSatz() }}</p>
       <p>
         <strong>Zweck:</strong> dir die Wirkung deiner Mitwirkung zeigen und die Punkte gegen
         Absprachen schützen.<br>
-        <strong>Rechtsgrundlage:</strong> deine eigene, freiwillige Einwilligung „Punkte und
+        <ng-container *ngIf="spielgefuehlBuehne()"><strong>Rechtsgrundlage:</strong> siehe
+        „Spielgefühl“ oben.<br></ng-container>
+        <ng-container *ngIf="!spielgefuehlBuehne()"><strong>Rechtsgrundlage:</strong> deine eigene, freiwillige Einwilligung „Punkte und
         Meilensteine“ nach Artikel 6 Absatz 1 Buchstabe a und Artikel 9 Absatz 2 Buchstabe a
-        DSGVO. Du gibst sie mit einem eigenen Häkchen unter „Meine Beiträge“ oder in den
+        DSGVO. Du gibst sie selbst unter „Meine Beiträge“ (Häkchen oder Frage mit zwei
+        gleichwertigen Knöpfen) oder mit einem eigenen Häkchen in den
         „Datenschutz-Einstellungen“; nichts ist vorausgewählt. Sie ist getrennt von der
         Einwilligung zu deiner Mitwirkung (siehe „Rückschlüsse auf deine politische
         Haltung“): Ohne sie kannst du genauso beitragen und bewerten. Ohne sie (nie erteilt
@@ -722,15 +915,17 @@
         nichts mehr berechnet. Deine Antwort speichern wir mit der Kennung des Wortlauts und
         dem Zeitpunkt als Nachweis, bis dein Konto gelöscht wird; ein Widerruf ist ein
         weiterer Eintrag. Kopien, die ein Konto ohne Einwilligung zu seiner Mitwirkung macht,
-        bringen niemandem Punkte (siehe „Verwendung von Beiträgen“).<br>
+        bringen niemandem Punkte (siehe „Verwendung von Beiträgen“).<br></ng-container>
         <strong>Dauer:</strong> Paar-Prüfwerte löschen wir sieben Tage nach der letzten
         Nutzung in ihrer Richtung, Muster-Hinweise acht Wochen nach dem letzten auffälligen
         Tag, jeweils automatisch (täglicher Löschlauf, also spätestens einen Tag danach). Wird
         ein Konto gelöscht, gehen die Muster-Hinweise, die es nennen, mit; seine Paar-Prüfwerte
         laufen nach spätestens sieben Tagen aus.
       </p>
+      <!-- Mit Schalter spielgefuehl_buehne entfallen „Abzeichen an deinem Namen“ und die Rangliste: Absatz „Spielgefühl“ oben -->
+      <ng-container *ngIf="!spielgefuehlBuehne()">
       <p>
-        <strong>Abzeichen an deinem Namen.</strong> Auch Abzeichen sind noch nicht eingeschaltet,
+        <strong>Abzeichen an deinem Namen.</strong><ng-container *ngIf="!punkte()"> Auch</ng-container> Abzeichen sind noch nicht eingeschaltet,
         und wir schalten sie getrennt von den Punkten ein; bis dahin sieht sie niemand außer
         dir. Danach gilt: Wenn du es erlaubst, sehen andere
         Angemeldete an deinen Beiträgen neben deinem Anzeigenamen, wie viele Meilensteine du
@@ -746,6 +941,29 @@
         <strong>Rechtsgrundlage:</strong> deine gesonderte Einwilligung nach Artikel 6 Absatz 1
         Buchstabe a und Artikel 9 Absatz 2 Buchstabe a DSGVO.
       </p>
+      <!-- Rangliste (#793): mit Schalter rangliste der Absatz von Jura (vorläufig 26.11.),
+           sonst der Hinweis, dass sie noch nicht eingeschaltet ist, wie bei den Abzeichen. -->
+      <p *ngIf="rangliste()" id="rangliste" data-testid="dse-rangliste">
+        <strong>Rangliste.</strong> Wenn du Punkten zugestimmt hast, kannst du zusätzlich
+        ausdrücklich einwilligen, in der Rangliste der laufenden Saison zu erscheinen, mit
+        Ranglistenname, Platz und deinen Punkten der Saison. Den Ranglistennamen würfeln wir beim
+        ersten Ja zufällig; deinen Anzeigenamen zeigen wir dort nur, wenn du ihn selbst wählst.
+        Sehen kann die Rangliste nur, wer selbst darin steht, und erst ab zehn Teilnehmenden: die
+        ersten zehn und dein eigener Platz. Jede Antwort auf diese Frage speichern wir mit
+        Zeitpunkt, Kennung des Wortlauts, deiner Namenswahl und deinem Ranglistennamen als
+        Nachweis; Plätze und Punkte speichern wir nicht, wir berechnen sie bei jedem Abruf.
+        Widerrufst du unter „Meine Beiträge“, stehst du ab dem nächsten Abruf nicht mehr darin.
+        Zweck: dir zeigen, wo du in der Saison stehst. Rechtsgrundlage: deine ausdrückliche
+        Einwilligung (Art. 6 Abs. 1 lit. a, Art. 9 Abs. 2 lit. a DSGVO). Dauer: die Antworten bis
+        zur Löschung deines Kontos.
+      </p>
+      <p *ngIf="!rangliste()" id="rangliste" data-testid="dse-rangliste-platzhalter">
+        <strong>Rangliste.</strong> Eine Rangliste je Saison ist noch nicht eingeschaltet; bis
+        dahin erscheint niemand darin, und wir speichern dafür nichts. Bevor wir sie
+        einschalten, beschreiben wir hier, was dafür verarbeitet wird, wer sie sieht und wie
+        du deine Einwilligung widerrufst.
+      </p>
+      </ng-container>
     </section>
 
     <mat-divider></mat-divider>
@@ -767,7 +985,7 @@
         <strong>Rechtsgrundlage:</strong> Artikel 6 Absatz 1 Buchstabe b DSGVO.<br>
         <strong>Dauer:</strong> Eine Bewertung bleibt gespeichert, bis du sie zurücknimmst,
         deine Art.-9-Einwilligung widerrufst (siehe „Deine Zustimmung und deine Einwilligung“), wir dein Konto löschen oder der bewertete Beitrag endgültig entfernt wird — ein
-        gelöschter Beitrag nach 30 Tagen (siehe „Beiträge, die du einstellst“). Ändert die Autorin oder der Autor den Titel so, dass er etwas anderes behauptet, löschen wir die Bewertungen dazu.
+        gelöschter Beitrag nach 30 Tagen (siehe „Beiträge, die du einstellst“). Ändert die Autorin oder der Autor den Titel so, dass er etwas anderes behauptet, löschen wir die Bewertungen dazu<ng-container *ngIf="textVerfall()">; sagt der Text einer Aussage unter gleichem Titel später etwas ganz anderes, verfallen die Bewertungen dazu und werden gelöscht</ng-container>.
         Eine eigene Frist hat sie nicht.
       </p>
     </section>
@@ -780,6 +998,12 @@
         An jedem Beitrag kannst du uns melden, dass mit ihm etwas nicht stimmt.
         <strong>Melden ist auch ohne Konto möglich</strong> — Artikel 16 der Verordnung (EU)
         2022/2065 (Digital Services Act) verlangt ein leicht zugängliches Meldeverfahren.
+      </p>
+      <!-- Meldeweg sichtbar (Schalter meldeweg_sichtbar, #843), Jura vorläufig 26.11. -->
+      <p *ngIf="meldewegSichtbar()" data-testid="dse-meldeweg">
+        An jedem Beitrag kannst du über „Melden“ auf rechtswidrige oder regelwidrige Inhalte
+        hinweisen; im Fuß jeder Seite findest du dazu „Melden &amp; Kontakt“. Was wir mit einer
+        Meldung speichern, steht in diesem Abschnitt.
       </p>
       <p>
         Gespeichert werden der gemeldete Beitrag, der gewählte Meldegrund, dein Freitext, falls
@@ -907,6 +1131,15 @@
         <strong>Dauer:</strong> Wir löschen Feedback samt Kontaktangabe <strong>nach 180 Tagen
         automatisch</strong>, auf deinen Wunsch früher. Nenn uns dafür die Kontaktangabe, die
         du hinterlassen hast; einem Konto ist dein Feedback nicht zugeordnet.
+      </p>
+      <!-- „Was hat dich gestört?“ (Schalter feedback_gestoert), Jura vorläufig 26.11.; der
+           Schalter wirkt ab dem 31.12.2026 nicht mehr, dann fällt auch der Absatz weg -->
+      <p *ngIf="feedbackGestoert()" data-testid="dse-feedback-gestoert">
+        In der Startphase kannst du uns über „Was hat dich gestört?“ kurz schreiben, was dich
+        gestört hat. Wir speichern nur deinen Text und den Tag, ohne deine Kennung und ohne
+        Kontaktmöglichkeit; schreib bitte keine Namen oder Daten anderer hinein. Wir nutzen die
+        Rückmeldungen, um Gut gesagt zu verbessern, und löschen alle spätestens am 31. Dezember
+        2026. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.
       </p>
     </section>
 
@@ -1082,6 +1315,18 @@
         widerrufst. Er verlässt dein Gerät nicht von selbst.
       </p>
       <p>
+        Sagst du ohne Konto bei einer Einladung zu einem Team „Ja, speichert …“, merkt sich dein
+        Browser, auch über das Schließen des Tabs hinaus, den Code der Einladung, die Kennung des
+        Wortlauts, dem du zugestimmt hast, ob du der zweiten Frage zugestimmt hast, ob deine Teams
+        an deinem Namen erscheinen dürfen (ohne diese Frage: nein), und bis wann der Eintrag gilt.
+        Damit trägt er deine Antwort bis zur Anmeldung nach dem Anlegen deines Kontos. Hast du
+        schon ein Konto und willst dich zum Beitreten erst anmelden, merkt er sich nur den Code,
+        bis du angemeldet zurückkommst. Den Namen des Teams und deine Nummer enthält der Eintrag
+        nie. Er gilt <strong>höchstens drei Tage</strong>, so lange wie der Link in der Mail. Wir
+        löschen ihn, sobald die Seite der Einladung ihn nach deiner Anmeldung gelesen hat, und
+        einen abgelaufenen Eintrag beim nächsten Aufruf der Einladung.
+      </p>
+      <p>
         Dein Profilbild legen wir nur in deinem Browser ab, <strong>wenn du es selbst
         wählst</strong> (im Profilmenü unter „Profilbild wählen“). Dann merkt sich der Browser,
         welches Bild du gewählt hast, auch über das Schließen hinaus, <strong>bis du die Wahl
@@ -1103,10 +1348,27 @@
         wiederkommt. Der Vermerk enthält keine Angaben über dich, bleibt auch über das Schließen
         hinaus, bis du die Websitedaten dieser Seite löschst, und geht nicht an uns.
       </p>
+      <p>
+        Klickst du auf der Startseite einen Vorschlag unter „Dein nächster Schritt“ weg, merkt
+        sich dein Browser unter dem festen Schlüssel „gutgesagt-naechster-schritt-weggeklickt“,
+        welche Art von Vorschlag du weggeklickt hast und an welchem Tag. Der Eintrag enthält keine
+        Kennung und keinen Prüfwert und geht nicht an uns. Er gilt <strong>sieben Tage</strong>,
+        danach kommt der Vorschlag wieder; Abgelaufenes löscht die Startseite beim nächsten
+        Aufruf, alles zusammen löschen wir beim Abmelden.
+        Gleich löschen kannst du ihn mit den Websitedaten dieser Seite.
+      </p>
       <p *ngIf="meilensteinMerker">
         Damit ein Hinweis zu deinen Meilensteinen nur einmal erscheint, merkt sich dein
         Browser, welche du schon gesehen hast. Der Vermerk enthält keine Angaben über dich,
         geht nicht an uns und wird beim Abmelden und beim nächsten Anmelden gelöscht.
+      </p>
+      <p>
+        Schaltest du bei einem Erfolg, etwa „Lücke zu!“, den „Ton bei Erfolgen“ ein, merkt sich
+        dein Browser das unter dem Schlüssel „gutgesagt-ton-bei-erfolgen“, damit der kurze Ton
+        auch beim nächsten Mal spielt. Der Eintrag enthält nur, dass der Ton an ist, und keine
+        Angaben über dich; schaltest du ihn wieder aus, löschen wir den Eintrag. Er bleibt, <strong>bis
+        du ihn änderst</strong> oder die Websitedaten dieser Seite löschst, und geht nicht an uns.
+        Den Ton erzeugt dein Browser selbst, dafür wird nichts geladen.
       </p>
       <p>
         Außerdem richtet die Plattform in deinem Browser ein kleines Hintergrundskript ein
@@ -1198,8 +1460,11 @@
         ähnlicher Weise erheblich beeinträchtigen. Ein Profiling im Sinne von Artikel 4
         Nummer 4 DSGVO findet nicht statt, solange Punkte ausgeschaltet sind. Sind sie
         eingeschaltet, bewertet dein Punktestand, wie deine Mitwirkung bei anderen wirkt
-        (siehe „Punkte“); er wird automatisch berechnet, aber nur dir gezeigt und hat keine
-        Folgen für dich. Auch ein Muster-Hinweis löst nichts automatisch aus.
+        (siehe „Punkte“); er wird automatisch berechnet. Deinen Punktestand zeigen wir nur
+        dir<ng-container *ngIf="rangliste()">, außer du spielst in der Saison-Rangliste mit; dann
+        sehen ihn auch die anderen Mitspielenden</ng-container>. Eine Entscheidung, die allein
+        automatisiert getroffen wird und dir gegenüber rechtliche oder ähnlich erhebliche Wirkung
+        hat, gibt es nicht. Auch ein Muster-Hinweis löst nichts automatisch aus.
       </p>
     </section>
 
@@ -1303,7 +1568,7 @@
 
     <mat-divider></mat-divider>
 
-    <section class="legal-section">
+    <section class="legal-section" id="deine-rechte" tabindex="-1">
       <h2>Deine Rechte</h2>
       <p>
         Du hast uns gegenüber das Recht auf <strong>Auskunft</strong> über die zu dir
@@ -1367,6 +1632,24 @@
           uns, ist aber keine Voraussetzung dafür, dass wir deinen Widerspruch prüfen.
         </p>
       </div>
+      <!-- Widerruf so einfach wie die Einwilligung (Art. 7 Abs. 3 DSGVO): die Knöpfe direkt hier,
+           auch wenn die Schalter aus sind (einwilligung/widerrufbar.component.ts) -->
+      <div class="widerruf-kasten" id="einwilligung-widerrufen" tabindex="-1" data-testid="dse-widerruf">
+        <h3>Einwilligung widerrufen</h3>
+        <ng-container *ngIf="angemeldet() === true">
+          <!-- Jura 27.11.: der erste Satz nur, solange es etwas auszuschalten gibt -->
+          <p data-testid="dse-widerruf-einleitung">
+            <ng-container *ngIf="widerrufZeilen() > 0">Was du hier ausschaltest, wirkt sofort. </ng-container>Deine
+            Einwilligung zur Mitwirkung widerrufst du unter <a routerLink="/einwilligung">Datenschutz-Einstellungen</a>.
+          </p>
+          <app-widerrufbar [ebene]="4" [punkteHaekchenDaneben]="false" anmeldeZiel="/datenschutz#einwilligung-widerrufen" (zeilenZahl)="widerrufZeilen.set($event)"
+            leerText="Spielgefühl, Punkte, Rangliste und Abzeichen sind bei dir aus; hier gibt es nichts zu widerrufen."></app-widerrufbar>
+        </ng-container>
+        <p *ngIf="angemeldet() === false" data-testid="dse-widerruf-anmelden">
+          Deine Einwilligungen siehst und widerrufst du hier, sobald du angemeldet bist.
+          <a routerLink="/login" [queryParams]="{ returnUrl: '/datenschutz#einwilligung-widerrufen' }">Anmelden</a>
+        </p>
+      </div>
     </section>
 
     <mat-divider></mat-divider>
@@ -1394,7 +1677,7 @@
     </section>
 
     <div class="update-notice">
-      <p><strong>Stand:</strong> 20. November 2026</p>
+      <p><strong>Stand:</strong> 27. November 2026</p>
     </div>
   </div>
 </div>

@@ -20,15 +20,21 @@ from sqlalchemy import text
 from api.v1.einwurf import _einwuerfe_fuer_aufrufer
 from infrastructure.database.models import (
     AbzeichenSichtbarkeitZeile,
+    EinstellungZeile,
+    TeamMitgliedschaftZeile,
+    TeamOeffentlichZeile,
     Art9EinwilligungZeile,
     Art9OhneEinwilligungZeile,
     Base,
     ContentReport,
     GeseheneNutzung,
     LoeschauftragZeile,
+    MerklisteZeile,
     MusterHinweisZeile,
     NutzungsbedingungenZustimmungZeile,
     PunkteEinwilligungZeile,
+    RanglisteEinwilligungZeile,
+    SpielgefuehlZeile,
     Einwurf,
     AusformuliertIn,
     Satz,
@@ -277,6 +283,14 @@ def spuren(datenbank, einwuerfe):
                 entschieden_am=datetime.now(timezone.utc),
             )
         )
+        # Ein gemerkter Beitrag (#758).
+        s.add(
+            MerklisteZeile(
+                user_id=PERSON,
+                content_id=beitrag,
+                gemerkt_am=datetime.now(timezone.utc),
+            )
+        )
         s.add(
             AbzeichenSichtbarkeitZeile(
                 user_id=PERSON,
@@ -294,12 +308,65 @@ def spuren(datenbank, einwuerfe):
                 beantwortet_am=datetime.now(timezone.utc),
             )
         )
+        # Die Einwilligung zur Rangliste (#793).
+        s.add(
+            RanglisteEinwilligungZeile(
+                user_id=PERSON,
+                teilnehmen=True,
+                mit_anzeigename=False,
+                wortlaut="rangliste-2026-11-25",
+                beantwortet_am=datetime.now(timezone.utc),
+            )
+        )
+        # Das Spielgefuehl (domain/spielgefuehl.py).
+        s.add(
+            SpielgefuehlZeile(
+                user_id=PERSON,
+                stufe="rangliste",
+                mit_anzeigename=False,
+                wortlaut="spielgefuehl-2026-11-26",
+                beantwortet_am=datetime.now(timezone.utc),
+                ranglistenname="Kluge Eule 11",
+            )
+        )
         # Die Zustimmung zu den Nutzungsbedingungen in der App.
         s.add(
             NutzungsbedingungenZustimmungZeile(
                 user_id=PERSON,
                 stand="2026-11-19",
                 zugestimmt_am=datetime.now(timezone.utc),
+            )
+        )
+        # Teams: eine Mitgliedschaft mit Einwilligung, die Einwilligung "Team
+        # oeffentlich am Namen zeigen" und eine Admin-Einstellung der Person. Die
+        # Mitgliedschaft traegt absichtlich die fruehere Kennung team-2026-11-25: Eine
+        # bestehende Mitgliedschaft damit muss weiter mit dem Konto geloescht werden.
+        s.add(
+            TeamMitgliedschaftZeile(
+                konto_kennung=PERSON,
+                team_name="BDK 26 Berlin",
+                team_motiv="vogel",
+                saison="2026",
+                nummer=1,
+                eingetreten_am=date(2026, 11, 25),
+                einwilligung_kennung="team-2026-11-25",
+                einwilligung_zeitpunkt=datetime.now(timezone.utc),
+            )
+        )
+        s.add(
+            TeamOeffentlichZeile(
+                konto_kennung=PERSON,
+                zeigen=True,
+                einwilligung_kennung="team-oeffentlich-2026-11-25",
+                beantwortet_am=datetime.now(timezone.utc),
+            )
+        )
+        s.add(
+            EinstellungZeile(
+                name="aktuelle_saison",
+                wert="2026",
+                geaendert_am=datetime.now(timezone.utc),
+                geaendert_von=PERSON,
             )
         )
         # Ein Loeschauftrag nach einem Widerruf (DSFA R9b).

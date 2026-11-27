@@ -140,6 +140,22 @@ class TestEntdoppelung:
         assert pruefwerte[0] and pruefwerte[0] == pruefwerte[1]
         assert pruefwerte[2] and pruefwerte[2] != pruefwerte[0]
 
+    def test_besucher_bekommt_die_plaetze_des_tagesdeckels(self, client, dienst):
+        """
+        Befund 9: Ohne Anmeldung zaehlen je Beitrag und Tag hoechstens die ersten drei
+        entdoppelt. Die Plaetze haengen nur an Beitrag und Tag, nicht am Anschluss.
+        """
+        zaehlen(client, "anonymous", adresse="198.51.100.5")
+        zaehlen(client, "anonymous", adresse="198.51.100.6")
+        erster, zweiter = [
+            c.kwargs["deckel"] for c in dienst.track_content_usage.call_args_list
+        ]
+        assert len(erster) == 3 and erster == zweiter
+
+    def test_angemeldet_kein_tagesdeckel(self, client, dienst):
+        zaehlen(client, "bo-2")
+        assert dienst.track_content_usage.call_args.kwargs["deckel"] is None
+
     def test_pruefwert_und_tag_gehoeren_zum_selben_tag(self, client, dienst):
         zaehlen(client, "bo-2")
 
@@ -381,3 +397,79 @@ class TestKeineSitzungskennung:
         assert antwort.status_code == 200
         _, kwargs = dienst.track_content_usage.call_args
         assert "session_id" not in kwargs
+
+
+class TestSpielgefuehlEinwilligungBeimErzeugen:
+    """
+    Im Spielgefuehl-Modell entsteht ein Paar-Pruefwert bzw. Muster-Hinweis nur, wenn
+    beide Konten beim Erzeugen eine Stufe ab ``fuer_mich`` haben, nicht erst bei der
+    Anzeige im Admin-Dashboard gefiltert (Jura 26.11.).
+    """
+
+    @pytest.fixture
+    def client_buehne(self, dienst, muster):
+        app = FastAPI()
+        app.include_router(usage_router, prefix="/api/v1/usage")
+        app.dependency_overrides[get_settings] = lambda: Settings(
+            startkonten=STARTKONTO, punkte_aktiv=True, spielgefuehl_buehne_aktiv=True
+        )
+
+        async def laden(content_id):
+            return SimpleNamespace(id=content_id, original_author=AUTORIN)
+
+        app.dependency_overrides[get_beitrag_laden] = lambda: laden
+        with patch.object(
+            usage_module, "get_usage_service", return_value=dienst
+        ), patch.object(
+            usage_module, "get_muster_hinweise_service", return_value=muster
+        ):
+            yield TestClient(app)
+
+    @staticmethod
+    def _stufen(spielgefuehl_ohne_datenbank, stufen):
+        from domain.spielgefuehl import AKTUELLER_WORTLAUT as SPIELGEFUEHL_WORTLAUT
+        from repositories.spielgefuehl_repository import SpielgefuehlAntwort
+
+        am = datetime(2026, 11, 26, tzinfo=timezone.utc)
+        spielgefuehl_ohne_datenbank.lesen.side_effect = lambda kennung: (
+            SpielgefuehlAntwort(stufen[kennung], False, SPIELGEFUEHL_WORTLAUT, am)
+            if kennung in stufen
+            else None
+        )
+
+    @pytest.mark.parametrize(
+        "nutzende, autorin, gemeldet",
+        [
+            ("fuer_mich", "rangliste", True),
+            ("aus", "rangliste", False),
+            ("fuer_mich", "aus", False),
+            (None, "fuer_mich", False),
+            ("fuer_mich", None, False),
+        ],
+    )
+    def test_nur_wenn_beide_ab_fuer_mich(
+        self,
+        client_buehne,
+        muster,
+        spielgefuehl_ohne_datenbank,
+        punkte_einwilligung_ohne_datenbank,
+        nutzende,
+        autorin,
+        gemeldet,
+    ):
+        from domain.spielgefuehl import Stufe
+
+        stufen = {}
+        if nutzende:
+            stufen["bo-2"] = Stufe(nutzende)
+        if autorin:
+            stufen[AUTORIN] = Stufe(autorin)
+        self._stufen(spielgefuehl_ohne_datenbank, stufen)
+
+        assert zaehlen(client_buehne, "bo-2").status_code == 200
+
+        assert muster.nutzung_melden.called is gemeldet
+        if gemeldet:
+            assert muster.nutzung_melden.call_args.args[:2] == ("bo-2", AUTORIN)
+        # Im neuen Modell zaehlt die alte Einwilligung nicht.
+        punkte_einwilligung_ohne_datenbank.eingewilligt.assert_not_called()

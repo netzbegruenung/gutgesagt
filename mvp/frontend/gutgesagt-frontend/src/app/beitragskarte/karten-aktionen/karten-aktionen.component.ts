@@ -10,6 +10,7 @@ import {
   Output,
   Injector,
   SimpleChanges,
+  computed,
   inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -18,11 +19,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatSnackBar, MatSnackBarRef } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { debounceTime, switchMap, take } from 'rxjs/operators';
+import { Observable, Subject } from 'rxjs';
+import { debounceTime, map, take } from 'rxjs/operators';
 
 import { AuthService } from '../../auth/auth.service';
 import { LoggingService } from '../../services/logging.service';
@@ -39,9 +40,13 @@ import { FunktionenService } from '../../services/funktionen.service';
 import { sharepicDialogOeffnen } from '../../shared/sharepic/sharepic-dialog.component';
 import { KOPIERT, KOPIERT_MIT_LUECKE, hatLuecke } from '../../shared/vorlagen-luecke';
 import { platzhalterDialogOeffnen } from './platzhalter-dialog.component';
-import { GEPOSTET_FRAGE_MS, JA_GEPOSTET, KOPIERT_GEPOSTET_FRAGE, gepostetDank } from './gepostet-texte';
+import { GEPOSTET_NICHT_GEZAEHLT, GEPOSTET_OHNE_KONTO_DANK, gepostetDank } from './gepostet-texte';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
 import { STIMM_DANK_MS, stimmDank } from './stimm-dank-texte';
+import { DankeKnopfComponent } from './danke-knopf.component';
+import { GepostetStand, KopiertErfolgComponent } from './kopiert-erfolg.component';
+import type { AndereTonlage } from './kopiert-erfolg';
+import { KopiertErfolgStelle } from './kopiert-erfolg-stelle';
 
 /**
  * So lange steht „Kopiert“: Mit 1,5 s war es beim Wechsel in die andere App schon weg
@@ -76,7 +81,7 @@ export interface KopierVariante {
 @Component({
   selector: 'app-karten-aktionen',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, DankeKnopfComponent, KopiertErfolgComponent],
   templateUrl: './karten-aktionen.component.html',
   styleUrls: ['./karten-aktionen.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -140,6 +145,56 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
 
   /** „Als Bild teilen“ steht nur im Menue, wenn der Schalter an ist (#756, Standard aus). */
   readonly sharepicAn = inject(FunktionenService).an('sharepic');
+  /** „Danke an die Autorin“ nach dem Kopieren (#791); ohne Konto nur mit Unterschalter. */
+  readonly dankeKnopfAn = inject(FunktionenService).an('danke_knopf');
+  readonly dankeOhneKontoAn = inject(FunktionenService).an('danke_ohne_konto');
+  /** „Ja, gepostet“ auch ohne Konto (#799), nur als Wochenzähler „Meldungen ohne Konto“. */
+  readonly gepostetOhneKontoAn = inject(FunktionenService).an('gepostet_ohne_konto');
+  /**
+   * Schon „Ja, gepostet“ getippt, mit oder ohne Konto (#643, #799): Danach fragt diese
+   * Karte nicht mehr, bis die Seite neu geladen wird. Ohne Konto ist das die einzige
+   * Entdoppelung; sie liegt nur in dieser Komponente, nicht im Browser-Speicher und nicht
+   * am Server.
+   */
+  private gepostetGemeldet = false;
+  /** Die Frage „Gepostet?“ im Erfolgskasten dieser Karte (Review Spielgefühl 25.11., Nr. 2). */
+  gepostetStand: GepostetStand = 'aus';
+  /** Der Dank nach „Ja, gepostet“, im Erfolgskasten. */
+  gepostetDankText: string | null = null;
+  /** Kennung beim Kopieren, für die Meldung; null ohne Konto. */
+  private gepostetKennung: string | null = null;
+  /** Zählt die Kopiervorgänge, damit eine späte Antwort nicht in ein neueres Kopieren fragt. */
+  private kopierLauf = 0;
+  /** Der laufende Kopiervorgang für den Erfolgskasten (Rückkehr-Moment). */
+  get erfolgLauf(): number {
+    return this.kopierLauf;
+  }
+  /** Ob die Frage „Gepostet?“ ohne Konto steht (#799): dann ohne „zählt mit“. */
+  get gepostetOhneKonto(): boolean {
+    return this.gepostetKennung === null;
+  }
+  /** Die Snackbar „Kopiert“, falls ohne Erfolgstext eine Frage sie ablöst. */
+  private kopiertHinweis: MatSnackBarRef<unknown> | null = null;
+  /** Seit dem ersten Kopieren auf dieser Karte; kein Zeitlimit. */
+  dankeAngeboten = false;
+
+  /** Erfolgstext nach dem Kopieren (#785): die Nutzung, wie die Karte sie zeigt; null = unbekannt. */
+  @Input() nutzung: number | null = null;
+  /** Erfolgstext nach dem Kopieren: eine Antwort zur selben Aussage in anderem Stil; null = kein Hinweis. */
+  @Input() andereTonlage: AndereTonlage | null = null;
+  /** Statt „Kopiert – jetzt unter dem Post einfügen.“ der Erfolgstext unter der Leiste (#785, Standard aus). */
+  readonly kopiertErfolgAn = inject(FunktionenService).an('kopiert_erfolg');
+  /** Welche Karte gerade ihren Erfolgstext zeigt; immer nur die zuletzt kopierte (#785). */
+  private readonly erfolgStelle = inject(KopiertErfolgStelle);
+  /** Kennung dieser Karte bei der Erfolgsstelle. */
+  private readonly erfolgKennung = {};
+  /** Ob der Erfolgstext gerade dasteht: bis die Person ihn schließt oder eine andere Karte kopiert. */
+  readonly kopiertErfolg = computed(() => this.erfolgStelle.aktiv() === this.erfolgKennung);
+  /**
+   * Die Nutzung im Moment des Kopierens, bevor die Karte die eigene Kopie hochzählt: „Schon
+   * N-mal genutzt“ nennt, wie oft die Antwort vorher genutzt wurde.
+   */
+  nutzungBeimKopieren: number | null = null;
 
   @Output() likeToggled = new EventEmitter<string>();
   /** Im Album: "Ändern" angetippt; den Dialog oeffnet die Seite. */
@@ -233,6 +288,7 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.abgleich.complete();
+    this.erfolgStelle.schliessen(this.erfolgKennung);
   }
 
   toggleLike(): void {
@@ -288,15 +344,34 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
     if (this.inhaltId) {
       this.usageTrackingService.trackContentUsage(this.inhaltId, this.fassung ?? undefined);
       this.kopiert.emit();
+      this.dankeAngeboten = true;
     }
     this.cdr.markForCheck();
   }
 
   /**
-   * Nach dem Kopieren: angemeldet, mit Einwilligung und eingeschalteter Rückmeldung
-   * „Kopiert. Gepostet? [Ja, gepostet]“ (#643), sonst wie bisher nur „Erfolgreich
-   * kopiert!“. Ein Klick auf „Ja, gepostet“ zählt die Person einmal je Woche als
-   * öffentlich gekontert; welcher Beitrag, erfährt der Server dabei nicht.
+   * Der Knopf „Danke an die Autorin“ (#791): nach dem Kopieren, nicht am eigenen Beitrag,
+   * nicht in Vorschau und Album; angemeldet mit `danke_knopf`, ohne Konto nur mit
+   * `danke_ohne_konto`.
+   */
+  get dankeSichtbar(): boolean {
+    if (!this.dankeAngeboten || this.vorschau || this.album || !this.eigeneStimmeImZaehler) {
+      return false;
+    }
+    const angemeldet = !!this.authService.getUserInfo()?.isAuthenticated;
+    return angemeldet ? this.dankeKnopfAn() : this.dankeOhneKontoAn();
+  }
+
+  /**
+   * Nach dem Kopieren: Mit dem Schalter `kopiert_erfolg` (#785) steht der Erfolgstext unter
+   * der Leiste statt der Snackbar „Kopiert“. Wird „Ja, gepostet“ angeboten (angemeldet mit
+   * Einwilligung und Schalter, #643, oder ohne Konto mit `gepostet_ohne_konto`, #799), steht
+   * die Frage mit Knopf im selben Kasten, ohne Frist: Posten dauert länger als eine
+   * Snackbar (Review Spielgefühl 25.11.). Ein Klick zählt die Person einmal je Woche als
+   * öffentlich gekontert.
+   *
+   * Ist `kopiert_erfolg` aus, zeigt der Kasten nur „Kopiert – jetzt unter dem Post
+   * einfügen.“ mit der Frage; ohne Frage bleibt es bei der Snackbar wie bisher.
    *
    * Hat der Text noch einen Platzhalter „[Hier …]“ (#640), bleibt es beim Hinweis aufs
    * Ausfüllen: Gepostet sein kann der Text dann noch nicht.
@@ -310,52 +385,132 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
       this.snackBar.open(KOPIERT_MIT_LUECKE, 'OK', { duration: 6000 });
       return;
     }
+    const lauf = ++this.kopierLauf;
     const person = this.authService.getUserInfo();
     const kennung = person?.isAuthenticated ? person.userId : null;
-    if (!kennung) {
-      this.snackBar.open(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
+    this.gepostetKennung = kennung;
+    this.gepostetDankText = null;
+    const angeboten = this.gepostetSofortAngeboten(kennung);
+    this.gepostetStand = angeboten === true ? 'frage' : 'aus';
+    this.kopiertHinweis = null;
+    if (this.kopiertErfolgAn() || angeboten === true) {
+      this.kopiertErfolgZeigen();
+    } else {
+      // Ein offener Kasten (diese oder eine andere Karte) geht zu: „Kopiert“ steht nur einmal.
+      this.erfolgStelle.ohneKasten(this.erfolgKennung);
+      this.cdr.markForCheck();
+      this.kopiertHinweis = this.snackBar.open(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
+    }
+    if (angeboten !== null || !kennung) {
       return;
     }
-    if (this.usageTrackingService.gepostetBekannt(kennung)) {
-      this.gepostetFragen(kennung);
-      return;
-    }
-    // Noch unbekannt oder nicht angeboten: sofort die gewohnte Bestätigung; kommt vom
-    // Server ein Ja, ersetzt die Frage sie (eine neue Snackbar schließt die alte).
-    this.snackBar.open(KOPIERT, 'Schließen', { duration: KOPIERT_DAUER_MS });
-    if (this.usageTrackingService.gepostetBekannt(kennung) === false) {
-      return;
-    }
+    // Noch unbekannt: Die Bestätigung steht schon; bietet der Server die Frage an, kommt
+    // sie in den Kasten dazu (ohne Erfolgstext löst der Kasten die Snackbar ab).
     this.usageTrackingService
       .gepostetAngeboten(kennung)
       .pipe(take(1))
-      .subscribe((angeboten) => {
-        if (angeboten) {
-          this.gepostetFragen(kennung);
-        }
-      });
-  }
-
-  /** Ob gerade die Snackbar „Kopiert. Gepostet? [Ja, gepostet]“ offen ist, von welcher Karte auch immer. */
-  private gepostetFrageOffen(): boolean {
-    const offen = this.snackBar._openedSnackBarRef?.instance as { data?: { action?: string } } | undefined;
-    return offen?.data?.action === JA_GEPOSTET;
-  }
-
-  private gepostetFragen(kennung: string): void {
-    this.snackBar
-      .open(KOPIERT_GEPOSTET_FRAGE, JA_GEPOSTET, { duration: GEPOSTET_FRAGE_MS })
-      .onAction()
-      .pipe(
-        take(1),
-        switchMap(() => this.usageTrackingService.gepostetMelden(kennung)),
-      )
-      .subscribe((personen) => {
-        if (personen === GEPOSTET_NICHT_ANGEBOTEN) {
+      .subscribe((ja) => {
+        if (!ja || lauf !== this.kopierLauf || this.gepostetGemeldet) {
           return;
         }
-        this.snackBar.open(gepostetDank(personen), 'Schließen', { duration: 5000 });
+        if (this.kopiertErfolgAn()) {
+          // Geschlossen oder eine andere Karte kopiert: nicht wieder aufdrängen.
+          if (this.kopiertErfolg()) {
+            this.gepostetStand = 'frage';
+            this.cdr.markForCheck();
+          }
+          return;
+        }
+        // Inzwischen eine andere Karte kopiert: deren Rückmeldung nicht wegnehmen.
+        if (!this.erfolgStelle.istZuletzt(this.erfolgKennung)) {
+          return;
+        }
+        this.kopiertHinweis?.dismiss();
+        this.kopiertHinweis = null;
+        this.gepostetStand = 'frage';
+        this.kopiertErfolgZeigen();
       });
+  }
+
+  /**
+   * Ob die Frage „Gepostet?“ ohne Warten kommt: true ja, false nein, null erst den Server
+   * fragen (nur angemeldet, solange `gepostetBekannt` es nicht weiß).
+   */
+  private gepostetSofortAngeboten(kennung: string | null): boolean | null {
+    if (this.gepostetGemeldet) {
+      return false;
+    }
+    if (!kennung) {
+      return this.gepostetOhneKontoAn();
+    }
+    return this.usageTrackingService.gepostetBekannt(kennung);
+  }
+
+  /**
+   * Den Erfolgstext (neu) einblenden: erst weg, dann wieder da, damit Screenreader ihn
+   * auch beim zweiten Kopieren erneut ansagen.
+   */
+  private kopiertErfolgZeigen(): void {
+    // Vor kopiert.emit(): danach zählt die Karte die eigene Kopie schon mit.
+    this.nutzungBeimKopieren = this.nutzung;
+    if (this.kopiertErfolg()) {
+      this.erfolgStelle.schliessen(this.erfolgKennung);
+      this.cdr.detectChanges();
+    }
+    this.erfolgStelle.zeigen(this.erfolgKennung);
+    this.cdr.markForCheck();
+  }
+
+  kopiertErfolgSchliessen(): void {
+    this.erfolgStelle.schliessen(this.erfolgKennung);
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * „Ja, gepostet“ im Erfolgskasten: angemeldet an /users/me/gepostet (mit dem Beitrag,
+   * falls der Dienst ihn fürs Wirkungs-Echo mitschickt), ohne Konto an den neutralen
+   * Sammelpfad (#799). Der Knopf sperrt sich sofort, ein Doppeltipp zählt einmal, und
+   * diese Karte fragt bis zum Neuladen nicht mehr. Scheitert das Melden (Netz, 5xx), steht
+   * der Knopf wieder bereit: Sonst ginge die Meldung stillschweigend verloren. Doppelt
+   * zählt der Server mit Konto nicht (einmal je Woche).
+   */
+  jaGepostet(): void {
+    if (this.gepostetStand !== 'frage' || this.gepostetGemeldet) {
+      return;
+    }
+    this.gepostetGemeldet = true;
+    this.gepostetStand = 'sendet';
+    this.cdr.markForCheck();
+    const kennung = this.gepostetKennung;
+    // null = nicht (mehr) angeboten, 'fehler' = nicht angekommen, sonst der Dank.
+    const dank$: Observable<string | null | 'fehler'> = kennung
+      ? this.usageTrackingService
+          .gepostetMelden(kennung, this.inhaltId)
+          .pipe(
+            map((personen) =>
+              personen === GEPOSTET_NICHT_ANGEBOTEN ? null : personen === null ? 'fehler' : gepostetDank(personen),
+            ),
+          )
+      : this.usageTrackingService
+          .gepostetOhneKontoMelden()
+          .pipe(
+            map((ergebnis) =>
+              ergebnis === 'nicht_angeboten' ? null : ergebnis === 'gezaehlt' ? GEPOSTET_OHNE_KONTO_DANK : 'fehler',
+            ),
+          );
+    dank$.pipe(take(1)).subscribe((dank) => {
+      if (dank === 'fehler') {
+        // Nicht angekommen: Knopf wieder bereit, der Hinweis lädt zum zweiten Tippen ein.
+        this.gepostetGemeldet = false;
+        this.gepostetStand = 'frage';
+        this.gepostetDankText = GEPOSTET_NICHT_GEZAEHLT;
+      } else {
+        // Nicht (mehr) angeboten: Die Frage verschwindet ohne Dank.
+        this.gepostetStand = dank === null ? 'aus' : 'gemeldet';
+        this.gepostetDankText = dank;
+      }
+      this.cdr.markForCheck();
+    });
   }
 
   get teilenSichtbar(): boolean {
@@ -517,9 +672,9 @@ export class KartenAktionenComponent implements OnInit, OnChanges, OnDestroy {
       next: () => {
         this.ausgang = undefined;
         this.isVoting = false;
-        // Steht noch die Frage „Gepostet?“ nach dem Kopieren, verdrängt der Dank sie nicht:
-        // Sonst wäre „Ja, gepostet“ weg, bevor die Person es treffen kann.
-        if (dank && !this.gepostetFrageOffen()) {
+        // Die Frage „Gepostet?“ steht im Erfolgskasten, nicht als Snackbar: Der Dank
+        // verdrängt sie nicht mehr.
+        if (dank) {
           // Sofort-Dank als Snackbar wie beim Kopieren (Entscheidung 20.11.2026): unten
           // eingeblendet, per aria-live angesagt, ohne die Karte zu verschieben. Ist dabei
           // ein Meilenstein wie „Erste 10 Bewertungen“ neu, steht er in derselben Snackbar.

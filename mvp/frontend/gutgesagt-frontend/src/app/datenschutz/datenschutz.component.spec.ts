@@ -1,10 +1,19 @@
-import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ActivatedRoute, provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { BehaviorSubject, Subject } from 'rxjs';
+import { AuthService, UserInfo } from '../auth/auth.service';
+import { environment } from '../../environments/environment';
 
 import { abschnitt as abschnittIn, istTagesdatum, normalisiert, stand } from '../testing/rechtstext';
 import { DatenschutzComponent } from './datenschutz.component';
 import { SUCHANFRAGEN_ABSCHNITT } from '../search/search.component';
 import { HOME_HINWEIS_MERKER, MEILENSTEIN_MERKER } from '../shared/geraetespeicher-schalter';
+import { FEIER_TON_SCHLUESSEL } from '../shared/feier/feier-ton.service';
+import { FunktionenService } from '../services/funktionen.service';
+import { dseDatum, dseMusterStimmen } from './dse-muster-stimmen';
 
 /** Der Satz zu Widerrufen vor dem Einspielen: mit Platzhalter oder mit Datum („1. Dezember 2026“). */
 const WIDERRUF_VOR_DEM_EINSPIELEN = new RegExp(
@@ -25,7 +34,7 @@ describe('DatenschutzComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(DatenschutzComponent);
@@ -250,6 +259,33 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('Prüfwerte bleiben nur bis zum Ende ihres Tages');
     });
 
+    it('Verwendung: ohne Anmeldung Prüfwert aus dem Anschluss für einen Tag, Deckel drei je Beitrag (Jura 27.11.)', () => {
+      const text = abschnitt('Verwendung von Beiträgen');
+
+      expect(text).toContain(
+        'Ohne Anmeldung erkennen wir dich dabei nur für einen Tag an deinem Anschluss: Daraus bilden wir mit einem ' +
+          'täglich wechselnden Schlüssel einen Prüfwert, den wir nach dem Tageswechsel verwerfen; deine Adresse ' +
+          'speichern wir nicht. So zählt ohne Anmeldung höchstens eine erste Kopie je Anschluss, Beitrag und Tag, und ' +
+          'insgesamt höchstens drei je Beitrag und Tag, egal von wem.',
+      );
+      expect(text).toContain('berechnet aus deiner Kennung, dem Beitrag und dem Datum.');
+      expect(text).not.toContain('ohne Anmeldung aus deiner IP-Adresse');
+    });
+
+    it('Verwendung: Deckel-Plätze ohne Schlüssel, verworfen nach Mitternacht, über Neustart erhalten (Jura 27.11.)', () => {
+      const text = abschnitt('Verwendung von Beiträgen');
+
+      expect(text).toContain(
+        'Auch wer die gespeicherten Daten hat, kann deshalb einen solchen Prüfwert weder auf dich noch auf den ' +
+          'Beitrag zurückführen. Für den Deckel ohne Anmeldung merken wir uns zusätzlich bis zu drei Plätze je ' +
+          'Beitrag und Tag; sie bestehen nur aus Beitrag, Tag und Platznummer und sagen nichts darüber, wer kopiert ' +
+          'hat. Nach Mitternacht (UTC) verwirft der Server alle Prüfwerte und Plätze des Vortags. Startet er am ' +
+          'selben Tag neu, passen die Prüfwerte nicht mehr und eine weitere Kopie zählt noch einmal; belegte Plätze ' +
+          'bleiben belegt.',
+      );
+      expect(text).not.toContain('startet er neu, passt keiner mehr');
+    });
+
     it('Verwendung: Kopien durch Startkonten zählen nicht', () => {
       expect(abschnitt('Verwendung von Beiträgen')).toContain('(Startkonten), zählen wir gar nicht');
     });
@@ -286,6 +322,11 @@ describe('DatenschutzComponent', () => {
 
       expect(text).toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
       expect(text).toContain('nichts ist vorausgewählt');
+      // Mit Schalter einwilligung_im_gewinn auch als Frage mit zwei Knöpfen (#788, Jura 25.11.)
+      expect(text).toContain(
+        'Du gibst sie selbst unter „Meine Beiträge“ (Häkchen oder Frage mit zwei gleichwertigen Knöpfen) ' +
+          'oder mit einem eigenen Häkchen in den „Datenschutz-Einstellungen“',
+      );
       expect(text).toContain('Ohne sie kannst du genauso beitragen und bewerten');
       expect(text).toContain('jederzeit in den „Datenschutz-Einstellungen“ widerrufen; danach wird nichts mehr berechnet');
       expect(text).not.toContain('Bevor wir Punkte einschalten');
@@ -307,11 +348,15 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('ohne die genutzten Beiträge (siehe „Punkte“)');
     });
 
-    it('Profiling: nur mit eingeschalteten Punkten, ohne Folgen', () => {
+    it('Profiling: nur mit eingeschalteten Punkten, keine allein automatisierte Entscheidung (Jura 26.11.)', () => {
       const text = abschnitt('Keine automatisierte Entscheidungsfindung');
 
       expect(text).toContain('solange Punkte ausgeschaltet sind');
-      expect(text).toContain('hat keine Folgen für dich');
+      expect(text).toContain(
+        'er wird automatisch berechnet. Deinen Punktestand zeigen wir nur dir. Eine Entscheidung, die allein ' +
+          'automatisiert getroffen wird und dir gegenüber rechtliche oder ähnlich erhebliche Wirkung hat, gibt es nicht.',
+      );
+      expect(text).not.toContain('Saison-Rangliste');
     });
   });
 
@@ -518,6 +563,91 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('Das gilt für beide Anmeldewege: über die Netzbegrünung und mit einem Konto aus einer Einladung.');
       expect(text).toContain('die der Anmeldedienst übermittelt, aber keine Zugangs-Tokens');
       expect(text).not.toContain('selbst anlegen');
+    });
+  });
+
+  describe('Teams über Einladungen', () => {
+    it('Einladung: das Team nur mit ausdrücklicher Zustimmung, nie die Einladung', () => {
+      const text = abschnitt('Konto aus einer Einladung');
+
+      expect(text).toContain('Am Konto steht nicht, über welche Einladung es entstand');
+      expect(text).toContain(
+        'Nur wenn eine Einladung zu einem Team gehört und du ausdrücklich zustimmst, speichern wir dein Team (siehe „Teams“), nicht aber die Einladung.'
+      );
+    });
+
+    it('Teams: was gespeichert wird, ohne Einladung, nur für dich, Admins nur die Zahl', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain(
+        'deine Kennung, den Namen des Teams, deine laufende Nummer im Team und den Tag, an dem du beigetreten bist'
+      );
+      expect(text).toContain('Welche Einladung du genutzt hast, speichern wir nicht.');
+      expect(text).toContain('Sagst du nein, speichern wir nichts davon');
+      expect(text).toContain('Deine Teams siehst nur du, unter „Meine Teams“.');
+      expect(text).toContain('sehen je Team nur, wie viele dabei sind, keine Namen und keine Liste');
+    });
+
+    it('Teams: auch nach einer Gruppe, die zugestimmt hat; die Gruppe bekommt keine Daten', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Manche Einladungen gehören zu einem Team, etwa einem Treffen, einem Ort oder einer Gruppe, die zugestimmt hat. Die Gruppe bekommt keine Daten über dich.'
+      );
+      expect(text).not.toContain('etwa einem Treffen oder einem Ort.');
+    });
+
+    it('Teams: eigene Einwilligung nach Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a, getrennt von den anderen', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain('Artikel 6 Absatz 1 Buchstabe a und Artikel 9 Absatz 2 Buchstabe a DSGVO');
+      expect(text).toContain('Du gibst sie mit dem Knopf „Ja, speichert …“, nichts ist vorausgewählt.');
+      expect(text).toContain('getrennt von der Einwilligung zu deiner Mitwirkung und von „Punkte und Meilensteine“');
+      expect(text).toContain('mit der Kennung des Wortlauts und dem Zeitpunkt als Nachweis');
+    });
+
+    it('Teams: der Nachweis bleibt, solange du im Team bist, nicht bis zur Kontolöschung (25.11.2026)', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Deine Antwort speichern wir mit der Kennung des Wortlauts und dem Zeitpunkt als Nachweis, solange du im Team bist.'
+      );
+      expect(text).not.toContain('als Nachweis, bis dein Konto gelöscht wird');
+    });
+
+    it('Teams: Zweck mit der Summe des Teams (25.11.2026)', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Zweck: dir zu zeigen, in welchen Teams du dabei bist, und die Nummer in deinem Team zu vergeben und die Summe deines Teams zu bilden.'
+      );
+    });
+
+    it('Teams: die Team-Summe mit derselben Einwilligung, mit Kommentaren und „Ja, gepostet“, noch nicht eingeschaltet (26.11.2026)', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Diese Anzeige am Namen ist noch nicht eingeschaltet. ' +
+          'Mit derselben Einwilligung darf die Zahl deiner Beiträge, Bewertungen und Kommentare und deiner Meldungen „Ja, gepostet“ in eine Summe deines Teams eingehen. ' +
+          'Diese Summe sehen nur Mitglieder des Teams, nur für abgeschlossene Wochen, erst wenn mindestens fünf ' +
+          'Mitglieder eingewilligt haben, gerundet und nie mit einzelnen Namen. Die Team-Summe ist noch nicht eingeschaltet.'
+      );
+    });
+
+    it('Teams: „Team verlassen“ löscht sofort, Nummer nicht neu, Sicherungskopien bis zum Ablauf', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain('„Team verlassen“');
+      expect(text).toContain('wir löschen den Eintrag sofort');
+      expect(text).toContain('Deine Nummer vergeben wir nicht neu.');
+      expect(text).toContain('siehe „Sicherungskopien“');
+    });
+
+    it('Teams: die Anzeige am Namen ist noch nicht eingeschaltet und braucht eine eigene Frage', () => {
+      const text = abschnitt('Teams');
+
+      expect(text).toContain('fragen wir dich vorher gesondert');
+      expect(text).toContain('Diese Anzeige am Namen ist noch nicht eingeschaltet.');
     });
   });
 
@@ -783,6 +913,27 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('Ohne eigene Wahl speichern wir nichts');
     });
 
+    it('Gerätespeicher: der Merker einer Einladung mit Team, höchstens drei Tage, nach dem Lesen gelöscht (team-merker.ts)', () => {
+      const text = abschnitt('Weitere Einträge').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        'Sagst du ohne Konto bei einer Einladung zu einem Team „Ja, speichert …“, merkt sich dein Browser, auch über ' +
+          'das Schließen des Tabs hinaus, den Code der Einladung, die Kennung des Wortlauts, dem du zugestimmt hast, ' +
+          'ob du der zweiten Frage zugestimmt hast, ob deine Teams an deinem Namen erscheinen dürfen (ohne diese ' +
+          'Frage: nein), und bis wann der Eintrag gilt.'
+      );
+      expect(text).toContain('Damit trägt er deine Antwort bis zur Anmeldung nach dem Anlegen deines Kontos.');
+      expect(text).toContain(
+        'Hast du schon ein Konto und willst dich zum Beitreten erst anmelden, merkt er sich nur den Code, bis du angemeldet zurückkommst.'
+      );
+      expect(text).toContain('Den Namen des Teams und deine Nummer enthält der Eintrag nie.');
+      expect(text).toContain('Er gilt höchstens drei Tage, so lange wie der Link in der Mail.');
+      expect(text).toContain(
+        'Wir löschen ihn, sobald die Seite der Einladung ihn nach deiner Anmeldung gelesen hat, und einen abgelaufenen ' +
+          'Eintrag beim nächsten Aufruf der Einladung.'
+      );
+    });
+
     it('Gerätespeicher: Willkommen und Rundgang „Mitmachen“ als zwei Vermerke ohne Übertragung (#516)', () => {
       const text = abschnitt('Weitere Einträge');
 
@@ -852,7 +1003,7 @@ describe('DatenschutzComponent', () => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
         imports: [DatenschutzComponent],
-        providers: [provideRouter([]), { provide: MEILENSTEIN_MERKER, useValue: aktiv }],
+        providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: MEILENSTEIN_MERKER, useValue: aktiv }],
       });
       const fixture = TestBed.createComponent(DatenschutzComponent);
       fixture.detectChanges();
@@ -889,7 +1040,7 @@ describe('DatenschutzComponent', () => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
         imports: [DatenschutzComponent],
-        providers: [provideRouter([]), { provide: HOME_HINWEIS_MERKER, useValue: aktiv }],
+        providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: HOME_HINWEIS_MERKER, useValue: aktiv }],
       });
       const fixture = TestBed.createComponent(DatenschutzComponent);
       fixture.detectChanges();
@@ -907,5 +1058,741 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain(ABSATZ);
       expect(text).toContain('sie schon gesehen hast. Das sind zwei Vermerke ohne Angaben über dich.');
     });
+  });
+
+  describe('Ton bei Erfolgen (#787)', () => {
+    it('steht immer unter „Speicherung auf deinem Gerät“, unabhängig von Schalter und Browserzustand', () => {
+      localStorage.removeItem(FEIER_TON_SCHLUESSEL);
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ imports: [DatenschutzComponent], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
+      const fixture = TestBed.createComponent(DatenschutzComponent);
+      fixture.detectChanges();
+      const text = abschnittIn(fixture.nativeElement as HTMLElement, 'Weitere Einträge');
+      expect(text).toContain(`unter dem Schlüssel „${FEIER_TON_SCHLUESSEL}“`);
+      expect(text).toContain('Der Eintrag enthält nur, dass der Ton an ist, und keine Angaben über dich');
+      expect(text).toContain('schaltest du ihn wieder aus, löschen wir den Eintrag');
+      expect(text).toContain('bis du ihn änderst');
+    });
+  });
+});
+
+/** Spielgefühl als eine Frage (Schalter spielgefuehl_buehne): ersetzt die Einwilligungsteile. */
+describe('DatenschutzComponent: Spielgefühl', () => {
+  const ALLE = ['spielgefuehl_buehne', 'punkte', 'rangliste'];
+  function seiteMit(an: boolean | string[]): HTMLElement {
+    const namen = an === true ? ALLE : an === false ? [] : an;
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: FunktionenService, useValue: { an: (name: string) => signal(namen.includes(name)) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('Schalter aus: bisherige Einwilligungen, kein Absatz „Spielgefühl“', () => {
+    const seite = seiteMit(false);
+
+    expect(seite.querySelector('[data-testid="dse-spielgefuehl"]')).toBeNull();
+    expect(abschnittIn(seite, 'Punkte')).toContain('Abzeichen an deinem Namen.');
+    expect(abschnittIn(seite, 'Punkte')).toContain('ohne deine Einwilligung „Punkte und Meilensteine“ gibt es keine, auch keine Wegmarken');
+    expect(seite.querySelector('[data-testid="dse-rangliste-platzhalter"]')).not.toBeNull();
+    expect(abschnittIn(seite, 'Punkte')).toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
+  });
+
+  it('Schalter an: Absatz „Spielgefühl“ statt Abzeichen am Namen, Rangliste und Einwilligung „Punkte“', () => {
+    const seite = seiteMit(true);
+    const punkte = abschnittIn(seite, 'Punkte');
+
+    expect(seite.querySelector('#spielgefuehl')).not.toBeNull();
+    expect(punkte).toContain('Spielgefühl. Du wählst selbst, ob und wie du mitspielst:');
+    expect(punkte).not.toContain('in drei Stufen');
+    expect(punkte).toContain('also deinem Anzeigenamen oder einem zufällig vergebenen Ranglistennamen');
+    expect(punkte).toContain('Abzeichen zeigen wir nirgends sonst');
+    expect(punkte).toContain('Rechtsgrundlage: siehe „Spielgefühl“ oben');
+    expect(punkte).not.toContain('Abzeichen an deinem Namen.');
+    expect(punkte).toContain('und mit deiner Stufe gilt auch der Schutz gegen Absprachen (unten)');
+    expect(punkte).toContain('deine Abzeichen zeigen wir nur in der Rangliste, wenn du mitspielst');
+    expect(punkte).toContain(
+      'ohne die Stufe ‚Nur für mich‘ oder ‚In der Saison-Rangliste mitspielen‘ beim Spielgefühl gibt es keine, auch keine Wegmarken',
+    );
+    expect(punkte).not.toContain('ohne deine Einwilligung „Punkte und Meilensteine“ gibt es keine');
+    expect(punkte).toContain('Muster-Hinweis');
+    expect(seite.querySelector('[data-testid="dse-rangliste-platzhalter"]')).toBeNull();
+    expect(punkte).not.toContain('deine eigene, freiwillige Einwilligung „Punkte und Meilensteine“');
+    // Die Rechenregeln bleiben
+    expect(punkte).toContain('Paar-Prüfwert');
+  });
+
+  it('Schalter an: die angebotenen Stufen als Liste, Rangliste nur mit Schalter rangliste', () => {
+    const stufen = (an: string[]) =>
+      Array.from(seiteMit(an).querySelectorAll('[data-testid="dse-spielgefuehl"] li')).map((li) => normalisiert(li.textContent));
+
+    const mit = stufen(ALLE);
+    expect(mit.length).toBe(3);
+    expect(mit[0]).toBe('‚Aus‘: Wir berechnen nichts.');
+    expect(mit[1]).toContain('‚Nur für mich‘: Wir berechnen Punkte und Meilensteine, die nur du siehst');
+    expect(mit[2]).toContain('‚In der Saison-Rangliste mitspielen‘: Zusätzlich stehst du in der Rangliste');
+
+    TestBed.resetTestingModule();
+    const ohne = stufen(['spielgefuehl_buehne', 'punkte']);
+    expect(ohne.length).toBe(2);
+    expect(ohne.join(' ')).not.toContain('In der Saison-Rangliste mitspielen');
+  });
+
+  it('mit Rangliste: kein Satz, dass wir die Stufe gerade nicht anbieten', () => {
+    const absatz = normalisiert(seiteMit(ALLE).querySelector('[data-testid="dse-spielgefuehl"]')!.textContent);
+    expect(absatz).not.toContain('bieten wir gerade nicht an');
+  });
+
+  // Jura zum Gamification-Gegencheck (26.11.), Wortlaut nach der Sammelrunde 27.11.
+  const SOCKEL =
+    'Hast du beim Spielgefühl eine Stufe gewählt, speichern wir deine Wahl, deine Namenswahl, gegebenenfalls deinen ' +
+    'Zufallsnamen, die Fassung des Einwilligungstexts und den Zeitpunkt. Ausschalten kannst du das jederzeit in deinen ' +
+    'Datenschutz-Einstellungen, auch wenn wir die Funktion gerade nicht anbieten.';
+
+  it('der Sockelsatz steht immer, auch ohne Schalter', () => {
+    for (const namen of [[], ['spielgefuehl_buehne'], ALLE]) {
+      TestBed.resetTestingModule();
+      expect(normalisiert(seiteMit(namen).querySelector('[data-testid="dse-spielgefuehl-sockel"]')!.textContent)).toBe(SOCKEL);
+    }
+  });
+
+  it('ohne Punkte kein Absatz „Spielgefühl“, auch wenn spielgefuehl_buehne an ist', () => {
+    const seite = seiteMit(['spielgefuehl_buehne']);
+    expect(seite.querySelector('[data-testid="dse-spielgefuehl"]')).toBeNull();
+  });
+
+  it('ohne Rangliste: statt der Stufe Rangliste der Satz, dass wir sie gerade nicht anbieten', () => {
+    const absatz = normalisiert(
+      seiteMit(['spielgefuehl_buehne', 'punkte']).querySelector('[data-testid="dse-spielgefuehl"]')!.textContent,
+    );
+    expect(absatz).toContain('Die Stufe ‚In der Saison-Rangliste mitspielen‘ bieten wir gerade nicht an.');
+    expect(absatz).not.toContain('zufällig vergebenen Ranglistennamen');
+    expect(absatz).toContain('Jede Antwort speichern wir mit Stufe');
+  });
+
+  it('Punkte: Bewertungen, Nutzung ohne Anmeldung und die Wegmarke „Erste 10 Bewertungen“', () => {
+    const punkte = abschnittIn(seiteMit(false), 'Punkte');
+    expect(punkte).toContain(
+      'und einen kleinen Punkt je Bewertung eines fremden Beitrags, höchstens drei am Tag; die Richtung der Bewertung zählt nicht',
+    );
+    expect(punkte).toContain(
+      'Kopiert oder nutzt jemand ohne Anmeldung deinen Beitrag, zählen wir das für deine Punkte höchstens dreimal je ' +
+        'Beitrag und Tag; wer das war, wissen und speichern wir nicht.',
+    );
+    expect(punkte).toContain('und „Erste 10 Bewertungen“');
+  });
+});
+
+/** „Danach wurde schon N-mal gesucht“ (#362, Jura vorläufig 26.11.): Absatz nur mit Schalter. */
+describe('DatenschutzComponent: Suchen ohne Treffer, Anzahl auf der Ergebnisseite', () => {
+  function seiteMit(an: boolean): HTMLElement {
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: FunktionenService, useValue: { an: (name: string) => signal(an && name === 'null_treffer_anzahl') } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('nennt mit Schalter an „n-mal gesucht“ ab drei, je Pseudonym und Tag, nicht „Personen“', () => {
+    const text = abschnittIn(seiteMit(true), 'Suchen ohne Treffer');
+
+    expect(text).toContain('„Danach wurde in den letzten vier Wochen schon n-mal gesucht.“');
+    expect(text).toContain('erst ab drei');
+    expect(text).toContain('je Pseudonym und Tag');
+    expect(text).toContain('nicht, wie viele verschiedene Menschen gesucht haben');
+    expect(text).not.toContain('schon n Personen gesucht');
+  });
+
+  it('lässt den Absatz mit Schalter aus weg', () => {
+    const text = abschnittIn(seiteMit(false), 'Suchen ohne Treffer');
+
+    expect(text).not.toContain('n-mal gesucht');
+    expect(text).toContain('Auf die Listen der Suchen ohne Treffer kommt ein Eintrag erst');
+  });
+});
+
+/** Halbsatz zum Stimmenverfall bei ganz anderem Text (#636) hinter dem Schalter stimmen_text_verfall. */
+describe('DatenschutzComponent - Stimmenverfall bei ganz anderem Text (#636)', () => {
+  // Wortlaut Jura vorläufig 26.11.2026
+  const HALBSATZ =
+    'sagt der Text einer Aussage unter gleichem Titel später etwas ganz anderes, verfallen die Bewertungen dazu und werden gelöscht';
+  const schalter = signal(false);
+
+  function bewertungen(): string {
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    return abschnittIn(fixture.nativeElement as HTMLElement, 'Bewertungen');
+  }
+
+  beforeEach(async () => {
+    schalter.set(false);
+    await TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        {
+          provide: FunktionenService,
+          useValue: { an: (name: string) => (name === 'stimmen_text_verfall' ? schalter : signal(false)) },
+        },
+      ],
+    }).compileComponents();
+  });
+
+  it('Schalter aus: nur der Titel, kein Halbsatz zum Text', () => {
+    const text = bewertungen();
+
+    expect(text).not.toContain(HALBSATZ);
+    expect(text).toContain(
+      'Ändert die Autorin oder der Autor den Titel so, dass er etwas anderes behauptet, löschen wir die Bewertungen dazu.'
+    );
+  });
+
+  it('Schalter an: Halbsatz steht im Satz zum Titel', () => {
+    schalter.set(true);
+    const text = bewertungen();
+
+    expect(text).toContain(`dass er etwas anderes behauptet, löschen wir die Bewertungen dazu; ${HALBSATZ}.`);
+  });
+
+  it('erscheint ohne Neuladen, sobald der Schalter umspringt', () => {
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    const seite = fixture.nativeElement as HTMLElement;
+    expect(abschnittIn(seite, 'Bewertungen')).not.toContain(HALBSATZ);
+
+    schalter.set(true);
+    fixture.detectChanges();
+
+    expect(abschnittIn(seite, 'Bewertungen')).toContain(HALBSATZ);
+  });
+});
+
+/**
+ * Absätze an Schaltern (vorläufige juristische Einschätzung 26.11.2026, interner Test):
+ * Grundsatz „kein Schalter ohne seinen Absatz“. Jeder Absatz steht wortgleich, sobald sein
+ * Schalter wirkt, und fehlt sonst; „noch nicht eingeschaltet“ entfällt mit dem Schalter.
+ */
+describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.2026)', () => {
+  const RANGLISTE =
+    'Rangliste. Wenn du Punkten zugestimmt hast, kannst du zusätzlich ausdrücklich einwilligen, in der ' +
+    'Rangliste der laufenden Saison zu erscheinen, mit Ranglistenname, Platz und deinen Punkten der Saison. ' +
+    'Den Ranglistennamen würfeln wir beim ersten Ja zufällig; deinen Anzeigenamen zeigen wir dort nur, wenn ' +
+    'du ihn selbst wählst. Sehen kann die Rangliste nur, wer selbst darin steht, und erst ab zehn ' +
+    'Teilnehmenden: die ersten zehn und dein eigener Platz. Jede Antwort auf diese Frage speichern wir mit ' +
+    'Zeitpunkt, Kennung des Wortlauts, deiner Namenswahl und deinem Ranglistennamen als Nachweis; Plätze ' +
+    'und Punkte speichern wir nicht, wir berechnen sie bei jedem Abruf. Widerrufst du unter „Meine ' +
+    'Beiträge“, stehst du ab dem nächsten Abruf nicht mehr darin. Zweck: dir zeigen, wo du in der Saison ' +
+    'stehst. Rechtsgrundlage: deine ausdrückliche Einwilligung (Art. 6 Abs. 1 lit. a, Art. 9 Abs. 2 lit. a ' +
+    'DSGVO). Dauer: die Antworten bis zur Löschung deines Kontos.';
+  const ECHO_DANKE =
+    'An deinen Beiträgen zeigen wir dir, wie oft andere sie verwendet und sich dafür bedankt haben. Hast du ' +
+    'einen fremden Beitrag kopiert, kannst du mit „Danke“ der Person danken, die ihn geschrieben hat; sie ' +
+    'sieht nur die Summe, nie, wer gedankt hat. Dafür speichern wir je Beitrag nur zwei Summen, ohne ' +
+    'Kennung und ohne Zeitpunkt. Damit dein Danke je Beitrag und Tag nur einmal zählt, nutzen wir einen ' +
+    'eigenen Tages-Prüfwert, gebildet wie beim Kopieren und wie dieser mit dem Tageswechsel gelöscht. Was ' +
+    'seit deinem letzten Besuch an Echo dazukam, merken wir uns als weiteren Zählerstand zu deiner Kennung.';
+  const GEPOSTET_OHNE_KONTO =
+    'Auch ohne Anmeldung kannst du nach dem Kopieren „Ja, gepostet“ tippen. Dann zählen wir für die laufende ' +
+    'Kalenderwoche nur eins dazu, ohne Kennung, ohne Prüfwert und ohne etwas in deinem Browser zu ' +
+    'speichern; der Knopf ist danach ausgegraut. Gegen Missbrauch begrenzen wir, wie viele solcher Meldungen ' +
+    'insgesamt in wenigen Sekunden zählen; eine Adresse verwenden wir dafür nicht. Diese Meldungen weisen wir ' +
+    'getrennt von denen Angemeldeter ' +
+    'aus. Zweck: sehen, wie oft Gut gesagt beim Widersprechen hilft. Rechtsgrundlage: Art. 6 Abs. 1 lit. f ' +
+    'DSGVO. Dauer: Die Wochensumme hat keinen Personenbezug.';
+  const ANTWORTEN =
+    'Hat jemand auf eine deiner Aussagen geantwortet, zeigen wir dir auf der Startseite, wie viele Antworten ' +
+    'anderer in den letzten sieben Tagen dazugekommen sind, und im Reiter „Meine Aussagen“ deine Aussagen ' +
+    'mit ihren Antworten. Dafür lesen wir beim Aufruf deine Aussagen, die Antworten daran und den Tag, an ' +
+    'dem sie als Antwort verknüpft wurden. Ob eine Antwort von dir ist, zeigen wir dir; wer sie sonst ' +
+    'geschrieben hat, nennen wir dort nicht. Auch das speichern wir nicht.';
+  const MELDEN =
+    'An jedem Beitrag kannst du über „Melden“ auf rechtswidrige oder regelwidrige Inhalte hinweisen; im Fuß ' +
+    'jeder Seite findest du dazu „Melden & Kontakt“. Was wir mit einer Meldung speichern, steht in diesem ' +
+    'Abschnitt.';
+  const GESTOERT =
+    'In der Startphase kannst du uns über „Was hat dich gestört?“ kurz schreiben, was dich gestört hat. Wir ' +
+    'speichern nur deinen Text und den Tag, ohne deine Kennung und ohne Kontaktmöglichkeit; schreib ' +
+    'bitte keine Namen oder Daten anderer hinein. Wir nutzen die Rückmeldungen, um Gut gesagt zu ' +
+    'verbessern, und löschen alle spätestens am 31. Dezember 2026. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.';
+  const NULL_TREFFER =
+    'Findest du zu einer Aussage keine Antwort, zeigen wir, wie oft schon danach gesucht wurde, sobald es ' +
+    'mindestens dreimal war. Die Zahl führen wir an der Aussage mit; wer gesucht hat, zeigen wir nicht ' +
+    '(Einzelheiten im Absatz darunter).';
+  const KAMPAGNENWORT =
+    'Öffnest du Gut gesagt über einen Link oder QR-Code mit einem Kampagnenwort, etwa von einem Sticker, ' +
+    'begrüßen wir dich passend dazu; das geschieht nur in deinem Browser.';
+  const BESTANDSZAHL =
+    'Wie viele Antworten es gibt und wie viele in den letzten sieben Tagen dazukamen, berechnen wir beim ' +
+    'Aufruf aus den öffentlichen Beiträgen; dafür speichern wir nichts.';
+
+  function seiteMit(...namen: string[]): HTMLElement {
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: FunktionenService, useValue: { an: (name: string) => signal(namen.includes(name)) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('alle Schalter aus: keiner der neuen Absätze, die Vorbehalte stehen', () => {
+    const seite = seiteMit();
+    const ganz = normalisiert(seite.textContent);
+
+    for (const text of [
+      RANGLISTE,
+      ECHO_DANKE,
+      GEPOSTET_OHNE_KONTO,
+      ANTWORTEN,
+      MELDEN,
+      GESTOERT,
+      NULL_TREFFER,
+      KAMPAGNENWORT,
+      BESTANDSZAHL,
+    ]) {
+      expect(ganz).not.toContain(text.slice(0, 60));
+    }
+    expect(ganz).toContain('Punkte sind noch nicht eingeschaltet.');
+    expect(ganz).toContain('Die Team-Summe ist noch nicht eingeschaltet.');
+    expect(ganz).toContain('Eine Rangliste je Saison ist noch nicht eingeschaltet');
+    expect(ganz).toContain('Einzige Ausnahme, sobald Punkte eingeschaltet sind:');
+    expect(ganz).toContain('Auch Abzeichen sind noch nicht eingeschaltet');
+    expect(ganz).toContain('nur zwei Zahlen');
+    expect(seite.querySelectorAll('#rangliste').length).toBe(1);
+  });
+
+  it('punkte: der Vorbehalt entfällt, die Muster-Hinweise gelten ohne „sobald“', () => {
+    const ganz = normalisiert(seiteMit('punkte').textContent);
+
+    expect(ganz).not.toContain('Punkte sind noch nicht eingeschaltet');
+    expect(ganz).toContain('Einzige Ausnahme: Nutzen sich zwei Konten gegenseitig');
+    expect(ganz).not.toContain('sobald Punkte eingeschaltet sind');
+    // Abzeichen haben einen eigenen Schalter und bleiben aus
+    expect(ganz).toContain('Abzeichen an deinem Namen. Abzeichen sind noch nicht eingeschaltet');
+  });
+
+  it('team_fortschritt: „Die Team-Summe ist noch nicht eingeschaltet“ entfällt, die Anzeige am Namen bleibt aus', () => {
+    const text = abschnittIn(seiteMit('team_fortschritt'), 'Teams');
+
+    expect(text).not.toContain('Die Team-Summe ist noch nicht eingeschaltet');
+    expect(text).toContain('erst wenn mindestens fünf Mitglieder eingewilligt haben, gerundet und nie mit einzelnen Namen.');
+    expect(text).toContain('Diese Anzeige am Namen ist noch nicht eingeschaltet.');
+  });
+
+  it('team_quests: der Absatz unter „Teams“', () => {
+    expect(abschnittIn(seiteMit('team_fortschritt', 'team_quests'), 'Teams')).toContain(
+      'In Teams gibt es gemeinsame Wochenaufgaben (Quests). Am Team speichern wir je Woche nur Thema und Ziel der ' +
+        'Quest, ohne Namen. Ob das Team sie schafft, berechnen wir bei jedem Abruf aus der Mitwirkung der Mitglieder; ' +
+        'die Mitglieder sehen nur die Summe des Teams, und erst ab fünf Mitgliedern. Hast du Punkte eingeschaltet, ' +
+        'bringen dir erfüllte Quests auch Punkte.',
+    );
+  });
+
+  it('ohne team_quests: kein Absatz zu Quests', () => {
+    expect(abschnittIn(seiteMit('team_fortschritt'), 'Teams')).not.toContain('Quests');
+  });
+
+  it('rangliste: im Abschnitt „Punkte“ sehen Mitspielende den Punktestand', () => {
+    expect(abschnittIn(seiteMit('punkte', 'rangliste'), 'Punkte')).toContain(
+      'Deinen Punktestand siehst nur du, außer du spielst in der Rangliste mit; dann sehen ihn auch die anderen ' +
+        'Mitspielenden (siehe unten). Wir speichern ihn nicht,',
+    );
+  });
+
+  it('ohne rangliste: im Abschnitt „Punkte“ der alte Satz', () => {
+    expect(abschnittIn(seiteMit('punkte'), 'Punkte')).toContain('Deinen Punktestand siehst nur du. Wir speichern ihn nicht,');
+  });
+
+  it('rangliste: der Absatz von Jura statt des Hinweises, unter „Punkte“', () => {
+    const seite = seiteMit('punkte', 'rangliste');
+
+    expect(abschnittIn(seite, 'Punkte')).toContain(RANGLISTE);
+    expect(abschnittIn(seite, 'Punkte')).not.toContain('Eine Rangliste je Saison ist noch nicht eingeschaltet');
+    expect(seite.querySelectorAll('#rangliste').length).toBe(1);
+  });
+
+  it('wirkungs_echo und danke_knopf: der ganze Absatz und „nur drei Zahlen“ mit der dritten', () => {
+    const text = abschnittIn(seiteMit('wirkungs_echo', 'danke_knopf'), 'Rückmeldung zur Nutzung deiner Beiträge');
+
+    expect(text).toContain(ECHO_DANKE);
+    expect(text).toContain(
+      'speichern wir zu deiner Kennung nur drei Zahlen: wie oft deine Beiträge insgesamt genutzt waren, wie viele ' +
+        'Einwürfe anderer es im Fangkorb gab, als du zuletzt da warst, und wie viel Echo deine Beiträge beim letzten ' +
+        'Besuch hatten. Mit der zweiten',
+    );
+    expect(text).not.toContain('nur zwei Zahlen');
+  });
+
+  it('nur danke_knopf: die Sätze zum Danke, kein Zählerstand des Echos, zwei Zahlen', () => {
+    const text = abschnittIn(seiteMit('danke_knopf'), 'Rückmeldung zur Nutzung deiner Beiträge');
+
+    expect(text).toContain('kannst du mit „Danke“ der Person danken');
+    expect(text).toContain('einen eigenen Tages-Prüfwert, gebildet wie beim Kopieren');
+    expect(text).not.toContain('an Echo dazukam');
+    expect(text).toContain(
+      'nur zwei Zahlen: wie oft deine Beiträge insgesamt genutzt waren und wie viele Einwürfe anderer es im ' +
+        'Fangkorb gab, als du zuletzt da warst.',
+    );
+  });
+
+  it('nur wirkungs_echo: Zählerstand des Echos, keine Sätze zum Danke-Knopf', () => {
+    const text = abschnittIn(seiteMit('wirkungs_echo'), 'Rückmeldung zur Nutzung deiner Beiträge');
+
+    expect(text).toContain('merken wir uns als weiteren Zählerstand zu deiner Kennung.');
+    expect(text).not.toContain('kannst du mit „Danke“');
+    expect(text).not.toContain('Tages-Prüfwert');
+  });
+
+  it('danke_ohne_konto allein bringt keinen Satz (Variante B nicht erfüllt, bleibt aus)', () => {
+    const ganz = normalisiert(seiteMit('danke_ohne_konto').textContent);
+
+    expect(ganz).not.toContain('Ohne Anmeldung zählt dein Danke');
+    expect(ganz).not.toContain('kannst du mit „Danke“');
+  });
+
+  it('wirkungs_echo: „Ja, gepostet“ nennt die Summe je Beitrag statt „welchen Beitrag … speichern wir nicht“ allein', () => {
+    const an = abschnittIn(seiteMit('wirkungs_echo'), 'Rückmeldung „Ja, gepostet“');
+
+    expect(an).toContain(
+      'Personen dieser Woche. Welchen Beitrag du gepostet hast, speichern wir nicht; an jedem Beitrag zählen wir ' +
+        'nur mit, wie oft er insgesamt als gepostet gemeldet wurde, ohne Kennung (siehe ‚Rückmeldung zur Nutzung deiner Beiträge‘). ' +
+        'Einen Link',
+    );
+    expect(an).not.toContain('Deine Kennung und welchen Beitrag');
+  });
+
+  it('ohne wirkungs_echo: „Ja, gepostet“ behält den alten Satz', () => {
+    expect(abschnittIn(seiteMit(), 'Rückmeldung „Ja, gepostet“')).toContain(
+      'Deine Kennung und welchen Beitrag du gepostet hast, speichern wir nicht. Einen Link',
+    );
+  });
+
+  it('rangliste: der Punktestand ist für Mitspielende der Rangliste sichtbar (Keine automatisierte Entscheidungsfindung)', () => {
+    const text = abschnittIn(seiteMit('punkte', 'rangliste'), 'Keine automatisierte Entscheidungsfindung');
+
+    expect(text).toContain(
+      'Deinen Punktestand zeigen wir nur dir, außer du spielst in der Saison-Rangliste mit; dann sehen ihn auch die ' +
+        'anderen Mitspielenden. Eine Entscheidung, die allein automatisiert getroffen wird',
+    );
+  });
+
+  it('gepostet_ohne_konto: der Absatz unter „Rückmeldung „Ja, gepostet““', () => {
+    expect(abschnittIn(seiteMit('gepostet_ohne_konto'), 'Rückmeldung „Ja, gepostet“')).toContain(GEPOSTET_OHNE_KONTO);
+  });
+
+  it('antworten_hinweis: der Satz vom 25.11. unter „Rückmeldung zur Nutzung“', () => {
+    expect(abschnittIn(seiteMit('antworten_hinweis'), 'Rückmeldung zur Nutzung deiner Beiträge')).toContain(ANTWORTEN);
+  });
+
+  it('meldeweg_sichtbar: der Satz im Abschnitt „Meldungen von Beiträgen“', () => {
+    expect(abschnittIn(seiteMit('meldeweg_sichtbar'), 'Meldungen von Beiträgen')).toContain(MELDEN);
+  });
+
+  it('feedback_gestoert: der Absatz unter „Feedback“', () => {
+    expect(abschnittIn(seiteMit('feedback_gestoert'), 'Feedback')).toContain(GESTOERT);
+  });
+
+  it('null_treffer_anzahl: der kurze Absatz unter „Suchen ohne Treffer“', () => {
+    expect(abschnittIn(seiteMit('null_treffer_anzahl'), 'Suchen ohne Treffer')).toContain(NULL_TREFFER);
+  });
+
+  it('k_begruessung: nur der Begrüßungssatz unter „Messung der Nutzung“', () => {
+    expect(abschnittIn(seiteMit('k_begruessung'), 'Messung der Nutzung')).toContain(KAMPAGNENWORT);
+  });
+
+  it('bestandszahl_zuwachs: eigener Unterabschnitt „Startseite“', () => {
+    expect(abschnittIn(seiteMit('bestandszahl_zuwachs'), 'Startseite')).toBe(BESTANDSZAHL);
+  });
+});
+
+/**
+ * Weg zum Widerruf (Art. 7 Abs. 3 DSGVO, Go-Bedingung Jura): Sprunglink beim Sockelsatz zum
+ * Kasten „Einwilligung widerrufen“; Angemeldete sehen die Knöpfe, alle anderen den Weg zur
+ * Anmeldung. Das gilt auch, wenn die Schalter aus sind.
+ */
+describe('DatenschutzComponent: Einwilligung widerrufen', () => {
+  const WIDERRUFBAR = `${environment.baseUrl}/api/v1/usage/users/me/widerrufbar`;
+  let info: BehaviorSubject<UserInfo | null>;
+  let http: HttpTestingController;
+
+  function anmeldung(angemeldet: boolean): UserInfo {
+    return { isAuthenticated: angemeldet, userId: angemeldet ? 'u1' : null, userName: null, claims: null };
+  }
+
+  function seite(stand: UserInfo | null) {
+    info = new BehaviorSubject<UserInfo | null>(stand);
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        // Alle Schalter aus: der Weg zum Widerruf steht trotzdem.
+        { provide: FunktionenService, useValue: { an: () => signal(false) } },
+        { provide: AuthService, useValue: { userInfo$: info } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  function el(fixture: { nativeElement: unknown }): HTMLElement {
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  afterEach(() => http.verify());
+
+  it('verweist beim Sockelsatz zum Spielgefühl mit „Einwilligung widerrufen“ auf den Kasten', () => {
+    const fixture = seite(null);
+
+    const sockel = el(fixture).querySelector('[data-testid="dse-spielgefuehl-sockel"]') as HTMLElement;
+    const verweis = sockel.nextElementSibling as HTMLElement;
+    expect(verweis.getAttribute('data-testid')).toBe('dse-widerruf-verweis');
+    const link = verweis.querySelector('a') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('Einwilligung widerrufen');
+    expect(link.getAttribute('href')).toBe('#einwilligung-widerrufen');
+    const kasten = el(fixture).querySelector('#einwilligung-widerrufen') as HTMLElement;
+    expect(kasten.querySelector('h3')?.textContent?.trim()).toBe('Einwilligung widerrufen');
+    // Fokusziel des Sprungs (WCAG 2.4.3)
+    expect(kasten.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('steht unter „Deine Rechte“', () => {
+    const fixture = seite(null);
+
+    const kasten = el(fixture).querySelector('#einwilligung-widerrufen') as HTMLElement;
+    expect(kasten.closest('#deine-rechte')).not.toBeNull();
+  });
+
+  it('zeigt nicht Angemeldeten den Weg zur Anmeldung, zurück zum Kasten, und fragt nichts', () => {
+    const fixture = seite(anmeldung(false));
+
+    const hinweis = el(fixture).querySelector('[data-testid="dse-widerruf-anmelden"]') as HTMLElement;
+    expect(hinweis.textContent).toContain('sobald du angemeldet bist');
+    const link = hinweis.querySelector('a') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('Anmelden');
+    expect(link.getAttribute('href')).toBe('/login?returnUrl=%2Fdatenschutz%23einwilligung-widerrufen');
+    expect(el(fixture).querySelector('app-widerrufbar')).toBeNull();
+    http.expectNone(WIDERRUFBAR);
+  });
+
+  it('zeigt Angemeldeten die Knöpfe direkt, auch bei ausgeschalteten Schaltern', () => {
+    const fixture = seite(anmeldung(true));
+
+    http.expectOne({ method: 'GET', url: WIDERRUFBAR }).flush({
+      spielgefuehl: { stufe: 'fuer_mich', titel: 'Nur für mich', wortlaut: 'spielgefuehl-2026-11-26' },
+      punkte: null,
+      rangliste: null,
+      abzeichen: null,
+    });
+    fixture.detectChanges();
+
+    const kasten = el(fixture).querySelector('#einwilligung-widerrufen') as HTMLElement;
+    expect(kasten.querySelector('[data-testid="widerruf-spielgefuehl"]')?.textContent).toContain('Spielgefühl: Nur für mich');
+    expect(kasten.querySelector('h4[id^="widerrufbar-titel"]')).not.toBeNull();
+    expect(kasten.querySelector('button')?.textContent?.trim()).toBe('Ausschalten');
+    expect(kasten.querySelector('a[href="/einwilligung"]')?.textContent?.trim()).toBe('Datenschutz-Einstellungen');
+    expect(normalisiert(kasten.querySelector('[data-testid="dse-widerruf-einleitung"]')?.textContent ?? null)).toBe(
+      'Was du hier ausschaltest, wirkt sofort. Deine Einwilligung zur Mitwirkung widerrufst du unter Datenschutz-Einstellungen.'
+    );
+    expect(el(fixture).querySelector('[data-testid="dse-widerruf-anmelden"]')).toBeNull();
+    fixture.destroy();
+  });
+
+  it('sagt Angemeldeten ohne gespeichertes Ja, dass nichts zu widerrufen ist', () => {
+    const fixture = seite(anmeldung(true));
+
+    http.expectOne({ method: 'GET', url: WIDERRUFBAR }).flush({ spielgefuehl: null, punkte: null, rangliste: null, abzeichen: null });
+    fixture.detectChanges();
+
+    // Wortlaut Jura 27.11.: ohne „am Namen“, und ohne den Satz „Was du hier ausschaltest, wirkt sofort.“
+    expect(normalisiert(el(fixture).querySelector('[data-testid="widerrufbar-leer"]')?.textContent ?? null)).toBe(
+      'Spielgefühl, Punkte, Rangliste und Abzeichen sind bei dir aus; hier gibt es nichts zu widerrufen.'
+    );
+    expect(normalisiert(el(fixture).querySelector('[data-testid="dse-widerruf-einleitung"]')?.textContent ?? null)).toBe(
+      'Deine Einwilligung zur Mitwirkung widerrufst du unter Datenschutz-Einstellungen.'
+    );
+    fixture.destroy();
+  });
+
+  it('zeigt weder Knöpfe noch Anmeldehinweis, solange die Anmeldung unbekannt ist', () => {
+    const fixture = seite(null);
+
+    expect(el(fixture).querySelector('app-widerrufbar')).toBeNull();
+    expect(el(fixture).querySelector('[data-testid="dse-widerruf-anmelden"]')).toBeNull();
+  });
+
+  it('folgt der Anmeldung ohne Neuladen der Seite', () => {
+    const fixture = seite(anmeldung(false));
+
+    info.next(anmeldung(true));
+    fixture.detectChanges();
+
+    expect(el(fixture).querySelector('[data-testid="dse-widerruf-anmelden"]')).toBeNull();
+    http.expectOne({ method: 'GET', url: WIDERRUFBAR }).flush({ spielgefuehl: null, punkte: null, rangliste: null, abzeichen: null });
+    fixture.destroy();
+  });
+  it('springt nach der Rückkehr vom Anmelden auf den Kasten und setzt den Fokus dorthin', fakeAsync(() => {
+    const vorher = `${location.pathname}${location.search}${location.hash}`;
+    history.replaceState(history.state, '', `${location.pathname}${location.search}#einwilligung-widerrufen`);
+    try {
+      const fixture = seite(anmeldung(false));
+      document.body.appendChild(el(fixture));
+      tick();
+
+      expect(document.activeElement?.id).toBe('einwilligung-widerrufen');
+      el(fixture).remove();
+    } finally {
+      history.replaceState(history.state, '', vorher);
+    }
+  }));
+});
+
+/** Anker hinter einem Schalter (Gamification-Check 26.11., Befund 19): Sprung, sobald die Schalter da sind. */
+describe('DatenschutzComponent: Anker hinter einem Schalter', () => {
+  it('springt zu #spielgefuehl, wenn der Absatz erst nach GET /api/v1/funktionen erscheint', async () => {
+    const spielgefuehl = signal(false);
+    const antwort = new Subject<boolean | null>();
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { fragment: 'spielgefuehl' } } },
+        {
+          provide: FunktionenService,
+          useValue: {
+            // Den Absatz gibt es nur mit Punkten (#855): Punkte an, Bühne kommt erst mit der Antwort.
+            an: (name: string) =>
+              name === 'spielgefuehl_buehne' ? spielgefuehl : signal(name === 'punkte'),
+            stand$: () => antwort.asObservable(),
+          },
+        },
+      ],
+    });
+    const springen = spyOn(Element.prototype, 'scrollIntoView');
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(springen).not.toHaveBeenCalled();
+
+    spielgefuehl.set(true);
+    antwort.next(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(springen).toHaveBeenCalledTimes(1);
+    expect(springen.calls.mostRecent().object).toBe(fixture.nativeElement.querySelector('#spielgefuehl'));
+  });
+
+  it('wirft nichts, wenn die Seite vor der Antwort verlassen wird (Review, NG0911)', async () => {
+    const antwort = new Subject<boolean | null>();
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { fragment: 'spielgefuehl' } } },
+        { provide: FunktionenService, useValue: { an: () => signal(false), stand$: () => antwort.asObservable() } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.destroy();
+
+    expect(() => antwort.next(true)).not.toThrow();
+    expect(antwort.observed).toBeFalse();
+  });
+
+  it('fragt nichts nach, wenn der Anker schon beim ersten Zeichnen steht', async () => {
+    const stand$ = jasmine.createSpy('stand$').and.returnValue(new Subject<boolean | null>());
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { fragment: 'spielgefuehl' } } },
+        { provide: FunktionenService, useValue: { an: (name: string) => signal(name === 'spielgefuehl_buehne' || name === 'punkte'), stand$ } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(stand$).not.toHaveBeenCalled();
+  });
+});
+
+/** Zustimmungen in den Muster-Hinweisen (Schalter muster_stimmen, Wortlaut Jura 27.11.). */
+describe('DatenschutzComponent: Zustimmungen in den Muster-Hinweisen', () => {
+  const SEIT = `${environment.baseUrl}/api/v1/funktionen/muster_stimmen/seit`;
+  let http: HttpTestingController | undefined;
+
+  beforeEach(() => (http = undefined));
+
+  function seiteMit(an: boolean) {
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: FunktionenService, useValue: { an: (name: string) => signal(an && name === 'muster_stimmen') } },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  const satz = (f: { nativeElement: HTMLElement }) =>
+    f.nativeElement.querySelector('[data-testid="dse-muster-stimmen"]')?.textContent?.trim() ?? null;
+
+  afterEach(() => http?.verify());
+
+  it('Schalter aus: kein Satz und keine Abfrage', () => {
+    const fixture = seiteMit(false);
+
+    expect(satz(fixture)).toBeNull();
+    http!.expectNone(SEIT);
+  });
+
+  it('Schalter an: der Satz von Jura mit dem Tag des Einschaltens', () => {
+    const fixture = seiteMit(true);
+    http!.expectOne(SEIT).flush({ seit: '2026-11-28' });
+    fixture.detectChanges();
+
+    expect(satz(fixture)).toBe(
+      'Seit dem 28. November 2026 fließt auch ein, wessen Beiträgen du zustimmst, wenn du dafür ' +
+        'eingewilligt hast. Die Hinweise bleiben höchstens 56 Tage und werden gelöscht, sobald einer ' +
+        'von euch widerruft.',
+    );
+  });
+
+  it('ohne lesbaren Tag: „Seit dem Einschalten“', () => {
+    const fixture = seiteMit(true);
+    http!.expectOne(SEIT).flush('weg', { status: 500, statusText: 'Fehler' });
+    fixture.detectChanges();
+
+    expect(satz(fixture)).toMatch(/^Seit dem Einschalten fließt auch ein, wessen Beiträgen du zustimmst/);
+  });
+
+  it('Datum: nur echte Tage', () => {
+    expect(dseDatum('2026-01-05')).toBe('5. Januar 2026');
+    expect(dseDatum('2026-13-01')).toBeNull();
+    expect(dseDatum(null)).toBeNull();
+    expect(dseMusterStimmen('kein Datum')).toContain('Seit dem Einschalten');
   });
 });

@@ -14,6 +14,11 @@ Qdrant und PostgreSQL zu fragen. Stattdessen rechnet ``im_takt`` die Abzeichen a
 Zustimmenden alle 15 Minuten neu, eine Antwort auf die Frage sofort. Ein Nein und ein
 Widerruf der Art.-9-Einwilligung nehmen das Abzeichen sofort weg (``vergessen``).
 Nach einem Neustart fehlen die Abzeichen bis zum ersten Lauf, der beim Start beginnt.
+
+Mit Schalter ``spielgefuehl_buehne`` (domain/spielgefuehl.py) gibt es keine Abzeichen am
+Anzeigenamen (``abzeichen`` bleibt leer): Gerechnet wird dann fuer alle, die in der
+Rangliste mitspielen, und die Zahl erscheint nur dort (``in_rangliste``), solange der
+Schalter ``rangliste`` wirkt. Ein Herabstufen nimmt sie sofort weg (``vergessen``).
 """
 
 import asyncio
@@ -43,18 +48,46 @@ class AbzeichenService:
         repository: AbzeichenSichtbarkeitRepository,
         meilensteine: Meilensteine,
         settings: Settings,
+        buehne_aktiv: Callable[[], bool] = lambda: False,
+        mitspielende: Callable[[], Iterable[str]] = lambda: [],
+        spielt_mit: Callable[[str], bool] = lambda user_id: False,
     ):
+        """
+        ``buehne_aktiv``: ob das Spielgefuehl-Modell gilt; ``mitspielende``: wer dann
+        in der Rangliste mitspielt; ``spielt_mit(kennung)``: ob eine Person das gerade
+        tut. Alle synchron; ohne Angabe gilt immer das bisherige Modell.
+        """
         self._repository = repository
         self._meilensteine = meilensteine
         self._settings = settings
+        self._buehne_aktiv = buehne_aktiv
+        self._mitspielende = mitspielende
+        self._spielt_mit = spielt_mit
         self._abzeichen: Dict[str, int] = {}
+        # Unter welchem Modell die Zahlen gerechnet sind (True: Spielgefuehl); nach
+        # einem Wechsel gilt keine, bis der naechste Lauf neu gerechnet hat.
+        self._modus: Optional[bool] = None
         # Zaehlt je Kennung jedes Vergessen; eine Rechnung, die vorher begann,
         # schreibt dann nichts mehr (siehe _neu_berechnen).
         self._vergessen: Dict[str, int] = {}
 
     def abzeichen(self, kennungen: Iterable[Optional[str]]) -> Dict[str, int]:
-        """Die Abzeichen dieser Kennungen, nur die vorhandenen; ohne Schalter leer."""
-        if not self._wirksam():
+        """
+        Die Abzeichen am Anzeigenamen fuer diese Kennungen, nur die vorhandenen; ohne
+        Schalter leer, im Spielgefuehl-Modell immer leer.
+        """
+        if self._buehne_aktiv() or not self._wirksam() or self._modus is True:
+            return {}
+        return {k: self._abzeichen[k] for k in kennungen if k in self._abzeichen}
+
+    def in_rangliste(self, kennungen: Iterable[str]) -> Dict[str, int]:
+        """
+        Die Abzeichen fuer die Rangliste: nur im Spielgefuehl-Modell und mit Schalter
+        ``rangliste``, sonst leer.
+        """
+        if not self._buehne_aktiv() or not self._rangliste_wirksam():
+            return {}
+        if self._modus is not True:
             return {}
         return {k: self._abzeichen[k] for k in kennungen if k in self._abzeichen}
 
@@ -96,10 +129,20 @@ class AbzeichenService:
 
     async def alle_aktualisieren(self) -> None:
         """Die Abzeichen aller Zustimmenden neu berechnen; alle anderen vergessen."""
-        if not await asyncio.to_thread(self._wirksam):
+        buehne = await asyncio.to_thread(self._buehne_aktiv)
+        if buehne != self._modus:
+            # Modellwechsel: nichts aus dem anderen Modell zeigen.
+            for kennung in list(self._abzeichen):
+                self.vergessen(kennung)
+            self._modus = buehne
+        if not await asyncio.to_thread(self._rechnen_wirksam, buehne):
             self._abzeichen.clear()
             return
-        zeigende = await asyncio.to_thread(self._repository.zeigende)
+        zeigende = list(
+            await asyncio.to_thread(
+                self._mitspielende if buehne else self._repository.zeigende
+            )
+        )
         for kennung in set(self._abzeichen) - set(zeigende):
             self.vergessen(kennung)
         for kennung in zeigende:
@@ -109,8 +152,26 @@ class AbzeichenService:
         """Beide Schalter wirksam (Obergrenze und Admin-Wert, #708)."""
         return schalter_wirksam("abzeichen_sichtbar", self._settings)
 
+    def _rangliste_wirksam(self) -> bool:
+        return schalter_wirksam("rangliste", self._settings)
+
+    def _rechnen_wirksam(self, buehne: bool) -> bool:
+        """Ob gerechnet wird: fuer den Namen (bisher) oder fuer die Rangliste (Spielgefuehl)."""
+        return self._rangliste_wirksam() if buehne else self._wirksam()
+
+    def _zeigt(self, user_id: str, buehne: bool) -> bool:
+        if buehne:
+            return self._spielt_mit(user_id)
+        antwort = self._repository.lesen(user_id)
+        return antwort is not None and antwort.zeigen
+
     async def _neu_berechnen(self, user_id: str) -> None:
-        if not await asyncio.to_thread(self._wirksam):
+        buehne = await asyncio.to_thread(self._buehne_aktiv)
+        if self._modus is None:
+            self._modus = buehne
+        if buehne != self._modus or not await asyncio.to_thread(
+            self._rechnen_wirksam, buehne
+        ):
             return
         stand = self._vergessen.get(user_id, 0)
         try:
@@ -123,8 +184,7 @@ class AbzeichenService:
             )
             # Erst nach der Rechnung nachsehen: Ein Nein waehrend der Rechnung
             # (im Takt laufen viele nacheinander) darf kein Abzeichen zuruecklassen.
-            antwort = await asyncio.to_thread(self._repository.lesen, user_id)
-            if antwort is None or not antwort.zeigen:
+            if not await asyncio.to_thread(self._zeigt, user_id, buehne):
                 erreicht = 0
         except Exception as e:
             # Lieber ein fehlendes Abzeichen als eine fehlgeschlagene Antwort.

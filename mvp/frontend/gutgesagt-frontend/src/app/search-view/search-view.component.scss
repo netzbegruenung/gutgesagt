@@ -40,6 +40,14 @@
   }
 }
 
+// Die Unterzeile mit Bestandszahl bricht unterhalb etwa 620 px um: zwei Zeilen frei halten,
+// sonst springt das Suchfeld, wenn die Zahl ankommt (hero-unterzeile.component.ts)
+@media (max-width: 767px) {
+  .start-hero app-hero-unterzeile {
+    min-height: 2lh;
+  }
+}
+
 // Gelbes Band: Suchfeld, Knopf, Hinweis, Beispielzeile
 .such-band {
   margin-top: var(--spacing-xl);

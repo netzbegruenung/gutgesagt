@@ -164,6 +164,7 @@ p {
     white-space: nowrap;
 }
 
+
 /* Am Handy passt die Zeile nicht in eine: der Satz steht dann ohne Trennpunkt darunter,
    statt dass eine Zeile mit "·" beginnt */
 @media (max-width: 599px) {

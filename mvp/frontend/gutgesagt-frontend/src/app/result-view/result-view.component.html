@@ -15,9 +15,12 @@
 </app-loading-spinner>
 
 <!-- Error Message -->
+<!-- Nie der rohe HTTP-Text (UX-Review 26.11.); bei 0/408/429/5xx versucht die Seite es selbst neu -->
 <app-error-message
     [error]="ohneSuche ? '' : ((error$ | async) || '')"
+    [title]="sucheFehlerTitel(error$ | async)"
     [showRetry]="true"
+    [retryLabel]="nochmalSuchen"
     [retryAction]="retrySearch">
 </app-error-message>
 
@@ -62,6 +65,8 @@
             <ng-template #zumThemaOben>
                 <p class="search-query-info">Direkt zu „{{searchQuery}}“ ist noch nichts drin. Oben stehen Aussagen zum Thema.</p>
             </ng-template>
+            <!-- Nur die Zahl, erst ab drei, auch fuer Besucher, hinter dem Schalter null_treffer_anzahl (#362, Jura vorlaeufig 26.11.) -->
+            <p class="schon-gesucht" *ngIf="schonGesuchtAnzahl as anzahl">Danach wurde in den letzten vier Wochen schon {{ anzahl }}-mal gesucht.</p>
 
             <app-nicht-dabei [suchtext]="searchQuery" [bekannteAussagen]="bekannteAussagen" [ohneTreffer]="true">
                 <p class="neu-anlegen-satz">Schreib den ersten Kommentar zu dieser Aussage.</p>

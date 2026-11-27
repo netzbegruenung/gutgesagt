@@ -121,7 +121,7 @@
             <span class="abschnitt-name">{{ abschnitt.thema.name }}</span>
             <mat-icon class="abschnitt-pfeil" aria-hidden="true">expand_more</mat-icon>
             <span class="abschnitt-stand">{{ stand(abschnitt) }}</span>
-            <span class="abschnitt-balken balken" aria-hidden="true"><i [style.width.%]="prozent(abschnitt)"></i></span>
+            <span class="abschnitt-balken balken" aria-hidden="true" *ngIf="abschnitt.genutzt"><i [style.width.%]="prozent(abschnitt)"></i></span>
         </button>
     </h2>
     <div class="abschnitt-inhalt" [id]="'album-' + abschnitt.thema.schluessel" [hidden]="!offen(abschnitt, i)">
@@ -148,5 +148,11 @@
                            [abstimmenSichtbar]="false"
                            (aendern)="aendern.emit($event)" (loeschen)="loeschenAngetippt($event)">
         </app-beitragskarte>
+        <!-- Wirkungs-Echo und Danke (#790, #791): nur Summen, nie wer; ohne Zahl gar nicht im DOM -->
+        <ng-container *ngIf="wirkungEcho(eintrag.karte) as echo">
+            <ul class="wirkung-echo" *ngIf="echo.length" aria-label="Was bei dir ankommt" data-testid="wirkung-echo">
+                <li *ngFor="let zeile of echo"><mat-icon aria-hidden="true">{{ zeile.icon }}</mat-icon>{{ zeile.text }}</li>
+            </ul>
+        </ng-container>
     </li>
 </ng-template>

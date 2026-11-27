@@ -1,0 +1,162 @@
+.meine-teams {
+  margin-bottom: var(--spacing-md);
+}
+
+.meine-teams h2 {
+  font-size: 1.1rem;
+  margin: 0 0 4px;
+}
+
+/* Fokusziel nach „Team verlassen“ (tabindex="-1"): ohne Ring bei Maus, mit bei Tastatur. */
+.meine-teams h2:focus {
+  outline: none;
+}
+
+.meine-teams h2:focus-visible {
+  outline: 2px solid var(--akzent-tanne);
+  outline-offset: 2px;
+}
+
+.meine-teams-zahl {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-leise);
+  margin-left: 8px;
+}
+
+.meine-teams-unter {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 12px 0 6px;
+  color: var(--text-leise);
+}
+
+.meine-teams-hinweis {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--text-leise);
+}
+
+/* Pillen brechen um, kein waagrechtes Scrollen auf dem Handy */
+.team-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.team {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 2px;
+  min-width: 0;
+}
+
+.team-seit {
+  font-size: 12px;
+  color: var(--text-leise);
+}
+
+.team-verlassen {
+  margin-left: auto;
+}
+
+.oeffentlich {
+  margin-top: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--feldrand);
+  border-radius: 8px;
+}
+
+.oeffentlich-wortlaut {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.oeffentlich-mehr {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+.meine-teams-status p {
+  margin: 8px 0 0;
+}
+
+.meine-teams-fehler {
+  font-size: 14px;
+  color: var(--fehler);
+}
+
+/*
+ * Team-Fortschritt und Team-Quest unter dem Team, volle Breite. Mobil (360 px) brechen die
+ * Zahlen um; keine Farbe traegt allein Bedeutung, Text in Normalschrift auf dem Grund der
+ * Karte (Kontrast wie der Fliesstext).
+ */
+.team-fortschritt {
+  flex-basis: 100%;
+  margin: 4px 0 8px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--primaer);
+  font-size: 14px;
+}
+
+.team-fortschritt p {
+  margin: 0 0 4px;
+}
+
+.team-fortschritt-titel {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 4px;
+}
+
+.team-zahlen {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 16px;
+  row-gap: 2px;
+  margin: 0 0 4px;
+}
+
+.team-zahlen div {
+  display: flex;
+  gap: 4px;
+}
+
+.team-zahlen dt {
+  color: var(--text-leise);
+}
+
+.team-zahlen dt::after {
+  content: ':';
+}
+
+.team-zahlen dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Thema wie in „Hier fehlt eine Antwort“: Motiv und Name, Tanne auf Hellgruen 8,2:1 */
+.team-quest-thema {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.3;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--primaer-tint);
+  color: var(--akzent-schrift);
+  vertical-align: middle;
+}
+
+.team-stempel {
+  display: inline-block;
+  margin-right: 6px;
+  font-weight: 700;
+  color: var(--akzent-schrift);
+}

@@ -38,10 +38,13 @@ from services.unbeantwortete_aussagen_service import (
 from utils.client_identity import derive_client_key
 from utils.device_category import derive_device_category
 from utils.rate_limiter import RateLimiter
-from services.entdoppelung import pruefwert
+from services.entdoppelung import deckel_pruefwerte, pruefwert
 from utils.aufrufer import ANONYM
 from services.meilensteine_service import MeilensteineService
 from services.abzeichen_service import AbzeichenService, get_abzeichen_service
+from repositories.abzeichen_sichtbarkeit_repository import (
+    get_abzeichen_sichtbarkeit_repository,
+)
 from domain.abzeichen_sichtbarkeit import (
     AKTUELLER_WORTLAUT as SICHTBARKEIT_WORTLAUT,
     MEHR_DAZU as SICHTBARKEIT_MEHR_DAZU,
@@ -57,8 +60,15 @@ from domain.punkte_einwilligung import (
 from repositories.punkte_einwilligung_repository import (
     get_punkte_einwilligung_repository,
 )
+from services import spielgefuehl_service
+from domain.spielgefuehl import Stufe as SpielgefuehlStufe
 from services.gepostet_service import GepostetService, get_gepostet_service
+from services.wirkung_service import get_wirkung_service
+from domain.content_registry import BEITRAGSTYPEN_WERTE
+from domain.team_fortschritt import Art as TeamArt
+from services.team_fortschritt_service import team_zaehlen_async
 from services import antworten_hinweis
+from services import rangliste_service
 from services.art9_einwilligung_service import get_art9_einwilligung_service
 from services.usage_tracking_service import get_usage_service
 from services.beitrag_laden import BeitragLader, BeitragUnlesbar
@@ -140,6 +150,15 @@ class BesuchResponse(BaseModel):
     # (#760, services/antworten_hinweis.py). None, solange der Schalter
     # antworten_hinweis aus ist: Dann zeigt das Frontend weder Kachel noch Reiter.
     antworten_auf_eigene_aussagen: Optional[int] = None
+    # Wirkungs-Echo (#790): wie oft die eigenen Beitraege seit dem letzten Besuch als
+    # oeffentlich gepostet gemeldet wurden, als Zaehlerstand wie die Nutzung
+    # (gesehene_nutzung.echo, kein Zeitpunkt). None, solange der Schalter
+    # wirkungs_echo aus ist.
+    neu_oeffentlich_gepostet: Optional[int] = None
+    # Der allererste Besuch dieses Kontos: Es gab noch keinen Stand. Dann gibt es kein
+    # "seit deinem letzten Besuch", die Startseite laesst den Block weg (Review
+    # Spielgefuehl 25.11.). Abgeleitet aus der vorhandenen Zeile, nichts Neues gespeichert.
+    erster_besuch: bool = False
 
 
 # So lange warten die Nebenzahlen (alles ausser der Nutzung) hoechstens; danach gilt
@@ -166,6 +185,9 @@ class PunkteResponse(BaseModel):
     # False fuer Startkonten und ohne Einwilligung "Punkte und Meilensteine": Das
     # Konto hat keine Punkte (GLOSSARY.md "Punkte"), das Frontend zeigt dann keinen Stand.
     sammelt: bool = True
+    # false: Schalter punkte aus (statt 404, docs/ARCHITECTURE.md "Automatisch
+    # abgefragte Endpunkte"); die Zahlen sind dann 0 und ohne Bedeutung
+    aktiv: bool = True
 
 
 class MeilensteinResponse(BaseModel):
@@ -191,6 +213,8 @@ class MeilensteineResponse(BaseModel):
     """Die eigenen Meilensteine; leer fuer Startkonten und ohne Einwilligung zu Punkten."""
 
     meilensteine: list[MeilensteinResponse]
+    # false: Schalter punkte aus
+    aktiv: bool = True
 
 
 class SichtbarkeitWortlaut(BaseModel):
@@ -206,6 +230,8 @@ class AbzeichenSichtbarkeitResponse(BaseModel):
     gefragt: bool
     zeigen: Optional[bool]
     aktueller_wortlaut: SichtbarkeitWortlaut
+    # false: Schalter abzeichen_sichtbar aus; dann wird nicht gefragt
+    aktiv: bool = True
 
 
 class AbzeichenSichtbarkeitRequest(BaseModel):
@@ -227,6 +253,9 @@ class PunkteEinwilligungResponse(BaseModel):
     eingewilligt: bool
     wortlaut: Optional[str] = None
     aktueller_wortlaut: PunkteEinwilligungWortlaut
+    # false: Schalter punkte aus; dann gibt es nichts, wozu man einwilligen koennte,
+    # und das Haekchen wird nicht angeboten
+    aktiv: bool = True
 
 
 class PunkteEinwilligungRequest(BaseModel):
@@ -238,6 +267,28 @@ class GepostetResponse(BaseModel):
     """Wie viele verschiedene Personen diese Kalenderwoche "Ja, gepostet" gemeldet haben (#643)."""
 
     personen_diese_woche: int
+    # Wirkungs-Echo (#790): Ob das Frontend beim Melden den Beitrag nennen soll. Nur
+    # mit Schalter wirkungs_echo; sonst schickt es keinen, und der Server erfaehrt
+    # wie bisher nicht, welcher Beitrag gepostet wurde.
+    beitrag_nennen: bool = False
+    # Nur GET: false ohne Schalter gepostet und fuer Startkonten (statt 404); dann
+    # bietet das Frontend "Ja, gepostet" nicht an
+    angeboten: bool = True
+
+
+class GepostetRequest(BaseModel):
+    """Optional der gepostete Beitrag (#790); ohne Schalter wirkungs_echo verworfen."""
+
+    content_id: Optional[str] = None
+
+
+class DankeResponse(BaseModel):
+    """
+    Ob das Danke gezaehlt wurde (#791). Keine Summe: Die sieht nur die Autorin, in
+    "Meine Beitraege".
+    """
+
+    gezaehlt: bool
 
 
 class TrendingContentResponse(BaseModel):
@@ -289,12 +340,19 @@ async def _eingewilligt(kennung: str) -> bool:
         return False
 
 
-async def _punkte_eingewilligt(kennung: str) -> bool:
+async def _punkte_eingewilligt(kennung: str, settings: Settings) -> bool:
     """
     Gilt fuer das Konto die Einwilligung "Punkte und Meilensteine" (#351)? Fuer die
     Muster-Hinweise; im Zweifel nicht erteilt, der Zaehler laeuft trotzdem.
+
+    Mit Schalter spielgefuehl_buehne: Stufe fuer_mich oder rangliste, deren Wortlaut
+    den Schutz gegen Absprachen einschliesst (domain/spielgefuehl.py); bei "aus" nicht.
     """
     try:
+        if spielgefuehl_service.buehne_aktiv(settings):
+            return await asyncio.to_thread(
+                spielgefuehl_service.stufe_punkte_wirksam, kennung
+            )
         return await asyncio.to_thread(
             get_punkte_einwilligung_repository().eingewilligt, kennung
         )
@@ -422,8 +480,14 @@ async def track_content_usage(
         # Entdoppelung fuer Punkte und "oft genutzt" (#352): angemeldet je Kennung,
         # sonst je Besuchermerkmal (#446), je Beitrag und UTC-Tag. Ein Konto ohne
         # Einwilligung bekommt keinen (#559).
+        deckel = None
         if not angemeldet:
             wert = pruefwert(aufrufer, besucher_merkmal(request), content_uuid, jetzt)
+            # Ohne Anmeldung ist die eigene Kopie nicht zu erkennen (Befund 9): je
+            # Beitrag und Tag zaehlen hoechstens die ersten N, egal von wem.
+            deckel = deckel_pruefwerte(
+                content_uuid, settings.punkte_nutzung_ohne_anmeldung_je_tag, jetzt
+            )
         elif eingewilligt:
             wert = pruefwert(aufrufer, None, content_uuid, jetzt)
         else:
@@ -437,6 +501,7 @@ async def track_content_usage(
             fassung=fassung,
             pruefwert=wert,
             tag=jetzt.date(),
+            deckel=deckel,
         )
 
         if not success:
@@ -457,8 +522,8 @@ async def track_content_usage(
             schalter_wirksam("punkte", settings)
             and angemeldet
             and beitrag is not None
-            and await _punkte_eingewilligt(aufrufer)
-            and await _punkte_eingewilligt(beitrag.original_author)
+            and await _punkte_eingewilligt(aufrufer, settings)
+            and await _punkte_eingewilligt(beitrag.original_author, settings)
         ):
             try:
                 await asyncio.to_thread(
@@ -550,6 +615,8 @@ class PunkteStatusResponse(BaseModel):
 
     aktiv: bool
     abzeichen_sichtbar: bool
+    # Spielgefuehl als eine Einstellung (Schalter spielgefuehl_buehne)
+    spielgefuehl_buehne: bool = False
 
 
 @router.get("/punkte/status", response_model=PunkteStatusResponse)
@@ -562,9 +629,13 @@ async def punkte_status(settings: Settings = Depends(get_settings)):
     punkte, meilensteine und abzeichen-sichtbarkeit nur bei eingeschaltetem Schalter auf,
     statt deren 404 abzuwarten (UX-Review B20, Entscheidung Maintainer 13.11.2026).
     """
+    buehne = spielgefuehl_service.buehne_aktiv(settings)
     return PunkteStatusResponse(
         aktiv=schalter_wirksam("punkte", settings),
-        abzeichen_sichtbar=schalter_wirksam("abzeichen_sichtbar", settings),
+        # Im neuen Modell gibt es keine Abzeichen am Namen (domain/spielgefuehl.py).
+        abzeichen_sichtbar=schalter_wirksam("abzeichen_sichtbar", settings)
+        and not buehne,
+        spielgefuehl_buehne=buehne,
     )
 
 
@@ -578,11 +649,14 @@ async def eigene_punkte(
     Die Punkte der angemeldeten Person, je Stufe und gesamt (#352). Nur die Person
     selbst sieht sie; Ranglisten kommen spaeter mit eigenem Opt-in.
 
-    Ohne ``punkte_aktiv`` 404: Die Funktion gibt es dann nicht. Die Person kommt aus
-    ``X-User``, nicht aus dem Pfad (#284).
+    Ohne ``punkte_aktiv`` ``aktiv: false``: Die Funktion gibt es dann nicht (kein 404,
+    "Meine Beitraege" fragt automatisch). Die Person kommt aus ``X-User``, nicht aus
+    dem Pfad (#284).
     """
     if not schalter_wirksam("punkte", settings):
-        raise HTTPException(status_code=404, detail="Not found")
+        return PunkteResponse(
+            tun=0, quests=0, wirkung=0, gesamt=0, sammelt=False, aktiv=False
+        )
     try:
         stand = await service.punkte(current_user)
     except Exception as e:
@@ -611,11 +685,12 @@ async def eigene_meilensteine(
     Person selbst sieht sie; ein Abzeichen fuer andere braucht eine eigene Zustimmung
     zur Sichtbarkeit, die es noch nicht gibt (ADR 0004).
 
-    Wie die Punkte hinter ``punkte_aktiv`` (sonst 404): Beide stuetzen sich auf
-    dieselbe Einwilligung und dieselbe DSFA. Die Person kommt aus ``X-User``.
+    Wie die Punkte hinter ``punkte_aktiv`` (sonst leer mit ``aktiv: false``): Beide
+    stuetzen sich auf dieselbe Einwilligung und dieselbe DSFA. Die Person kommt aus
+    ``X-User``.
     """
     if not schalter_wirksam("punkte", settings):
-        raise HTTPException(status_code=404, detail="Not found")
+        return MeilensteineResponse(meilensteine=[], aktiv=False)
     try:
         meilensteine = await service.meilensteine(current_user)
     except Exception as e:
@@ -643,14 +718,26 @@ async def eigene_meilensteine(
     )
 
 
-def _abzeichen_dienst(
+def _abzeichen_dienst_oder_aus(
     settings: Settings = Depends(get_settings),
-) -> AbzeichenService:
-    """Ohne beide Schalter 404: Sichtbare Abzeichen gibt es dann nicht (#351)."""
+) -> Optional[AbzeichenService]:
+    """Fuer den Abruf: ohne Schalter None statt 404 (automatisch abgefragt)."""
     dienst = get_abzeichen_service()
-    if not schalter_wirksam("abzeichen_sichtbar", settings) or dienst is None:
-        raise HTTPException(status_code=404, detail="Not found")
+    if (
+        not schalter_wirksam("abzeichen_sichtbar", settings)
+        or dienst is None
+        or spielgefuehl_service.buehne_aktiv(settings)
+    ):
+        return None
     return dienst
+
+
+def _sichtbarkeit_wortlaut() -> SichtbarkeitWortlaut:
+    return SichtbarkeitWortlaut(
+        kennung=SICHTBARKEIT_WORTLAUT,
+        text=SICHTBARKEIT_WORTLAUTE[SICHTBARKEIT_WORTLAUT],
+        mehr_dazu=SICHTBARKEIT_MEHR_DAZU[SICHTBARKEIT_WORTLAUT],
+    )
 
 
 @router.get(
@@ -658,12 +745,20 @@ def _abzeichen_dienst(
 )
 async def abzeichen_sichtbarkeit(
     current_user: str = Depends(require_user),
-    dienst: AbzeichenService = Depends(_abzeichen_dienst),
+    dienst: Optional[AbzeichenService] = Depends(_abzeichen_dienst_oder_aus),
 ):
     """
     Die Antwort der Person auf die Frage, ob andere Angemeldete ihre
     Meilenstein-Abzeichen sehen (#351, GLOSSARY.md "Zustimmung zur Sichtbarkeit").
+    Ohne Schalter ``aktiv: false``.
     """
+    if dienst is None:
+        return AbzeichenSichtbarkeitResponse(
+            gefragt=False,
+            zeigen=None,
+            aktueller_wortlaut=_sichtbarkeit_wortlaut(),
+            aktiv=False,
+        )
     try:
         antwort = await asyncio.to_thread(dienst.sichtbarkeit, current_user)
     except Exception as e:
@@ -675,27 +770,43 @@ async def abzeichen_sichtbarkeit(
     return AbzeichenSichtbarkeitResponse(
         gefragt=antwort is not None,
         zeigen=antwort.zeigen if antwort else None,
-        aktueller_wortlaut=SichtbarkeitWortlaut(
-            kennung=SICHTBARKEIT_WORTLAUT,
-            text=SICHTBARKEIT_WORTLAUTE[SICHTBARKEIT_WORTLAUT],
-            mehr_dazu=SICHTBARKEIT_MEHR_DAZU[SICHTBARKEIT_WORTLAUT],
-        ),
+        aktueller_wortlaut=_sichtbarkeit_wortlaut(),
     )
+
+
+def _abzeichen_nein_ohne_dienst(user_id: str, wortlaut: str) -> None:
+    """Nein zur Sichtbarkeit, wenn die Abzeichen aus sind: nur festhalten."""
+    if wortlaut not in SICHTBARKEIT_WORTLAUTE:
+        raise UnbekannterWortlaut(wortlaut)
+    get_abzeichen_sichtbarkeit_repository().antworten(user_id, False, wortlaut)
+    dienst = get_abzeichen_service()
+    if dienst is not None:
+        dienst.vergessen(user_id)
 
 
 @router.put("/users/me/abzeichen-sichtbarkeit", status_code=204)
 async def abzeichen_sichtbarkeit_antworten(
     request: AbzeichenSichtbarkeitRequest,
     current_user: str = Depends(require_user),
-    dienst: AbzeichenService = Depends(_abzeichen_dienst),
+    dienst: Optional[AbzeichenService] = Depends(_abzeichen_dienst_oder_aus),
 ):
     """
     Ja oder Nein zur Sichtbarkeit, jederzeit aenderbar. Ein Nein nimmt das Abzeichen
     sofort weg. Ohne Art.-9-Einwilligung offen wie jedes Zuruecknehmen; ein Ja zeigt
-    dann nichts, weil es ohne sie keine Meilensteine gibt.
+    dann nichts, weil es ohne sie keine Meilensteine gibt. Ein Nein auch ohne die
+    Schalter und im Spielgefuehl-Modell (Widerruf so einfach wie die Einwilligung,
+    Art. 7 Abs. 3 DSGVO), ein Ja dann nicht (409): Sonst gaelte ein altes Ja nach dem
+    Wiedereinschalten ungefragt weiter.
     """
+    if dienst is None and request.zeigen:
+        raise HTTPException(status_code=409, detail="Not active")
     try:
-        await dienst.antworten(current_user, request.zeigen, request.wortlaut)
+        if dienst is not None:
+            await dienst.antworten(current_user, request.zeigen, request.wortlaut)
+        else:
+            await asyncio.to_thread(
+                _abzeichen_nein_ohne_dienst, current_user, request.wortlaut
+            )
     except UnbekannterWortlaut:
         raise HTTPException(status_code=422, detail="Unbekannter Wortlaut")
     except Exception as e:
@@ -707,24 +818,39 @@ async def abzeichen_sichtbarkeit_antworten(
     return Response(status_code=204)
 
 
-def _punkte_einwilligung_angeboten(
-    settings: Settings = Depends(get_settings),
-) -> None:
-    """Ohne punkte_aktiv 404: Dann gibt es nichts, wozu man einwilligen koennte."""
-    if not schalter_wirksam("punkte", settings):
-        raise HTTPException(status_code=404, detail="Not found")
+def _punkte_einwilligung_angeboten(settings: Settings) -> bool:
+    """
+    Ohne punkte_aktiv gibt es nichts, wozu man einwilligen koennte. Ebenso im neuen
+    Modell: Dort waehlt die Person die Stufe des Spielgefuehls.
+    """
+    return schalter_wirksam(
+        "punkte", settings
+    ) and not spielgefuehl_service.buehne_aktiv(settings)
 
 
 @router.get("/users/me/punkte-einwilligung", response_model=PunkteEinwilligungResponse)
 async def punkte_einwilligung(
     current_user: str = Depends(require_user),
-    _angeboten: None = Depends(_punkte_einwilligung_angeboten),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Die Einwilligung "Punkte und Meilensteine" der Person (#351) und der Wortlaut
     fuers Haekchen. Nichts ist vorausgewaehlt: ``eingewilligt`` ist False, bis die
-    Person selbst einwilligt.
+    Person selbst einwilligt. Ohne ``punkte_aktiv`` ``aktiv: false`` ohne
+    Datenbankabfrage (kein 404: "Meine Beitraege" und die Einstellungen fragen
+    automatisch).
     """
+    wortlaut_aktuell = PunkteEinwilligungWortlaut(
+        kennung=PUNKTE_WORTLAUT, text=PUNKTE_WORTLAUTE[PUNKTE_WORTLAUT]
+    )
+    # Im neuen Modell (Schalter spielgefuehl_buehne) gibt es diese Einwilligung
+    # nicht mehr: aktiv false, die App fragt stattdessen nach dem Spielgefuehl.
+    if not schalter_wirksam("punkte", settings) or spielgefuehl_service.buehne_aktiv(
+        settings
+    ):
+        return PunkteEinwilligungResponse(
+            eingewilligt=False, aktueller_wortlaut=wortlaut_aktuell, aktiv=False
+        )
     try:
         stand = await asyncio.to_thread(
             get_punkte_einwilligung_repository().lesen, current_user
@@ -738,9 +864,7 @@ async def punkte_einwilligung(
     return PunkteEinwilligungResponse(
         eingewilligt=stand is not None and stand.gilt,
         wortlaut=stand.wortlaut if stand else None,
-        aktueller_wortlaut=PunkteEinwilligungWortlaut(
-            kennung=PUNKTE_WORTLAUT, text=PUNKTE_WORTLAUTE[PUNKTE_WORTLAUT]
-        ),
+        aktueller_wortlaut=wortlaut_aktuell,
     )
 
 
@@ -748,13 +872,18 @@ async def punkte_einwilligung(
 async def punkte_einwilligung_antworten(
     request: PunkteEinwilligungRequest,
     current_user: str = Depends(require_user),
-    _angeboten: None = Depends(_punkte_einwilligung_angeboten),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Einwilligen oder widerrufen, jederzeit. Einwilligen geht nur zu einem geltenden
-    Wortlaut. Ein Widerruf wirkt sofort: Punkte und Meilensteine werden je Abruf
-    berechnet und fragen die Einwilligung; das Abzeichen am Namen verschwindet.
+    Wortlaut und nur, solange die Einwilligung angeboten wird (sonst 409). Widerrufen
+    geht immer, auch ohne Schalter und im Spielgefuehl-Modell (Art. 7 Abs. 3 DSGVO).
+    Ein Widerruf wirkt sofort: Punkte und Meilensteine werden je Abruf berechnet und
+    fragen die Einwilligung; das Abzeichen am Namen verschwindet, die Muster-Hinweise
+    mit der Person werden geloescht.
     """
+    if request.eingewilligt and not _punkte_einwilligung_angeboten(settings):
+        raise HTTPException(status_code=409, detail="Not active")
     if request.wortlaut not in PUNKTE_WORTLAUTE or (
         request.eingewilligt and request.wortlaut not in PUNKTE_GELTENDE_WORTLAUTE
     ):
@@ -777,6 +906,34 @@ async def punkte_einwilligung_antworten(
         dienst = get_abzeichen_service()
         if dienst is not None:
             dienst.vergessen(current_user)
+        # Ohne Punkte keine Rangliste: ein frueheres Ja gilt als Nein, damit eine neue
+        # Einwilligung in die Punkte nicht ungefragt in die Rangliste fuehrt (#793).
+        # Ebenso im Spielgefuehl: eine Stufe ueber "aus" gaelte sonst nach dem
+        # Einschalten des Schalters spielgefuehl_buehne ungefragt weiter.
+        try:
+            await asyncio.to_thread(rangliste_service.zuruecknehmen, current_user)
+            await asyncio.to_thread(
+                spielgefuehl_service.zuruecknehmen,
+                current_user,
+                None,
+                SpielgefuehlStufe.AUS,
+            )
+        except Exception as e:
+            logger.error(
+                f"Einwilligung zur Rangliste von {log_pseudonym(current_user)} nicht zurueckgenommen: {type(e).__name__}",
+                exc_info=True,
+            )
+            raise HTTPException(status_code=500, detail="Internal server error")
+        # Fehler nur im Log: Das Admin-Dashboard filtert ohnehin nach der Einwilligung.
+        try:
+            await asyncio.to_thread(
+                spielgefuehl_service.muster_hinweise_vergessen, current_user
+            )
+        except Exception as e:
+            logger.error(
+                f"Muster-Hinweise von {log_pseudonym(current_user)} nicht geloescht: {type(e).__name__}",
+                exc_info=True,
+            )
     return Response(status_code=204)
 
 
@@ -799,11 +956,21 @@ async def besuch(
     direkt danach liefert 0. Die Person kommt aus ``X-User``, nicht aus dem Pfad (#284).
     """
     seit = datetime.now(timezone.utc) - timedelta(days=BESUCH_ZEITRAUM_TAGE)
+    # Vor den Zahlen: Sie legen den Stand beim ersten Besuch erst an.
+    erster = await _erster_besuch(current_user, gesehen)
     # Alle Zahlen zugleich: Die Nebenzahlen haben eine Zeitgrenze, die Nutzung
     # nicht; scheitert sie, ist der Besuch gescheitert (500).
     # Ohne Schalter fragt der Besuch die eigenen Aussagen gar nicht erst ab (#760).
     mit_antworten = schalter_wirksam(antworten_hinweis.SCHALTER, settings)
+    mit_echo = schalter_wirksam("wirkungs_echo", settings)
     try:
+        echo = (
+            _hoechstens(
+                _neues_echo(current_user, settings, gesehen), 0, "Wirkungs-Echo"
+            )
+            if mit_echo
+            else _keine()
+        )
         antworten = (
             _hoechstens(
                 _neue_antworten(current_user, settings, seit), 0, "Neue Antworten"
@@ -811,7 +978,7 @@ async def besuch(
             if mit_antworten
             else _keine()
         )
-        anzahl, neu, wartend, ausformuliert, beitraege, antworten = (
+        anzahl, neu, wartend, ausformuliert, beitraege, antworten, gepostet = (
             await asyncio.gather(
                 get_usage_service().nutzung_seit_letztem_besuch(current_user),
                 _hoechstens(
@@ -831,6 +998,7 @@ async def besuch(
                     _neue_beitraege(current_user, settings, seit), 0, "Neue Beitraege"
                 ),
                 antworten,
+                echo,
             )
         )
     except Exception as e:
@@ -847,7 +1015,43 @@ async def besuch(
         ausformulierte_einwuerfe=max(0, ausformuliert),
         neue_beitraege=max(0, beitraege),
         antworten_auf_eigene_aussagen=max(0, antworten) if mit_antworten else None,
+        neu_oeffentlich_gepostet=max(0, gepostet) if mit_echo else None,
+        erster_besuch=erster,
     )
+
+
+async def _erster_besuch(person: str, gesehen: GeseheneNutzungRepository) -> bool:
+    """
+    Ob die Person zum ersten Mal da ist (noch kein Stand). Bei einem Fehler False: Dann
+    steht "Seit deinem letzten Besuch" wie bisher da, der Besuch selbst scheitert nicht.
+    """
+    try:
+        return not await asyncio.to_thread(gesehen.schon_besucht, person)
+    except Exception as e:
+        logger.warning(f"Erster Besuch nicht geprueft: {type(e).__name__}")
+        return False
+
+
+async def _neues_echo(
+    person: str, settings: Settings, gesehen: GeseheneNutzungRepository
+) -> int:
+    """
+    Wirkungs-Echo (#790): der Zuwachs der Summe "oeffentlich gepostet" ueber die
+    eigenen Beitraege seit dem letzten Besuch, als Zaehlerstand wie die Nutzung. So
+    steht die Kachel nur da, wenn wirklich etwas dazukam. Bei einem Fehler 0.
+    """
+    try:
+        eigene = await get_content_repository(settings).getByAuthor(
+            user_id=person, limit=10000, offset=0, content_types=BEITRAGSTYPEN_WERTE
+        )
+        ids = [uuid.UUID(str(beitrag.id)) for beitrag in eigene]
+        summe = await asyncio.to_thread(get_wirkung_service().gepostet_summe, ids)
+        return await asyncio.to_thread(
+            gesehen.neues_echo_seit_letztem_besuch, person, summe
+        )
+    except Exception as e:
+        logger.warning(f"Wirkungs-Echo nicht gezaehlt: {type(e).__name__}")
+        return 0
 
 
 async def _keine() -> int:
@@ -1047,17 +1251,40 @@ def _gepostet_dienst(
     return get_gepostet_service()
 
 
+def gepostet_angeboten(
+    current_user: str = Depends(require_user),
+    settings: Settings = Depends(get_settings),
+) -> bool:
+    """
+    Ob "Gepostet?" angeboten wird, und erst dann die Sperre ohne Einwilligung
+    (``require_art9_einwilligung``, 403): Ein ausgeschalteter Schalter fragt die
+    Datenbank nicht und antwortet niemandem 403 (#643). Synchron wie die Sperre selbst.
+    tests/unit/api/test_art9_einwilligung_api.py zaehlt diese Abhaengigkeit als Sperre.
+    """
+    if not schalter_wirksam("gepostet", settings) or settings.ist_startkonto(
+        current_user
+    ):
+        return False
+    require_art9_einwilligung(current_user)
+    return True
+
+
 @router.get("/users/me/gepostet", response_model=GepostetResponse)
 async def gepostet_stand(
     current_user: str = Depends(require_user),
-    dienst: GepostetService = Depends(_gepostet_dienst),
-    _einwilligung: None = Depends(require_art9_einwilligung),
+    angeboten: bool = Depends(gepostet_angeboten),
+    settings: Settings = Depends(get_settings),
 ):
     """
-    Ob die Rueckmeldung "Gepostet?" angeboten wird (200) und wie viele Personen diese
-    Woche gemeldet haben. 404 ohne Schalter, 403 ohne Art.-9-Einwilligung; das
-    Frontend zeigt "Ja, gepostet" nur nach einer 200.
+    Ob die Rueckmeldung "Gepostet?" angeboten wird und wie viele Personen diese
+    Woche gemeldet haben. Ohne Schalter und fuer Startkonten ``angeboten: false``
+    (kein 404: das Frontend fragt nach dem Kopieren von selbst, docs/ARCHITECTURE.md),
+    403 ohne Art.-9-Einwilligung nur bei eingeschaltetem Schalter; das Frontend zeigt
+    "Ja, gepostet" nur bei ``angeboten``.
     """
+    if not angeboten:
+        return GepostetResponse(personen_diese_woche=0, angeboten=False)
+    dienst = get_gepostet_service()
     try:
         anzahl = await asyncio.to_thread(dienst.diese_woche)
     except Exception as e:
@@ -1066,30 +1293,127 @@ async def gepostet_stand(
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Internal server error")
-    return GepostetResponse(personen_diese_woche=anzahl)
+    return GepostetResponse(
+        personen_diese_woche=anzahl,
+        beitrag_nennen=schalter_wirksam("wirkungs_echo", settings),
+    )
 
 
 @router.post("/users/me/gepostet", response_model=GepostetResponse)
 async def gepostet_melden(
+    body: Optional[GepostetRequest] = None,
     current_user: str = Depends(require_user),
     dienst: GepostetService = Depends(_gepostet_dienst),
     _einwilligung: None = Depends(require_art9_einwilligung),
+    laden: BeitragLader = Depends(get_beitrag_laden),
+    settings: Settings = Depends(get_settings),
 ):
     """
     "Ja, gepostet" nach dem Kopieren (#643): zaehlt die Person einmal je
     Kalenderwoche als "oeffentlich gekontert", ohne Beitrag und ohne festzuhalten,
     wer es war (services/gepostet_service.py). Ein zweiter Klick in derselben Woche
     aendert die Zahl nicht. Die Person kommt aus ``X-User``, nicht aus dem Pfad (#284).
+
+    Wirkungs-Echo (#790): Mit Schalter ``wirkungs_echo`` und genanntem Beitrag zaehlt
+    zusaetzlich dessen Summe "oeffentlich gepostet" (services/wirkung_service.py),
+    ausser beim eigenen Beitrag. Scheitert das, bleibt die Wochenzahl gezaehlt.
     """
     try:
         anzahl = await asyncio.to_thread(dienst.melden, current_user)
+        # Fuer die Teams der Person (Team-Fortschritt, #784), nur mit Art.-9-
+        # Einwilligung (prueft der Dienst selbst noch einmal); Fehler nur im Log.
+        await team_zaehlen_async(current_user, TeamArt.GEPOSTET)
     except Exception as e:
         logger.error(
             f"Gepostet von {log_pseudonym(current_user)} nicht gemerkt: {type(e).__name__}",
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Internal server error")
-    return GepostetResponse(personen_diese_woche=anzahl)
+    echo = schalter_wirksam("wirkungs_echo", settings)
+    if echo and body is not None and body.content_id:
+        await _echo_zaehlen(current_user, body.content_id, laden)
+    return GepostetResponse(personen_diese_woche=anzahl, beitrag_nennen=echo)
+
+
+async def _echo_zaehlen(person: str, content_id: str, laden: BeitragLader) -> None:
+    """
+    "Oeffentlich gepostet" fuer diesen Beitrag zaehlen (#790), nur wenn es ihn gibt
+    und er nicht der Person selbst gehoert. Fehler kosten nur das Echo.
+    """
+    try:
+        content_uuid = uuid.UUID(content_id)
+        beitrag = await laden(content_uuid)
+        if beitrag is None or beitrag.original_author == person:
+            return
+        await asyncio.to_thread(
+            get_wirkung_service().gepostet_melden, person, content_uuid
+        )
+    except Exception as e:
+        logger.warning(f"Wirkungs-Echo nicht gezaehlt: {type(e).__name__}")
+
+
+@router.post("/content/{content_id}/danke", response_model=DankeResponse)
+async def danke_sagen(
+    content_id: str,
+    request: Request,
+    aufrufer: Optional[str] = Depends(get_current_user_optional),
+    laden: BeitragLader = Depends(get_beitrag_laden),
+    settings: Settings = Depends(get_settings),
+    limiter: RateLimiter = Depends(get_nutzung_rate_limiter),
+):
+    """
+    "Danke an die Autorin" nach dem Kopieren (#791). Hoechstens ein Danke je Person,
+    Beitrag und Tag, entdoppelt wie die Nutzung (Tages-Pruefwert,
+    services/entdoppelung.py); keine Punkte. Die Autorin sieht nur die Summe.
+
+    Angemeldet nur mit Art.-9-Einwilligung (403 wie beim Abstimmen); ohne Konto nur
+    mit dem Unterschalter ``danke_ohne_konto``, entdoppelt ueber das
+    Besuchermerkmal. Eigene Beitraege und Startkonten zaehlen nicht, ohne Fehler.
+    Ohne Schalter 404.
+    """
+    angemeldet = bool(aufrufer) and aufrufer != ANONYM
+    if not schalter_wirksam("danke_knopf", settings) or (
+        not angemeldet and not schalter_wirksam("danke_ohne_konto", settings)
+    ):
+        raise HTTPException(status_code=404, detail="Not found")
+    try:
+        content_uuid = uuid.UUID(content_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid content ID format")
+    if angemeldet:
+        # Erst nach dem Schalter, damit ein ausgeschalteter die Datenbank nicht fragt.
+        await asyncio.to_thread(require_art9_einwilligung, aufrufer)
+    if await limiter.is_rate_limited(
+        f"danke:user:{aufrufer}"
+        if angemeldet
+        else f"danke:{derive_client_key(request)}"
+    ):
+        raise HTTPException(status_code=429, detail="Too many requests. Please wait.")
+    try:
+        beitrag = await laden(content_uuid)
+    except BeitragUnlesbar:
+        # Wem er gehoert, ist dann nicht feststellbar: im Zweifel nicht zaehlen.
+        return DankeResponse(gezaehlt=False)
+    except Exception as e:
+        logger.error(f"Danke: Beitrag nicht lesbar: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+    if beitrag is None:
+        raise HTTPException(status_code=404, detail="Content not found")
+    if (angemeldet and beitrag.original_author == aufrufer) or settings.ist_startkonto(
+        aufrufer
+    ):
+        return DankeResponse(gezaehlt=False)
+    try:
+        gezaehlt = await asyncio.to_thread(
+            get_wirkung_service().danke_sagen,
+            aufrufer if angemeldet else None,
+            None if angemeldet else besucher_merkmal(request),
+            content_uuid,
+        )
+    except Exception as e:
+        logger.error(f"Danke nicht gezaehlt: {type(e).__name__}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+    return DankeResponse(gezaehlt=gezaehlt)
 
 
 @router.get("/trending", response_model=TrendingContentResponse)
@@ -1152,6 +1476,8 @@ async def oft_genutzt(
                 QdrantRepositoryFactory(),
                 reference_service,
             ),
+            mindest_nutzungen=settings.oft_genutzt_mindest_nutzungen,
+            mindest_beitraege=settings.oft_genutzt_mindest_beitraege,
         )
         angereichert = usage_service.enrich_content_with_usage(
             await service.beitraege()
