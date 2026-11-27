@@ -2,15 +2,17 @@
 
 > **Entwurf des Jurawichtels (KI), keine Rechtsberatung, zur Prüfung durch Vorstand und DSB.**
 > Herkunft: Jura-Entwurf vom 27.11.2026, Teil A, inhaltlich unverändert übernommen.
-> Mit ❔ markierte Stellen sind **offen** und brauchen den Rat der Datenschutzbeauftragten.
+> Einschübe in eckigen Klammern [Prüfvermerk …] sind nachträglich ergänzt und verweisen auf
+> die Prüfvermerke am Code am Ende. Mit ❔ markierte Stellen sind **offen** und brauchen den
+> Rat der Datenschutzbeauftragten.
 
 Ergänzt [`docs/DSFA.md`](./DSFA.md) um die Daten, die mit dem Spielgefühl-Modell und den
 Wirkungs-Funktionen dazukommen. Die Nummern sind die der Verarbeitungen in `docs/DSFA.md`
 und im Verzeichnis ([`docs/VERARBEITUNGSVERZEICHNIS.md`](./VERARBEITUNGSVERZEICHNIS.md)):
 V9a, V10 und V21 stehen dort schon, V23 kommt mit dem DSFA-Stand vom 25.11. (#780); V28,
 V29 und V31 sind neu und dort noch **offen**, bis die DSFA sie als eigene Verarbeitungen
-beschreibt. Eine Zeile je Datum: Risiko · Maßnahme · Restrisiko. Fundstellen auf `main` @ `d3b3def7` (27.11.2026),
-`ss/` = `mvp/backend/semantic-search-service/app/`.
+beschreibt. Eine Zeile je Datum: Risiko · Maßnahme · Restrisiko. Fundstellen auf `main` @
+`d3b3def7` (27.11.2026), `ss/` = `mvp/backend/semantic-search-service/app/`.
 
 Rahmen: alles Opt-in, Standard aus; Art.-9-Nähe, weil Nutzung auf politische Haltung schließen
 lässt; Rechtsgrundlage Art. 9 Abs. 2 lit. a (Einwilligung), wo Profil oder Vergleich entsteht,
@@ -19,11 +21,11 @@ sonst Art. 6 Abs. 1 lit. f mit Art.-9-Mitwirkung wie V10.
 | # | Datum (neu) | Risiko | Maßnahme | Restrisiko |
 |---|---|---|---|---|
 | V28 | Spielgefühl-Stufe (aus / nur für mich / Saison-Rangliste), Namenswahl, Zufallsname, Kennung des Wortlauts, Zeitpunkt (#849) | Vorbelegung, gebündelte Einwilligung | eine Frage, drei gleichwertige Knöpfe, keine Vorauswahl; Namenswahl Pflicht ohne Vorauswahl; Hinweis vor den Knöpfen; Kennung spielgefuehl-2026-11-26 | gering |
-| V28 | Rangliste: Name, Platz, Punkte, Abzeichen, sichtbar nur für angemeldete Mitspielende | Offenlegung von Aktivität und Parteinähe ggü. Dritten (Art. 9) | nur Stufe 3; Zufallsname wählbar; erst ab 10 Teilnehmenden sichtbar; kein Abruf ohne Anmeldung (Code prüfen ❔, geprüft: siehe Prüfvermerk 1); im Wortlaut: Mitspielende sehen deinen Namen, Zufallsname schützt; Übergang: alle zurückgesetzt und neu gefragt | gering bis mittel |
+| V28 | Rangliste: Name, Platz, Punkte, Abzeichen, sichtbar nur für angemeldete Mitspielende | Offenlegung von Aktivität und Parteinähe ggü. Dritten (Art. 9) | nur Stufe 3; Zufallsname wählbar; erst ab 10 Teilnehmenden sichtbar; kein Abruf ohne Anmeldung (Code prüfen ❔) [Prüfvermerk 1: bestätigt]; im Wortlaut: Mitspielende sehen deinen Namen, Zufallsname schützt; Übergang: alle zurückgesetzt und neu gefragt | gering bis mittel |
 | V28 | Widerruf (#853) | Widerruf schwerer als Erteilung (Art. 7 Abs. 3) | Nein/Aus/Widerruf immer speicherbar, auch bei Schalter aus; Widerruf entfernt Rangliste, Punkte, Abzeichen sofort; sichtbarer Weg auf der Datenschutzseite (Folge-PR) **Bedingung fürs Go**, spätestens vor Vorhut-Ausweitung | gering, sobald Folge-PR da |
 | V28 | Punkte aus Nutzungsereignissen, 90 Tage (ab 2. Saison 100) | Profilbildung über Zeit | nur mit Stufe ≥2; Löschung nach Frist (LOESCHKONZEPT); 100 Tage nur für neu erhobene Ereignisse, DSE vorher | gering |
 | V28 | Punkt je Bewertung fremder Beiträge, ≤3/Tag, Richtung zählt nicht | Rückschluss auf Meinung | Richtung fließt nicht ein; Deckel | gering |
-| V28 | Muster-Hinweise und Paar-Prüfwerte (Zweitkonten/Absprachen) | Verdacht gegen Einzelne, Art.-9-Profil | nur wenn beide aktuell eingewilligt (auch beim Erzeugen geprüft); Prüfwerte ohne Kontozuordnung, Schlüssel nur im Arbeitsspeicher, nicht einzeln löschbar, Verfall 7 Tage; Hinweise (am Konto) beim Widerruf sofort gelöscht; nur Admin, ein Mensch entscheidet, keine automatische Sperre (Art. 22 greift nicht ❔) | gering. Zustimmungen als weiteres Merkmal: **offen**, braucht neue Kennung, bis dahin nicht gebaut (siehe Prüfvermerk 2) |
+| V28 | Muster-Hinweise und Paar-Prüfwerte (Zweitkonten/Absprachen) | Verdacht gegen Einzelne, Art.-9-Profil | nur wenn beide aktuell eingewilligt (auch beim Erzeugen geprüft); Prüfwerte ohne Kontozuordnung, Schlüssel nur im Arbeitsspeicher, nicht einzeln löschbar, Verfall 7 Tage; Hinweise (am Konto) beim Widerruf sofort gelöscht; nur Admin, ein Mensch entscheidet, keine automatische Sperre (Art. 22 greift nicht ❔) | gering. Zustimmungen als weiteres Merkmal: **offen**, braucht neue Kennung, bis dahin nicht gebaut [Prüfvermerk 2: bestätigt] |
 | V9a | Deckel für Nutzungen ohne Anmeldung (#857): Platz-Prüfwert aus Beitrag, Tag, Platznummer | Erfassung Besuchender | kein Besuchermerkmal, kein Speicherzugriff im Endgerät (also kein § 25 TDDDG ❔); ≤3 je Beitrag und Tag | gering |
 | V9a | öffentliche Saison-Summe (#814), Zähler „Meldungen ohne Konto“ | Einzelne erkennbar bei kleinen Zahlen | erst ab 3 Wochen × 25 Personen; Drosselung insgesamt, ohne Adresse | gering |
 | V10 | „Dein nächster Schritt“ (#789/#816), Antworten-Hinweis (#760) | Profil aus eigenem Verhalten | beim Abruf berechnet, nichts gespeichert; Weggeklicktes nur im Browser 7 Tage | gering |
@@ -36,8 +38,9 @@ politischer Meinung, Bewertung/Scoring); dagegen stehen kleiner Kreis, Freiwilli
 Voreinstellung aus, Pseudonymwahl.
 
 **Bedingungen fürs Go:** sichtbarer Widerrufsweg (#853-Folge-PR), Rangliste ohne Abruf ohne
-Anmeldung (✅, Prüfvermerk 1), Wortlaut Stufe 3 (✅ gelesen am 27.11.2026 in
-`ss/domain/spielgefuehl.py`, Zeilen 93–104 auf `main`), DSE und VVT ergänzt vor dem Einschalten.
+Anmeldung (✅ laut Meister: require_user, test_rangliste_api.py:215) [Prüfvermerk 1],
+Wortlaut Stufe 3 (✅ selbst gelesen, spielgefuehl.py:93–104 origin/main 27.11.)
+[`ss/domain/spielgefuehl.py`], DSE und VVT ergänzt vor dem Einschalten.
 Offen ❔: Mindestalter 16 für Stufe ≥2 (Art. 8, falls Mitglieder unter 16 die App nutzen).
 
 **Restrisiko gesamt:** kein hohes. Begründung: Jede Verarbeitung mit Profil- oder
@@ -55,11 +58,16 @@ Aufsicht (Art. 36, bis 8 Wochen 📖) nach der BDK.
    `Depends(require_user)` (`ss/api/v1/rangliste.py:161` und `:211`). `require_user`
    antwortet 401, wenn `X-User` fehlt oder `anonymous` ist, wie es das BFF für öffentliche
    Aufrufe setzt (`ss/dependencies.py:769–779`). Der Test `test_ohne_anmeldung_401`
-   (`ss/tests/unit/api/test_rangliste_api.py:215`) prüft beide Endpunkte auf 401.
-2. **Zustimmungen in der Muster-Prüfung: nicht gebaut.** Muster-Hinweise entstehen nur aus
+   (`ss/tests/unit/api/test_rangliste_api.py:215`) prüft beide Endpunkte ohne `X-User` auf
+   401; den Fall `X-User: anonymous` deckt er nicht eigens ab. Davor sperrt schon das BFF:
+   `/api/v1/rangliste` steht nicht in `EndpointPolicy.AllowAnonymous`
+   (`mvp/backend/BFF/Proxy/EndpointPolicy.cs`), ohne Anmeldung antwortet es 401
+   (`mvp/backend/BFF/Program.cs:537`). Andere Wege zur Rangliste gibt es nicht: Die übrigen
+   Aufrufer des Ranglisten-Dienstes nehmen nur Einträge zurück (Widerruf).
+2. **Stimmen (Zustimmung oder Ablehnung, GLOSSARY.md) in der Muster-Prüfung: nicht gebaut.** Muster-Hinweise entstehen nur aus
    Nutzungen: Der einzige Aufruf von `nutzung_melden` steht im Zähl-Endpunkt
    `POST /content/{content_id}/usage` (`ss/api/v1/usage.py:521–533`), und zwar nur mit
    eingeschalteten Punkten und wenn beide Konten in die Punkte eingewilligt haben (die
-   Prüfung „beim Erzeugen“ aus der Tabelle). Bewertungen und Zustimmungen rufen die
+   Prüfung „beim Erzeugen“ aus der Tabelle). Bewertungen, also auch Stimmen, rufen die
    Muster-Prüfung nirgends auf (`ss/services/muster_hinweise_service.py`, Kopf und
    `nutzung_melden`).
