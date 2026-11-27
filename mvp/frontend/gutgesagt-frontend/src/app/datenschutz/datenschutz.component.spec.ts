@@ -258,6 +258,33 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('Prüfwerte bleiben nur bis zum Ende ihres Tages');
     });
 
+    it('Verwendung: ohne Anmeldung Prüfwert aus dem Anschluss für einen Tag, Deckel drei je Beitrag (Jura 27.11.)', () => {
+      const text = abschnitt('Verwendung von Beiträgen');
+
+      expect(text).toContain(
+        'Ohne Anmeldung erkennen wir dich dabei nur für einen Tag an deinem Anschluss: Daraus bilden wir mit einem ' +
+          'täglich wechselnden Schlüssel einen Prüfwert, den wir nach dem Tageswechsel verwerfen; deine Adresse ' +
+          'speichern wir nicht. So zählt ohne Anmeldung höchstens eine erste Kopie je Anschluss, Beitrag und Tag, und ' +
+          'insgesamt höchstens drei je Beitrag und Tag, egal von wem.',
+      );
+      expect(text).toContain('berechnet aus deiner Kennung, dem Beitrag und dem Datum.');
+      expect(text).not.toContain('ohne Anmeldung aus deiner IP-Adresse');
+    });
+
+    it('Verwendung: Deckel-Plätze ohne Schlüssel, verworfen nach Mitternacht, über Neustart erhalten (Jura 27.11.)', () => {
+      const text = abschnitt('Verwendung von Beiträgen');
+
+      expect(text).toContain(
+        'Auch wer die gespeicherten Daten hat, kann deshalb einen solchen Prüfwert weder auf dich noch auf den ' +
+          'Beitrag zurückführen. Für den Deckel ohne Anmeldung merken wir uns zusätzlich bis zu drei Plätze je ' +
+          'Beitrag und Tag; sie bestehen nur aus Beitrag, Tag und Platznummer und sagen nichts darüber, wer kopiert ' +
+          'hat. Nach Mitternacht (UTC) verwirft der Server alle Prüfwerte und Plätze des Vortags. Startet er am ' +
+          'selben Tag neu, passen die Prüfwerte nicht mehr und eine weitere Kopie zählt noch einmal; belegte Plätze ' +
+          'bleiben belegt.',
+      );
+      expect(text).not.toContain('startet er neu, passt keiner mehr');
+    });
+
     it('Verwendung: Kopien durch Startkonten zählen nicht', () => {
       expect(abschnitt('Verwendung von Beiträgen')).toContain('(Startkonten), zählen wir gar nicht');
     });
@@ -1048,7 +1075,7 @@ describe('DatenschutzComponent', () => {
   });
 });
 
-/** Spielgefühl in drei Stufen (Schalter spielgefuehl_buehne): ersetzt die Einwilligungsteile. */
+/** Spielgefühl als eine Frage (Schalter spielgefuehl_buehne): ersetzt die Einwilligungsteile. */
 describe('DatenschutzComponent: Spielgefühl', () => {
   const ALLE = ['spielgefuehl_buehne', 'punkte', 'rangliste'];
   function seiteMit(an: boolean | string[]): HTMLElement {
@@ -1080,7 +1107,8 @@ describe('DatenschutzComponent: Spielgefühl', () => {
     const punkte = abschnittIn(seite, 'Punkte');
 
     expect(seite.querySelector('#spielgefuehl')).not.toBeNull();
-    expect(punkte).toContain('entscheidest du mit einer Frage in drei Stufen');
+    expect(punkte).toContain('Spielgefühl. Du wählst selbst, ob und wie du mitspielst:');
+    expect(punkte).not.toContain('in drei Stufen');
     expect(punkte).toContain('also deinem Anzeigenamen oder einem zufällig vergebenen Ranglistennamen');
     expect(punkte).toContain('Abzeichen zeigen wir nirgends sonst');
     expect(punkte).toContain('Rechtsgrundlage: siehe „Spielgefühl“ oben');
@@ -1098,10 +1126,32 @@ describe('DatenschutzComponent: Spielgefühl', () => {
     expect(punkte).toContain('Paar-Prüfwert');
   });
 
-  // Jura zum Gamification-Gegencheck (26.11.)
+  it('Schalter an: die angebotenen Stufen als Liste, Rangliste nur mit Schalter rangliste', () => {
+    const stufen = (an: string[]) =>
+      Array.from(seiteMit(an).querySelectorAll('[data-testid="dse-spielgefuehl"] li')).map((li) => normalisiert(li.textContent));
+
+    const mit = stufen(ALLE);
+    expect(mit.length).toBe(3);
+    expect(mit[0]).toBe('‚Aus‘: Wir berechnen nichts.');
+    expect(mit[1]).toContain('‚Nur für mich‘: Wir berechnen Punkte und Meilensteine, die nur du siehst');
+    expect(mit[2]).toContain('‚In der Saison-Rangliste mitspielen‘: Zusätzlich stehst du in der Rangliste');
+
+    TestBed.resetTestingModule();
+    const ohne = stufen(['spielgefuehl_buehne', 'punkte']);
+    expect(ohne.length).toBe(2);
+    expect(ohne.join(' ')).not.toContain('In der Saison-Rangliste mitspielen');
+  });
+
+  it('mit Rangliste: kein Satz, dass wir die Stufe gerade nicht anbieten', () => {
+    const absatz = normalisiert(seiteMit(ALLE).querySelector('[data-testid="dse-spielgefuehl"]')!.textContent);
+    expect(absatz).not.toContain('bieten wir gerade nicht an');
+  });
+
+  // Jura zum Gamification-Gegencheck (26.11.), Wortlaut nach der Sammelrunde 27.11.
   const SOCKEL =
-    'Hast du beim Spielgefühl eine Stufe gewählt, speichern wir deine Wahl und den Zeitpunkt. Ausschalten kannst du das ' +
-    'jederzeit in deinen Datenschutz-Einstellungen, auch wenn wir die Funktion gerade nicht anbieten.';
+    'Hast du beim Spielgefühl eine Stufe gewählt, speichern wir deine Wahl, deine Namenswahl, gegebenenfalls deinen ' +
+    'Zufallsnamen, die Fassung des Einwilligungstexts und den Zeitpunkt. Ausschalten kannst du das jederzeit in deinen ' +
+    'Datenschutz-Einstellungen, auch wenn wir die Funktion gerade nicht anbieten.';
 
   it('der Sockelsatz steht immer, auch ohne Schalter', () => {
     for (const namen of [[], ['spielgefuehl_buehne'], ALLE]) {
