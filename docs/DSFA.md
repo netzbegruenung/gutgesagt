@@ -4,7 +4,7 @@
 > der Netzbegrünung; die Datenschutzbeauftragte ist zu beteiligen (Art. 35 Abs. 2), die Fragen
 > an beide stehen in Abschnitt 6. **Stand 27.11.2026 (Entscheidung des Maintainers):** AV-Vertrag
 > laut Vorstand geschlossen; Go des Vorstands angenommen. Beides ist hier als Annahme vermerkt,
-> nicht als Beleg (8.6, F1); Datum und Unterzeichnung des Vertrags stehen nicht im Repo.
+> nicht als Beleg (AV-Vertrag: 8.6, F1; Go: Abschnitt 7); Datum und Unterzeichnung des Vertrags stehen nicht im Repo.
 > Bedingung für das Einschalten der Punkte bleiben die übrigen Punkte in Abschnitt 7 (#708);
 > ob der Admin-Schalter heute aus ist, ist offen. Die Obergrenze `SEMANTIC_SEARCH_PUNKTE_AKTIV` steht in Produktion auf
 > an (erlaubt). Aussagen ohne Beleg im Repo oder in der Konfiguration des Betreibers stehen als
@@ -218,8 +218,9 @@ Offen:
 
 Erledigt:
 
-- DSFA übernommen: Go des Vorstands angenommen (Entscheidung des Maintainers, 27.11.2026);
-  die Fragen in Abschnitt 6 bleiben zur Beratung, halten das Go aber nicht auf.
+- Go des Vorstands angenommen (Entscheidung des Maintainers, 27.11.2026), ohne den Rat der
+  Datenschutzbeauftragten abzuwarten; die Fragen in Abschnitt 6 bleiben gestellt (Art. 35
+  Abs. 2). Die förmliche Übernahme der DSFA ist im Repo nicht belegt.
 - Datenschutzerklärung angepasst (#499): Prüfwert und Vermerk der ersten Kopie unter
   „Verwendung von Beiträgen“, eigener Abschnitt „Punkte“ mit Paar-Prüfwert (7 Tage) und
   Muster-Hinweisen (8 Wochen), Startkonten; „kein Pseudonym“ beim Kopieren gestrichen, „kein
@@ -257,7 +258,7 @@ Voraussetzung für den Livebetrieb (V16, F6). Nach der Methode in 8.4 liegt R9 m
 erst der vollautomatische Ablauf, ist eine Frage an die Datenschutzbeauftragte (Frage 7;
 Folgerung in 8.4). **Erst wenn die vier Lücken geschlossen
 sind**, die Maßnahmen aus 8.2 und 8.3 stehen
-und die offenen Fakten (8.6) belegt sind, bleibt außer den Daten Dritter (R3) nur geringes Risiko.
+und die offenen Fakten (8.6) belegt sind (F1 angenommen), bleibt außer den Daten Dritter (R3) nur geringes Risiko.
 
 ### 8.1 Schwellwert für den Grundbetrieb ohne Punkte
 
@@ -585,7 +586,7 @@ Empfänger und Ort“.
   n-mal gesucht“, erst ab drei und die eigene Suche eingerechnet, aber nur zu einer Aussage, die
   sie ohnehin sehen (mit Antwort oder freigegeben, Vormoderation P6); zu einer verborgenen oder
   abgelehnten Suchanfrage gibt es keine Zahl. Gezählt wird je Tagespseudonym (Anschluss bzw.
-  Kennung je Tag), nicht je Mensch; deshalb „n-mal“ statt „n Personen“ (Jura vorläufig 26.11.).
+  Kennung je Tag), nicht je Mensch; deshalb „n-mal“ statt „n Personen“ (vorläufige rechtliche Einschätzung vom 26.11.).
 - **Maßnahmen:** Merkliste nur im Speicher bis Mitternacht (`DSE:469-476`); erst ab zwei Personen
   auf der Liste (`DSE:490-491`).
 
@@ -665,8 +666,8 @@ Empfänger und Ort“.
 - **Zustimmungen (Schalter `muster_stimmen`, Standard aus):** Gegenseitige Zustimmungen als
   weiteres Merkmal der Muster-Hinweise, mit denselben Garantien: Paar-Prüfwerte ohne
   Kontozuordnung, Schlüssel nur im Arbeitsspeicher, 7 Tage; Hinweis 56 Tage. Ausgewertet nur bei
-  Paaren, die beide dem Spielgefühl-Wortlaut `spielgefuehl-2026-11-27` zugestimmt haben (Jura
-  27.11.), geprüft beim Erzeugen und beim Zeigen; Ablehnungen zählen nicht. Kein Einfluss auf
+  Paaren, die beide dem Spielgefühl-Wortlaut `spielgefuehl-2026-11-27` zugestimmt haben
+  (rechtliche Einschätzung vom 27.11.), geprüft beim Erzeugen und beim Zeigen; Ablehnungen zählen nicht. Kein Einfluss auf
   Punkte oder Rangliste. Bewertet im Nachtrag Spielgefühl und Wirkung, Zeile V30
   (`docs/DSFA_NACHTRAG_SPIELGEFUEHL.md`, #860); in Abschnitt 3 (Nutzungsnetz) noch nicht
   eingearbeitet.
@@ -1099,7 +1100,7 @@ Entwurfs; sie zu bestätigen oder zu ändern, ist Teil der Beratung (Abschnitt 6
 | R1 Haltung sichtbar | überschaubar | überschaubar: Vorname und Initial, nur Angemeldete | gering | gering |
 | R2 Zuordnung pseudonymer Daten | überschaubar: braucht Datenbank und Konfiguration, nur der laufende Tag | substanziell: kann auf einen Suchtext führen | **Risiko** | gering (V7 umgestellt) |
 | R3 Daten Dritter | substanziell: Beiträge nennen oft Dritte | überschaubar: öffentliche Äußerungen, Melden möglich | **Risiko** | Risiko, hinnehmbar |
-| R4 Datenpanne, Zugriff durch Admins | überschaubar, unter Vorbehalt von 8.6 (F2, F3 und F5 belegt, F4 teilweise, Stand 25.11.; F1 angenommen, 27.11.) | substanziell: Art.-9-Daten, Name und E-Mail in Meldungen | **Risiko** | gering (8.6 belegt, Zugriff geregelt) |
+| R4 Datenpanne, Zugriff durch Admins | überschaubar, unter Vorbehalt von 8.6 (F2, F3 und F5 belegt, F4 teilweise, Stand 25.11.; F1 angenommen, 27.11.) | substanziell: Art.-9-Daten, Name und E-Mail in Meldungen | **Risiko** | gering (F4 belegt, Zugriff geregelt) |
 | R5 Protokolle | geringfügig: Wahrscheinlichkeit eines Schadens, nicht Zahl der Zeilen; kein Altbestand auf gutgesagt\*, Suchtexte nur bei direktem Aufruf, nur `root`, 14 Tage; die Speicherbegrenzung (Art. 5 Abs. 1 lit. e) gilt unabhängig von der Klasse | substanziell: Suchtext mit IP | **gering**, unter der Voraussetzung der Frist für die Container-Logs vor dem Livebetrieb | gering |
 | R6 Löschung von Hand | überschaubar: nie an echten Daten gelaufen | substanziell: Art.-9-Daten bleiben | **Risiko** | gering (erster Lauf belegt) |
 | R8 Rückschluss auf Stimmen | geringfügig: Schwelle drei | überschaubar | gering | gering |
@@ -1108,9 +1109,9 @@ Entwurfs; sie zu bestätigen oder zu ändern, ist Teil der Beratung (Abschnitt 6
 
 **Gesamtrisiko heute: Risiko**, unter dem Vorbehalt der offenen Fakten (8.6): Mit dem
 Löschauftrag (#661) liegt R9 in der mittleren Klasse, vorher war es **hoch**. **Folgerung zu
-Art. 36:** Nach den Maßnahmen bleibt kein hohes Risiko. Die Bedingung dafür war, dass der
-AV-Vertrag Gut gesagt erfasst (F1); er gilt laut Vorstand als geschlossen (Annahme nach
-Entscheidung des Maintainers, 27.11.2026). Stellt sich das als falsch heraus, wären R4 und das
+Art. 36:** Nach den Maßnahmen bleibt kein hohes Risiko. Bedingung dafür ist, dass der
+AV-Vertrag Gut gesagt erfasst (F1); das gilt als angenommen (AV-Vertrag laut Vorstand
+geschlossen, Entscheidung des Maintainers, 27.11.2026). Stellt sich das als falsch heraus, wären R4 und das
 Gesamtrisiko **hoch** (Art. 36). Für R5
 ist die Frist für die Container-Logs Voraussetzung für den Livebetrieb (F6); F3 ist bewusst
 akzeptiert (V17). Ob für R9 die Ausführung von Hand binnen sieben Tagen genügt oder erst der
@@ -1200,7 +1201,8 @@ Konfiguration des Betreibers (`Salt:…`, Stand 24.11.2026) oder aus Tickets die
    25.11.2026, F6). Suchtexte im vorgelagerten Webserver bei direktem Aufruf der Ergebnisseite:
    bewusst akzeptiert (V16).
 5. **Formales:** Wer übernimmt die DSFA (Vorstand mit Datenschutzbeauftragter, Art. 35 Abs. 2)?
-   **Stand 27.11.2026:** Go des Vorstands angenommen (Entscheidung des Maintainers). Das Verzeichnis der Verarbeitungstätigkeiten steht als Entwurf in
+   **Stand 27.11.2026:** der Vorstand; Go angenommen (Entscheidung des Maintainers), der Rat
+   der Datenschutzbeauftragten wird nicht abgewartet (Abschnitt 7). Das Verzeichnis der Verarbeitungstätigkeiten steht als Entwurf in
    `docs/VERARBEITUNGSVERZEICHNIS.md`; führen muss es der Verein (Art. 30 Abs. 1).
 6. **Fragen an die Datenschutzbeauftragte:** Lücke aus Abschnitt 4, Meldungen ohne Einwilligung
    (V12) und Altersgrenze (WP 248 Kriterium 7) zu `docs/FRAGEN_DATENSCHUTZBEAUFTRAGTE.md` hinzufügen
@@ -1213,8 +1215,8 @@ Konfiguration des Betreibers (`Salt:…`, Stand 24.11.2026) oder aus Tickets die
    einem Admin ausgeführt (`ss/services/loeschauftrag_service.py`, `ausfuehren`); der tägliche
    Lauf räumt nur erledigte Aufträge nach einem Jahr ab (`ss/services/loeschfristen_service.py`).
    Die Frist von sieben Tagen hängt am kleinen Kreis der Admins (F4); Vertretung: offen.
-8. **Offene Fakten** (8.6): F1 bis F6 belegen, vor allem den AV-Vertrag (F1), bevor Art.-9-Daten
-   echter Personen verarbeitet werden. **Stand 25.11.2026:** F2, F3 (Verschlüsselung der Kopie
+8. **Offene Fakten** (8.6): F2 bis F6 belegen, bevor Art.-9-Daten echter Personen verarbeitet
+   werden; F1 gilt als angenommen (AV-Vertrag laut Vorstand geschlossen, 27.11.2026). **Stand 25.11.2026:** F2, F3 (Verschlüsselung der Kopie
    bewusst akzeptiert) und F5 belegt; F4 teilweise; F6 belegt bis auf die Frist der
    Container-Logs (Voraussetzung für den Livebetrieb). **Stand 27.11.2026:** F1 angenommen,
    AV-Vertrag laut Vorstand geschlossen (8.6).
