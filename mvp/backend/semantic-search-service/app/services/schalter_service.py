@@ -166,8 +166,9 @@ SPIEL_SCHALTER = (
         feld="saal_spruch_aktiv",
         umgebungsvariable="SEMANTIC_SEARCH_SAAL_SPRUCH_AKTIV",
         erklaerung=(
-            "Karte „Heute im Saal gehört:“ oben auf der Startseite mit dem heutigen "
-            "Saal-Spruch (Abschnitt Saal-Sprüche) und dem Knopf „Antworten ansehen“; an "
+            "Karte „Heute im Netz zur BDK:“ oben auf der Startseite mit dem heutigen "
+            "Saal-Spruch (Abschnitt Saal-Sprüche: ein Spruch, der gerade unter "
+            "BDK-Beiträgen im Netz kursiert) und dem Knopf „Antworten ansehen“; an "
             "Tagen ohne Spruch nichts. Speichert nichts zur Person."
         ),
         oeffentlich=True,

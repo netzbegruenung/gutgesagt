@@ -26,7 +26,7 @@ from enum import Enum
 from typing import Dict, Iterable, List, Optional
 
 from core.fehler import Validierungsfehler
-from domain.teams import SAISON_MAX
+from domain.teams import SAISON_MAX, SAISON_VERBOTEN
 from utils.utc_tag import wochenbeginn
 
 ZIEL_MAX = 1_000_000
@@ -97,6 +97,12 @@ def name_bereinigen(name: str) -> str:
     """Leerraum zusammenfassen; leer, zu lang oder mit Steuerzeichen: SaisonUngueltig."""
     if _STEUERZEICHEN.search(name.replace(" ", "")):
         raise SaisonUngueltig("Der Name darf keine Steuerzeichen enthalten.")
+    # Dieselbe Regel wie am Teamlink: Sonst liesse sich die Saison anlegen, aber kein
+    # Team in ihr (UX-Review 26.11.2026). Der Schraegstrich geht („Winter 26/27“).
+    if SAISON_VERBOTEN.search(name.replace(" ", "")):
+        raise SaisonUngueltig(
+            'Der Name darf keine Zeichen wie < > & " oder \\ enthalten.'
+        )
     name = " ".join(name.split())
     if not name:
         raise SaisonUngueltig("Die Saison braucht einen Namen.")

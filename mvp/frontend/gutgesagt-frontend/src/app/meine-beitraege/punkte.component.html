@@ -12,4 +12,4 @@
         <li *ngIf="punkte.quests" class="punkte-stufe" data-stufe="quests">Quests: <span class="punkte-wert">{{ punkte.quests }}</span></li>
     </ul>
 </section>
-<p *ngIf="!punkte && platzhalter" class="punkte-platzhalter" role="status">Punkte werden berechnet …</p>
+<p *ngIf="!punkte && platzhalter" class="punkte-platzhalter" role="status"><span *ngIf="!nichtAbrufbar">Punkte werden berechnet …</span><span *ngIf="nichtAbrufbar" data-testid="punkte-nicht-abrufbar">Deine Punkte sind gerade nicht abrufbar. Wir versuchen es gleich noch einmal.</span></p>

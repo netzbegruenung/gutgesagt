@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { SUCHE_GESCHEITERT, SUCHE_HAKT } from './suchfehler';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { SearchService } from './search.service';
@@ -45,5 +46,16 @@ describe('SearchService', () => {
     const req = httpMock.expectOne(searchUrl);
     expect(req.request.headers.has('X-Session-Id')).toBeFalse();
     req.flush(null, { status: 500, statusText: 'Server Error' });
+  });
+
+  it('zeigt nie den rohen HTTP-Text: vorübergehend „hakt“, sonst ohne Versprechen (UX-Review 26.11.)', () => {
+    const zustand = TestBed.inject(StateManagementService);
+    service.search('klima', 10).subscribe({ error: () => {} });
+    httpMock.expectOne(searchUrl).flush('Service Unavailable', { status: 503, statusText: 'Service Unavailable' });
+    expect(zustand.currentState.error).toBe(SUCHE_HAKT);
+
+    service.search('klima', 10).subscribe({ error: () => {} });
+    httpMock.expectOne(searchUrl).flush({ detail: 'zu lang' }, { status: 422, statusText: 'Unprocessable Entity' });
+    expect(zustand.currentState.error).toBe(SUCHE_GESCHEITERT);
   });
 });

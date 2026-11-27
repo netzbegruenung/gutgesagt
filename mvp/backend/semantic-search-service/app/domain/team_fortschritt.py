@@ -9,7 +9,8 @@ wer eine aendert, aendert auch die Texte dort:
 
 - Gezaehlt werden nur Beitraege (jeder Beitragstyp, Kommentare eingeschlossen),
   Bewertungen und Meldungen "Ja, gepostet". Eine Meldung "Ja, gepostet" zaehlt nur mit
-  geltender Art.-9-Einwilligung.
+  geltender Art.-9-Einwilligung, eine Bewertung nur zu einem fremden Beitrag
+  (api/v1/voting.py, ``_fuers_team_zaehlen``; weniger als die Einwilligung erlaubt).
 - Sichtbar erst ab ``MINDESTMITGLIEDER`` Mitgliedern mit Team-Einwilligung, die die
   Summe deckt (``SUMME_GEDECKT``), und nur fuer abgeschlossene Wochen.
 - Keine genaue Zahl: unter ``RUNDUNG_AB`` steht "weniger als 10", darueber die auf

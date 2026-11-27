@@ -36,6 +36,7 @@ from domain.teams import (
     OEFFENTLICH_KENNUNG,
     OEFFENTLICH_WORTLAUTE,
     SAISON_MAX,
+    SAISON_VERBOTEN,
     TEAM_ART_ANLASS,
     TEAM_ART_GRUPPE,
     TEAM_NAME_MAX,
@@ -82,19 +83,21 @@ NAME_MAX = 100
 # Kennung eines Einwilligungswortlauts (domain/teams.py), etwa "team-2026-11-26"
 KENNUNG_MAX = 64
 NAME_VERBOTEN = re.compile(r'[<>&"\v$%!#?§;*~/\\|^=\[\]{}()@\x00-\x1f\x7f]')
-# Teamname und Saison stehen an Namen und in Pillen: keine Steuerzeichen, kein
-# Markup, keine Schraegstriche.
+# Der Teamname steht an Namen und in Pillen: keine Steuerzeichen, kein Markup, keine
+# Schraegstriche. Die Saison folgt der Regel der Saisons (SAISON_VERBOTEN in
+# domain/teams.py), damit jede angelegte Saison auch am Teamlink geht.
 TEAM_VERBOTEN = re.compile(r'[<>&"\\/\x00-\x1f\x7f]')
-SAISON_STEUERZEICHEN = re.compile(r"[\x00-\x1f\x7f]")
 SAISON_UNBEKANNT = (
     "Diese Saison gibt es nicht. Lege sie unter Saisons an oder wähle eine vorhandene."
 )
 
 
-def _team_text(wert: Optional[str], feld: str) -> Optional[str]:
+def _team_text(
+    wert: Optional[str], feld: str, verboten: re.Pattern = TEAM_VERBOTEN
+) -> Optional[str]:
     if wert is None:
         return None
-    if TEAM_VERBOTEN.search(wert):
+    if verboten.search(wert):
         raise ValueError(f"{feld} enthaelt ein Zeichen, das nicht geht")
     wert = " ".join(wert.split())
     if not wert:
@@ -125,17 +128,8 @@ class TeamFelder(BaseModel):
     @field_validator("team_saison")
     @classmethod
     def _team_saison(cls, wert: Optional[str]) -> Optional[str]:
-        # Nur Steuerzeichen nicht: Ein Saisonname wie "Winter 26/27" ist erlaubt, wie
-        # beim Anlegen der Saison (domain/saisons.py name_bereinigen). Ob es die
-        # Saison gibt, prueft TeamService.team_festlegen (Befund 6).
-        if wert is None:
-            return None
-        if SAISON_STEUERZEICHEN.search(wert):
-            raise ValueError("Die Saison enthaelt ein Zeichen, das nicht geht")
-        wert = " ".join(wert.split())
-        if not wert:
-            raise ValueError("Die Saison darf nicht leer sein")
-        return wert
+        # Ob es die Saison gibt, prueft TeamService.team_festlegen (Befund 6).
+        return _team_text(wert, "Die Saison", SAISON_VERBOTEN)
 
     @field_validator("team_motiv")
     @classmethod

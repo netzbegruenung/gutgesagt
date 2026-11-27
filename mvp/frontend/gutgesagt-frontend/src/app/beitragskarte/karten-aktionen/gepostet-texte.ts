@@ -9,6 +9,11 @@
  * Snackbar (Review Spielgefühl 25.11., WCAG 2.2.1).
  */
 export const GEPOSTET_FRAGE = 'Gepostet? Dann zählt dein Konter mit.';
+/**
+ * Dieselbe Frage ohne Konto (Gamification-Check 26.11., Befund 21): Meldungen ohne Konto
+ * zählen nicht zu „Öffentlich gekontert“, deshalb ohne „zählt mit“.
+ */
+export const GEPOSTET_FRAGE_OHNE_KONTO = 'Gepostet? Kurz antippen, wenn ja.';
 export const JA_GEPOSTET = 'Ja, gepostet';
 /**
  * Statt der Frage, wenn die Person nach dem Kopieren zurückkommt (Rückkehr-Moment,
@@ -32,6 +37,14 @@ export const GEPOSTET_NICHT_GEZAEHLT = 'Danke! Zählen hat gerade nicht geklappt
  * Menschen; und ohne Aufforderung, sich anzumelden.
  */
 export const GEPOSTET_OHNE_KONTO_DANK = 'Danke! Schön, dass du öffentlich konterst.';
+
+/**
+ * Der nächste Schritt unter dem Dank (UX-Review 26.11.2026, Befund 5): Nach dem Kontern
+ * endete der Weg sonst. Ein einziger Vorschlag, mit und ohne Konto, ohne Druck.
+ */
+export const GEPOSTET_WEITER = 'Noch ein Spruch, der dich ärgert?';
+/** Der Link dazu: auf die Startseite, Fokus ins Suchfeld. */
+export const GEPOSTET_WEITER_LINK = 'Spruch suchen';
 
 /**
  * Der Dank nach „Ja, gepostet“; ``personen`` schließt die Person selbst ein. Die Zahl
