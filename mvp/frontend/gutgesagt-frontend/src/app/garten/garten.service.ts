@@ -1,14 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 
 import { environment } from '../../environments/environment';
-import { FunktionenService } from '../services/funktionen.service';
 import { stillerKontext } from '../shared/selbst-nachladen';
-
-/** Schalter der Gartenansicht (#783), wie im Backend (services/gartenansicht_service.py). */
-export const GARTEN_SCHALTER = 'gartenansicht';
 
 /** Ein Thema mit seinen Zahlen; Besucher wie Angemeldete bekommen nur Zahlen. */
 export interface Beet {
@@ -22,31 +17,23 @@ export interface Beet {
 
 export interface GartenAntwort {
   beete: Beet[];
-  /** false: Schalter aus (der Server antwortet dann 200 statt 404, Gateway-fail2ban). */
+  /** false: nur von einem älteren Backend mit Schalter (dann 200 statt 404, Gateway-fail2ban). */
   aktiv?: boolean;
 }
 
 /**
- * GET /api/v1/search/garten: offen wie die Suche. Meldet FunktionenService den Schalter
- * sicher aus, fragt die Seite den Endpunkt nicht; sonst antwortet er ohne Schalter 200 mit
- * `aktiv: false`.
+ * GET /api/v1/search/garten: offen wie die Suche (Gartenansicht #783, Basisfunktion seit
+ * dem Schalter-Umbau 27.11.).
  */
 @Injectable({ providedIn: 'root' })
 export class GartenService {
   private readonly http = inject(HttpClient);
-  private readonly funktionen = inject(FunktionenService);
 
   beete(): Observable<GartenAntwort> {
-    return this.funktionen.stand$(GARTEN_SCHALTER).pipe(
-      switchMap((an) =>
-        an === false
-          ? of<GartenAntwort>({ beete: [], aktiv: false })
-          : // Still: die Seite laedt selbst nach, ein Fehler soll nie auf /login umleiten
-            this.http.get<GartenAntwort>(`${environment.baseUrl}/api/v1/search/garten`, {
-              context: stillerKontext(),
-            }),
-      ),
-    );
+    // Still: die Seite laedt selbst nach, ein Fehler soll nie auf /login umleiten
+    return this.http.get<GartenAntwort>(`${environment.baseUrl}/api/v1/search/garten`, {
+      context: stillerKontext(),
+    });
   }
 }
 

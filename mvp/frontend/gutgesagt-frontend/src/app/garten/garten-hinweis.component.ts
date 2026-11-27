@@ -1,14 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 
-import { FunktionenService } from '../services/funktionen.service';
 import { PAGE_TITLES, ROUTES } from '../shared/constants/app.constants';
-import { GARTEN_SCHALTER } from './garten.service';
 
 /**
- * Der Weg zur Gartenansicht (#783) auf der Startseite: eine Zeile mit Link, fuer alle,
- * nur solange der Schalter `gartenansicht` an ist (GET /api/v1/funktionen).
+ * Der Weg zur Gartenansicht (#783) auf der Startseite: eine Zeile mit Link, fuer alle
+ * (Basisfunktion seit dem Schalter-Umbau 27.11.).
  */
 @Component({
   selector: 'app-garten-hinweis',
@@ -16,15 +14,13 @@ import { GARTEN_SCHALTER } from './garten.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, MatIconModule],
   template: `
-    @if (an()) {
-      <a class="garten-hinweis" [routerLink]="ziel">
-        <span class="garten-hinweis-text">
-          <span class="garten-hinweis-titel">{{ titel }}</span>
-          <span class="garten-hinweis-satz">Wo es schon viele Antworten gibt und wo noch welche fehlen</span>
-        </span>
-        <mat-icon class="garten-hinweis-pfeil" aria-hidden="true">arrow_forward</mat-icon>
-      </a>
-    }
+    <a class="garten-hinweis" [routerLink]="ziel">
+      <span class="garten-hinweis-text">
+        <span class="garten-hinweis-titel">{{ titel }}</span>
+        <span class="garten-hinweis-satz">Wo es schon viele Antworten gibt und wo noch welche fehlen</span>
+      </span>
+      <mat-icon class="garten-hinweis-pfeil" aria-hidden="true">arrow_forward</mat-icon>
+    </a>
   `,
   styles: [
     `
@@ -79,7 +75,6 @@ import { GARTEN_SCHALTER } from './garten.service';
   ],
 })
 export class GartenHinweisComponent {
-  readonly an = inject(FunktionenService).an(GARTEN_SCHALTER);
   readonly ziel = ROUTES.GARTEN;
   readonly titel = PAGE_TITLES.GARTEN;
 }

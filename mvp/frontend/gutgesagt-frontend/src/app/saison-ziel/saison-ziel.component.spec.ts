@@ -12,12 +12,10 @@ const URL = `${environment.baseUrl}/api/v1/saisons/aktuell`;
 describe('SaisonZielComponent', () => {
   let fixture: ComponentFixture<SaisonZielComponent>;
   let http: HttpTestingController;
-  /** Was FunktionenService zum Schalter saison_ziel meldet; null: unbekannt. */
-  let schalter: boolean | null;
+  /** Welche Schalter die Komponente fragt; als Basisfunktion keinen (Schalter-Umbau 27.11.). */
   let gefragt: string[];
 
   beforeEach(async () => {
-    schalter = true;
     gefragt = [];
     await TestBed.configureTestingModule({
       imports: [SaisonZielComponent],
@@ -27,9 +25,10 @@ describe('SaisonZielComponent', () => {
         {
           provide: FunktionenService,
           useValue: {
+            // Alle Schalter aus
             stand$: (name: string) => {
               gefragt.push(name);
-              return of(schalter);
+              return of(false);
             },
           },
         },
@@ -52,16 +51,14 @@ describe('SaisonZielComponent', () => {
     return fixture.nativeElement.querySelector('[data-testid="saison-ziel"]');
   }
 
-  it('fragt den Endpunkt nicht, solange der Schalter sicher aus ist (Saal, kein 404)', () => {
-    schalter = false;
+  it('fragt ohne Schalter direkt den Endpunkt (Basisfunktion, antwortet im Leerfall 200)', () => {
     fixture.detectChanges();
-    http.expectNone(URL);
-    expect(gefragt).toEqual(['saison_ziel']);
+    http.expectOne(URL).flush({ balken: null });
+    expect(gefragt).toEqual([]);
     expect(bereich()).toBeNull();
   });
 
-  it('zeigt nichts, wenn der Server den Schalter als aus meldet (200, aktiv false)', () => {
-    schalter = null;
+  it('zeigt nichts, wenn ein älterer Server den Schalter als aus meldet (200, aktiv false)', () => {
     fixture.detectChanges();
     http.expectOne(URL).flush({ balken: null, aktiv: false });
     fixture.detectChanges();

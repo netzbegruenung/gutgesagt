@@ -72,7 +72,7 @@ describe('EinladungComponent mit Team', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  /** Antwort von /funktionen für den Schalter teamlink_vertrauenssatz, je Test einstellbar. */
+  /** Antwort von /funktionen für das Paket teams (Vertrauenssatz), je Test einstellbar. */
   let vertrauenssatzAn = false;
 
   function pruefen(antwort: { einloesbar: boolean; team: TeamBeimPruefen | null }, angemeldet = false) {
@@ -80,11 +80,11 @@ describe('EinladungComponent mit Team', () => {
     expect(anfrage.request.body).toEqual({ code: 'Code123' });
     anfrage.flush(antwort);
     http.expectOne(SITZUNG).flush({ isAuthenticated: angemeldet });
-    // Mit Team fragt die Seite den Schalter teamlink_vertrauenssatz (höchstens einmal je Stand).
+    // Mit Team fragt die Seite das Paket teams für den Vertrauenssatz (höchstens einmal je Stand).
     if (antwort.team) {
       http
         .match(FUNKTIONEN)
-        .forEach((r) => r.flush({ funktionen: { teams: true, teamlink_vertrauenssatz: vertrauenssatzAn } }));
+        .forEach((r) => r.flush({ funktionen: { teams: vertrauenssatzAn } }));
     }
     fixture.detectChanges();
   }
@@ -170,7 +170,7 @@ describe('EinladungComponent mit Team', () => {
     });
   });
 
-  describe('Vertrauenssatz (Schalter teamlink_vertrauenssatz)', () => {
+  describe('Vertrauenssatz (Paket teams)', () => {
     const ERSTER = 'Beitreten heißt: Du zählst zu diesem Team und trägst zu seiner Summe bei.';
     const ZWEITER = 'Die Gruppe, nach der es benannt ist, bekommt keine Daten über dich.';
 
@@ -182,7 +182,7 @@ describe('EinladungComponent mit Team', () => {
       return el().querySelector('.team-knoepfe[role="group"]')!.getAttribute('aria-describedby');
     }
 
-    it('Schalter aus: kein Satz, die Knöpfe beschreibt nur die Erklärung', () => {
+    it('Paket teams aus: kein Satz, die Knöpfe beschreibt nur die Erklärung', () => {
       starten('Code123');
       pruefen({ einloesbar: true, team: team({ art: 'gruppe', name: 'Netzfeuerwehr' }) });
 
@@ -236,7 +236,7 @@ describe('EinladungComponent mit Team', () => {
       const anfrage = http.expectOne(`${URL}/pruefen`);
       anfrage.flush({ einloesbar: true, team: team({ art: 'anlass' }) });
       http.expectOne(SITZUNG).flush({ isAuthenticated: false });
-      http.expectOne(FUNKTIONEN).flush({ funktionen: { teams: true, teamlink_vertrauenssatz: true } });
+      http.expectOne(FUNKTIONEN).flush({ funktionen: { teams: true } });
       fixture.detectChanges();
 
       http.expectNone(FUNKTIONEN);

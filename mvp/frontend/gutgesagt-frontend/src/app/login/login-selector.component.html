@@ -2,14 +2,11 @@
 
     <h2 class="anmeldegrund" *ngIf="anmeldegrund">{{ anmeldegrund }}</h2>
 
-    <!-- Vertrauenszeile vor dem Anmelden (Jura vorläufig 26.11.), nur mit Schalter vertrauenszeile;
-         steht unabhängig von den Anmeldewegen. Bis GET /api/v1/funktionen geantwortet hat, gilt
-         der Schalter als aus; beim allerersten Aufruf kann die Zeile deshalb nachträglich erscheinen -->
-    @if (vertrauenszeileAn()) {
-        <p class="vertrauenszeile" data-testid="vertrauenszeile">
-            {{ vertrauenszeile }}<span aria-hidden="true"> · </span><a routerLink="/datenschutz" class="vertrauenszeile-link">Datenschutz</a>
-        </p>
-    }
+    <!-- Vertrauenszeile vor dem Anmelden (Jura vorläufig 26.11., Basisfunktion seit dem
+         Schalter-Umbau 27.11.); steht unabhängig von den Anmeldewegen -->
+    <p class="vertrauenszeile" data-testid="vertrauenszeile">
+        {{ vertrauenszeile }}<span aria-hidden="true"> · </span><a routerLink="/datenschutz" class="vertrauenszeile-link">Datenschutz</a>
+    </p>
 
     <div class="login-selector-container" *ngIf="!isLoading">
         <!-- Only the enabled login options; a switched-off one is hidden, not greyed out (#600) -->

@@ -25,9 +25,6 @@ export const VERTRAUENSZEILE =
   'Was du beiträgst, erscheint unter deinem Anzeigenamen. Wie viel du sonst mitmachst, sehen andere nicht, ' +
   'außer als Teil der Summe deiner Teams und, wenn du sie selbst wählst, in der Rangliste.';
 
-/** Schalter der Vertrauenszeile (services/schalter_service.py), Standard aus. */
-export const VERTRAUENSZEILE_SCHALTER = 'vertrauenszeile';
-
 /**
  * Hinweis unter „Noch kein Konto?“, nur mit Kampagnenwort ``bdk`` (UX-Review 26.11.2026,
  * Befund 4): Am Stand gibt es den Teamlink, die Seite nannte ihn nicht. Wie die Begrüßung nach
@@ -61,8 +58,6 @@ export class LoginSelectorComponent implements OnInit {
   anmeldegrund: string | null = null;
   readonly organisation = ORGANISATION;
   readonly vertrauenszeile = VERTRAUENSZEILE;
-  /** Ob die Vertrauenszeile steht; kommt nach, ohne dass jemand neu lädt (FunktionenService). */
-  readonly vertrauenszeileAn = inject(FunktionenService).an(VERTRAUENSZEILE_SCHALTER);
   readonly bdkHinweis = BDK_KONTO_HINWEIS;
   /** Den Schalter nur fragen, wenn das Wort passt: sonst kein Abruf nur dafür. */
   private readonly bdkWort = inject(KampagnenwortService).wort === 'bdk';

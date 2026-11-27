@@ -2,8 +2,8 @@ import { Component, DestroyRef, ElementRef, Injector, OnInit, ViewChild, afterNe
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/router';
-import { Observable, forkJoin, throwError } from 'rxjs';
-import { filter, shareReplay, switchMap, take } from 'rxjs/operators';
+import { Observable, throwError } from 'rxjs';
+import { filter, switchMap, take } from 'rxjs/operators';
 
 import { SHARED_IMPORTS } from '../../shared/shared-imports';
 import { BeitragskarteComponent } from '../../beitragskarte/beitragskarte.component';
@@ -29,7 +29,6 @@ import {
 } from './gespeichert-adresse';
 import { ROUTES } from '../../shared/constants/app.constants';
 import { LUECKE_ZU, LUECKE_ZU_AUSRUF, NAECHSTE_LUECKE } from '../../shared/luecke-texte';
-import { FunktionenService } from '../../services/funktionen.service';
 import { EINWURF_PARAM } from '../../destillieren/einwurf-adresse';
 import { TeilenService } from '../../shared/teilen.service';
 import { AussageMitThemenFeld, ThemenService } from '../../services/themen.service';
@@ -104,7 +103,6 @@ export class BeitragGespeichertComponent implements OnInit {
   readonly einwurfNichtVerknuepft = EINWURF_NICHT_MIT_NEUEM_VERKNUEPFT;
   readonly lueckeZuTitel = LUECKE_ZU;
   readonly lueckeZuAusruf = LUECKE_ZU_AUSRUF;
-  private funktionen = inject(FunktionenService);
   /** „Ton bei Erfolgen“: spielt im großen Moment nur, wenn die Person ihn eingeschaltet hat. */
   private feierTon = inject(FeierTonService);
   private injector = inject(Injector);
@@ -114,11 +112,6 @@ export class BeitragGespeichertComponent implements OnInit {
    * „Zurück“ wieder (aus history.state); dann traegt er den Vermerk lueckeZuGezeigt.
    */
   private readonly lueckeZuFrisch: boolean;
-  /**
-   * Schalter luecke_zu_gross (#787), einmal frisch vom Server gefragt: null, solange die
-   * Antwort aussteht. So springt die Seite nicht vom kleinen Satz zum großen Moment.
-   */
-  lueckeZuGrossStand: boolean | null = null;
   /**
    * Die Ansage des Satzes im großen Moment, in einer Live-Region, die schon vorher steht;
    * ein Signal, damit das Setzen nach dem Rendern neu zeichnet.
@@ -168,9 +161,7 @@ export class BeitragGespeichertComponent implements OnInit {
     this.typ = this.route.snapshot.data?.['typ'] ?? 'commentary';
     this.lueckeZuFrisch = this.zustand.verknuepft === true && this.zustand.lueckeZuGezeigt !== true;
     if (this.lueckeZuFrisch && this.lueckeZu) {
-      this.lueckeZuEntscheiden();
-    } else {
-      this.lueckeZuGrossStand = false;
+      this.lueckeZuVermerken();
     }
     const aussage = this.zustand.aussage;
     // Nicht verknuepft: keine "Antwort auf"-Karte - der Hinweis nennt die Aussage.
@@ -287,17 +278,12 @@ export class BeitragGespeichertComponent implements OnInit {
   }
 
   /**
-   * „Lücke zu!“ als großer Moment (#787, Schalter luecke_zu_gross): einmal je Antwort,
-   * direkt nach dem Speichern. Nach dem Neuladen oder „Zurück“ traegt der Router-State den
-   * Vermerk; dann steht wie bisher der kleine Satz.
+   * „Lücke zu!“ als großer Moment (#787, Basisfunktion seit dem Schalter-Umbau 27.11.):
+   * einmal je Antwort, direkt nach dem Speichern. Nach dem Neuladen oder „Zurück“ traegt
+   * der Router-State den Vermerk; dann steht der kleine Satz.
    */
   get lueckeZuGross(): boolean {
-    return this.lueckeZu && this.lueckeZuFrisch && this.lueckeZuGrossStand === true;
-  }
-
-  /** Solange der Schalter nicht feststeht, bleibt der Kopf leer (hoechstens FUNKTIONEN_FRISCH_WARTEN_MS). */
-  get lueckeZuOffen(): boolean {
-    return this.lueckeZu && this.lueckeZuGrossStand === null;
+    return this.lueckeZu && this.lueckeZuFrisch;
   }
 
   get lueckeZuMomentSatz(): string {
@@ -374,23 +360,18 @@ export class BeitragGespeichertComponent implements OnInit {
   }
 
   /**
-   * Fragt den Schalter frisch und vermerkt, wenn der große Moment steht, im Verlaufseintrag
-   * dieser Seite (mitLueckeZuGezeigt). Der Vermerk erst nach dem Ende der Navigation:
-   * Vorher gehoert der Eintrag womoeglich noch der vorigen Seite.
+   * Vermerkt den großen Moment im Verlaufseintrag dieser Seite (mitLueckeZuGezeigt). Der
+   * Vermerk erst nach dem Ende der Navigation: Vorher gehoert der Eintrag womoeglich noch
+   * der vorigen Seite.
    */
-  private lueckeZuEntscheiden(): void {
-    const schalter$ = this.funktionen.frisch('luecke_zu_gross').pipe(shareReplay(1));
-    schalter$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((an) => (this.lueckeZuGrossStand = an));
-    const navigationsEnde$ = this.router.events.pipe(
-      filter((e) => e instanceof NavigationEnd),
-      take(1),
-    );
-    forkJoin([schalter$.pipe(take(1)), navigationsEnde$])
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(([an]) => {
-        if (!an) {
-          return;
-        }
+  private lueckeZuVermerken(): void {
+    this.router.events
+      .pipe(
+        filter((e) => e instanceof NavigationEnd),
+        take(1),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
         try {
           window.history.replaceState(mitLueckeZuGezeigt(window.history.state), '');
         } catch (error) {

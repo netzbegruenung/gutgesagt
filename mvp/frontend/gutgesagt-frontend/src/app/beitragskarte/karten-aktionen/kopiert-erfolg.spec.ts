@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { WritableSignal, signal } from '@angular/core';
+import { signal } from '@angular/core';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatDialog } from '@angular/material/dialog';
@@ -17,7 +17,6 @@ import { LoggingService } from '../../services/logging.service';
 import { UsageTrackingService } from '../../services/usage-tracking.service';
 import { VotingService } from '../../services/voting.service';
 import { FunktionenService } from '../../services/funktionen.service';
-import { KOPIERT } from '../../shared/vorlagen-luecke';
 import { TEILEN_NAVIGATOR } from '../../shared/teilen.service';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
 import { GEPOSTET_FRAGE, JA_GEPOSTET } from './gepostet-texte';
@@ -71,13 +70,11 @@ describe('Erfolgstext nach dem Kopieren - Karte (#785)', () => {
   const ANDERE_ID = '223e4567-e89b-12d3-a456-426614174000';
   let fixture: ComponentFixture<KartenAktionenComponent>;
   let component: KartenAktionenComponent;
-  let schalter: WritableSignal<boolean>;
   let snackBar: jasmine.SpyObj<MatSnackBar>;
   let usage: jasmine.SpyObj<UsageTrackingService>;
   let auth: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
-    schalter = signal(true);
     snackBar = jasmine.createSpyObj('MatSnackBar', ['open']);
     usage = jasmine.createSpyObj('UsageTrackingService', [
       'trackContentUsage',
@@ -104,7 +101,8 @@ describe('Erfolgstext nach dem Kopieren - Karte (#785)', () => {
         { provide: MeilensteinHinweisService, useValue: jasmine.createSpyObj('MeilensteinHinweisService', ['bestaetigen']) },
         {
           provide: FunktionenService,
-          useValue: { an: (name: string) => (name === 'kopiert_erfolg' ? schalter : signal(false)) },
+          // Alle Schalter aus: der Erfolgstext ist Basisfunktion (Schalter-Umbau 27.11.)
+          useValue: { an: () => signal(false) },
         },
       ],
     }).compileComponents();
@@ -246,15 +244,6 @@ describe('Erfolgstext nach dem Kopieren - Karte (#785)', () => {
     expect(fixture.nativeElement.querySelector('.ja-gepostet')).toBeNull();
   });
 
-  it('bei ausgeschaltetem Schalter wie bisher die Snackbar und kein Erfolgstext', () => {
-    schalter.set(false);
-    fixture.detectChanges();
-    kopieren();
-
-    expect(erfolg()).toBeNull();
-    expect(snackBar.open).toHaveBeenCalledWith(KOPIERT, 'Schließen', jasmine.any(Object));
-  });
-
   it('nicht in der Formular-Vorschau', () => {
     component.vorschau = true;
     component.kopieren();
@@ -265,7 +254,6 @@ describe('Erfolgstext nach dem Kopieren - Karte (#785)', () => {
 });
 
 describe('Erfolgstext nach dem Kopieren - in der Beitragskarte (#785)', () => {
-  let schalter: WritableSignal<boolean>;
 
   function inhalt(id: string, usageCount: number): any {
     return {
@@ -312,7 +300,6 @@ describe('Erfolgstext nach dem Kopieren - in der Beitragskarte (#785)', () => {
   }
 
   beforeEach(async () => {
-    schalter = signal(true);
     const auth = jasmine.createSpyObj('AuthService', ['getUserInfo', 'login']);
     auth.getUserInfo.and.returnValue({ isAuthenticated: false });
     auth.userInfo$ = new BehaviorSubject<UserInfo | null>(null);
@@ -339,7 +326,8 @@ describe('Erfolgstext nach dem Kopieren - in der Beitragskarte (#785)', () => {
         { provide: TEILEN_NAVIGATOR, useValue: {} },
         {
           provide: FunktionenService,
-          useValue: { an: (name: string) => (name === 'kopiert_erfolg' ? schalter : signal(false)) },
+          // Alle Schalter aus: der Erfolgstext ist Basisfunktion (Schalter-Umbau 27.11.)
+          useValue: { an: () => signal(false) },
         },
       ],
     }).compileComponents();

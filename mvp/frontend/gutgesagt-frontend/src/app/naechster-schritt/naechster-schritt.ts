@@ -6,9 +6,6 @@ import {
   VON_PARAM,
 } from '../beitragsformular/beitrag-gespeichert/gespeichert-adresse';
 
-/** Schalter der Karte (#789), wie im Backend (services/naechster_schritt.py). */
-export const NAECHSTER_SCHRITT_SCHALTER = 'naechster_schritt';
-
 export type VorschlagArt = 'suchen' | 'einwerfen' | 'bewerten' | 'brachflaeche' | 'kurzfassung';
 
 /** Ein Vorschlag aus GET /api/v1/usage/users/me/naechster-schritt. */

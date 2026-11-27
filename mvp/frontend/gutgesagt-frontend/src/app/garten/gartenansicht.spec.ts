@@ -39,13 +39,6 @@ describe('Gartenansicht (#783)', () => {
 
   describe('Seite', () => {
     let http: HttpTestingController;
-    /** Was FunktionenService zum Schalter gartenansicht meldet; null: unbekannt. */
-    let schalter: boolean | null = true;
-
-    afterEach(() => {
-      schalter = true;
-    });
-
     function starten(angemeldet: boolean) {
       const nutzer = new BehaviorSubject<UserInfo | null>({ isAuthenticated: angemeldet, userId: null, userName: null, claims: null });
       TestBed.configureTestingModule({
@@ -55,7 +48,8 @@ describe('Gartenansicht (#783)', () => {
           provideHttpClientTesting(),
           provideRouter([]),
           { provide: AuthService, useValue: { userInfo$: nutzer } },
-          { provide: FunktionenService, useValue: { stand$: () => of(schalter) } },
+          // Alle Schalter aus: die Gartenansicht fragt ihren Endpunkt direkt (Basisfunktion)
+          { provide: FunktionenService, useValue: { an: () => signal(false), stand$: () => of(false) } },
         ],
       });
       http = TestBed.inject(HttpTestingController);
@@ -144,17 +138,7 @@ describe('Gartenansicht (#783)', () => {
       expect(fixture.nativeElement.querySelector('.garten-konto')).toBeNull();
     });
 
-    it('fragt den Endpunkt nicht, solange der Schalter sicher aus ist, und sagt das (Saal, kein 404)', () => {
-      schalter = false;
-      const fixture = starten(false);
-      http.expectNone(URL);
-      fixture.detectChanges();
-      expect(fixture.nativeElement.textContent).toContain('Diese Übersicht ist gerade nicht eingeschaltet.');
-      expect(beete(fixture).length).toBe(0);
-    });
-
-    it('sagt bei aktiv false vom Server, dass die Übersicht aus ist', () => {
-      schalter = null;
+    it('sagt bei aktiv false (älterer Server mit Schalter), dass die Übersicht aus ist', () => {
       const fixture = starten(false);
       http.expectOne(URL).flush({ beete: [], aktiv: false });
       fixture.detectChanges();
@@ -191,10 +175,11 @@ describe('Gartenansicht (#783)', () => {
   });
 
   describe('Hinweis auf der Startseite', () => {
-    function hinweis(schalter: boolean) {
+    function hinweis() {
       TestBed.configureTestingModule({
         imports: [GartenHinweisComponent],
-        providers: [provideRouter([]), { provide: FunktionenService, useValue: { an: () => signal(schalter) } }],
+        // Alle Schalter aus: der Hinweis braucht keinen
+        providers: [provideRouter([]), { provide: FunktionenService, useValue: { an: () => signal(false) } }],
       });
       const fixture = TestBed.createComponent(GartenHinweisComponent);
       fixture.detectChanges();
@@ -203,12 +188,8 @@ describe('Gartenansicht (#783)', () => {
 
     afterEach(() => TestBed.resetTestingModule());
 
-    it('fehlt ohne Schalter', () => {
-      expect(hinweis(false).querySelector('a')).toBeNull();
-    });
-
-    it('führt mit Schalter zur Gartenansicht', () => {
-      const link = hinweis(true).querySelector('a') as HTMLAnchorElement;
+    it('führt ohne Schalter zur Gartenansicht', () => {
+      const link = hinweis().querySelector('a') as HTMLAnchorElement;
       expect(new window.URL(link.href).pathname).toBe('/garten');
       expect(link.textContent).toContain('Themen im Überblick');
     });

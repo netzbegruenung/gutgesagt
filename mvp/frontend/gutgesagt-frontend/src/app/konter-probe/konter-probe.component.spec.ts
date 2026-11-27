@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
-import { signal } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 
 import { KonterProbeComponent } from './konter-probe.component';
@@ -20,7 +19,6 @@ import {
 } from './konter-probe';
 import { KartenlisteComponent } from '../beitragskarte/kartenliste.component';
 import { BeitragskarteStubComponent } from '../beitragskarte/beitragskarte.stub';
-import { FunktionenService } from '../services/funktionen.service';
 
 function roh(id: string, style: string, usage_count: number, extra: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -225,7 +223,6 @@ describe('KonterProbeComponent', () => {
 
 describe('KonterProbeEinstiegComponent', () => {
   let service: jasmine.SpyObj<KonterProbeService>;
-  const an = signal(false);
 
   function erstellen(): ComponentFixture<KonterProbeEinstiegComponent> {
     const fixture = TestBed.createComponent(KonterProbeEinstiegComponent);
@@ -234,23 +231,18 @@ describe('KonterProbeEinstiegComponent', () => {
   }
 
   beforeEach(async () => {
-    an.set(false);
     service = jasmine.createSpyObj('KonterProbeService', ['proben']);
     await TestBed.configureTestingModule({
       imports: [KonterProbeEinstiegComponent],
-      providers: [
-        provideRouter([]),
-        { provide: KonterProbeService, useValue: service },
-        { provide: FunktionenService, useValue: { an: () => an } },
-      ],
+      providers: [provideRouter([]), { provide: KonterProbeService, useValue: service }],
     }).compileComponents();
   });
 
-  it('erscheint bei eingeschaltetem Schalter mit passender Aussage', () => {
+  it('erscheint ohne Schalter mit passender Aussage (Basisfunktion)', () => {
     service.proben.and.returnValue(of([probe()]));
-    an.set(true);
     const fixture = erstellen();
     const link = fixture.nativeElement.querySelector('a') as HTMLAnchorElement;
+    expect(service.proben).toHaveBeenCalledTimes(1);
     expect(fixture.nativeElement.querySelector('h2').textContent.trim()).toBe('Konter-Probe');
     expect(link.textContent!.trim()).toBe('Mitspielen');
     expect(link.getAttribute('href')).toBe('/konter-probe');
@@ -258,26 +250,12 @@ describe('KonterProbeEinstiegComponent', () => {
 
   it('erscheint ohne passende Aussage nicht', () => {
     service.proben.and.returnValue(of([]));
-    an.set(true);
     const fixture = erstellen();
     expect(fixture.nativeElement.querySelector('section')).toBeNull();
-  });
-
-  it('fragt bei ausgeschaltetem Schalter gar nicht erst und kommt beim Umschalten', () => {
-    service.proben.and.returnValue(of([probe()]));
-    const fixture = erstellen();
-    expect(service.proben).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.querySelector('section')).toBeNull();
-
-    an.set(true);
-    fixture.detectChanges();
-    expect(service.proben).toHaveBeenCalledTimes(1);
-    expect(fixture.nativeElement.querySelector('section')).not.toBeNull();
   });
 
   it('fragt nach einem Ladefehler von selbst erneut', fakeAsync(() => {
     service.proben.and.returnValues(throwError(() => ({ status: 500 })), of([probe()]));
-    an.set(true);
     const fixture = erstellen();
     expect(fixture.nativeElement.querySelector('section')).toBeNull();
 
@@ -290,7 +268,6 @@ describe('KonterProbeEinstiegComponent', () => {
 
   it('fragt ohne passende Aussage spaeter erneut', fakeAsync(() => {
     service.proben.and.returnValues(of([]), of([probe()]));
-    an.set(true);
     const fixture = erstellen();
     expect(fixture.nativeElement.querySelector('section')).toBeNull();
 
@@ -300,20 +277,4 @@ describe('KonterProbeEinstiegComponent', () => {
     expect(fixture.nativeElement.querySelector('section')).not.toBeNull();
     fixture.destroy();
   }));
-
-  it('verschwindet beim Ausschalten und fragt beim Wiedereinschalten neu', () => {
-    service.proben.and.returnValue(of([probe()]));
-    an.set(true);
-    const fixture = erstellen();
-    expect(fixture.nativeElement.querySelector('section')).not.toBeNull();
-
-    an.set(false);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('section')).toBeNull();
-
-    an.set(true);
-    fixture.detectChanges();
-    expect(service.proben).toHaveBeenCalledTimes(2);
-    expect(fixture.nativeElement.querySelector('section')).not.toBeNull();
-  });
 });

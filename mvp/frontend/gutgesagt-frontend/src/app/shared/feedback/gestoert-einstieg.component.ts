@@ -1,17 +1,18 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 
 import { FunktionenService } from '../../services/funktionen.service';
 import { gestoertDialogOeffnen } from './feedback-dialog.component';
-import { FEEDBACK_GESTOERT_SCHALTER } from './feedback.service';
+import { FEEDBACK_GESTOERT_SCHALTER, gestoertOffen } from './feedback.service';
 
 /**
  * Der Einstieg „Was hat dich gestört?“ für die Startphase auf der Startseite: ein
  * Knopf, der das Feedback-Formular mit der Kategorie „gestoert“ öffnet (nur Freitext,
- * ohne Kontakt). Nur solange der Schalter `feedback_gestoert` an ist; der Stand kommt
- * über FunktionenService und kommt beim Umschalten ohne Neuladen an. Ab dem 31.12.2026
- * meldet der Dienst ihn aus.
+ * ohne Kontakt). Nur solange der Dienst `feedback_gestoert` als an meldet (Not-Aus der
+ * Basisfunktion); der Stand kommt über FunktionenService und kommt beim Umschalten ohne
+ * Neuladen an. Ab dem 31.12.2026 (UTC) meldet der Dienst ihn aus, und die App prüft das
+ * Datum zusätzlich selbst (gestoertOffen): Ein älterer Stand zeigt ihn dann nicht mehr.
  */
 @Component({
   selector: 'app-gestoert-einstieg',
@@ -89,7 +90,10 @@ import { FEEDBACK_GESTOERT_SCHALTER } from './feedback.service';
   ],
 })
 export class GestoertEinstiegComponent {
-  readonly an = inject(FunktionenService).an(FEEDBACK_GESTOERT_SCHALTER);
+  private readonly gemeldet = inject(FunktionenService).an(FEEDBACK_GESTOERT_SCHALTER);
+  /** Für Tests ersetzbar. */
+  jetzt: () => number = () => Date.now();
+  readonly an = computed(() => this.gemeldet() && gestoertOffen(this.jetzt()));
   private readonly dialog = inject(MatDialog);
 
   oeffnen(): void {

@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { WritableSignal, signal } from '@angular/core';
+import { signal } from '@angular/core';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatDialog } from '@angular/material/dialog';
@@ -18,14 +18,13 @@ import { VotingService } from '../services/voting.service';
 import { MeilensteinHinweisService } from '../meine-beitraege/meilenstein-hinweis.service';
 
 /**
- * „Melden“ klein am Ende der Meta-Zeile der Karte (Schalter meldeweg_sichtbar, Standard aus):
+ * „Melden“ klein am Ende der Meta-Zeile der Karte (Meldeweg, Basisfunktion seit dem Schalter-Umbau 27.11.):
  * in der Zeile, die es schon gibt, damit die Karte nicht höher wird (Entscheidung 26.11.).
  */
 describe('Beitragskarte: Melden in der Meta-Zeile', () => {
   const ID = '123e4567-e89b-12d3-a456-426614174843';
   let fixture: ComponentFixture<BeitragskarteComponent>;
   let dialog: jasmine.SpyObj<MatDialog>;
-  let meldeweg: WritableSignal<boolean>;
   let auth: jasmine.SpyObj<AuthService>;
 
   function daten(felder: Record<string, unknown> = {}) {
@@ -75,7 +74,6 @@ describe('Beitragskarte: Melden in der Meta-Zeile', () => {
   }
 
   beforeEach(async () => {
-    meldeweg = signal(false);
     dialog = jasmine.createSpyObj('MatDialog', ['open']);
     auth = jasmine.createSpyObj('AuthService', ['getUserInfo', 'login']);
     auth.getUserInfo.and.returnValue({ isAuthenticated: false } as UserInfo);
@@ -101,7 +99,8 @@ describe('Beitragskarte: Melden in der Meta-Zeile', () => {
         { provide: MatDialog, useValue: dialog },
         {
           provide: FunktionenService,
-          useValue: { an: (name: string) => (name === 'meldeweg_sichtbar' ? meldeweg.asReadonly() : signal(false)) },
+          // Alle Schalter aus: der Meldeweg braucht keinen
+          useValue: { an: () => signal(false) },
         },
         provideRouter([]),
       ],
@@ -110,18 +109,7 @@ describe('Beitragskarte: Melden in der Meta-Zeile', () => {
 
   afterEach(() => document.querySelectorAll('.cdk-overlay-container').forEach((c) => (c.innerHTML = '')));
 
-  it('Schalter aus: Meta-Zeile wie bisher, kein Knopf, „Inhalt melden“ bleibt im Menü', async () => {
-    zeigen();
-
-    expect(knopf()).toBeNull();
-    expect(meta()!.classList).not.toContain('karte-meta--melden');
-    expect(getComputedStyle(meta()!).textAlign).toBe('center');
-    expect(meta()!.textContent).toContain('genutzt');
-    expect(await menueMelden()).toEqual(['flagInhalt melden']);
-  });
-
-  it('Schalter an: „Melden“ am Ende der Meta-Zeile, Name „Beitrag melden“, der Menüeintrag bleibt', async () => {
-    meldeweg.set(true);
+  it('ohne Schalter: „Melden“ am Ende der Meta-Zeile, Name „Beitrag melden“, der Menüeintrag bleibt', async () => {
     zeigen();
 
     const k = knopf()!;
@@ -134,15 +122,15 @@ describe('Beitragskarte: Melden in der Meta-Zeile', () => {
     expect(await menueMelden()).toEqual(['flagInhalt melden']);
   });
 
-  it('macht die Karte nicht höher: die Meta-Zeile behält ihre Höhe', () => {
+  it('macht die Karte nicht höher: die Meta-Zeile ist nicht höher als ihr Text', () => {
     zeigen();
-    const vorher = meta()!.getBoundingClientRect().height;
-
-    meldeweg.set(true);
-    fixture.detectChanges();
 
     expect(knopf()).not.toBeNull();
-    expect(meta()!.getBoundingClientRect().height).toBeLessThanOrEqual(vorher + 1);
+    const stil = getComputedStyle(meta()!);
+    const text = meta()!.querySelector('.karte-meta-text')!.getBoundingClientRect().height;
+    expect(meta()!.getBoundingClientRect().height).toBeLessThanOrEqual(
+      text + parseFloat(stil.paddingTop) + parseFloat(stil.paddingBottom) + 1,
+    );
   });
 
   it('angemeldet mit Autorzeile und Teams, schmal: „Melden“ bleibt in der ersten Zeile', () => {
@@ -154,9 +142,6 @@ describe('Beitragskarte: Melden in der Meta-Zeile', () => {
     fixture.componentRef.setInput('daten', daten({ autor_name: 'Kim Beispiel', autor_teams: teams }));
     fixture.detectChanges();
     expect(meta()!.textContent).toContain('Von: Kim Beispiel');
-
-    meldeweg.set(true);
-    fixture.detectChanges();
 
     const text = meta()!.querySelector('.karte-meta-text')!.getBoundingClientRect();
     const k = knopf()!.getBoundingClientRect();
@@ -172,7 +157,6 @@ describe('Beitragskarte: Melden in der Meta-Zeile', () => {
   });
 
   it('Tippziel mindestens 24 × 24 px (WCAG 2.5.8)', () => {
-    meldeweg.set(true);
     zeigen();
 
     const r = knopf()!.getBoundingClientRect();
@@ -180,19 +164,7 @@ describe('Beitragskarte: Melden in der Meta-Zeile', () => {
     expect(r.height).toBeGreaterThanOrEqual(24);
   });
 
-  it('kommt und geht ohne Neuladen, sobald der Schalter umschaltet', () => {
-    zeigen();
-    expect(knopf()).toBeNull();
-    meldeweg.set(true);
-    fixture.detectChanges();
-    expect(knopf()).not.toBeNull();
-    meldeweg.set(false);
-    fixture.detectChanges();
-    expect(knopf()).toBeNull();
-  });
-
   it('öffnet den Melde-Dialog mit Beitrag und Typ', () => {
-    meldeweg.set(true);
     zeigen();
 
     knopf()!.click();
@@ -204,7 +176,6 @@ describe('Beitragskarte: Melden in der Meta-Zeile', () => {
   });
 
   it('auch an der schlanken Karte ohne Alter und Nutzung', () => {
-    meldeweg.set(true);
     zeigen({ schlank: true }, { usage_count: 0 });
 
     expect(meta()!.querySelector('.karte-meta-text')).toBeNull();
@@ -212,14 +183,12 @@ describe('Beitragskarte: Melden in der Meta-Zeile', () => {
   });
 
   it('nicht in der Formular-Vorschau', () => {
-    meldeweg.set(true);
     zeigen({ vorschau: true });
 
     expect(knopf()).toBeNull();
   });
 
   it('nicht im eigenen Album', () => {
-    meldeweg.set(true);
     zeigen({ eigenesAlbum: true });
 
     expect(knopf()).toBeNull();

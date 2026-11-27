@@ -73,14 +73,11 @@ export class DatenschutzComponent {
   readonly kurzfassungSaetze: readonly KurzfassungSatz[] = inject(KURZFASSUNG);
   /** Schlusssatz unter den drei Sätzen des Kastens (Wortlaut Jura). */
   readonly kurzfassungSchluss = KURZFASSUNG_SCHLUSS;
-  private readonly kurzfassungAn = this.funktionen.an('dse_kurzfassung');
   /**
-   * Kasten „Kurz gesagt“ oben: nur mit Schalter dse_kurzfassung und nur, wenn alle drei
-   * Sätze den Wortlaut von Jura tragen, nie mit Platzhalter.
+   * Kasten „Kurz gesagt“ oben (Basisfunktion seit dem Schalter-Umbau 27.11.): nur, wenn alle
+   * drei Sätze den Wortlaut von Jura tragen, nie mit Platzhalter (Schutzgrenze ohne Schalter).
    */
-  readonly kurzfassungZeigen = computed(
-    () => this.kurzfassungAn() && kurzfassungFertig(this.kurzfassungSaetze)
-  );
+  readonly kurzfassungZeigen = computed(() => kurzfassungFertig(this.kurzfassungSaetze));
 
   /**
    * Sprunglink der Kurzfassung: scrollIntoView statt Router-Fragment, weil der
@@ -147,8 +144,10 @@ export class DatenschutzComponent {
   /** Merker der Meilensteine im Browser; der Absatz dazu steht erst, wenn er an ist (§ 25 TDDDG). */
   readonly meilensteinMerker = inject(MEILENSTEIN_MERKER);
   /**
-   * Spielgefühl als eine Frage (Schalter spielgefuehl_buehne): der Absatz „Spielgefühl“
-   * ersetzt unter „Punkte“ die Einwilligungsteile zu Punkten, Abzeichen und Rangliste.
+   * Paket Spielgefühl (spielgefuehl_buehne: Punkte, Spielgefühl als eine Frage, Rangliste;
+   * Schalter-Umbau 27.11.): der Absatz „Spielgefühl“ ersetzt unter „Punkte“ die
+   * Einwilligungsteile zu Punkten, Abzeichen und Rangliste. Die früheren Schalter punkte und
+   * rangliste fragt die Seite nicht mehr, ihre Absätze hängen am Paket.
    */
   readonly spielgefuehlBuehne = this.funktionen.an('spielgefuehl_buehne');
   readonly spielgefuehlTitel = DSE_SPIELGEFUEHL_TITEL;
@@ -161,28 +160,15 @@ export class DatenschutzComponent {
   readonly spielgefuehlSockel = DSE_SPIELGEFUEHL_SOCKEL;
   /** Merker „Hinweis Home-Bildschirm ausgeblendet“; der Absatz dazu steht nur, wenn er an ist. */
   readonly homeHinweisMerker = inject(HOME_HINWEIS_MERKER);
-  /**
-   * Karte „Dein nächster Schritt“ (#789): der Satz unter „Rückmeldung zur Nutzung“ steht,
-   * solange der Schalter an ist; der Absatz zum Eintrag auf dem Gerät immer, weil ein
-   * Eintrag nach dem Ausschalten noch bis zu sieben Tage liegen kann.
-   */
-  readonly naechsterSchritt = this.funktionen.an('naechster_schritt');
-  /** „Danach wurde schon N-mal gesucht“ (#362): der Absatz unter „Suchen ohne Treffer“ steht, solange der Schalter an ist. */
-  readonly nullTrefferAnzahl = this.funktionen.an('null_treffer_anzahl');
-  /**
-   * Stimmenverfall bei ganz anderem Text (#636): der Halbsatz unter „Bewertungen“ steht nur,
-   * solange der Schalter stimmen_text_verfall an ist; sonst verfallen Stimmen nur beim Titel.
-   */
-  readonly textVerfall = inject(FunktionenService).an('stimmen_text_verfall');
 
   /*
    * Absätze und Sätze, die an einem Schalter hängen (Grundsatz: kein Schalter ohne seinen
    * Absatz, vorläufige juristische Einschätzung 26.11.2026). Jeder Schalter hier muss in
    * services/schalter_service.py öffentlich sein, sonst meldet GET /api/v1/funktionen ihn
-   * nicht und der Absatz bliebe auch bei eingeschaltetem Schalter weg.
+   * nicht und der Absatz bliebe auch bei eingeschaltetem Schalter weg. Absätze der
+   * Basisfunktionen (Schalter-Umbau 27.11.) stehen ohne Bedingung, auch die mit Not-Aus
+   * (gepostet_ohne_konto, null_treffer_anzahl, feedback_gestoert).
    */
-  /** Punkte: der Vorbehalt „noch nicht eingeschaltet“ entfällt, die Muster-Hinweise gelten. */
-  readonly punkte = this.funktionen.an('punkte');
   /**
    * Zustimmungen in den Muster-Hinweisen (Schalter muster_stimmen): ein Satz unter
    * „Muster-Hinweise“ mit dem Einschalttag, den die Seite erst fragt, wenn der Schalter an ist.
@@ -205,33 +191,17 @@ export class DatenschutzComponent {
     { initialValue: null },
   );
   readonly musterStimmenSatz = computed(() => dseMusterStimmen(this.musterStimmenSeit()));
-  /** Rangliste (#793): Absatz statt des Hinweises „noch nicht eingeschaltet“. */
-  readonly rangliste = this.funktionen.an('rangliste');
-  /** Team-Summe (#784): der Satz „noch nicht eingeschaltet“ entfällt. */
-  readonly teamFortschritt = this.funktionen.an('team_fortschritt');
-  /** Team-Quests (#792): Absatz unter „Teams“; wirkt nur mit team_fortschritt. */
+  /** Paket Teams (#784): mit ihm entfällt der Satz „Die Team-Summe ist noch nicht eingeschaltet“. */
+  readonly teams = this.funktionen.an('teams');
+  /** Team-Quests (#792): Absatz unter „Teams“; wirkt nur mit dem Paket teams. */
   readonly teamQuests = this.funktionen.an('team_quests');
-  /** Wirkungs-Echo (#790): dritte gespeicherte Zahl und der Zählerstand des Echos. */
-  readonly wirkungsEcho = this.funktionen.an('wirkungs_echo');
-  /** Danke-Knopf (#791): die Sätze zum Danke und zum Tages-Prüfwert. */
-  readonly dankeKnopf = this.funktionen.an('danke_knopf');
-  /** „Ja, gepostet“ ohne Konto (#799). */
-  readonly gepostetOhneKonto = this.funktionen.an('gepostet_ohne_konto');
-  /** Neue Antworten auf eigene Aussagen (#760). */
-  readonly antwortenHinweis = this.funktionen.an('antworten_hinweis');
-  /** „Melden“ in der Meta-Zeile und „Melden & Kontakt“ im Fuß (#843). */
-  readonly meldewegSichtbar = this.funktionen.an('meldeweg_sichtbar');
-  /** „Was hat dich gestört?“ in der Startphase. */
-  readonly feedbackGestoert = this.funktionen.an('feedback_gestoert');
-  /** Begrüßung nach dem Kampagnenwort ?k=. */
-  readonly kBegruessung = this.funktionen.an('k_begruessung');
-  /** Bestandszahl samt Zuwachs der letzten sieben Tage auf der Startseite. */
-  readonly bestandszahlZuwachs = this.funktionen.an('bestandszahl_zuwachs');
   /**
-   * „Ton bei Erfolgen“ (#787) gibt es nur im großen Moment „Lücke zu!“ hinter dem Schalter
-   * luecke_zu_gross; der Absatz zu seinem Eintrag im Browser steht, solange der Schalter an ist
-   * oder der Browser den Eintrag noch hat (Schalter später wieder aus).
+   * Paket Wirkungs-Echo (#790, #791): dritte gespeicherte Zahl, der Zählerstand des Echos und
+   * die Sätze zum Danke und zum Tages-Prüfwert.
    */
+  readonly wirkungsEcho = this.funktionen.an('wirkungs_echo');
+  /** Paket BDK-Begrüßung: Begrüßung nach dem Kampagnenwort ?k=. */
+  readonly kBegruessung = this.funktionen.an('k_begruessung');
   readonly KONTAKT_MAIL = LEGAL_ENTITY.KONTAKT_MAIL;
 
   // Der Datenschutzbeauftragte ist ueber die Vereinsadresse erreichbar, nicht privat.

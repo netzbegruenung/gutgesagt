@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FooterComponent, buildKennung, buildWerteAusSeite } from './footer.component';
 import { MatDialogModule } from '@angular/material/dialog';
 import { ActivatedRoute, provideRouter } from '@angular/router';
-import { WritableSignal, signal } from '@angular/core';
+import { signal } from '@angular/core';
 import { FunktionenService } from '../services/funktionen.service';
 import { LEGAL_ENTITY } from '../shared/legal-entity';
 import { of } from 'rxjs';
@@ -61,6 +61,7 @@ describe('FooterComponent', () => {
       'Impressum',
       'Datenschutz',
       'Nutzungsbedingungen',
+      'Melden & Kontakt',
     ]);
     expect(footer.lastElementChild!.classList).toContain('traeger');
   });
@@ -81,21 +82,17 @@ describe('FooterComponent', () => {
   });
 });
 
-/** „Melden & Kontakt“ im Fuß (Schalter meldeweg_sichtbar, Standard aus). */
+/** „Melden & Kontakt“ im Fuß (Meldeweg, Basisfunktion seit dem Schalter-Umbau 27.11.). */
 describe('FooterComponent - Meldeweg', () => {
   let fixture: ComponentFixture<FooterComponent>;
-  let meldeweg: WritableSignal<boolean>;
 
   beforeEach(async () => {
-    meldeweg = signal(false);
     await TestBed.configureTestingModule({
       imports: [FooterComponent, MatDialogModule],
       providers: [
         provideRouter([]),
-        {
-          provide: FunktionenService,
-          useValue: { an: (name: string) => (name === 'meldeweg_sichtbar' ? meldeweg.asReadonly() : signal(false)) },
-        },
+        // Alle Schalter aus: der Meldeweg steht trotzdem
+        { provide: FunktionenService, useValue: { an: () => signal(false) } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(FooterComponent);
@@ -107,25 +104,13 @@ describe('FooterComponent - Meldeweg', () => {
       .map((l) => l.textContent!.trim());
   }
 
-  it('Schalter aus: kein Eintrag und keine Adresse', () => {
-    expect(linkTexte()).not.toContain('Melden & Kontakt');
-    expect(fixture.nativeElement.querySelector('.meldeweg')).toBeNull();
-    expect(fixture.nativeElement.textContent).not.toContain(LEGAL_ENTITY.KONTAKT_MAIL);
-  });
-
-  it('Schalter an: „Melden & Kontakt“ als letzter Link, führt zum Meldeabschnitt im Impressum', () => {
-    meldeweg.set(true);
-    fixture.detectChanges();
-
+  it('ohne Schalter: „Melden & Kontakt“ als letzter Link, führt zum Meldeabschnitt im Impressum', () => {
     expect(linkTexte().at(-1)).toBe('Melden & Kontakt');
     const link = fixture.nativeElement.querySelector('.melden-link') as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/impressum#melden');
   });
 
-  it('Schalter an: nennt den Meldeweg und nur die Funktionsadresse aus dem Impressum', () => {
-    meldeweg.set(true);
-    fixture.detectChanges();
-
+  it('nennt den Meldeweg und nur die Funktionsadresse aus dem Impressum', () => {
     const zeile = fixture.nativeElement.querySelector('.meldeweg') as HTMLElement;
     const text = zeile.textContent!.replace(/\s+/g, ' ').trim();
     expect(text).toBe(
@@ -140,13 +125,6 @@ describe('FooterComponent - Meldeweg', () => {
     }
     // Die Trägerzeile bleibt die letzte Zeile des Fußes
     expect(fixture.nativeElement.querySelector('.footer').lastElementChild!.classList).toContain('traeger');
-  });
-
-  it('kommt ohne Neuladen, sobald der Schalter umschaltet', () => {
-    expect(fixture.nativeElement.querySelector('.melden-link')).toBeNull();
-    meldeweg.set(true);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.melden-link')).not.toBeNull();
   });
 });
 

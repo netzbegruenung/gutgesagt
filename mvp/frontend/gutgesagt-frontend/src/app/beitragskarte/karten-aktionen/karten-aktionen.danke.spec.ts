@@ -17,7 +17,7 @@ import { TEILEN_NAVIGATOR } from '../../shared/teilen.service';
 import { MeilensteinHinweisService } from '../../meine-beitraege/meilenstein-hinweis.service';
 import { DANKE_ANGEKOMMEN, DANKE_FEHLER, DANKE_GESAGT, DANKE_NICHT_GEZAEHLT } from '../../shared/wirkung-texte';
 
-/** „Danke an die Autorin“ nach dem Kopieren (#791): nur mit Schalter, nie am eigenen Beitrag. */
+/** „Danke an die Autorin“ nach dem Kopieren (#791): nur mit dem Paket Wirkungs-Echo, nie am eigenen Beitrag. */
 describe('KartenAktionenComponent - Danke an die Autorin', () => {
   const INHALT_ID = '123e4567-e89b-12d3-a456-426614174000';
   let fixture: ComponentFixture<KartenAktionenComponent>;
@@ -27,7 +27,7 @@ describe('KartenAktionenComponent - Danke an die Autorin', () => {
   let schalter: Record<string, WritableSignal<boolean>>;
 
   beforeEach(async () => {
-    schalter = { danke_knopf: signal(false), danke_ohne_konto: signal(false) };
+    schalter = { wirkungs_echo: signal(false), danke_ohne_konto: signal(false) };
     usage = jasmine.createSpyObj('UsageTrackingService', [
       'trackContentUsage',
       'gepostetAngeboten',
@@ -79,7 +79,7 @@ describe('KartenAktionenComponent - Danke an die Autorin', () => {
   });
 
   it('mit Schalter erst nach dem Kopieren, mit sichtbarem Namen', () => {
-    schalter['danke_knopf'].set(true);
+    schalter['wirkungs_echo'].set(true);
     fixture.detectChanges();
     expect(knopf()).toBeNull();
 
@@ -89,7 +89,7 @@ describe('KartenAktionenComponent - Danke an die Autorin', () => {
   });
 
   it('nicht am eigenen Beitrag, nicht im Album und nicht in der Vorschau', () => {
-    schalter['danke_knopf'].set(true);
+    schalter['wirkungs_echo'].set(true);
     kopieren();
 
     component.eigeneStimmeImZaehler = false;
@@ -104,7 +104,7 @@ describe('KartenAktionenComponent - Danke an die Autorin', () => {
 
   it('ohne Konto nur mit dem Unterschalter', () => {
     auth.getUserInfo.and.returnValue({ isAuthenticated: false } as any);
-    schalter['danke_knopf'].set(true);
+    schalter['wirkungs_echo'].set(true);
     kopieren();
     expect(component.dankeSichtbar).toBeFalse();
 
@@ -113,7 +113,7 @@ describe('KartenAktionenComponent - Danke an die Autorin', () => {
   });
 
   it('sagt nach dem Klick, dass das Danke angekommen ist, und schickt nur die ID', () => {
-    schalter['danke_knopf'].set(true);
+    schalter['wirkungs_echo'].set(true);
     usage.dankeSagen.and.returnValue(of<DankeErgebnis>('gezaehlt'));
     kopieren();
 
@@ -129,7 +129,7 @@ describe('KartenAktionenComponent - Danke an die Autorin', () => {
   });
 
   it('nicht gezaehlt: nur die Regel nennen, nichts ueber die Person behaupten, kein zweites Senden', () => {
-    schalter['danke_knopf'].set(true);
+    schalter['wirkungs_echo'].set(true);
     usage.dankeSagen.and.returnValue(of<DankeErgebnis>('nicht_gezaehlt'));
     kopieren();
 
@@ -144,7 +144,7 @@ describe('KartenAktionenComponent - Danke an die Autorin', () => {
   });
 
   it('der Fokus bleibt nach dem Danke auf dem Knopf', () => {
-    schalter['danke_knopf'].set(true);
+    schalter['wirkungs_echo'].set(true);
     usage.dankeSagen.and.returnValue(of<DankeErgebnis>('gezaehlt'));
     kopieren();
     document.body.appendChild(fixture.nativeElement);
@@ -158,7 +158,7 @@ describe('KartenAktionenComponent - Danke an die Autorin', () => {
   });
 
   it('bei einem Fehler bleibt der Knopf zum erneuten Versuch', () => {
-    schalter['danke_knopf'].set(true);
+    schalter['wirkungs_echo'].set(true);
     usage.dankeSagen.and.returnValue(of<DankeErgebnis>('fehler'));
     kopieren();
 
@@ -170,7 +170,7 @@ describe('KartenAktionenComponent - Danke an die Autorin', () => {
   });
 
   it('während des Sendens gesperrt, ein Doppeltipp schickt nur einmal', () => {
-    schalter['danke_knopf'].set(true);
+    schalter['wirkungs_echo'].set(true);
     const antwort = new Subject<DankeErgebnis>();
     usage.dankeSagen.and.returnValue(antwort.asObservable());
     kopieren();
