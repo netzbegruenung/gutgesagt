@@ -266,6 +266,20 @@ describe('DatenschutzComponent', () => {
       expect(text).not.toContain('ohne Anmeldung aus deiner IP-Adresse');
     });
 
+    it('Verwendung: Deckel-Plätze ohne Schlüssel, verworfen nach Mitternacht, über Neustart erhalten (Jura 27.11.)', () => {
+      const text = abschnitt('Verwendung von Beiträgen');
+
+      expect(text).toContain(
+        'Auch wer die gespeicherten Daten hat, kann deshalb einen solchen Prüfwert weder auf dich noch auf den ' +
+          'Beitrag zurückführen. Für den Deckel ohne Anmeldung merken wir uns zusätzlich bis zu drei Plätze je ' +
+          'Beitrag und Tag; sie bestehen nur aus Beitrag, Tag und Platznummer und sagen nichts darüber, wer kopiert ' +
+          'hat. Nach Mitternacht (UTC) verwirft der Server alle Prüfwerte und Plätze des Vortags. Startet er am ' +
+          'selben Tag neu, passen die Prüfwerte nicht mehr und eine weitere Kopie zählt noch einmal; belegte Plätze ' +
+          'bleiben belegt.',
+      );
+      expect(text).not.toContain('startet er neu, passt keiner mehr');
+    });
+
     it('Verwendung: Kopien durch Startkonten zählen nicht', () => {
       expect(abschnitt('Verwendung von Beiträgen')).toContain('(Startkonten), zählen wir gar nicht');
     });
