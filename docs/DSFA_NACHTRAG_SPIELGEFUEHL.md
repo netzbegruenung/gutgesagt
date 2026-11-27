@@ -4,14 +4,16 @@
 > Herkunft: Jura-Entwurf vom 27.11.2026, Teil A, inhaltlich unverändert übernommen.
 > Einschübe in eckigen Klammern [Prüfvermerk …] sind nachträglich ergänzt und verweisen auf
 > die Prüfvermerke am Code am Ende. Mit ❔ markierte Stellen sind **offen** und brauchen den
-> Rat der Datenschutzbeauftragten.
+> Rat der Datenschutzbeauftragten; wo ein Prüfvermerk eine ❔-Frage am Code beantwortet,
+> steht das in der Klammer dahinter.
 
 Ergänzt [`docs/DSFA.md`](./DSFA.md) um die Daten, die mit dem Spielgefühl-Modell und den
-Wirkungs-Funktionen dazukommen. Die Nummern sind die der Verarbeitungen in `docs/DSFA.md`
-und im Verzeichnis ([`docs/VERARBEITUNGSVERZEICHNIS.md`](./VERARBEITUNGSVERZEICHNIS.md)):
-V9a, V10 und V21 stehen dort schon, V23 kommt mit dem DSFA-Stand vom 25.11. (#780), der
-bei V27 endet; V28 bis V31 sind neu und dort noch **offen**, bis die DSFA sie als eigene
-Verarbeitungen beschreibt. Eine Zeile je Datum: Risiko · Maßnahme · Restrisiko. Fundstellen auf `main` @
+Wirkungs-Funktionen dazukommen. Die Nummern sind die der Verarbeitungen in `docs/DSFA.md`:
+V9a, V10 und V21 stehen dort und im Verzeichnis
+([`docs/VERARBEITUNGSVERZEICHNIS.md`](./VERARBEITUNGSVERZEICHNIS.md)); V23 kommt mit dem
+DSFA-Stand vom 25.11. (#780, Zählung bis V27) in die DSFA, ins Verzeichnis noch nicht;
+V28 bis V31 sind neu und dort noch **offen**, bis die DSFA sie als eigene Verarbeitungen
+beschreibt. Eine Zeile je Datum: Risiko · Maßnahme · Restrisiko. Fundstellen auf `main` @
 `d3b3def7` (27.11.2026), `ss/` = `mvp/backend/semantic-search-service/app/`.
 
 Rahmen: alles Opt-in, Standard aus; Art.-9-Nähe, weil Nutzung auf politische Haltung schließen
@@ -46,7 +48,7 @@ Offen ❔: Mindestalter 16 für Stufe ≥2 (Art. 8, falls Mitglieder unter 16 di
 **Restrisiko gesamt:** kein hohes. Begründung: Jede Verarbeitung mit Profil- oder
 Vergleichscharakter hängt an einer gesonderten, widerrufbaren Einwilligung ohne Vorauswahl.
 Sichtbar wird nur, wer es wählt, auf Wunsch unter Zufallsnamen. Fristen sind kurz (7 bis 100
-Tage), Ereignisse ohne Konto tragen kein Besuchermerkmal, und kleine Zahlen sind gesperrt.
+Tage), Ereignisse ohne Konto tragen kein Besuchermerkmal [Prüfvermerk 3: gilt für den Deckel; der Tages-Prüfwert entsteht aus dem Merkmal und gilt bis zum Tageswechsel], und kleine Zahlen sind gesperrt.
 **Ausgenommen** und deshalb aus: teams_oeffentlich, merkliste, aufrufe_zaehlen. Für sie wäre
 ein hohes Restrisiko möglich, also gesonderte Prüfung und gegebenenfalls Konsultation der
 Aufsicht (Art. 36, bis 8 Wochen 📖) nach der BDK.
@@ -61,9 +63,11 @@ Aufsicht (Art. 36, bis 8 Wochen 📖) nach der BDK.
    (`ss/tests/unit/api/test_rangliste_api.py:215`) prüft beide Endpunkte ohne `X-User` auf
    401; den Fall `X-User: anonymous` deckt er nicht eigens ab. Davor sperrt schon das BFF:
    `/api/v1/rangliste` steht nicht in `EndpointPolicy.AllowAnonymous`
-   (`mvp/backend/BFF/Proxy/EndpointPolicy.cs`), ohne Anmeldung antwortet es 401
-   (`mvp/backend/BFF/Program.cs:537`). Andere Wege zur Rangliste gibt es nicht: Die übrigen
-   Aufrufer des Ranglisten-Dienstes nehmen nur Einträge zurück (Widerruf).
+   (`mvp/backend/BFF/Proxy/EndpointPolicy.cs:24`), ohne Anmeldung antwortet es 401
+   (`mvp/backend/BFF/Program.cs:537–540`). Andere Wege zur Rangliste gibt es nicht: Die übrigen
+   Aufrufer des Ranglisten-Dienstes nehmen nur Einträge zurück (Widerruf). Die Rangliste
+   selbst liefert der Dienst nur Teilnehmenden und erst ab `MIN_TEILNEHMENDE` = 10
+   (`ss/services/rangliste_service.py:104`, `ss/domain/rangliste.py:44`).
 2. **Zustimmungen als Merkmal der Muster-Prüfung (V30): auf `main` noch nicht gebaut.**
    Die Tabelle beschreibt den Stand ab Kennung `spielgefuehl-2026-11-27` mit eigenem
    Schalter. Auf `main` gibt es weder diese Kennung noch einen Schalter dafür; aktuell ist
@@ -74,11 +78,13 @@ Aufsicht (Art. 36, bis 8 Wochen 📖) nach der BDK.
    Erzeugen“). Bewertungen, also auch Stimmen (Zustimmung oder Ablehnung, GLOSSARY.md), rufen
    die Muster-Prüfung nirgends auf. Die Fristen der Zeile stimmen: Paar-Prüfwerte 7 Tage
    (`MUSTER_FENSTER_TAGE`, `ss/services/entdoppelung.py:49`), Hinweise höchstens 56 Tage
-   (`MUSTER_FRIST_TAGE`, `ss/services/muster_hinweise_service.py:53`).
+   (`MUSTER_FRIST_TAGE`, `ss/services/muster_hinweise_service.py:54`).
 3. **Nutzung ohne Anmeldung (V9a): bestätigt.** Ohne Anmeldung bildet der Zähl-Endpunkt den
    Tages-Prüfwert aus dem Besuchermerkmal (`ss/api/v1/usage.py:485`). Das Merkmal ist der
    Anschluss, bei IPv6 sein /64, unter einem HMAC mit einem Schlüssel, der je Tag zufällig
    entsteht und nur im Speicher liegt; die Adresse wird weder gespeichert noch geloggt
    (`ss/utils/besucher_pseudonym.py`, Kopf). Dazu kommt der Deckel je Beitrag und Tag
    (`deckel_pruefwerte`, `ss/api/v1/usage.py:488–490`; `punkte_nutzung_ohne_anmeldung_je_tag`
-   = 3 in `ss/core/config.py`).
+   = 3 in `ss/core/config.py:459`). Der Tages-Prüfwert liegt in der Tabelle `nutzung_heute`;
+   `pruefwerte_verwerfen_im_takt` verwirft die Zeilen nach jedem Tageswechsel
+   (`ss/services/entdoppelung.py:17–19`, `:190`).
