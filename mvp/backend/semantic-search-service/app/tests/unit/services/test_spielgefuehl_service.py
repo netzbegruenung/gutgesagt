@@ -480,3 +480,23 @@ def test_muster_im_neuen_modell_bei_lesefehler_nicht(spielgefuehl_ohne_datenbank
     settings = Settings(punkte_aktiv=True, spielgefuehl_buehne_aktiv=True)
 
     assert asyncio.run(_punkte_eingewilligt("kim", settings)) is False
+
+
+class TestQuestEinwilligungSeit:
+    """Juristische Vorgabe vom 27.11.: Quest-Punkte nur mit spielgefuehl_buehne und -28."""
+
+    SEIT = datetime(2026, 11, 28, 9, tzinfo=timezone.utc)
+
+    def test_mit_schalter_aus_der_tabelle(self, spielgefuehl_ohne_datenbank):
+        spielgefuehl_ohne_datenbank.quest_einwilligung_seit.return_value = self.SEIT
+        with patch.object(spielgefuehl_service, "buehne_aktiv", return_value=True):
+            assert spielgefuehl_service.quest_einwilligung_seit("kim-1") == self.SEIT
+        spielgefuehl_ohne_datenbank.quest_einwilligung_seit.assert_called_once_with(
+            "kim-1"
+        )
+
+    def test_ohne_schalter_keine_und_ohne_abfrage(self, spielgefuehl_ohne_datenbank):
+        spielgefuehl_ohne_datenbank.quest_einwilligung_seit.return_value = self.SEIT
+        with patch.object(spielgefuehl_service, "buehne_aktiv", return_value=False):
+            assert spielgefuehl_service.quest_einwilligung_seit("kim-1") is None
+        spielgefuehl_ohne_datenbank.quest_einwilligung_seit.assert_not_called()

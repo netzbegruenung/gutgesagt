@@ -791,10 +791,10 @@ Quest-Punkte (Team-Quests, switch `team_quests`) count only for accounts whose n
 (`SpielgefuehlRepository.quest_einwilligung_seit`: start of the uninterrupted run of `-28` answers
 above `aus`; a change between `fuer_mich` and `rangliste` does not interrupt it, `aus` does).
 `PunkteService` passes only those Beiträge to `TeamFortschrittService.quest_tage`, so a quest week
-before the consent is never credited afterwards. The check does not ask `spielgefuehl_buehne`:
-in the old model points follow the points consent, but Quest-Punkte still need a `-28` answer,
-which can only be given while the switch is effective. With `team_quests` off the consent is not
-read at all.
+before the consent is never credited afterwards. Quest-Punkte also need `spielgefuehl_buehne`
+to be effective (`spielgefuehl_service.quest_einwilligung_seit` returns None without it, legal
+requirement of 27.11.): only `-28` carries them, and the privacy policy names them only with that
+switch. With `team_quests` or `spielgefuehl_buehne` off the consent is not read at all.
 
 - `GET /api/v1/usage/users/me/spielgefuehl`: level (null = not asked yet), name choice,
   Ranglistenname, wording in button order (community first), one-time badge note; 200 with

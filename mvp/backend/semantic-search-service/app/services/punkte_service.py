@@ -21,9 +21,10 @@ Woher die drei Stufen kommen:
   erreichter Quest eines eigenen Teams mit deckender Einwilligung, wenn die Person in
   der Woche einen Beitrag gespeichert hat, der heute sichtbar und mindestens
   BEITRAG_WARTEZEIT alt ist; gezaehlt am Montag nach der Woche, je Tag gedeckelt. Nur
-  mit Schalter team_quests, sonst bleibt die Stufe 0. Nur mit der Einwilligung zum
-  Spielgefuehl-Wortlaut mit Quest-Punkten (spielgefuehl-2026-11-28, juristische Vorgabe
-  vom 27.11.), und es zaehlen nur Beitraege ab dieser Einwilligung: keine rueckwirkende
+  mit Schalter team_quests, sonst bleibt die Stufe 0. Nur mit Schalter
+  spielgefuehl_buehne und der Einwilligung zum Spielgefuehl-Wortlaut mit Quest-Punkten
+  (spielgefuehl-2026-11-28, juristische Vorgabe vom 27.11.), und es zaehlen nur
+  Beitraege ab dieser Einwilligung: keine rueckwirkende
   Gutschrift fuer Wochen davor (``quest_einwilligung_seit``).
 
 Ein Startkonto sammelt keine Punkte, ein Konto ohne geltende Einwilligung "Punkte

@@ -139,14 +139,19 @@ def punkte_eingewilligte(
     return get_punkte_einwilligung_repository().eingewilligte(liste)
 
 
-def quest_einwilligung_seit(user_id: str) -> Optional[datetime]:
+def quest_einwilligung_seit(
+    user_id: str, einstellungen: Optional[Settings] = None
+) -> Optional[datetime]:
     """
     Seit wann Quest-Punkte fuer die Kennung zaehlen duerfen: die Einwilligung zum
     Wortlaut mit Quest-Punkten (domain/spielgefuehl.py ``QUEST_WORTLAUT``) ab
-    ``fuer_mich``, ohne Unterbrechung bis heute; None ohne sie. Fragt den Schalter
-    ``spielgefuehl_buehne`` nicht: Ohne die Einwilligung zu ``-28`` gibt es keine
-    Quest-Punkte, auch nicht im bisherigen Modell. Synchron.
+    ``fuer_mich``, ohne Unterbrechung bis heute; None ohne sie. Nur mit wirksamem
+    Schalter ``spielgefuehl_buehne`` (juristische Vorgabe vom 27.11.): Nur ``-28``
+    traegt Quest-Punkte, und die Datenschutzerklaerung nennt sie nur mit dem Schalter;
+    ohne ihn wird die Tabelle nicht gefragt. Synchron.
     """
+    if not buehne_aktiv(einstellungen):
+        return None
     return _neues_repository().quest_einwilligung_seit(user_id)
 
 

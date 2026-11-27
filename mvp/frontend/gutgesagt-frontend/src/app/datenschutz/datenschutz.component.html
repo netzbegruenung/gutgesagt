@@ -233,8 +233,7 @@
         In Teams gibt es gemeinsame Wochenaufgaben (Quests). Am Team speichern wir je Woche nur
         Thema und Ziel der Quest, ohne Namen. Ob das Team sie schafft, berechnen wir bei jedem
         Abruf aus der Mitwirkung der Mitglieder; die Mitglieder sehen nur die Summe des Teams, und
-        erst ab fünf Mitgliedern. Hast du Punkte eingeschaltet, bringen dir erfüllte Quests auch
-        Punkte.
+        erst ab fünf Mitgliedern.<!-- Quest-Punkte nur mit spielgefuehl_buehne und Wortlaut -28, juristische Vorgabe vom 27.11. --><span *ngIf="spielgefuehlBuehne()" data-testid="dse-quest-punkte"> Hast du beim Spielgefühl ‚Nur für mich‘ oder ‚In der Saison-Rangliste mitspielen‘ gewählt und dabei auch den Quest-Punkten zugestimmt, bringen dir erfüllte Quests auch Punkte, für Beiträge, die du ab dieser Zustimmung speicherst.</span>
       </p>
       <p>
         <strong>Zweck:</strong> dir zu zeigen, in welchen Teams du dabei bist, und die Nummer in
@@ -837,12 +836,12 @@
         fremden Beitrags, höchstens drei am Tag; die Richtung der Bewertung zählt nicht. Die
         meisten gibt es dafür, dass andere deine Beiträge
         nutzen (gezählt wie oben unter „Verwendung von Beiträgen“: höchstens einmal je
-        Person, Beitrag und Tag) und ihnen zustimmen. Kopiert oder nutzt jemand ohne
+        Person, Beitrag und Tag) und ihnen zustimmen.<!-- Quest-Punkte, juristische Vorgabe vom 27.11. --><span *ngIf="teamQuests() && spielgefuehlBuehne()" data-testid="dse-punkte-quests"> Bist du in einem Team und hast beim Spielgefühl auch den Quest-Punkten zugestimmt, bekommst du Punkte für jede Quest deines Teams, die in einer Woche erfüllt ist, in der du ab deiner Zustimmung selbst einen Beitrag gespeichert hast (siehe ‚Teams‘).</span> Kopiert oder nutzt jemand ohne
         Anmeldung deinen Beitrag, zählen wir das für deine Punkte höchstens dreimal je
         Beitrag und Tag; wer das war, wissen und speichern wir nicht. Deinen Punktestand
         <strong>siehst nur du</strong><ng-container *ngIf="rangliste()">, außer du spielst in der
         Rangliste mit; dann sehen ihn auch die anderen Mitspielenden (siehe unten)</ng-container>. Wir speichern ihn nicht, sondern berechnen ihn bei
-        jedem Abruf aus deinen sichtbaren Beiträgen und den Zählern daran. Eigene Kopien und
+        jedem Abruf aus deinen sichtbaren Beiträgen und den Zählern daran<ng-container *ngIf="teamQuests() && spielgefuehlBuehne()"> und aus den Wochensummen deiner Teams</ng-container>. Eigene Kopien und
         Stimmen zählen nicht, ebenso wenig Kopien und Stimmen der Startkonten; ein Startkonto
         sammelt selbst keine Punkte.
       </p>
