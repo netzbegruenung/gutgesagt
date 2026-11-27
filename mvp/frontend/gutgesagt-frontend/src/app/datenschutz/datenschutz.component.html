@@ -644,14 +644,21 @@
       </p>
       <p>
         Um die erste Kopie zu erkennen, speichern wir <strong>bis zum Ende des Tages einen
-        Prüfwert</strong>: einen Kurzwert, berechnet aus deiner Kennung (ohne Anmeldung aus
-        deiner IP-Adresse, bei IPv6 nur ihrem vorderen Teil, wie bei den Suchvorgängen), dem
-        Beitrag und dem Datum. Der Server bildet ihn
+        Prüfwert</strong>: einen Kurzwert, berechnet aus deiner Kennung, dem Beitrag und dem
+        Datum. Der Server bildet ihn
         mit einem geheimen Schlüssel, den er <strong>jeden Tag neu zufällig erzeugt, nur im
         Arbeitsspeicher hält und nirgends speichert</strong>. Auch wer die gespeicherten Daten
         hat, kann deshalb einen Prüfwert weder auf dich noch auf den Beitrag zurückführen.
         Nach Mitternacht (UTC) verwirft der Server die Prüfwerte des Vortags; startet er neu,
-        passt keiner mehr, und eine weitere Kopie am selben Tag zählt noch einmal. Kopien
+        passt keiner mehr, und eine weitere Kopie am selben Tag zählt noch einmal.
+        <!-- Jura 27.11. (vorläufig), ersetzt die Klammer „ohne Anmeldung aus deiner IP-Adresse“;
+             Prüfwert aus Anschluss und Tagesschlüssel (utils/besucher_pseudonym.py,
+             services/entdoppelung.py), Deckel aus #857 (deckel_pruefwerte) -->
+        <span data-testid="dse-entdoppelung-ohne-anmeldung">Ohne Anmeldung erkennen wir dich dabei
+        nur für einen Tag an deinem Anschluss: Daraus bilden wir mit einem täglich wechselnden
+        Schlüssel einen Prüfwert, den wir nach dem Tageswechsel verwerfen; deine Adresse speichern
+        wir nicht. So zählt ohne Anmeldung höchstens eine erste Kopie je Anschluss, Beitrag und Tag,
+        und insgesamt höchstens drei je Beitrag und Tag, egal von wem.</span> Kopien
         angemeldeter Konten ohne Einwilligung (siehe „Rückschlüsse auf deine politische
         Haltung“) bekommen keinen Prüfwert. Sie zählen deshalb nur bei allen Kopien des
         Beitrags mit, nicht für „Diese Woche oft genutzt“ und nicht für Punkte.

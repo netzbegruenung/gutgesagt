@@ -253,6 +253,19 @@ describe('DatenschutzComponent', () => {
       expect(text).toContain('Prüfwerte bleiben nur bis zum Ende ihres Tages');
     });
 
+    it('Verwendung: ohne Anmeldung Prüfwert aus dem Anschluss für einen Tag, Deckel drei je Beitrag (Jura 27.11.)', () => {
+      const text = abschnitt('Verwendung von Beiträgen');
+
+      expect(text).toContain(
+        'Ohne Anmeldung erkennen wir dich dabei nur für einen Tag an deinem Anschluss: Daraus bilden wir mit einem ' +
+          'täglich wechselnden Schlüssel einen Prüfwert, den wir nach dem Tageswechsel verwerfen; deine Adresse ' +
+          'speichern wir nicht. So zählt ohne Anmeldung höchstens eine erste Kopie je Anschluss, Beitrag und Tag, und ' +
+          'insgesamt höchstens drei je Beitrag und Tag, egal von wem.',
+      );
+      expect(text).toContain('berechnet aus deiner Kennung, dem Beitrag und dem Datum.');
+      expect(text).not.toContain('ohne Anmeldung aus deiner IP-Adresse');
+    });
+
     it('Verwendung: Kopien durch Startkonten zählen nicht', () => {
       expect(abschnitt('Verwendung von Beiträgen')).toContain('(Startkonten), zählen wir gar nicht');
     });
@@ -1075,7 +1088,7 @@ describe('DatenschutzComponent: Spielgefühl', () => {
     const punkte = abschnittIn(seite, 'Punkte');
 
     expect(seite.querySelector('#spielgefuehl')).not.toBeNull();
-    expect(punkte).toContain('Spielgefühl. Beim Spielgefühl wählst du selbst, ob und wie du mitspielst:');
+    expect(punkte).toContain('Spielgefühl. Du wählst selbst, ob und wie du mitspielst:');
     expect(punkte).not.toContain('in drei Stufen');
     expect(punkte).toContain('also deinem Anzeigenamen oder einem zufällig vergebenen Ranglistennamen');
     expect(punkte).toContain('Abzeichen zeigen wir nirgends sonst');

@@ -13,11 +13,12 @@ export const DSE_SPIELGEFUEHL_TITEL = 'Spielgefühl.';
 
 /**
  * Der Absatz als Einleitung und Liste der angebotenen Stufen (Jura zum Gamification-Gegencheck,
- * 26.11.; Einleitung nach der Sammelrunde 27.11.): Der Listenpunkt zur Stufe Rangliste steht nur,
+ * 26.11.; Einleitung nach der Sammelrunde 27.11., ohne doppeltes „Spielgefühl“ hinter dem
+ * fett gesetzten Titel im Fließtext): Der Listenpunkt zur Stufe Rangliste steht nur,
  * solange der Schalter `rangliste` wirksam an ist, sonst nach der Liste der Satz
  * DSE_SPIELGEFUEHL_OHNE_RANGLISTE. Danach DSE_SPIELGEFUEHL_SCHLUSS.
  */
-export const DSE_SPIELGEFUEHL_EINLEITUNG = 'Beim Spielgefühl wählst du selbst, ob und wie du mitspielst:';
+export const DSE_SPIELGEFUEHL_EINLEITUNG = 'Du wählst selbst, ob und wie du mitspielst:';
 
 export const DSE_SPIELGEFUEHL_AUS = '‚Aus‘: Wir berechnen nichts.';
 
