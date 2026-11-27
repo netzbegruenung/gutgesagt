@@ -26,7 +26,8 @@ from tests.integration.test_loeschkommando import _loeschen, datenbank  # noqa: 
 pytestmark = pytest.mark.integration
 
 AN = Settings(teams_aktiv=True, team_quests_aktiv=True)
-AUS = Settings(teams_aktiv=True)
+# Paket Teams aus: kein Team-Fortschritt, keine Quests (Schalter-Umbau 27.11.)
+AUS = Settings(team_quests_aktiv=True)
 HEUTE = date(2026, 11, 25)
 LAUFENDE = date(2026, 11, 23)
 VORIGE = date(2026, 11, 16)
