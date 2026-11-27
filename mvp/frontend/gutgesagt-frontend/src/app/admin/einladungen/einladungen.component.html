@@ -62,7 +62,7 @@
           <mat-hint>Pflicht mit Teamname: die laufende Saison, etwa „Winter 26/27“. Anlässe wie die BDK sind Teams darin.</mat-hint>
         </mat-form-field>
         <p *ngIf="teamNameUngueltig || teamSaisonUngueltig" class="warnung team-fehler" role="alert">
-          Teamname und Saison dürfen nicht leer sein und keine der Zeichen &lt; &gt; &amp; " \ / enthalten.
+          Teamname und Saison dürfen nicht leer sein; der Teamname darf keine der Zeichen &lt; &gt; &amp; " \ / enthalten.
         </p>
         <p *ngIf="teamZustimmungFehlt" class="warnung team-fehler" role="alert" data-testid="team-zustimmung-fehlt">
           Bei einem Team nach Gruppe ist das Datum der schriftlichen Zustimmung Pflicht, höchstens heute.
@@ -89,7 +89,7 @@
         Einladung anlegen
       </button>
     </form>
-    <p *ngIf="anlegenFehler" class="warnung" role="alert">Die Einladung konnte nicht angelegt werden.</p>
+    <p *ngIf="anlegenFehler" class="warnung" role="alert">Die Einladung konnte nicht angelegt werden.<ng-container *ngIf="anlegenFehlerText"> {{ anlegenFehlerText }}</ng-container></p>
 
     <app-nachlade-hinweis [fehler]="fehler" [geladen]="einladungen !== null" was="Einladungen"></app-nachlade-hinweis>
     <p *ngIf="schaltenFehler" class="warnung" role="alert">Die Einladung konnte nicht umgeschaltet werden.</p>

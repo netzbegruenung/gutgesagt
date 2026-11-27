@@ -31,7 +31,13 @@ from services.einstellungen_service import (
     UngueltigerWert,
     wert_bereinigen,
 )
-from services.team_service import OeffentlichAus, Team, TeamService, TeamsAus
+from services.team_service import (
+    OeffentlichAus,
+    SaisonUnbekannt,
+    Team,
+    TeamService,
+    TeamsAus,
+)
 from utils.utc_tag import heute_utc
 
 pytestmark = pytest.mark.unit
@@ -402,3 +408,43 @@ class TestEinstellungen:
         service = EinstellungenService(lesen=kaputt, setzen=Mock())
 
         assert service.wert("aktuelle_saison")
+
+
+class TestTeamFestlegen:
+    """Befund 6: Ein Teamlink verweist auf die Saison per ID, wenn es sie gibt."""
+
+    from domain.saisons import Saison as _Saison
+
+    WINTER = _Saison(
+        uuid.uuid4(), "Winter 26/27", date(2026, 11, 27), date(2027, 2, 24), 5
+    )
+
+    def _dienst(self, saisons):
+        return TeamService(
+            Mock(),
+            saison=lambda: "2026",
+            vorschlag=lambda: "Winter 26/27",
+            saisons=lambda: saisons,
+        )
+
+    def test_vorhandene_saison_bekommt_ihre_id(self):
+        team = self._dienst([self.WINTER]).team_festlegen(
+            "BDK", "vogel", "Winter 26/27"
+        )
+        assert (team.saison, team.saison_id) == ("Winter 26/27", self.WINTER.id)
+
+    def test_ohne_angabe_der_vorschlag_mit_id(self):
+        team = self._dienst([self.WINTER]).team_festlegen("BDK", "vogel", None)
+        assert team.saison_id == self.WINTER.id
+
+    def test_unbekannte_saison_bei_vorhandenen_saisons(self):
+        with pytest.raises(SaisonUnbekannt):
+            self._dienst([self.WINTER]).team_festlegen("BDK", "vogel", "2026")
+
+    def test_ohne_saisons_gilt_der_name_wie_bisher(self):
+        team = self._dienst([]).team_festlegen("BDK", "vogel", "2026")
+        assert (team.saison, team.saison_id) == ("2026", None)
+
+    def test_id_zaehlt_nicht_zur_identitaet(self):
+        mit = self._dienst([self.WINTER]).team_festlegen("BDK", "vogel", "Winter 26/27")
+        assert mit == Team("BDK", "vogel", "Winter 26/27")

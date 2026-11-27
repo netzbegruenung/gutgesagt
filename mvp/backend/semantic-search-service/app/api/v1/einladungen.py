@@ -55,7 +55,7 @@ from services.einladung_service import (
     KontoAnlegenFehlgeschlagen,
     EinloesenNichtEingerichtet,
 )
-from services.team_service import Team, TeamsAus
+from services.team_service import SaisonUnbekannt, Team, TeamService, TeamsAus
 from utils.client_identity import derive_client_key
 from utils.rate_limiter import (
     einladung_pruefen_rate_limiter,
@@ -85,6 +85,10 @@ NAME_VERBOTEN = re.compile(r'[<>&"\v$%!#?§;*~/\\|^=\[\]{}()@\x00-\x1f\x7f]')
 # Teamname und Saison stehen an Namen und in Pillen: keine Steuerzeichen, kein
 # Markup, keine Schraegstriche.
 TEAM_VERBOTEN = re.compile(r'[<>&"\\/\x00-\x1f\x7f]')
+SAISON_STEUERZEICHEN = re.compile(r"[\x00-\x1f\x7f]")
+SAISON_UNBEKANNT = (
+    "Diese Saison gibt es nicht. Lege sie unter Saisons an oder wähle eine vorhandene."
+)
 
 
 def _team_text(wert: Optional[str], feld: str) -> Optional[str]:
@@ -121,7 +125,17 @@ class TeamFelder(BaseModel):
     @field_validator("team_saison")
     @classmethod
     def _team_saison(cls, wert: Optional[str]) -> Optional[str]:
-        return _team_text(wert, "Die Saison")
+        # Nur Steuerzeichen nicht: Ein Saisonname wie "Winter 26/27" ist erlaubt, wie
+        # beim Anlegen der Saison (domain/saisons.py name_bereinigen). Ob es die
+        # Saison gibt, prueft TeamService.team_festlegen (Befund 6).
+        if wert is None:
+            return None
+        if SAISON_STEUERZEICHEN.search(wert):
+            raise ValueError("Die Saison enthaelt ein Zeichen, das nicht geht")
+        wert = " ".join(wert.split())
+        if not wert:
+            raise ValueError("Die Saison darf nicht leer sein")
+        return wert
 
     @field_validator("team_motiv")
     @classmethod
@@ -160,17 +174,23 @@ class TeamFelder(BaseModel):
             raise ValueError("Ein Datum der Zustimmung nur bei einem Team nach Gruppe")
         return self
 
-    def team(self, saison_vorschlag: str) -> Optional[Team]:
-        """Ohne Saison gilt der Vorschlag (laufende oder naechste geplante Saison)."""
+    def team(self, teams: TeamService) -> Optional[Team]:
+        """
+        Ohne Saison gilt der Vorschlag (laufende oder naechste geplante Saison). Eine
+        Saison, die es nicht gibt, obwohl es Saisons gibt, ergibt 422 (Befund 6).
+        """
         if self.team_name is None:
             return None
-        return Team(
-            self.team_name,
-            self.team_motiv,
-            self.team_saison or saison_vorschlag,
-            art=self.team_art or TEAM_ART_ANLASS,
-            zustimmung_am=self.team_zustimmung_am,
-        )
+        try:
+            return teams.team_festlegen(
+                self.team_name,
+                self.team_motiv,
+                self.team_saison,
+                art=self.team_art or TEAM_ART_ANLASS,
+                zustimmung_am=self.team_zustimmung_am,
+            )
+        except SaisonUnbekannt:
+            raise HTTPException(status_code=422, detail=SAISON_UNBEKANNT)
 
 
 class EinladungAnlegenRequest(TeamFelder):
@@ -486,7 +506,7 @@ async def einladung_anlegen(
 ):
     team = None
     if service.teams_wirksam:
-        team = request.team(service.teams.saison_vorschlag())
+        team = request.team(service.teams)
     einladung = service.anlegen(
         request.notiz, request.erlaubte_einloesungen, request.gueltig_bis, team=team
     )
@@ -503,7 +523,7 @@ async def einladung_schalten(
     """Abschalten oder wieder einschalten und/oder das Team setzen; der Zaehler bleibt."""
     team = UNVERAENDERT
     if "team_name" in request.model_fields_set and service.teams_wirksam:
-        team = request.team(service.teams.saison_vorschlag())
+        team = request.team(service.teams)
     einladung = service.aendern(
         einladung_id, abgeschaltet=request.abgeschaltet, team=team
     )
