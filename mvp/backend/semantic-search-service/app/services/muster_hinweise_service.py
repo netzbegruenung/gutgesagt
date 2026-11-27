@@ -33,6 +33,12 @@ Spielgefuehl-Wortlaut mit Zustimmungen eingewilligt haben (domain/spielgefuehl.p
 ``STIMMEN_WORTLAUT``, geprueft in api/v1/voting.py); das Admin-Dashboard prueft das
 beim Zeigen erneut. Keine Wirkung auf Punkte oder Rangliste.
 
+Abgleich mit der Einwilligung (Art. 17, Bedingung Jura zu #863): Derselbe Lauf loescht
+alle Hinweise, bei denen nicht mehr beide Konten wirksam eingewilligt haben
+(``ohne_einwilligung_loeschen``), der Abruf des Admin-Dashboards nebenbei die, die er
+liest. So geht ein Hinweis, der waehrend eines Widerrufs entstand, spaetestens nach
+einem Lauf.
+
 Widerruf: Das Admin-Dashboard zeigt nur Hinweise, deren beide Konten aktuell
 eingewilligt haben (``hinweise(eingewilligte)``, api/v1/metrics.py). Ein Widerruf
 ("Punkte und Meilensteine" Nein, Spielgefuehl ``aus``) loescht ausserdem die Hinweise,
@@ -42,7 +48,7 @@ loeschen (Schluessel nur im Speicher) und gehen nach MUSTER_FENSTER_TAGE von sel
 
 import asyncio
 from datetime import date, datetime, timedelta, timezone
-from typing import Callable, Iterable, List, Optional, Set
+from typing import Callable, Iterable, List, Optional, Sequence, Set, Tuple
 
 from core.logging import get_logger
 from repositories.muster_hinweis_repository import (
@@ -73,9 +79,25 @@ VORRAT_FAKTOR = 3
 LOESCH_TAKT_SEKUNDEN = 24 * 60 * 60
 
 
+Einwilligung = Callable[[Iterable[str]], Set[str]]
+"""Kennungen -> die davon, die aktuell wirksam eingewilligt haben (eine Abfrage)."""
+
+
 class MusterHinweiseService:
-    def __init__(self, repository: MusterHinweisRepository):
+    def __init__(
+        self,
+        repository: MusterHinweisRepository,
+        eingewilligte: Optional[Einwilligung] = None,
+        stimmen_eingewilligte: Optional[Einwilligung] = None,
+    ):
+        """
+        ``eingewilligte`` und ``stimmen_eingewilligte``: die Bedingungen fuer Hinweise
+        aus Nutzungen bzw. Zustimmungen, fuer den Abgleich im Loeschlauf
+        (``ohne_einwilligung_loeschen``). Ohne sie gleicht der Lauf nichts ab.
+        """
         self._repository = repository
+        self._eingewilligte = eingewilligte
+        self._stimmen_eingewilligte = stimmen_eingewilligte
 
     def nutzung_melden(
         self,
@@ -155,14 +177,65 @@ class MusterHinweiseService:
                 {k for h in zustimmungen for k in (h.konto_a, h.konto_b)}
             )
 
-        def gezeigt(h: MusterHinweis) -> bool:
-            if h.konto_a not in mit or h.konto_b not in mit:
-                return False
-            if h.art == ZUSTIMMUNG:
-                return h.konto_a in stimmen_mit and h.konto_b in stimmen_mit
-            return True
+        def beide(h: MusterHinweis, menge: Set[str]) -> bool:
+            return h.konto_a in menge and h.konto_b in menge
 
+        def gezeigt(h: MusterHinweis) -> bool:
+            if not beide(h, mit):
+                return False
+            return beide(h, stimmen_mit) if h.art == ZUSTIMMUNG else True
+
+        # Nebenbei aufraeumen (Art. 17): Hinweise, deren eigene Bedingung nicht mehr
+        # erfuellt ist, wie im Loeschlauf. Zustimmungen nur mit ihrem Filter; ohne
+        # Schalter bleiben sie bis zum Lauf stehen.
+        weg = [
+            h
+            for h in hinweise
+            if (h.art == NUTZUNG and not beide(h, mit))
+            or (
+                h.art == ZUSTIMMUNG
+                and stimmen_eingewilligte is not None
+                and not beide(h, stimmen_mit)
+            )
+        ]
+        if weg:
+            self._loeschen([(h.konto_a, h.konto_b, h.art) for h in weg])
         return [h for h in hinweise if gezeigt(h)][:ANZAHL]
+
+    def ohne_einwilligung_loeschen(self) -> int:
+        """
+        Alle Hinweise loeschen, bei denen nicht mehr beide Konten wirksam eingewilligt
+        haben (Art. 17 DSGVO; Bedingung Jura zu #863): Nutzungen nach
+        ``eingewilligte``, Zustimmungen nach ``stimmen_eingewilligte`` (Wortlaut -27
+        ab "Nur fuer mich" und Art.-9-Einwilligung). So geht auch ein Hinweis, der
+        waehrend eines Widerrufs entstand, spaetestens nach einem Lauf. Liefert die
+        Anzahl.
+        """
+        if self._eingewilligte is None or self._stimmen_eingewilligte is None:
+            return 0
+        paare = self._repository.paare()
+        weg: List[Tuple[str, str, str]] = []
+        for art, bedingung in (
+            (NUTZUNG, self._eingewilligte),
+            (ZUSTIMMUNG, self._stimmen_eingewilligte),
+        ):
+            dieser_art = [p for p in paare if p[2] == art]
+            if not dieser_art:
+                continue
+            mit = bedingung({k for a, b, _ in dieser_art for k in (a, b)})
+            weg += [p for p in dieser_art if p[0] not in mit or p[1] not in mit]
+        if weg:
+            self._repository.loeschen_paare(weg)
+        return len(weg)
+
+    def _loeschen(self, paare: Sequence[Tuple[str, str, str]]) -> None:
+        try:
+            self._repository.loeschen_paare(paare)
+        except Exception as e:
+            logger.error(
+                f"Pattern notes without consent not deleted: {type(e).__name__}",
+                exc_info=True,
+            )
 
     def vergessen(self, user_id: str, art: Optional[str] = None) -> None:
         """
@@ -186,6 +259,15 @@ class MusterHinweiseService:
             f"Discarded {paare} pair check values past the window, "
             f"deleted {geloescht} pattern notes past their Loeschfrist"
         )
+        # Eigener Versuch: Scheitert der Abgleich, gelten die Fristen trotzdem.
+        try:
+            ohne = self.ohne_einwilligung_loeschen()
+            logger.info(f"Deleted {ohne} pattern notes without consent of both")
+        except Exception as e:
+            logger.error(
+                f"Error deleting pattern notes without consent: {type(e).__name__}",
+                exc_info=True,
+            )
 
 
 def _fenster_ab(tag: date) -> date:

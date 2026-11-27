@@ -232,3 +232,47 @@ class TestZustimmungen:
         dienst.vergessen("kim-1", art=ZUSTIMMUNG)
 
         assert [h.art for h in dienst.hinweise()] == [NUTZUNG]
+
+
+class TestAbgleichMitDerEinwilligung:
+    """Bedingung Jura zu #863: Der Lauf loescht Hinweise ohne Einwilligung beider."""
+
+    def test_lauf_loescht_je_art_nach_eigener_bedingung(self, datenbank):  # noqa: F811
+        repository = MusterHinweisRepository(datenbank)
+        melden = MusterHinweiseService(repository)
+        for a, b in [("kim-1", "bo-2"), ("ali-3", "bo-2")]:
+            for art in (melden.nutzung_melden, melden.zustimmung_melden):
+                art(a, b, _um(MONTAG))
+                art(b, a, _um(MONTAG))
+        assert len(repository.paare()) == 4
+        # kim-1 hat waehrend einer Meldung widerrufen: weder Punkte noch -27
+        dienst = MusterHinweiseService(
+            repository,
+            eingewilligte=lambda ks: set(ks) - {"kim-1"},
+            stimmen_eingewilligte=lambda ks: set(ks) - {"kim-1"},
+        )
+
+        dienst.fristen_anwenden(MONTAG)
+
+        assert sorted(repository.paare()) == [
+            ("ali-3", "bo-2", NUTZUNG),
+            ("ali-3", "bo-2", ZUSTIMMUNG),
+        ]
+
+    def test_loeschen_paare_in_stuecken(self, datenbank, monkeypatch):  # noqa: F811
+        import repositories.muster_hinweis_repository as modul
+
+        monkeypatch.setattr(modul, "LOESCH_STUECK", 2)
+        repository = MusterHinweisRepository(datenbank)
+        melden = MusterHinweiseService(repository)
+        for i in range(5):
+            _gegenseitig_paar(melden, f"a-{i}", f"b-{i}")
+
+        assert repository.loeschen_paare(repository.paare()[:4]) == 4
+        assert len(repository.paare()) == 1
+        assert repository.loeschen_paare([]) == 0
+
+
+def _gegenseitig_paar(dienst, a, b):
+    dienst.nutzung_melden(a, b, _um(MONTAG))
+    dienst.nutzung_melden(b, a, _um(MONTAG))

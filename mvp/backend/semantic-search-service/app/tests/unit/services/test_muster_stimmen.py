@@ -306,6 +306,118 @@ class TestMusterHinweiseService:
         repository.vergessen.assert_called_once_with("kim-1", art=ZUSTIMMUNG)
 
 
+class TestAbgleichImLoeschlauf:
+    """
+    Bedingung Jura zu #863 (Art. 17): Der Loeschlauf loescht alle Hinweise, bei denen
+    nicht mehr beide Konten wirksam eingewilligt haben, auch einen, der waehrend
+    eines Widerrufs entstand.
+    """
+
+    PAARE = [
+        ("bo-2", "kim-1", NUTZUNG),
+        ("ali-3", "kim-1", NUTZUNG),
+        ("bo-2", "kim-1", ZUSTIMMUNG),
+        ("ali-3", "bo-2", ZUSTIMMUNG),
+    ]
+
+    def _dienst(self, punkte, stimmen):
+        repository = Mock()
+        repository.paare.return_value = list(self.PAARE)
+        repository.paare_verwerfen_vor.return_value = 0
+        repository.loeschen_vor.return_value = 0
+        dienst = MusterHinweiseService(
+            repository,
+            eingewilligte=lambda ks: set(ks) & punkte,
+            stimmen_eingewilligte=lambda ks: set(ks) & stimmen,
+        )
+        return dienst, repository
+
+    def test_je_art_die_eigene_bedingung(self):
+        # ali-3: Punkte ja, aber nicht -27; kim-1 nach einem Widerruf ohne -27
+        dienst, repository = self._dienst(
+            punkte={"bo-2", "kim-1"}, stimmen={"bo-2", "ali-3"}
+        )
+
+        assert dienst.ohne_einwilligung_loeschen() == 2
+
+        repository.loeschen_paare.assert_called_once_with(
+            [("ali-3", "kim-1", NUTZUNG), ("bo-2", "kim-1", ZUSTIMMUNG)]
+        )
+
+    def test_alle_eingewilligt_nichts_geloescht(self):
+        alle = {"bo-2", "kim-1", "ali-3"}
+        dienst, repository = self._dienst(punkte=alle, stimmen=alle)
+
+        assert dienst.ohne_einwilligung_loeschen() == 0
+        repository.loeschen_paare.assert_not_called()
+
+    def test_ohne_bedingungen_kein_abgleich(self):
+        repository = Mock()
+
+        assert MusterHinweiseService(repository).ohne_einwilligung_loeschen() == 0
+        repository.paare.assert_not_called()
+
+    def test_der_taegliche_lauf_gleicht_ab(self):
+        dienst, repository = self._dienst(punkte=set(), stimmen=set())
+
+        dienst.fristen_anwenden(TAG)
+
+        assert len(repository.loeschen_paare.call_args.args[0]) == 4
+        repository.loeschen_vor.assert_called_once()
+
+    def test_fehler_im_abgleich_kostet_die_fristen_nicht(self):
+        dienst, repository = self._dienst(punkte=set(), stimmen=set())
+        repository.paare.side_effect = RuntimeError("weg")
+
+        dienst.fristen_anwenden(TAG)
+
+        repository.loeschen_vor.assert_called_once()
+        repository.paare_verwerfen_vor.assert_called_once()
+
+    def test_dashboard_raeumt_nebenbei_auf(self):
+        repository = Mock()
+        repository.hinweise.return_value = [
+            _hinweis(a, b, art) for a, b, art in self.PAARE
+        ]
+        alle = {"bo-2", "kim-1", "ali-3"}
+
+        hinweise = MusterHinweiseService(repository).hinweise(
+            lambda ks: set(ks) & {"bo-2", "kim-1"}, lambda ks: set(ks) & alle
+        )
+
+        assert hinweise == [
+            _hinweis("bo-2", "kim-1", NUTZUNG),
+            _hinweis("bo-2", "kim-1", ZUSTIMMUNG),
+        ]
+        # Geloescht nur, was die eigene Bedingung verfehlt: die Nutzung mit ali-3.
+        # Die Zustimmung ali-3/bo-2 bleibt (ihre Bedingung gilt), wird aber nicht
+        # gezeigt, weil ali-3 die Punkte-Einwilligung fehlt.
+        repository.loeschen_paare.assert_called_once_with([("ali-3", "kim-1", NUTZUNG)])
+
+    def test_dashboard_ohne_schalter_loescht_keine_zustimmungen(self):
+        repository = Mock()
+        repository.hinweise.return_value = [_hinweis("bo-2", "kim-1", ZUSTIMMUNG)]
+
+        MusterHinweiseService(repository).hinweise(lambda ks: set(ks))
+
+        repository.loeschen_paare.assert_not_called()
+
+    def test_fehler_beim_aufraeumen_kostet_das_dashboard_nicht(self):
+        repository = Mock()
+        repository.hinweise.return_value = [_hinweis("bo-2", "kim-1")]
+        repository.loeschen_paare.side_effect = RuntimeError("weg")
+
+        assert MusterHinweiseService(repository).hinweise(lambda ks: set()) == []
+
+    def test_produktion_hat_beide_bedingungen(self):
+        from dependencies import get_muster_hinweise_service
+
+        dienst = get_muster_hinweise_service()
+
+        assert dienst._eingewilligte is not None
+        assert dienst._stimmen_eingewilligte is not None
+
+
 # --- Abstimmen (api/v1/voting.py) ---------------------------------------------------
 
 BEITRAG = uuid.uuid4()

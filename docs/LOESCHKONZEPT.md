@@ -261,7 +261,7 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
 | Meldungen ohne Konto je Woche (`gepostet_ohne_konto_wochen`, #799) | keine | — nur die Zahl der Klicks je Woche, ohne Prüfwert, Beitrag oder Adresse; die Drosselung liegt nur im Arbeitsspeicher und vergisst nach einer Sekunde |
 | Ankünfte je Kampagnenwort und Tag (`ankuenfte_je_tag`) | 12 Monate (365 Tage) | der Tag (`tag`); gelöscht vom täglichen Task der Löschfristen. Nur Wort, Tag und Zahl, ohne Kennung, Konto, Adresse oder Beitrag; die Drosselung liegt nur im Arbeitsspeicher und vergisst nach einer Sekunde |
 | Wirkungs-Echo und Danke je Beitrag (`wirkung_je_beitrag`, #790, #791) | keine | — nur zwei Summen je Beitrag, ohne Kennung und Zeitpunkt; die Tages-Prüfwerte des Danke liegen in `nutzung_heute` und gehen mit ihnen nach dem Tageswechsel, die des Wirkungs-Echos nur im Arbeitsspeicher |
-| Muster-Hinweise (`muster_hinweise`) | 56 Tage (8 Wochen) | letzter Tag mit gegenseitiger Nutzung bzw. Zustimmung (`letzter_tag`, je Art eine Zeile); widerruft eine der beiden Personen den Zweck Zustimmungen oder die Art.-9-Einwilligung (die ihre Stimmen löscht), gehen die Hinweise der Art `zustimmung` sofort |
+| Muster-Hinweise (`muster_hinweise`) | 56 Tage (8 Wochen) | letzter Tag mit gegenseitiger Nutzung bzw. Zustimmung (`letzter_tag`, je Art eine Zeile); widerruft eine der beiden Personen den Zweck Zustimmungen oder die Art.-9-Einwilligung (die ihre Stimmen löscht), gehen die Hinweise der Art `zustimmung` sofort; haben nicht mehr beide Konten wirksam eingewilligt, löscht sie spätestens der nächste tägliche Lauf |
 | Löschaufträge (`loeschauftraege`), offen | keine | — sie sind Arbeit und bleiben, bis ein Admin den Löschablauf ausführt (Frist dafür: sieben Tage ab dem Widerruf, unter „Löschauftrag nach dem Widerruf“) |
 | Löschaufträge, erledigt | 365 Tage (entschieden 13.11.2026) | Ausführung (`erledigt_am`); mit dem Konto sofort (Schritt 2) |
 | Merkliste (`merkliste`, #758): gemerkter Beitrag und Zeitpunkt | solange die Person ihn gemerkt hat | — geht beim Entfernen aus der Merkliste, mit dem Konto (Schritt 2), beim Widerruf der Art.-9-Einwilligung und mit dem endgültig entfernten Beitrag; höchstens 500 Einträge je Person. Schaltet ein Admin den Schalter wieder aus, bleiben die Einträge, Entfernen bleibt für die Person offen |
@@ -348,7 +348,14 @@ bis zu 28 Tage weiter (unter „Was nicht gelöscht wird“).
   denen beide aktuell eingewilligt haben. Ihre Paar-Prüfwerte gehen erst mit der Frist von
   sieben Tagen (nicht per Kennung löschbar, siehe oben); ein neuer Hinweis entsteht trotzdem
   nicht, weil beim Erzeugen die Einwilligung beider Konten geprüft wird
-  (`api/v1/usage.py`, vor `nutzung_melden`). Wortgleich in der Datenschutzerklärung:
+  (`api/v1/usage.py`, vor `nutzung_melden`; bei Zustimmungen `api/v1/voting.py`). Entsteht ein
+  Hinweis doch genau während eines Widerrufs (Prüfung und Schreiben laufen getrennt), löscht
+  ihn der tägliche Lauf: Er löscht alle Hinweise, bei denen nicht mehr beide Konten wirksam
+  eingewilligt haben, Nutzungen nach der Einwilligung „Punkte und Meilensteine“ bzw. dem
+  Spielgefühl ab „Nur für mich“, Zustimmungen nach dem Wortlaut `spielgefuehl-2026-11-27` ab
+  „Nur für mich“ und der Art.-9-Einwilligung (`MusterHinweiseService.ohne_einwilligung_loeschen`,
+  Bedingung Jura zu #863, Art. 17 DSGVO); der Abruf des Admin-Dashboards räumt die Hinweise,
+  die er liest, nebenbei genauso auf. Wortgleich in der Datenschutzerklärung:
   „Die Prüfwerte, mit denen wir Muster erkennen, lassen sich keinem Konto zuordnen und verfallen nach sieben Tagen; nach deinem Widerruf werten wir sie für dich nicht mehr aus.“ Prüfwerte verwirft ein eigener
   Task (`services/entdoppelung.py`), Paar-Prüfwerte und Hinweise ein zweiter
   (`services/muster_hinweise_service.py`), beide unabhängig vom abschaltbaren Bereinigungsjob.

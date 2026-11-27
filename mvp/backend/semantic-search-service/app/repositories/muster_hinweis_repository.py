@@ -7,9 +7,9 @@ services/muster_hinweise_service.py.
 
 from dataclasses import dataclass
 from datetime import date
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Tuple
 
-from sqlalchemy import and_, delete, desc, exists, func, or_, select
+from sqlalchemy import and_, delete, desc, exists, func, or_, select, tuple_
 from sqlalchemy.dialects.postgresql import insert
 
 from infrastructure.database.connection import AppDatabase, get_app_database
@@ -20,6 +20,9 @@ NUTZUNG = "nutzung"
 
 ZUSTIMMUNG = "zustimmung"
 """Art eines Muster-Hinweises: Die Konten haben einander zugestimmt (muster_stimmen)."""
+
+LOESCH_STUECK = 500
+"""So viele Hinweise loescht ``loeschen_paare`` je Anweisung."""
 
 
 @dataclass(frozen=True)
@@ -140,6 +143,38 @@ class MusterHinweisRepository:
             bedingung = and_(bedingung, MusterHinweisZeile.art == art)
         with self.db.get_session() as session:
             return session.execute(delete(MusterHinweisZeile).where(bedingung)).rowcount
+
+    def paare(self) -> List[Tuple[str, str, str]]:
+        """Alle Hinweise als (konto_a, konto_b, art), fuer den Abgleich mit der Einwilligung."""
+        with self.db.get_session() as session:
+            return [
+                (z.konto_a, z.konto_b, z.art)
+                for z in session.execute(
+                    select(
+                        MusterHinweisZeile.konto_a,
+                        MusterHinweisZeile.konto_b,
+                        MusterHinweisZeile.art,
+                    )
+                )
+            ]
+
+    def loeschen_paare(self, paare: Sequence[Tuple[str, str, str]]) -> int:
+        """Genau diese Hinweise (konto_a, konto_b, art) loeschen; liefert die Anzahl."""
+        liste = list(paare)
+        geloescht = 0
+        with self.db.get_session() as session:
+            for ab in range(0, len(liste), LOESCH_STUECK):
+                stueck = liste[ab : ab + LOESCH_STUECK]
+                geloescht += session.execute(
+                    delete(MusterHinweisZeile).where(
+                        tuple_(
+                            MusterHinweisZeile.konto_a,
+                            MusterHinweisZeile.konto_b,
+                            MusterHinweisZeile.art,
+                        ).in_(stueck)
+                    )
+                ).rowcount
+        return geloescht
 
     def paare_verwerfen_vor(self, tag: date) -> int:
         """Paar-Pruefwerte, deren letzter Tag vor ``tag`` liegt, verwerfen."""

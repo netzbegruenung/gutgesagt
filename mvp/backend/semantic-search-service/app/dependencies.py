@@ -396,10 +396,31 @@ def get_meilensteine_service(
     )
 
 
+def _punkte_eingewilligte(kennungen):
+    from services.spielgefuehl_service import punkte_eingewilligte
+
+    return punkte_eingewilligte(kennungen)
+
+
+def _stimmen_eingewilligte(kennungen):
+    from services.spielgefuehl_service import stimmen_eingewilligte
+
+    return stimmen_eingewilligte(kennungen)
+
+
 def get_muster_hinweise_service() -> MusterHinweiseService:
+    """
+    Mit den Bedingungen fuer den Abgleich im Loeschlauf: Nutzungen wie im
+    Admin-Dashboard ("Punkte und Meilensteine" bzw. Spielgefuehl ab "Nur fuer mich"),
+    Zustimmungen Wortlaut -27 ab "Nur fuer mich" und Art.-9-Einwilligung.
+    """
     from repositories.muster_hinweis_repository import get_muster_hinweis_repository
 
-    return MusterHinweiseService(get_muster_hinweis_repository())
+    return MusterHinweiseService(
+        get_muster_hinweis_repository(),
+        eingewilligte=_punkte_eingewilligte,
+        stimmen_eingewilligte=_stimmen_eingewilligte,
+    )
 
 
 def _keycloak_konten() -> Optional[KeycloakKonten]:

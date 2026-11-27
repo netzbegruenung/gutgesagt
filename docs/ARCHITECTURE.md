@@ -773,7 +773,11 @@ key, same table `muster_pruefwerte`) only if both accounts' newest answer is `-2
 `fuer_mich` or above, checked on every report; mutual approvals within seven days give a
 Muster-Hinweis of kind `zustimmung` (column `art` of `muster_hinweise`), with the same 56-day
 retention. The admin dashboard shows those only while the switch is effective and both accounts
-still have `-27`. No effect on points or the Rangliste. An answer without the purpose after one
+still have `-27` and a valid Art. 9 consent. The daily retention run (`loeschen_im_takt`) also
+deletes every Muster-Hinweis whose two accounts no longer both consent (usage: points consent or
+Spielgefühl ≥ `fuer_mich`; approvals: `-27` ≥ `fuer_mich` plus Art. 9), so a hint written during a
+withdrawal goes within one run; the dashboard request cleans up the rows it reads the same way.
+No effect on points or the Rangliste. An answer without the purpose after one
 with it (e.g. `fuer_mich` to `-26` after the switch went off) deletes only the hints of kind
 `zustimmung`; `aus` deletes all. `GET /api/v1/funktionen/muster_stimmen/seit` (no sign-in, always
 200) gives the day (German time) the admin value was last switched on, for the sentence in the
