@@ -8,7 +8,7 @@ import { MetricsService } from '../services/metrics.service';
 import { GetMetricsResponse, ZuwachsDto } from '../services/dtos/metricsDtos';
 import { ROUTES } from '../shared/constants/app.constants';
 import { selbstNachladen } from '../shared/selbst-nachladen';
-import { Bestandszahl, bestandszahl } from './bestandszahl';
+import { Bestandszahl, abgerundet, bestandszahl } from './bestandszahl';
 
 /** Die Unterzeile ohne Zahl: vor der ersten Antwort, bei zu wenig Bestand oder nach einem Fehler. */
 export const HERO_UNTERZEILE = 'Bewährte Argumente aus der Community.';
@@ -21,6 +21,15 @@ export const BESTAND_NACHLADEN_MS = 5 * 60 * 1000;
 
 /** Ziel des Zusatzes: „Frisch aus der Community“ auf der Startseite. */
 export const FRISCH_ANKER = 'recent-content';
+
+/**
+ * Statt der Zahl, wenn fast alles neu ist (Neustart, Startbestand eingespielt): „98 neu“
+ * neben „90 Antworten“ las sich wie ein Widerspruch (UX-Review 26.11.2026, Befund 9).
+ */
+export const FRISCH_GESAMMELT = 'frisch gesammelt';
+
+/** Ab diesem Anteil neuer Kommentare am Bestand gilt er als frisch gesammelt. */
+export const FRISCH_ANTEIL = 0.8;
 
 /** So weit zurück nennt die Unterzeile den Tag; älter heißt „aus der Community“. */
 const TAGE_HOECHSTENS = 7;
@@ -43,16 +52,25 @@ function tageszahl(tag: string): number | null {
 }
 
 /**
- * Der Zusatz mit Verweis auf „Frisch aus der Community“: ab 3 neuen die genaue Zahl, darunter
- * der Tag des letzten Kommentars (heute, gestern, am TT.MM.), nie eine Uhrzeit. null: nichts
- * Neues in 7 Tagen, keine Angabe oder ein unlesbarer Tag; dann steht „aus der Community.“.
+ * Der Zusatz mit Verweis auf „Frisch aus der Community“: ab 3 neuen die Zahl, gerundet wie
+ * der Bestand (abgerundet) und nie größer als er; sind mindestens FRISCH_ANTEIL der
+ * ``kommentare`` neu, „frisch gesammelt“ statt einer Zahl. Darunter der Tag des letzten
+ * Kommentars (heute, gestern, am TT.MM.), nie eine Uhrzeit. null: nichts Neues in 7 Tagen,
+ * keine Angabe oder ein unlesbarer Tag; dann steht „aus der Community.“.
+ *
+ * ``kommentare`` ist die genaue Zahl aus /getMetrics; ohne sie nur gerundet, ohne Deckel.
  */
-export function zuwachsText(zuwachs: ZuwachsDto | null | undefined, jetzt: Date): string | null {
+export function zuwachsText(zuwachs: ZuwachsDto | null | undefined, jetzt: Date, kommentare?: number): string | null {
   if (!zuwachs) {
     return null;
   }
   if (typeof zuwachs.neu_7_tage === 'number' && zuwachs.neu_7_tage >= 3) {
-    return `${zahl(zuwachs.neu_7_tage)} neu in 7 Tagen`;
+    const bestand = typeof kommentare === 'number' && kommentare > 0 ? kommentare : null;
+    if (bestand !== null && zuwachs.neu_7_tage >= bestand * FRISCH_ANTEIL) {
+      return FRISCH_GESAMMELT;
+    }
+    const neu = bestand !== null ? Math.min(abgerundet(zuwachs.neu_7_tage), abgerundet(bestand)) : abgerundet(zuwachs.neu_7_tage);
+    return `${zahl(neu)} neu in 7 Tagen`;
   }
   const tag = zuwachs.zuletzt_ergaenzt ? tageszahl(zuwachs.zuletzt_ergaenzt) : null;
   const heute = tageszahl(heuteInDeutschland(jetzt));
@@ -191,7 +209,7 @@ export class HeroUnterzeileComponent implements OnInit {
           return this.zeile;
         }
         const bestand = bestandszahl(m.commentary_count, m.statement_count);
-        return bestand ? { bestand, zuwachs: zuwachsText(m.zuwachs, new Date()) } : null;
+        return bestand ? { bestand, zuwachs: zuwachsText(m.zuwachs, new Date(), m.commentary_count) } : null;
       }),
       catchError(() => of(this.zeile)),
     );

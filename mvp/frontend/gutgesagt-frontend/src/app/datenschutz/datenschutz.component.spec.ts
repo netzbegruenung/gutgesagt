@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
+import { Subject } from 'rxjs';
 
 import { abschnitt as abschnittIn, istTagesdatum, normalisiert, stand } from '../testing/rechtstext';
 import { DatenschutzComponent } from './datenschutz.component';
@@ -1463,6 +1464,79 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
 
   it('bestandszahl_zuwachs: eigener Unterabschnitt „Startseite“', () => {
     expect(abschnittIn(seiteMit('bestandszahl_zuwachs'), 'Startseite')).toBe(BESTANDSZAHL);
+  });
+});
+
+/** Anker hinter einem Schalter (Gamification-Check 26.11., Befund 19): Sprung, sobald die Schalter da sind. */
+describe('DatenschutzComponent: Anker hinter einem Schalter', () => {
+  it('springt zu #spielgefuehl, wenn der Absatz erst nach GET /api/v1/funktionen erscheint', async () => {
+    const spielgefuehl = signal(false);
+    const antwort = new Subject<boolean | null>();
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { snapshot: { fragment: 'spielgefuehl' } } },
+        {
+          provide: FunktionenService,
+          useValue: {
+            // Den Absatz gibt es nur mit Punkten (#855): Punkte an, Bühne kommt erst mit der Antwort.
+            an: (name: string) =>
+              name === 'spielgefuehl_buehne' ? spielgefuehl : signal(name === 'punkte'),
+            stand$: () => antwort.asObservable(),
+          },
+        },
+      ],
+    });
+    const springen = spyOn(Element.prototype, 'scrollIntoView');
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(springen).not.toHaveBeenCalled();
+
+    spielgefuehl.set(true);
+    antwort.next(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(springen).toHaveBeenCalledTimes(1);
+    expect(springen.calls.mostRecent().object).toBe(fixture.nativeElement.querySelector('#spielgefuehl'));
+  });
+
+  it('wirft nichts, wenn die Seite vor der Antwort verlassen wird (Review, NG0911)', async () => {
+    const antwort = new Subject<boolean | null>();
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { snapshot: { fragment: 'spielgefuehl' } } },
+        { provide: FunktionenService, useValue: { an: () => signal(false), stand$: () => antwort.asObservable() } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.destroy();
+
+    expect(() => antwort.next(true)).not.toThrow();
+    expect(antwort.observed).toBeFalse();
+  });
+
+  it('fragt nichts nach, wenn der Anker schon beim ersten Zeichnen steht', async () => {
+    const stand$ = jasmine.createSpy('stand$').and.returnValue(new Subject<boolean | null>());
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { snapshot: { fragment: 'spielgefuehl' } } },
+        { provide: FunktionenService, useValue: { an: (name: string) => signal(name === 'spielgefuehl_buehne' || name === 'punkte'), stand$ } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(stand$).not.toHaveBeenCalled();
   });
 });
 

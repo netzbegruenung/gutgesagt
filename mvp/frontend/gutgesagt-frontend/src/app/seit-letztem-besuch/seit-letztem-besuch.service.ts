@@ -74,7 +74,7 @@ export class SeitLetztemBesuchService {
    */
   naechsterSchrittGemerkt: Vorschlag[] | null = null;
   /**
-   * Ob die Karte „Heute im Saal gehört:“ heute einen Spruch hat. false ohne die Karte (dann
+   * Ob die Karte „Heute im Netz zur BDK:“ heute einen Spruch hat. false ohne die Karte (dann
    * wartet nichts auf sie); die Karte setzt null, solange ihre Antwort aussteht, und dann
    * true oder false. Bei der Rückkehr gilt der letzte Stand, wie beim Vorschlag.
    */

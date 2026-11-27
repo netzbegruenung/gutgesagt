@@ -48,13 +48,13 @@ describe('Saal-Spruch (Schalter saal_spruch)', () => {
     let schalter: boolean | null;
     let info: BehaviorSubject<UserInfo | null>;
     let besuch: BehaviorSubject<BesuchResponse | null>;
-    let band: ReturnType<typeof signal<{ imInhalt?: boolean } | null>>;
+    let band: ReturnType<typeof signal<{ imInhalt?: boolean; schlank?: boolean; begruessung?: boolean } | null>>;
 
     function einrichten(an: boolean | null, wer: UserInfo) {
       schalter = an;
       info = new BehaviorSubject<UserInfo | null>(wer);
       besuch = new BehaviorSubject<BesuchResponse | null>(null);
-      band = signal<{ imInhalt?: boolean } | null>(null);
+      band = signal<{ imInhalt?: boolean; schlank?: boolean; begruessung?: boolean } | null>(null);
       TestBed.configureTestingModule({
         providers: [
           provideHttpClient(),
@@ -114,7 +114,7 @@ describe('Saal-Spruch (Schalter saal_spruch)', () => {
 
       const el: HTMLElement = fixture.nativeElement;
       expect(karte(el)).not.toBeNull();
-      expect(el.querySelector('h2')!.textContent).toContain('Heute im Saal gehört:');
+      expect(el.querySelector('h2')!.textContent).toContain('Heute im Netz zur BDK:');
       expect(el.querySelector('[data-testid="saal-spruch-text"]')!.textContent).toContain(SPRUCH);
       expect(el.textContent).toContain('Wie würdest du antworten?');
       const knopf = el.querySelector('[data-testid="saal-spruch-knopf"]') as HTMLAnchorElement;
@@ -137,6 +137,21 @@ describe('Saal-Spruch (Schalter saal_spruch)', () => {
       fixture.detectChanges();
       expect(karte(fixture.nativeElement)).not.toBeNull();
     });
+
+    for (const [wie, angebot] of [
+      ['„Neu hier?“', { imInhalt: true, schlank: true }],
+      ['„Von der BDK?“', { imInhalt: true, schlank: true, begruessung: true }],
+    ] as const) {
+      it(`steht neben dem schlanken Willkommen ${wie} (UX-Review 26.11.)`, () => {
+        einrichten(true, BESUCHER);
+        band.set({ ...angebot });
+        const fixture = TestBed.createComponent(SaalSpruchComponent);
+        fixture.detectChanges();
+        http.expectOne(SAAL_SPRUCH_HEUTE_URL).flush({ spruch: SPRUCH });
+        fixture.detectChanges();
+        expect(karte(fixture.nativeElement)).not.toBeNull();
+      });
+    }
 
     it('Angemeldete mit Vorschlag: „Dein nächster Schritt“ geht vor', () => {
       einrichten(true, ANGEMELDET);

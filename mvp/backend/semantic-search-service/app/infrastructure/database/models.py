@@ -1288,8 +1288,8 @@ SAAL_SPRUCH_MAX = 200
 class SaalSpruchZeile(Base):
     """
     Der Saal-Spruch eines Tages (services/saal_spruch_service.py): ein oeffentlicher
-    Spruch, den ein Admin vorab fuer einen Tag (Europe/Berlin) festlegt, etwa fuer die
-    Tage der BDK. Je Tag hoechstens einer. Nichts zur Person, auch nicht, welcher Admin
+    Spruch, den ein Admin fuer einen Tag (Europe/Berlin) festlegt, an BDK-Tagen jeden
+    Morgen den, der gerade unter BDK-Beitraegen im Netz kursiert. Je Tag hoechstens einer. Nichts zur Person, auch nicht, welcher Admin
     ihn festgelegt hat.
 
     Neue Tabelle: create_all legt sie beim Start an. Das Skript

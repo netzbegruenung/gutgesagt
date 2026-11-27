@@ -435,7 +435,8 @@ class Settings(BaseSettings):
     # HINWEIS_SCHALTER): Obergrenze von Haus aus aus, bis Jura den Wortlaut bestaetigt.
     hinweiszeile_kurz_aktiv: bool = False
     # Saal-Spruch (services/saal_spruch_service.py): Karte auf der Startseite
-    # mit einem vorab festgelegten, oeffentlichen Spruch je Tag; nur Text, nichts zur Person.
+    # mit einem oeffentlichen Spruch je Tag (an BDK-Tagen der, der gerade im Netz
+    # kursiert); nur Text, nichts zur Person.
     saal_spruch_aktiv: bool = False
     # Saison und Gemeinschaftsziel (#782, domain/saisons.py): Den Balken sehen alle erst,
     # wenn es einmal so viele abgeschlossene Wochen hintereinander mit je mindestens so

@@ -18,7 +18,6 @@ from services.spielgefuehl_service import stimmen_aktiv, stimmen_eingewilligte
 from services.beitrag_laden import BeitragLader, BeitragUnlesbar
 from middleware.rate_limiter import check_voting_rate_limit
 from core.fehler import NICHT_ERREICHBAR, UNGUELTIGE_ANFRAGE, Validierungsfehler
-from domain.models.content import ContentDbEntry
 from domain.team_fortschritt import Art as TeamArt
 from services.team_fortschritt_service import team_zaehlen
 
@@ -36,8 +35,9 @@ def get_current_user(x_user: Optional[str] = Header(None)) -> str:
 
 async def nur_sichtbarer_beitrag(
     content_id: uuid.UUID, laden: BeitragLader = Depends(get_beitrag_laden)
-) -> Optional[ContentDbEntry]:
+) -> Optional[str]:
     """
+
     Abstimmen nur auf einen Beitrag, den die Person sehen kann: Gesperrt, geloescht
     oder nie vorhanden gibt 404 und keine Stimme. Zuruecknehmen prueft das nicht,
     eine alte Stimme an einem inzwischen gesperrten Beitrag bleibt loszuwerden.
@@ -47,9 +47,6 @@ async def nur_sichtbarer_beitrag(
     Antwortet der Suchindex nicht, zaehlt sie ebenfalls: Stimmen liegen in
     PostgreSQL und gingen bis #272 ohne Suchindex, die Pruefung soll sie nicht davon
     abhaengig machen.
-
-    Liefert den Beitrag (fuer die Muster-Hinweise aus Zustimmungen), None, wenn er
-    sich nicht lesen liess.
     """
     try:
         beitrag = await laden(content_id)
@@ -63,30 +60,47 @@ async def nur_sichtbarer_beitrag(
         return None
     if beitrag is None:
         raise HTTPException(status_code=404, detail="Content not found")
-    return beitrag
+    # Die Autorin, fuer den Team-Fortschritt (``_fuers_team_zaehlen``) und die
+    # Muster-Hinweise aus Zustimmungen; None oben, wenn sich der Beitrag nicht lesen liess.
+    return getattr(beitrag, "original_author", None)
+
+
+def _fuers_team_zaehlen(
+    user_id: str, autorin: Optional[str], content_id: uuid.UUID
+) -> None:
+    """
+    Eine Stimme zaehlt fuer die Teams der Person (Team-Fortschritt, #784), aber nicht
+    die zu einem eigenen Beitrag: Sonst fuellten drei Klicks am eigenen Bestand die
+    Team-Quest (Gamification-Check 26.11., Befund 22), wie es ADR 0004 schon fuer die
+    Punkte fuers Bewerten ausschliesst. Ist die Autorin unbekannt (Beitrag unlesbar,
+    Suchindex weg), zaehlt die Stimme wie bisher. Fehler nur im Log.
+    """
+    if autorin is not None and autorin == user_id:
+        return
+    team_zaehlen(user_id, TeamArt.BEWERTUNG, str(content_id))
 
 
 def zustimmung_fuer_muster(
-    user_id: str, beitrag: Optional[ContentDbEntry], settings: Settings
+    user_id: str, autorin: Optional[str], settings: Settings
 ) -> None:
     """
     Eine Zustimmung fuer die Muster-Hinweise melden (Schalter ``muster_stimmen``):
     nur, wenn der Schalter wirkt und beide Konten zum Spielgefuehl-Wortlaut mit
-    Zustimmungen eingewilligt haben (domain/spielgefuehl.py ``STIMMEN_WORTLAUT``),
-    geprueft bei jeder Meldung. Ablehnungen zaehlen nicht. Ohne Schalter keine
-    Datenbankabfrage. Fehler nur im Log: Die Stimme ist schon gespeichert.
+    Zustimmungen und zur Art.-9-Einwilligung eingewilligt haben
+    (services/spielgefuehl_service.py ``stimmen_eingewilligte``), geprueft bei jeder
+    Meldung. Ablehnungen zaehlen nicht. Ohne Schalter keine Datenbankabfrage. Fehler
+    nur im Log: Die Stimme ist schon gespeichert.
     """
-    autor = getattr(beitrag, "original_author", None)
-    if not autor:
+    if not autorin:
         return
     try:
         if not stimmen_aktiv(settings):
             return
-        if settings.ist_startkonto(user_id) or settings.ist_startkonto(autor):
+        if settings.ist_startkonto(user_id) or settings.ist_startkonto(autorin):
             return
-        if stimmen_eingewilligte([user_id, autor]) != {user_id, autor}:
+        if stimmen_eingewilligte([user_id, autorin]) != {user_id, autorin}:
             return
-        get_muster_hinweise_service().zustimmung_melden(user_id, autor)
+        get_muster_hinweise_service().zustimmung_melden(user_id, autorin)
     except Exception as e:
         logger.error(f"Pattern check for approval failed: {type(e).__name__}")
 
@@ -99,7 +113,7 @@ def zustimmung_fuer_muster(
 def set_like(
     content_id: uuid.UUID,
     user_id: str = Depends(get_current_user),
-    beitrag: Optional[ContentDbEntry] = Depends(nur_sichtbarer_beitrag),
+    autorin: Optional[str] = Depends(nur_sichtbarer_beitrag),
     voting_service: VotingService = Depends(get_voting_service),
     settings: Settings = Depends(get_settings),
 ) -> VoteResponse:
@@ -111,10 +125,9 @@ def set_like(
     logger.debug(f"Setting like for content {content_id}")
     try:
         result = voting_service.set_like(user_id, content_id)
-        # Zaehlt fuer die Teams der Person (Team-Fortschritt, #784); Fehler nur im Log.
-        team_zaehlen(user_id, TeamArt.BEWERTUNG, str(content_id))
+        _fuers_team_zaehlen(user_id, autorin, content_id)
         # Muster-Hinweise aus gegenseitigen Zustimmungen; Fehler nur im Log.
-        zustimmung_fuer_muster(user_id, beitrag, settings)
+        zustimmung_fuer_muster(user_id, autorin, settings)
         logger.debug("Like set successfully")
         return result
     except Validierungsfehler as e:
@@ -166,7 +179,7 @@ def remove_like(
 def set_dislike(
     content_id: uuid.UUID,
     user_id: str = Depends(get_current_user),
-    _: Optional[ContentDbEntry] = Depends(nur_sichtbarer_beitrag),
+    autorin: Optional[str] = Depends(nur_sichtbarer_beitrag),
     voting_service: VotingService = Depends(get_voting_service),
 ) -> VoteResponse:
     """
@@ -177,8 +190,7 @@ def set_dislike(
     logger.debug(f"Setting dislike for content {content_id}")
     try:
         result = voting_service.set_dislike(user_id, content_id)
-        # Zaehlt fuer die Teams der Person (Team-Fortschritt, #784); Fehler nur im Log.
-        team_zaehlen(user_id, TeamArt.BEWERTUNG, str(content_id))
+        _fuers_team_zaehlen(user_id, autorin, content_id)
         logger.debug("Dislike set successfully")
         return result
     except Validierungsfehler as e:

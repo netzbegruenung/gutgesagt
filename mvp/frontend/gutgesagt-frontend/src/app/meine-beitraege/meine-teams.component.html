@@ -1,7 +1,7 @@
 <!-- Nur fuer die Person selbst; fremde Teams gibt keine Schnittstelle heraus. Bei Schalter teams aus
      nur, solange es eigene Teams gibt (zum Verlassen). -->
 <section *ngIf="sichtbar && stand" class="meine-teams" aria-labelledby="meine-teams-titel" data-testid="meine-teams">
-    <h2 id="meine-teams-titel">{{ titel }}<span *ngIf="stand.teams.length" class="meine-teams-zahl">{{ stand.teams.length }}</span></h2>
+    <h2 id="meine-teams-titel" #titelElement tabindex="-1">{{ titel }}<span *ngIf="stand.teams.length" class="meine-teams-zahl">{{ stand.teams.length }}</span></h2>
 
     <ng-container *ngIf="stand.teams.length; else leer">
         <p *ngIf="stand.teams_aktiv === false" class="meine-teams-hinweis" data-testid="teams-aus">
@@ -44,7 +44,9 @@
         <div *ngIf="team.aktuelle_saison && (team.wirkung || team.quest)" class="team-fortschritt" data-testid="team-fortschritt">
             <ng-container *ngIf="team.wirkung as wirkung">
                 <p *ngIf="wirkung.waechst_noch" class="team-waechst" data-testid="team-waechst">{{ waechstNoch }}</p>
-                <ng-container *ngIf="!wirkung.waechst_noch">
+                <!-- Die gezeigte Woche endete vor dem eigenen Beitritt: keine leere Vorwoche (UX-Review 26.11.) -->
+                <p *ngIf="!wirkung.waechst_noch && vorBeitritt(wirkung.woche, team)" class="team-waechst" data-testid="team-erste-woche">{{ ersteWoche }}</p>
+                <ng-container *ngIf="!wirkung.waechst_noch && !vorBeitritt(wirkung.woche, team)">
                     <h3 class="team-fortschritt-titel" [id]="'wirkung-' + team.id">{{ wocheTitel(wirkung.woche) }}</h3>
                     <dl class="team-zahlen" [attr.aria-labelledby]="'wirkung-' + team.id" data-testid="team-zahlen">
                         <div><dt>Beiträge</dt><dd>{{ wirkung.beitraege }}</dd></div>
@@ -54,7 +56,7 @@
                 </ng-container>
             </ng-container>
             <ng-container *ngIf="team.quest as quest">
-                <p *ngIf="quest.vorige_geschafft" class="team-quest-geschafft" data-testid="quest-geschafft">
+                <p *ngIf="quest.vorige_geschafft && !vorigeVorBeitritt(quest.woche, team)" class="team-quest-geschafft" data-testid="quest-geschafft">
                     <span class="team-stempel" aria-hidden="true">✓</span>{{ questGeschafft(quest.vorige_thema_name) }}
                 </p>
                 <p *ngIf="quest.ziel" class="team-quest" data-testid="quest-ziel">

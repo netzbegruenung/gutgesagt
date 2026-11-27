@@ -603,7 +603,7 @@ Ein kleines Spiel ohne Konto (#786, Schalter `konter_probe`): Zu einer Aussage s
 _Avoid_: Quiz, Ratespiel
 
 **Saal-Spruch**:
-Ein öffentlicher Spruch, den ein Admin vorab für einen bestimmten Tag festlegt (Schalter `saal_spruch`), etwa für die Tage der BDK: Die Startseite zeigt ihn an diesem Tag oben als Karte „Heute im Saal gehört:“ mit der Frage „Wie würdest du antworten?“ und dem Knopf „Antworten ansehen“, der die Suche mit dem Spruch startet. Je Tag höchstens einer, der Tag gilt in deutscher Zeit; gepflegt auf der Admin-Seite „Schalter“ im Abschnitt „Saal-Sprüche“. Nur Text, keine Namen, nichts zur Person. Die Karte geht nur allgemeinen Zahlen vor, nicht eigenem Neuem und nicht „Dein nächster Schritt“, und wartet, solange ein Rundgang-Angebot auf der Startseite steht.
+Ein öffentlicher Spruch, den ein Admin für einen bestimmten Tag festlegt (Schalter `saal_spruch`): an den Tagen der BDK jeden Morgen der Spruch, der gerade unter Beiträgen zur BDK im Netz kursiert. Im Saal selbst fallen solche Sprüche gegen die Grünen nicht; der Name „Saal-Spruch“ blieb, weil Schalter, Schnittstellen und Tabelle so heißen (Entscheidung 27.11.2026). Die Startseite zeigt ihn an diesem Tag oben als Karte „Heute im Netz zur BDK:“ mit der Frage „Wie würdest du antworten?“ und dem Knopf „Antworten ansehen“, der die Suche mit dem Spruch startet. Je Tag höchstens einer, der Tag gilt in deutscher Zeit; gepflegt auf der Admin-Seite „Schalter“ im Abschnitt „Saal-Sprüche“. Nur Text, keine Namen, nichts zur Person. Die Karte geht nur allgemeinen Zahlen vor, nicht eigenem Neuem und nicht „Dein nächster Schritt“, und wartet, solange ein Rundgang-Angebot auf der Startseite steht.
 _Avoid_: Spruch des Tages (klingt nach Kalenderspruch), Tagesaussage
 
 **Zustimmung zur Sichtbarkeit**:
@@ -713,7 +713,7 @@ Was ein Team in der letzten abgeschlossenen Woche gemeinsam bewirkt hat, unter �
 _Avoid_: Team-Statistik, Team-Score, Teamrangliste
 
 **Wochenzähler**:
-Die Zahlen eines Teams je Saison und Woche, aus denen Team-Fortschritt und Team-Quests rechnen: wie viele Beiträge, Bewertungen und Meldungen „Ja, gepostet“ seine Mitglieder mit Einwilligung `team-2026-11-26` in der Woche hatten, ohne Kennung und ohne Beitrag. Gezählt wird nur für Teams ab 5 solchen Mitgliedern, keine Startkonten, „Ja, gepostet“ nur mit Art.-9-Einwilligung. Entdoppelt wird über einen Wochen-Prüfwert im Arbeitsspeicher (ein Beitrag einmal, eine Stimme je Person und Beitrag einmal, „Ja, gepostet“ je Person einmal je Woche); in der Datenbank steht keiner. Er bleibt bei „Team verlassen“ und bei der Löschung eines Kontos.
+Die Zahlen eines Teams je Saison und Woche, aus denen Team-Fortschritt und Team-Quests rechnen: wie viele Beiträge, Bewertungen und Meldungen „Ja, gepostet“ seine Mitglieder mit Einwilligung `team-2026-11-26` in der Woche hatten, ohne Kennung und ohne Beitrag. Gezählt wird nur für Teams ab 5 solchen Mitgliedern, keine Startkonten, „Ja, gepostet“ nur mit Art.-9-Einwilligung. Entdoppelt wird über einen Wochen-Prüfwert im Arbeitsspeicher (ein Beitrag einmal, eine Stimme je Person und Beitrag einmal, „Ja, gepostet“ je Person einmal je Woche); Stimmen zu eigenen Beiträgen zählen nicht; in der Datenbank steht keiner. Er bleibt bei „Team verlassen“ und bei der Löschung eines Kontos.
 _Avoid_: Team-Summe (umgangssprachlich ok), Zählerstand
 
 **Team-Quest**:

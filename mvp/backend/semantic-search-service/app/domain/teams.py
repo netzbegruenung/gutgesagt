@@ -13,11 +13,19 @@ Jeder Wortlaut traegt eine Kennung; wer ihn aendert, legt eine neue Kennung an u
 laesst die alte stehen (wie domain/art9_einwilligung.py).
 """
 
+import re
 from dataclasses import dataclass
 from typing import Collection, Dict, Optional
 
 TEAM_NAME_MAX = 40
 SAISON_MAX = 20
+
+# Zeichen, die ein Saisonname nicht enthalten darf, gleich ob er als Saison angelegt
+# (domain/saisons.py) oder an einem Teamlink eingegeben wird (api/v1/einladungen.py):
+# Teams zaehlen nur zusammen, wenn ihr Saisonname gleich ist. Kein Markup, kein
+# Rueckstrich, keine Steuerzeichen. Der Schraegstrich ist erlaubt („Winter 26/27“): Der
+# Saisonname steht in keiner Adresse und keinem Pfad, Saisons gehen ueber ihre ID.
+SAISON_VERBOTEN = re.compile(r'[<>&"\\\x00-\x1f\x7f]')
 
 # Motive wie bei den Meilensteinen (Fluent Emoji, Frontend public/meilensteine/<schluessel>.svg),
 # immer mit Namen daneben. Schluessel -> Name.

@@ -93,7 +93,7 @@ visit at most one card that points the person somewhere new (review Spielgefühl
 |---|------|-------------|------------|
 | 1 | Hero and search; the subtitle carries the Bestandszahl (`app-hero-unterzeile`, `/getMetrics`, no Schalter) and its growth (Schalter `bestandszahl_zuwachs`, links to card 6 „Frisch aus der Community“) | everyone | always; without a number the plain subtitle |
 | 2 | Rundgang line (`app-rundgang-band`, Willkommen) | everyone | until answered; signed in without „Ein Konto brauchst du nicht“ (`WILLKOMMEN_ANGEMELDET`) |
-| 2a | „Heute im Saal gehört:“ (`app-saal-spruch`) | everyone, Schalter `saal_spruch` | an admin has set a Saal-Spruch for today (Europe/Berlin); not while a Rundgang offer (`imInhalt`: Willkommen, home screen, app install) is on the start page; signed in only when card 3 shows no own news and card 4 has no suggestion |
+| 2a | „Heute im Netz zur BDK:“ (`app-saal-spruch`) | everyone, Schalter `saal_spruch` | an admin has set a Saal-Spruch for today (Europe/Berlin); not while a Rundgang offer (`imInhalt`: Willkommen, home screen, app install) is on the start page, except the slim Willkommen line („Neu hier?“, or its Kampagnenwort greeting such as „Von der BDK?“); signed in only when card 3 shows no own news and card 4 has no suggestion |
 | 3 | „Seit deinem letzten Besuch“ | signed in | not on the very first visit (`erster_besuch` from `POST /users/me/besuch`); next to a suggestion of card 4 only with news about the person's own Beiträge (`EIGENES_NEUES`: answers, uses, Wirkungs-Echo, ausformulierte Einwürfe) |
 | 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion and card 3 shows no own news |
 | 5 | Saison goal | everyone, Schalter `saison_ziel` | from the threshold (#782) |
@@ -615,6 +615,8 @@ officer has advised.
 
 #### Saal-Spruch
 
+On BDK days an admin picks each morning the saying currently circulating under BDK posts
+online (card „Heute im Netz zur BDK:“; the name Saal-Spruch stays for switch, paths and table).
 Table `saal_sprueche` (day in Europe/Berlin, text up to 200 characters, time of the last change;
 no personal data, not even which admin set it), `repositories/saal_spruch_repository.py`,
 `services/saal_spruch_service.py` (today's text cached 60 s; a read error means no Saal-Spruch).
@@ -718,7 +720,9 @@ the cleanup job runs), approvals by the day of their last change, Tun and rating
 Team-Quest points by their quest week (its Monday within the season, not the Monday they are
 credited, so a quest of the last season week still counts for that season).
 A season used with the Rangliste should therefore not be longer than that retention, otherwise
-usage from its first days drops out near its end. Season points of all participants are cached
+usage from its first days drops out near its end. Points that miss a source (Team-Quests not
+readable, `Punktestand.vollstaendig`) are used for that request only and not cached, so nobody
+sits too low for 120 s. Season points of all participants are cached
 in memory once per season for 120 s; one request recomputes (at most 8 people in parallel), the
 others wait for it. Neither points nor places are stored.
 
