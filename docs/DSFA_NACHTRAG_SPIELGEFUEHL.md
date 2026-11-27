@@ -1,15 +1,16 @@
 # DSFA-Nachtrag: Spielgefühl und Wirkung (Vorstands-Go)
 
 > **KI-gestützter Entwurf, keine Rechtsberatung.**
-> Herkunft: Jura-Entwurf vom 27.11.2026, Teil A, inhaltlich unverändert übernommen.
+> Herkunft: juristischer Entwurf vom 27.11.2026, Teil A, inhaltlich unverändert übernommen.
 > Einschübe in eckigen Klammern [Prüfvermerk …] sind nachträglich ergänzt und verweisen auf
 > die Prüfvermerke am Code am Ende. Mit ❔ markierte Stellen sind Fragen an die
 > Datenschutzbeauftragte; wo ein Prüfvermerk eine ❔-Frage am Code beantwortet, steht das in
 > der Klammer dahinter.
 >
 > **Stand 27.11.2026 (Entscheidung des Maintainers):** Rat der Datenschutzbeauftragten:
-> angenommen (27.11.). Go des Vorstands: angenommen (27.11.). Beides ist als Annahme vermerkt,
-> nicht als Beleg; die ❔-Stellen bleiben als Fragen markiert und halten das Go nicht auf.
+> angenommen (27.11.). Go des Vorstands: angenommen (27.11.). Vermerkt auf Entscheidung des
+> Maintainers; ein schriftlicher Beleg liegt dem Repo nicht bei. Die ❔-Stellen bleiben als
+> Fragen markiert und halten das Go nicht auf.
 
 Ergänzt [`docs/DSFA.md`](./DSFA.md) um die Daten, die mit dem Spielgefühl-Modell und den
 Wirkungs-Funktionen dazukommen. Die Nummern sind die der Verarbeitungen in `docs/DSFA.md`:
@@ -48,7 +49,10 @@ Voreinstellung aus, Pseudonymwahl.
 #862 und #864], Rangliste ohne Abruf ohne
 Anmeldung (✅ belegt im Code: require_user, test_rangliste_api.py:215) [Prüfvermerk 1],
 Wortlaut Stufe 3 (✅ selbst gelesen, spielgefuehl.py:93–104 origin/main 27.11.)
-[`ss/domain/spielgefuehl.py`], DSE und VVT ergänzt vor dem Einschalten.
+[`ss/domain/spielgefuehl.py`, Zeilen auf `d3b3def7`], DSE und VVT ergänzt vor dem Einschalten
+[Stand 27.11.: DSE-Satz zu `muster_stimmen` laut Einschalthinweis drin
+(`ss/services/schalter_service.py:685`); Verzeichnis für V28 bis V31 noch offen, vor dem
+Einschalten nötig].
 Offen ❔: Mindestalter 16 für Stufe ≥2 (Art. 8, falls Mitglieder unter 16 die App nutzen).
 
 **Restrisiko gesamt:** kein hohes. Begründung: Jede Verarbeitung mit Profil- oder
@@ -80,8 +84,9 @@ Aufsicht (Art. 36, bis 8 Wochen 📖) nach der BDK.
      `spielgefuehl_buehne` (`ss/services/schalter_service.py:672`, Feld `muster_stimmen_aktiv`
      in `ss/core/config.py:429`).
    - Kennung `spielgefuehl-2026-11-27` (`STIMMEN_WORTLAUT`, `ss/domain/spielgefuehl.py:41`); die
-     Frage zeigt sie nur bei wirksamem Schalter und fragt Konten mit `spielgefuehl-2026-11-26`
-     neu.
+     Frage zeigt sie nur bei wirksamem Schalter und fragt Konten, die zu
+     `spielgefuehl-2026-11-26` ab „Nur für mich“ eingewilligt haben, neu (`neu_fragen`,
+     `ss/domain/spielgefuehl.py:196`).
    - Erzeugen: Eine Zustimmung (nicht eine Ablehnung) meldet `zustimmung_fuer_muster` nur bei
      wirksamem Schalter und wenn beide Konten dem neuen Wortlaut und der Art.-9-Einwilligung
      zugestimmt haben, geprüft bei jeder Meldung (`ss/api/v1/voting.py:83`, Aufruf `:130`);
