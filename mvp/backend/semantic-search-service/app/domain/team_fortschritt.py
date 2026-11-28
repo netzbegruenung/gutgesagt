@@ -15,12 +15,18 @@ wer eine aendert, aendert auch die Texte dort:
   Summe deckt (``SUMME_GEDECKT``), und nur fuer abgeschlossene Wochen.
 - Keine genaue Zahl: unter ``RUNDUNG_AB`` steht "weniger als 10", darueber die auf
   ``RUNDUNG_SCHRITT`` gerundete Zahl.
+
+Quasi-live (Schalter ``team_live``, Jura-Akte 28.11.2026 "Team-Fortschritt quasi-live
+zur BDK"): Stundenbloecke nach Blockende, die Regeln dazu stehen unten bei
+``LIVE_MINDESTMITGLIEDER``; wer sie aendert, aendert auch DSE, VVT T17 und DSFA V29.
 """
 
 import math
 from dataclasses import dataclass
+from datetime import datetime, time, timedelta, timezone
 from enum import StrEnum
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 # Kennungen der Team-Einwilligung, die die Summe des Teams decken. team-2026-11-25
 # nannte nur Beitraege und Bewertungen; wer ihr zugestimmt hat, zaehlt nicht mit und
@@ -90,3 +96,102 @@ class Wochenzaehlung:
     @property
     def gesamt(self) -> int:
         return self.beitraege + self.bewertungen + self.gepostet
+
+
+# --- Quasi-live (team_live, Jura-Akte 28.11.2026) ----------------------------------
+#
+# - Der laufende Tag zaehlt in Stundenbloecken (deutsche Zeit, volle Stunde). Jeder
+#   Block wird VEROEFFENTLICHUNG_NACH nach seinem Ende einmal vorberechnet, nicht je
+#   Abruf.
+# - Ein Block wird erst freigegeben, wenn mindestens LIVE_K verschiedene Mitglieder in
+#   ihm (samt der uebertragenen Bloecke davor) beigetragen haben; sonst geht er in den
+#   naechsten Block desselben Tages ueber ("laeuft noch"). Ohne vollstaendige Menge der
+#   Pruefwerte (Neustart waehrend des Blocks) wird uebertragen, nie freigegeben.
+# - Live nur in Teams ab LIVE_MINDESTMITGLIEDER Mitgliedern mit deckender Einwilligung.
+#   Die Tagessumme wird auf LIVE_SCHRITT abgerundet, darunter "weniger als 10"; die
+#   Mitgliederzahl ebenso abgerundet. Die Wochenanzeige oben bleibt unveraendert.
+# - Die Quest-Stufe (Drittel) kommt nur aus freigegebenen Bloecken.
+
+LIVE_MINDESTMITGLIEDER = 20
+LIVE_K = 10
+LIVE_SCHRITT = 10
+BLOCK = timedelta(hours=1)
+VEROEFFENTLICHUNG_NACH = timedelta(minutes=15)
+ZEITZONE = ZoneInfo("Europe/Berlin")
+
+
+def live_zeigbar(einwilligende_mitglieder: int) -> bool:
+    """Ob ein Team gross genug fuer den Live-Stand ist (ab 20 mit Einwilligung)."""
+    return einwilligende_mitglieder >= LIVE_MINDESTMITGLIEDER
+
+
+def abgerundet(anzahl: int) -> Optional[int]:
+    """Auf LIVE_SCHRITT abgerundet; None unter RUNDUNG_AB ("weniger als 10")."""
+    if anzahl < RUNDUNG_AB:
+        return None
+    return anzahl // LIVE_SCHRITT * LIVE_SCHRITT
+
+
+def live_anzeige(anzahl: int) -> str:
+    """Die abgerundete Tagessumme als Text: "weniger als 10" oder "rund 80"."""
+    wert = abgerundet(anzahl)
+    return WENIGER_ALS if wert is None else f"rund {wert}"
+
+
+def mitglieder_anzeige(einwilligende_mitglieder: int) -> Optional[int]:
+    """Die Mitgliederzahl fuer den Live-Stand: erst ab 20, auf 10 abgerundet."""
+    if not live_zeigbar(einwilligende_mitglieder):
+        return None
+    return abgerundet(einwilligende_mitglieder)
+
+
+def freigeben(verschiedene: int, beobachtet: bool) -> bool:
+    """
+    Ob ein Block (mit den uebertragenen davor) freigegeben wird: nur ab LIVE_K
+    verschiedenen Beitragenden und nur, wenn der Block vollstaendig beobachtet wurde
+    (kein Neustart seit Blockbeginn).
+    """
+    return beobachtet and verschiedene >= LIVE_K
+
+
+def quest_stufe(freigegeben_in_der_woche: int, ziel: int) -> int:
+    """Die Quest-Stufe: 0 (unter einem Drittel), 1 (ein Drittel), 2 (zwei Drittel), 3 (geschafft)."""
+    if ziel <= 0 or freigegeben_in_der_woche >= ziel:
+        return 3
+    if 3 * freigegeben_in_der_woche >= 2 * ziel:
+        return 2
+    if 3 * freigegeben_in_der_woche >= ziel:
+        return 1
+    return 0
+
+
+def blockbeginn(zeitpunkt: datetime) -> datetime:
+    """
+    Beginn (UTC) des Stundenblocks, in den der Zeitpunkt faellt. Deutsche Zeit weicht
+    um ganze Stunden von UTC ab, die volle Stunde ist also in beiden dieselbe.
+    """
+    utc = zeitpunkt.astimezone(timezone.utc)
+    return utc.replace(minute=0, second=0, microsecond=0)
+
+
+def tagesbeginn(zeitpunkt: datetime) -> datetime:
+    """Mitternacht (deutsche Zeit) des Tages, in den der Zeitpunkt faellt, in UTC."""
+    tag = zeitpunkt.astimezone(ZEITZONE).date()
+    return datetime.combine(tag, time.min, tzinfo=ZEITZONE).astimezone(timezone.utc)
+
+
+def wochenbeginn_live(zeitpunkt: datetime) -> datetime:
+    """
+    Montag 0 Uhr (deutsche Zeit) der Woche, in die der Zeitpunkt faellt, in UTC: die
+    Wochengrenze der Stundenzaehler (Loeschung, Quest-Stufe), passend zum Tag in
+    deutscher Zeit.
+    """
+    tag = zeitpunkt.astimezone(ZEITZONE).date()
+    montag = tag - timedelta(days=tag.weekday())
+    return datetime.combine(montag, time.min, tzinfo=ZEITZONE).astimezone(timezone.utc)
+
+
+def bis_stunde(block: datetime) -> int:
+    """Die volle Stunde (deutsche Zeit), mit der der Block endet; Mitternacht als 24."""
+    stunde = (block + BLOCK).astimezone(ZEITZONE).hour
+    return stunde or 24

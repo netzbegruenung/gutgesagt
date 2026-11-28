@@ -21,6 +21,7 @@ from infrastructure.database.models import (
     TeamMitgliedschaftZeile,
     TeamNummerZeile,
     TeamQuestZeile,
+    TeamStundeZeile,
     TeamWocheZeile,
 )
 from repositories.gepostet_repository import GepostetRepository
@@ -42,6 +43,7 @@ TABELLEN = [
     TeamNummerZeile.__table__,
     TeamWocheZeile.__table__,
     TeamQuestZeile.__table__,
+    TeamStundeZeile.__table__,
 ]
 
 

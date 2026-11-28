@@ -51,6 +51,26 @@ Meilensteine" gilt und seit wann die zum Spielgefuehl-Wortlaut mit Quest-Punkten
 (spielgefuehl-2026-11-28, nur mit wirksamem Schalter spielgefuehl_buehne), prueft services/punkte_service.py davor und reicht nur
 Beitraege ab dieser Einwilligung herein.
 
+Quasi-live (Schalter ``team_live``, wirkt nur mit ``teams``; Jura-Akte 28.11.2026,
+Regeln in domain/team_fortschritt.py): Waehrend der Schalter wirkt, erhoeht ``zaehlen``
+fuer Teams ab 20 Mitgliedern mit Einwilligung zusaetzlich den Stundenzaehler des
+laufenden Blocks (team_stunden: Team, Saison, Blockbeginn, Zahl, ohne Kennung) und
+merkt sich in ``StundenPruefwerte`` (nur Arbeitsspeicher, Schluessel je Tag) einen
+HMAC-Pruefwert je Mitglied, Team und Block. Gezaehlt wird dasselbe wie im
+Wochenzaehler, nach dessen Entdoppelung. ``bloecke_veroeffentlichen`` (Takt
+``live_im_takt``, 15 min nach jeder vollen Stunde) rechnet jeden abgelaufenen Block
+einmal vor: Mit den uebertragenen Bloecken desselben Tages ab 10 verschiedenen
+Beitragenden wird er freigegeben (``freigabe`` = seine Zahl samt der uebertragenen),
+sonst uebertragen. Fehlt die Menge der Pruefwerte fuer den Block (Neustart seit
+Blockbeginn, Schalter zwischendurch aus), wird uebertragen, nie freigegeben. Die
+Mitgliederzahl wird dabei mit abgelegt. "Meine Teams" (``staende``) liest nur diese
+vorberechneten Werte: die Summe der heute freigegebenen Bloecke (auf 10 abgerundet),
+bis zu welcher vollen Stunde, ob die letzte Stunde noch laeuft, die Mitgliederzahl und
+die Quest-Stufe aus den in der Woche freigegebenen Bloecken. Die Stundenzaehler
+loescht der Loeschlauf mit dem Wochenwechsel (services/loeschfristen_service.py). Mit
+mehreren Workern sieht jeder nur einen Teil der Pruefwerte und gibt seltener frei,
+nie zu frueh; vorberechnet wird je Block nur einmal (``stunde_abschliessen``).
+
 Kontoloeschung und "Team verlassen" loeschen die Mitgliedschaft; der Zaehler bleibt,
 er traegt nichts zur Person. Eine Zuordnung Person -> Zaehler entsteht nirgends: Die
 Quest-Punkte werden bei jedem Abruf aus den eigenen Mitgliedschaften und Beitraegen
@@ -62,7 +82,8 @@ import hashlib
 import hmac
 import threading
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+import secrets
+from datetime import date, datetime, time, timedelta, timezone
 from typing import (
     Awaitable,
     Callable,
@@ -78,16 +99,33 @@ from typing import (
 from core.config import Settings, settings as globale_settings
 from core.logging import get_logger
 from domain.team_fortschritt import (
+    BLOCK,
     SUMME_GEDECKT,
+    VEROEFFENTLICHUNG_NACH,
+    ZEITZONE,
     Art,
     Wochenzaehlung,
     anzeige,
+    bis_stunde,
+    blockbeginn,
+    freigeben,
+    live_anzeige,
+    live_zeigbar,
+    mitglieder_anzeige,
+    quest_stufe,
     quest_ziel,
+    tagesbeginn,
+    wochenbeginn_live,
     zeigbar,
 )
 from domain.themen import THEMEN
 from repositories.team_fortschritt_repository import (
+    FREIGEGEBEN,
+    OFFEN,
+    UEBERTRAGEN,
+    EigenesTeam,
     Quest,
+    Stunde,
     TeamFortschrittRepository,
     TeamSchluessel,
 )
@@ -138,6 +176,111 @@ class WochenPruefwerte:
             return True
 
 
+def _jetzt() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+class StundenPruefwerte:
+    """
+    Die Pruefwerte der Stundenbloecke fuer den Live-Stand, nur im Arbeitsspeicher: je
+    Team und Block die Menge der HMAC-Werte der Mitglieder, die beigetragen haben, mit
+    einem Schluessel je Tag (deutsche Zeit), der nur hier liegt. So laesst sich zaehlen,
+    wie viele verschiedene beigetragen haben, ohne dass eine Kennung irgendwo steht.
+
+    ``beobachtet``: ob die Menge eines Blocks vollstaendig ist, also seit Blockbeginn
+    kein Neustart war und der Speicher nicht geleert wurde. Die Mengen eines Blocks
+    verfallen mit seiner Freigabe, alle uebrigen mit dem Tag.
+    """
+
+    def __init__(self, jetzt: Callable[[], datetime] = _jetzt):
+        self._jetzt = jetzt
+        self._seit = jetzt()
+        self._schluessel: Dict[date, bytes] = {}
+        self._werte: Dict[Tuple[TeamSchluessel, datetime], Set[str]] = {}
+        self._sperre = threading.Lock()
+
+    @staticmethod
+    def _tag(block: datetime) -> date:
+        return block.astimezone(ZEITZONE).date()
+
+    def merken(self, team: TeamSchluessel, block: datetime, kennung: str) -> None:
+        with self._sperre:
+            tag = self._tag(block)
+            schluessel = self._schluessel.setdefault(tag, secrets.token_bytes(32))
+            wert = hmac.new(
+                schluessel,
+                f"stunde|{team[0]}|{team[1]}|{kennung}".encode("utf-8"),
+                hashlib.sha256,
+            ).hexdigest()
+            self._werte.setdefault((team, block), set()).add(wert)
+
+    def verschiedene(self, team: TeamSchluessel, bloecke: Iterable[datetime]) -> int:
+        """Wie viele verschiedene in diesen Bloecken (eines Tages) beigetragen haben."""
+        with self._sperre:
+            alle: Set[str] = set()
+            for block in bloecke:
+                alle |= self._werte.get((team, block), set())
+            return len(alle)
+
+    def beobachtet(self, block: datetime) -> bool:
+        with self._sperre:
+            return self._seit <= block
+
+    def vergessen(self, team: TeamSchluessel, bloecke: Iterable[datetime]) -> None:
+        with self._sperre:
+            for block in bloecke:
+                self._werte.pop((team, block), None)
+
+    def aufraeumen(self, vor: datetime) -> None:
+        """Mengen der Bloecke vor ``vor`` und Schluessel der Tage davor verwerfen."""
+        with self._sperre:
+            for schluessel in [k for k in self._werte if k[1] < vor]:
+                del self._werte[schluessel]
+            tag = self._tag(vor)
+            for alt in [t for t in self._schluessel if t < tag]:
+                del self._schluessel[alt]
+
+    def leeren(self) -> None:
+        """Alles verwerfen (Schalter aus); laufende Bloecke gelten danach als unbeobachtet."""
+        with self._sperre:
+            self._werte = {}
+            self._schluessel = {}
+            self._seit = self._jetzt()
+
+
+@dataclass(frozen=True)
+class TeamLiveWerte:
+    """
+    Die freigegebenen Werte eines Teams fuer den Live-Stand (``live_werte``), ohne Bezug
+    zu einer Person: die heute freigegebene Summe (abgerundeter Text) bis zur vollen
+    Stunde ``bis``, ob die letzte Stunde noch laeuft, die abgerundete Mitgliederzahl und
+    die in der Woche freigegebene Summe (nur fuer die Quest-Stufe, nie gezeigt).
+    """
+
+    laeuft_noch: bool
+    mitglieder: Optional[int]
+    bis: Optional[int]
+    tagessumme: Optional[str]
+    woche_freigegeben: int
+
+
+@dataclass(frozen=True)
+class TeamLive:
+    """
+    Der Live-Stand eines Teams (team_live), nur aus vorberechneten Werten: die heute
+    freigegebene Summe (abgerundeter Text) bis zur vollen Stunde ``bis``, ob die letzte
+    Stunde noch laeuft, die abgerundete Mitgliederzahl, die Quest-Stufe (0 bis 3, None
+    ohne Quest) und ob der Hinweis an Bestandsmitglieder faellig ist.
+    """
+
+    laeuft_noch: bool
+    mitglieder: Optional[int]
+    bis: Optional[int] = None
+    tagessumme: Optional[str] = None
+    quest_stufe: Optional[int] = None
+    hinweis_neu: bool = False
+
+
 @dataclass(frozen=True)
 class TeamWirkung:
     """
@@ -168,6 +311,7 @@ class TeamQuestStand:
 class TeamStand:
     wirkung: TeamWirkung
     quest: Optional[TeamQuestStand] = None
+    live: Optional[TeamLive] = None
 
 
 def bedarf_aus(themen_je_aussage: Iterable[Sequence[str]]) -> Tuple[Optional[str], int]:
@@ -201,6 +345,9 @@ class TeamFortschrittService:
         heute: Callable[[], date] = heute_utc,
         pruefwerte: Optional[WochenPruefwerte] = None,
         saison: Optional[Callable[[], str]] = None,
+        jetzt: Callable[[], datetime] = _jetzt,
+        stunden: Optional[StundenPruefwerte] = None,
+        live_seit: Optional[Callable[[], Optional[datetime]]] = None,
     ):
         self._repository = repository
         self._settings = settings
@@ -214,6 +361,12 @@ class TeamFortschrittService:
         # Saisons sind Abzeichen (GLOSSARY.md "Saison"). Ohne Angabe die Einstellung.
         self._saison = saison or _aktuelle_saison
         self._bedarf_je_woche: Dict[date, Tuple[Optional[str], int]] = {}
+        self._jetzt = jetzt
+        self._stunden = stunden or StundenPruefwerte(jetzt)
+        # Seit wann team_live eingeschaltet ist (Hinweis an Bestandsmitglieder)
+        self._live_seit = live_seit or _team_live_eingeschaltet_am
+        # Der zuletzt vorberechnete Block in diesem Prozess
+        self._vorberechnet_bis: Optional[datetime] = None
 
     @property
     def _einstellungen(self) -> Settings:
@@ -227,6 +380,9 @@ class TeamFortschrittService:
 
     def quests_wirksam(self) -> bool:
         return schalter_wirksam("team_quests", self._settings)
+
+    def live_wirksam(self) -> bool:
+        return schalter_wirksam("team_live", self._settings)
 
     def _aktuelle(self, teams):
         saison = self._saison()
@@ -263,7 +419,23 @@ class TeamFortschrittService:
         ]
         if zu_zaehlen:
             self._repository.erhoehen(zu_zaehlen, woche, art)
+            self._stunde_zaehlen(kennung, zu_zaehlen, groessen)
         return len(zu_zaehlen)
+
+    def _stunde_zaehlen(
+        self,
+        kennung: str,
+        teams: List[TeamSchluessel],
+        groessen: Dict[TeamSchluessel, int],
+    ) -> None:
+        """Den Stundenzaehler der Teams ab 20 erhoehen und den Pruefwert merken."""
+        live = [t for t in teams if live_zeigbar(groessen.get(t, 0))]
+        if not live or not self.live_wirksam():
+            return
+        block = blockbeginn(self._jetzt())
+        for team in live:
+            self._stunden.merken(team, block, kennung)
+        self._repository.stunde_erhoehen(live, block)
 
     # --- Zeigen ----------------------------------------------------------------
 
@@ -296,6 +468,11 @@ class TeamFortschrittService:
         quests: Dict[TeamSchluessel, TeamQuestStand] = {}
         if grosse and self.quests_wirksam():
             quests = await self._quest_staende(grosse, groessen, zaehler, laufende)
+        live: Dict[TeamSchluessel, TeamLive] = {}
+        if grosse and self.live_wirksam():
+            live = await self._live_staende(
+                [t for t in teams if t.schluessel in grosse], quests
+            )
 
         staende: Dict[TeamSchluessel, TeamStand] = {}
         for s in schluessel:
@@ -312,8 +489,180 @@ class TeamFortschrittService:
                     gepostet=anzeige(z.gepostet),
                 ),
                 quests.get(s),
+                live.get(s),
             )
         return staende
+
+    # --- Live-Stand (team_live) ------------------------------------------------
+
+    def live_werte(
+        self, teams: Iterable[TeamSchluessel]
+    ) -> Dict[TeamSchluessel, "TeamLiveWerte"]:
+        """
+        Die freigegebenen Werte je Team, ohne Bezug zur aufrufenden Person; synchron.
+        Nur aus vorberechneten Stundenzaehlern, alle Schwellen und Rundungen sind hier
+        schon angewendet. "Meine Teams" zeigt sie Mitgliedern; eine spaetere weitere
+        Darstellung derselben Werte (etwa eine Saalansicht; die braucht vorher einen
+        neuen Wortlaut, eine neue Kennung und eine eigene Pruefung) liest nur hier.
+        Teams fehlen, deren letzter vorberechneter Block unter 20 Mitgliedern lag oder
+        vor der letzten Stunde des Vortags liegt; die Schwelle wird bei jedem
+        Vorberechnen neu geprueft, Austritte zaehlen also mit.
+
+        Die Tagessumme enthaelt nur freigegebene Bloecke, bis zur letzten freigegebenen
+        Blockgrenze: Ein uebertragener Block fehlt, bis er mit dem naechsten freigegeben
+        ist, und laesst sich so nicht als Differenz herausrechnen.
+        """
+        teams = list(teams)
+        if not teams:
+            return {}
+        jetzt = self._jetzt()
+        heute_ab = tagesbeginn(jetzt)
+        woche_ab = wochenbeginn_live(jetzt)
+        # Bis der letzte Block des Vortags vorberechnet ist (0:15), zaehlt der davor
+        frisch_ab = heute_ab - 2 * BLOCK
+        je_team: Dict[TeamSchluessel, List[Stunde]] = {}
+        for stunde in self._repository.stunden(teams, min(frisch_ab, woche_ab)):
+            if stunde.stand != OFFEN:
+                je_team.setdefault(stunde.schluessel, []).append(stunde)
+        ergebnis: Dict[TeamSchluessel, TeamLiveWerte] = {}
+        for team in teams:
+            fertig = je_team.get(team, [])
+            if not fertig:
+                continue
+            letzte = fertig[-1]
+            if letzte.block_beginn < frisch_ab or not live_zeigbar(
+                letzte.mitglieder or 0
+            ):
+                continue
+            heute = [x for x in fertig if x.block_beginn >= heute_ab]
+            frei = [x for x in heute if x.stand == FREIGEGEBEN]
+            ergebnis[team] = TeamLiveWerte(
+                laeuft_noch=not heute or heute[-1].stand != FREIGEGEBEN,
+                mitglieder=mitglieder_anzeige(letzte.mitglieder or 0),
+                bis=bis_stunde(frei[-1].block_beginn) if frei else None,
+                tagessumme=(
+                    live_anzeige(sum(x.freigabe or 0 for x in frei)) if frei else None
+                ),
+                woche_freigegeben=sum(
+                    x.freigabe or 0
+                    for x in fertig
+                    if x.stand == FREIGEGEBEN and x.block_beginn >= woche_ab
+                ),
+            )
+        return ergebnis
+
+    async def _live_staende(
+        self, teams: List[EigenesTeam], quests: Dict[TeamSchluessel, TeamQuestStand]
+    ) -> Dict[TeamSchluessel, TeamLive]:
+        """Je eigenem Team die freigegebenen Werte samt Quest-Stufe und Hinweis."""
+        werte = await asyncio.to_thread(self.live_werte, [t.schluessel for t in teams])
+        if not werte:
+            return {}
+        live_seit = await self._live_seit_lesen()
+        ergebnis: Dict[TeamSchluessel, TeamLive] = {}
+        for team in teams:
+            w = werte.get(team.schluessel)
+            if w is None:
+                continue
+            quest = quests.get(team.schluessel)
+            ergebnis[team.schluessel] = TeamLive(
+                laeuft_noch=w.laeuft_noch,
+                mitglieder=w.mitglieder,
+                bis=w.bis,
+                tagessumme=w.tagessumme,
+                quest_stufe=(
+                    quest_stufe(w.woche_freigegeben, quest.laufende.ziel)
+                    if quest is not None and quest.laufende is not None
+                    else None
+                ),
+                hinweis_neu=(
+                    live_seit is not None
+                    and team.einwilligung_zeitpunkt is not None
+                    and team.einwilligung_zeitpunkt < live_seit
+                ),
+            )
+        return ergebnis
+
+    async def _live_seit_lesen(self) -> Optional[datetime]:
+        try:
+            return await asyncio.to_thread(self._live_seit)
+        except Exception as e:
+            logger.warning(f"Team live switch-on time not read: {type(e).__name__}")
+            return None
+
+    def bloecke_veroeffentlichen(self) -> int:
+        """
+        Jeden Block, der seit mindestens 15 min abgelaufen ist und in diesem Prozess
+        noch nicht vorberechnet wurde, einmal vorberechnen (nur Bloecke des Tages, in
+        den der letzte faellige faellt); synchron. Gibt die Zahl der freigegebenen
+        Bloecke zurueck.
+
+        Wirkt team_live nicht (aus oder nach team_live_bis): verwirft die Pruefwerte,
+        rechnet nichts und loescht sofort alle Stundenzaehler (Jura 28.11.: die DSE
+        nennt sie dann nicht mehr), in jedem Lauf: Waehrend des Schalter-Caches kann
+        ein Ereignis noch einen Zaehler anlegen.
+        """
+        if not self.live_wirksam():
+            self._stunden.leeren()
+            self._vorberechnet_bis = None
+            self._repository.stunden_loeschen_vor(self._jetzt() + BLOCK)
+            return 0
+        letzter = blockbeginn(self._jetzt() - VEROEFFENTLICHUNG_NACH - BLOCK)
+        tag_ab = tagesbeginn(letzter)
+        block = tag_ab
+        if self._vorberechnet_bis is not None:
+            block = max(block, self._vorberechnet_bis + BLOCK)
+        freigegeben = 0
+        while block <= letzter:
+            freigegeben += self._block_vorberechnen(block)
+            self._vorberechnet_bis = block
+            block += BLOCK
+        self._stunden.aufraeumen(tag_ab)
+        return freigegeben
+
+    def _block_vorberechnen(self, block: datetime) -> int:
+        saison = self._saison()
+        tag_ab = tagesbeginn(block)
+        groessen = self._repository.einwilligende_der_saison(saison, SUMME_GEDECKT)
+        teams = {t for t, n in groessen.items() if live_zeigbar(n)}
+        teams |= set(self._repository.teams_mit_stunden(saison, tag_ab))
+        if not teams:
+            return 0
+        je_team: Dict[TeamSchluessel, List[Stunde]] = {}
+        for stunde in self._repository.stunden(list(teams), tag_ab):
+            if stunde.block_beginn <= block:
+                je_team.setdefault(stunde.schluessel, []).append(stunde)
+        beobachtet = self._stunden.beobachtet(block)
+        freigegeben = 0
+        for team in sorted(teams):
+            stunden = je_team.get(team, [])
+            eigene = next((x for x in stunden if x.block_beginn == block), None)
+            if eigene is not None and eigene.stand != OFFEN:
+                continue
+            frei_davor = [x.block_beginn for x in stunden if x.stand == FREIGEGEBEN]
+            ab = max(frei_davor) if frei_davor else None
+            offen = [
+                x
+                for x in stunden
+                if x.stand == UEBERTRAGEN and (ab is None or x.block_beginn > ab)
+            ]
+            summe = sum(x.anzahl for x in offen) + (eigene.anzahl if eigene else 0)
+            bloecke = [x.block_beginn for x in offen] + [block]
+            mitglieder = groessen.get(team, 0)
+            frei = live_zeigbar(mitglieder) and freigeben(
+                self._stunden.verschiedene(team, bloecke), beobachtet
+            )
+            abgeschlossen = self._repository.stunde_abschliessen(
+                team,
+                block,
+                FREIGEGEBEN if frei else UEBERTRAGEN,
+                summe if frei else None,
+                mitglieder,
+            )
+            if abgeschlossen and frei:
+                self._stunden.vergessen(team, bloecke)
+                freigegeben += 1
+        return freigegeben
 
     async def _quest_staende(
         self,
@@ -407,6 +756,45 @@ class TeamFortschrittService:
             if beigetragen:
                 tage[ende] = tage.get(ende, 0) + 1
         return tage
+
+
+def _team_live_eingeschaltet_am() -> Optional[datetime]:
+    """
+    Seit wann team_live wirkt: der frueheste Stundenblock. Wirkt der Schalter nicht,
+    loescht der Takt alle Stundenzaehler; der frueheste ist also der erste seit dem
+    letzten Wirksamwerden (Obergrenze, Admin-Wert und Enddatum zusammen), nicht der
+    Zeitpunkt des Admin-Werts allein.
+    """
+    from repositories.team_fortschritt_repository import (
+        get_team_fortschritt_repository,
+    )
+
+    return get_team_fortschritt_repository().erste_stunde()
+
+
+def _sekunden_bis_zum_takt(jetzt: datetime) -> float:
+    """Sekunden bis 15 min (und 5 s Puffer) nach der naechsten vollen Stunde."""
+    naechste = blockbeginn(jetzt) + VEROEFFENTLICHUNG_NACH + timedelta(seconds=5)
+    if naechste <= jetzt:
+        naechste += BLOCK
+    return (naechste - jetzt).total_seconds()
+
+
+async def live_im_takt(service: "TeamFortschrittService") -> None:
+    """
+    Hintergrund-Task: rechnet sofort und dann 15 min nach jeder vollen Stunde die
+    abgelaufenen Stundenbloecke vor (``bloecke_veroeffentlichen``), bis er abgebrochen
+    wird; wirkt team_live nicht, loescht er die Stundenzaehler. Ein Fehler wird nur protokolliert; der naechste Lauf holt nach.
+    """
+    while True:
+        try:
+            # Bewusst ohne Log je Block oder Team: gezaehlt wird nur im Speicher.
+            await asyncio.to_thread(service.bloecke_veroeffentlichen)
+        except Exception as e:
+            logger.error(
+                f"Team hour blocks not computed: {type(e).__name__}", exc_info=True
+            )
+        await asyncio.sleep(_sekunden_bis_zum_takt(_jetzt()))
 
 
 def _aktuelle_saison() -> str:

@@ -27,6 +27,7 @@ PAKETE = ("teams", "spielgefuehl_buehne", "wirkungs_echo", "k_begruessung")
 GEMELDET = {
     *PAKETE,
     "team_quests",
+    "team_live",
     "muster_stimmen",
     "teams_oeffentlich",
     "merkliste",
@@ -42,6 +43,7 @@ ALLE_OBERGRENZEN = dict(
     wirkungs_echo_aktiv=True,
     k_begruessung_aktiv=True,
     team_quests_aktiv=True,
+    team_live_aktiv=True,
     muster_stimmen_aktiv=True,
     teams_oeffentlich_aktiv=True,
     merkliste_aktiv=True,
@@ -101,6 +103,7 @@ def test_paket_an_nur_mit_admin_wert_und_obergrenze(werte, paket):
     "schalter, paket",
     [
         ("team_quests", "teams"),
+        ("team_live", "teams"),
         ("teams_oeffentlich", "teams"),
         ("muster_stimmen", "spielgefuehl_buehne"),
         ("danke_ohne_konto", "wirkungs_echo"),

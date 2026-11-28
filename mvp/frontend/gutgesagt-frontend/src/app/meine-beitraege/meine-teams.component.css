@@ -109,6 +109,25 @@
   margin: 0 0 4px;
 }
 
+/* Stand des Tages (team_live): vorn, damit die Gruppe ihren Fortschritt gleich sieht */
+.team-live {
+  margin-bottom: 6px;
+}
+
+.team-live-tag {
+  font-weight: 600;
+}
+
+.team-live-mitglieder {
+  color: var(--text-leise);
+}
+
+.team-live-hinweis {
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: var(--primaer-tint);
+}
+
 .team-fortschritt-titel {
   font-size: 14px;
   font-weight: 500;

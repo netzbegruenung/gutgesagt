@@ -4,6 +4,7 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  Injectable,
   Injector,
   OnInit,
   ViewChild,
@@ -25,9 +26,16 @@ import { TeamPilleComponent } from '../shared/teams/team-pille.component';
 import {
   MEINE_TEAMS_TITEL,
   TEAM_ERSTE_WOCHE,
+  TEAM_LIVE_HINWEIS,
+  TEAM_LIVE_HINWEIS_MEHR,
+  TEAM_LIVE_LAEUFT_NOCH,
+  TEAM_LIVE_STUNDE_LAEUFT_NOCH,
   TEAM_VERLASSEN,
   TEAM_WAECHST_NOCH,
+  teamLiveMitglieder,
+  teamLiveTag,
   teamQuestGeschafft,
+  teamQuestStufe,
   teamQuestZiel,
   teamWocheTitel,
   wocheVorBeitritt,
@@ -36,6 +44,25 @@ import {
   BestaetigungsDialogComponent,
   BestaetigungsDialogDaten,
 } from '../shared/components/bestaetigungs-dialog/bestaetigungs-dialog.component';
+
+/**
+ * Für welche Teams der Hinweis an Bestandsmitglieder (team_live) in dieser Sitzung der App
+ * schon stand: nur im Arbeitsspeicher, nichts auf dem Gerät (ein Merker im Speicher des
+ * Geräts bräuchte eine Prüfung nach § 25 TDDDG und einen Absatz in der Erklärung).
+ */
+@Injectable({ providedIn: 'root' })
+export class TeamLiveHinweisMerker {
+  private readonly gezeigt = new Set<string>();
+
+  /** True beim ersten Mal je Team und Sitzung (und merkt es). */
+  erstmals(teamId: string): boolean {
+    if (this.gezeigt.has(teamId)) {
+      return false;
+    }
+    this.gezeigt.add(teamId);
+    return true;
+  }
+}
 
 /** Die Rückfrage vor „Team verlassen“: endgültig, die Nummer wird nicht neu vergeben. */
 export function verlassenFrage(team: MeinTeam): BestaetigungsDialogDaten {
@@ -67,6 +94,11 @@ export function verlassenFrage(team: MeinTeam): BestaetigungsDialogDaten {
  * Team-Fortschritt der letzten abgeschlossenen Woche (nur gerundet, unter 5 Mitgliedern
  * „Euer Team wächst noch …“) und die Team-Quest (Ziel der Woche ohne Stand, nach
  * Wochenende nur „geschafft“). Ohne die Schalter fehlen beide.
+ *
+ * Mit dem Schalter team_live (Jura-Akte 28.11.2026) steht in Teams ab 20 Mitgliedern
+ * daneben der Stand des Tages, etwa „Heute bis 14 Uhr: rund 80“, die Zahl der Mitglieder
+ * und die Quest in Dritteln, alles vom Server vorberechnet. Wer vor dem Einschalten
+ * eingewilligt hat, sieht dazu einmal je Sitzung den Hinweis aus der Akte.
  */
 @Component({
   selector: 'app-meine-teams',
@@ -91,12 +123,22 @@ export class MeineTeamsComponent implements OnInit {
   readonly wocheTitel = teamWocheTitel;
   readonly questZiel = teamQuestZiel;
   readonly ersteWoche = TEAM_ERSTE_WOCHE;
+  readonly liveTag = teamLiveTag;
+  readonly liveLaeuftNoch = TEAM_LIVE_LAEUFT_NOCH;
+  readonly liveStundeLaeuftNoch = TEAM_LIVE_STUNDE_LAEUFT_NOCH;
+  readonly liveMitglieder = teamLiveMitglieder;
+  readonly questStufe = teamQuestStufe;
+  readonly liveHinweis = TEAM_LIVE_HINWEIS;
+  readonly liveHinweisMehr = TEAM_LIVE_HINWEIS_MEHR;
+  /** Teams, unter denen in dieser Karte der Hinweis an Bestandsmitglieder steht. */
+  readonly hinweisFuer = new Set<string>();
 
   private readonly teamsService = inject(TeamsService);
   private readonly dialog = inject(MatDialog);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private readonly hinweisMerker = inject(TeamLiveHinweisMerker);
   /** Ziel des Fokus, nachdem ein Team verlassen ist: Knopf und Eintrag sind dann weg (WCAG 2.4.3). */
   @ViewChild('titelElement') private titelElement?: ElementRef<HTMLElement>;
   private readonly anstoss$ = new Subject<void>();
@@ -112,6 +154,7 @@ export class MeineTeamsComponent implements OnInit {
       this.erstes = false;
       if (lauf.fehler === null) {
         this.stand = lauf.daten;
+        this.hinweiseMerken(lauf.daten);
       } else {
         const status = (lauf.fehler as { status?: number } | null)?.status;
         // Schalter aus (älteres Backend: 404) oder abgemeldet: keine Karte. Sonst bleibt der letzte Stand stehen.
@@ -122,6 +165,18 @@ export class MeineTeamsComponent implements OnInit {
       this.cdr.markForCheck();
     });
     this.destroyRef.onDestroy(() => abo.unsubscribe());
+  }
+
+  /**
+   * Der Hinweis an Bestandsmitglieder steht unter einem Live-Team, sobald der Server ihn
+   * meldet, einmal je Sitzung; in dieser Karte bleibt er stehen, bis sie geschlossen wird.
+   */
+  private hinweiseMerken(stand: MeineTeams | null): void {
+    for (const team of stand?.teams ?? []) {
+      if (team.aktuelle_saison && team.live?.hinweis_neu && this.hinweisMerker.erstmals(team.id)) {
+        this.hinweisFuer.add(team.id);
+      }
+    }
   }
 
   /** Die Woche ab ``montag`` endete vor dem eigenen Beitritt: dann „Eure erste gemeinsame Woche läuft.“ */
