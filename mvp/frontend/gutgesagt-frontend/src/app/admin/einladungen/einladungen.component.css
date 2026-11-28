@@ -95,6 +95,7 @@ th {
 }
 
 .motiv-wahl {
+  display: block;
   flex-basis: 100%;
   min-width: 0;
 }
@@ -126,30 +127,6 @@ th {
   margin-bottom: 4px;
   font-size: 0.875rem;
   color: var(--text-leise);
-}
-
-.motive {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-}
-
-.motiv-inhalt {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Medaillon wie bei den Meilensteinen */
-.medaillon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--primaer-tint);
-  box-shadow: inset 0 0 0 2px var(--akzent-tanne);
 }
 
 /* Team-Pille und Zeile „Nach Gruppe …“ nur an Wortgrenzen umbrechen, sonst rechnet die

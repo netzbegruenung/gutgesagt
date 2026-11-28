@@ -150,7 +150,13 @@ class TestAdmin:
         assert body["aktuelle_saison"] == "2026"
         # Ohne angelegte Saison ist der Vorschlag die aktuelle Saison
         assert body["saison_vorschlag"] == "2026"
-        assert {m["schluessel"] for m in body["motive"]} >= {"vogel", "laufschuh"}
+        # Zur Auswahl die Emoji der Positivliste mit Name und Kategorie; die sechs
+        # frueheren Schluessel bleiben gueltig, stehen aber nicht mehr zur Wahl.
+        motive = {m["schluessel"]: m for m in body["motive"]}
+        assert motive["🌱"]["name"] == "Spross"
+        assert motive["🌱"]["kategorie"] == "tiere-natur"
+        assert "vogel" not in motive
+        assert [k["name"] for k in body["motiv_kategorien"]][0] == "Tiere & Natur"
         assert body["teamname_hinweis"] == (
             "Anlass, Ort, Saison oder öffentliche Gruppe mit schriftlicher "
             "Zustimmung; keine Namen zu Religion, Gesundheit, sexueller "
@@ -160,6 +166,7 @@ class TestAdmin:
         assert mit_team["team"] == {
             "name": "BDK 26 Berlin",
             "motiv": "vogel",
+            "motiv_name": "Vogel",
             "saison": "2026",
             "art": "anlass",
             "zustimmung_am": None,
@@ -272,6 +279,7 @@ class TestAdmin:
         assert set(team) == {
             "name",
             "motiv",
+            "motiv_name",
             "saison",
             "art",
             "zustimmung_am",
@@ -295,6 +303,110 @@ class TestAdmin:
 
         assert antwort.status_code == 201
         assert einladung_repo.anlegen.call_args.kwargs["team_name"] is None
+
+    @pytest.mark.parametrize("motiv", ["🌱", "⚖️", "vogel", "sprechblase"])
+    def test_anlegen_mit_emoji_oder_frueherem_motiv(
+        self, einladung_repo, team_repo, motiv
+    ):
+        # Neue Teams waehlen aus der Positivliste; Teams mit Vogel und Sprechblase gibt
+        # es auf Prod schon, ihre Schluessel gelten weiter.
+        antwort = _client(einladung_repo, team_repo).post(
+            "/api/v1/einladungen",
+            headers=ADMIN,
+            json={
+                "notiz": "Vorhut",
+                "erlaubte_einloesungen": 30,
+                "gueltig_bis": (heute_utc() + timedelta(days=14)).isoformat(),
+                "team_name": "Vorhut",
+                "team_motiv": motiv,
+            },
+        )
+
+        assert antwort.status_code == 201
+        assert einladung_repo.anlegen.call_args.kwargs["team_motiv"] == motiv
+
+    @pytest.mark.parametrize(
+        "motiv",
+        [
+            # Religion
+            "✝️",
+            "☪️",
+            "🕉️",
+            "✡️",
+            "☸️",
+            "☦️",
+            "🛐",
+            "📿",
+            "⛪",
+            "🕌",
+            "🕍",
+            "⛩️",
+            "🕋",
+            "🕎",
+            "🧿",
+            # Gender, Trans, Sexualitaet
+            "⚧️",
+            "♀️",
+            "♂️",
+            "🏳️\u200d🌈",
+            "🌈",
+            # Gesundheit, Behinderung, Medizin, Koerper
+            "♿",
+            "🦽",
+            "🦼",
+            "🦯",
+            "🦻",
+            "💉",
+            "💊",
+            "🩸",
+            "🦠",
+            "🧬",
+            "🧠",
+            # Smileys & Personen, Flaggen
+            "😀",
+            "🤰",
+            "💏",
+            "💑",
+            "🇩🇪",
+            "🏴",
+            # Hautton, Waffen, mehrdeutig
+            "👍🏽",
+            "🔫",
+            "🗡️",
+            "✊",
+            "🙏",
+            "🍆",
+            "🍑",
+            # Politische bzw. Zugehoerigkeits-Symbole
+            "🌹",
+            "🕊️",
+            "🌻",
+            # Nicht genau der Eintrag: ohne Variantenwaehler, ZWJ-Sequenz, Freitext
+            "⚖",
+            "🌱\ufe0f",
+            "🐦\u200d⬛",
+            "🌱🌱",
+            "drache",
+            "",
+        ],
+    )
+    def test_motiv_ausserhalb_der_liste_abgelehnt(
+        self, einladung_repo, team_repo, motiv
+    ):
+        antwort = _client(einladung_repo, team_repo).post(
+            "/api/v1/einladungen",
+            headers=ADMIN,
+            json={
+                "notiz": "Vorhut",
+                "erlaubte_einloesungen": 30,
+                "gueltig_bis": (heute_utc() + timedelta(days=14)).isoformat(),
+                "team_name": "Vorhut",
+                "team_motiv": motiv,
+            },
+        )
+
+        assert antwort.status_code == 422
+        einladung_repo.anlegen.assert_not_called()
 
     @pytest.mark.parametrize(
         "felder",
@@ -427,6 +539,8 @@ class TestPruefen:
         team = antwort.json()["team"]
         assert team["name"] == "BDK 26 Berlin"
         assert team["motiv"] == "vogel"
+        # Name fuer Alt-Text und Beschriftung, auch fuer die frueheren Schluessel
+        assert team["motiv_name"] == "Vogel"
         assert team["saison"] == "2026"
         assert team["art"] == "anlass"
         assert team["mitglieder"] == 36
@@ -565,7 +679,12 @@ class TestBeitreten:
 
         assert antwort.status_code == 200
         assert antwort.json() == {
-            "team": {"name": "BDK 26 Berlin", "motiv": "vogel", "saison": "2026"},
+            "team": {
+                "name": "BDK 26 Berlin",
+                "motiv": "vogel",
+                "motiv_name": "Vogel",
+                "saison": "2026",
+            },
             "nummer": 37,
             "neu": True,
         }

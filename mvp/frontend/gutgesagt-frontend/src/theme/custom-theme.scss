@@ -131,6 +131,9 @@ $gutgesagt-light-theme: mat.m2-define-light-theme((
   --primaer-text: #007830; // Klee als Schrift (Links), 5,63:1 auf Weiss
   --akzent: #8abd24; // Grashalm
   --primaer-tint: #ebf6ef; // Hellgruen: Erfolg, Auswahl
+  // Scheibe unter Team-Motiven als Emoji: hell in beiden Modi, damit schwarze Zeichen (♠️ ✔️)
+  // auch im Dunkeln lesbar bleiben
+  --emoji-grund: #ffffff;
   // Ueberschriften und Akzentschrift: im Hellen Tanne, im Dunkeln fast Weiss (#588)
   --akzent-schrift: var(--primaer);
   // Status
@@ -292,6 +295,7 @@ html[data-theme='dark'] {
     --primaer-text: #ebebeb;
     --akzent: #8abd24;
     --primaer-tint: #2b3134;
+    --emoji-grund: #dfe4e6; // gedaempft hell, blendet weniger als Weiss
     --akzent-schrift: #f2f2f2;
     --fehler: #ff8a80; // Fehlertext; Warn-Knoepfe (Material warn) bleiben #c62828 mit Weiss
     --fehler-tint: #2c1a1b;

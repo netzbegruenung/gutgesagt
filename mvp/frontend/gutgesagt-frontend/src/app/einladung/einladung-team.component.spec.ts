@@ -254,6 +254,16 @@ describe('EinladungComponent mit Team', () => {
   });
 
   describe('ohne Konto', () => {
+    it('zeigt ein Emoji-Motiv mit dem Namen vom Server daneben', () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: { ...team(), motiv: '🚲', motiv_name: 'Fahrrad' } });
+
+      const zeile = el().querySelector('[data-testid="team-motiv"]')!;
+      expect(zeile.querySelector('[data-testid="motiv-emoji"]')!.textContent!.trim()).toBe('🚲');
+      expect(zeile.querySelector('img')).toBeNull();
+      expect(zeile.textContent).toContain('Motiv: Fahrrad');
+    });
+
     it('zeigt den Kasten über dem Formular mit Team, Motiv samt Name, Nummer und beiden Knöpfen', () => {
       starten('Code123');
       pruefen({ einloesbar: true, team: team() });

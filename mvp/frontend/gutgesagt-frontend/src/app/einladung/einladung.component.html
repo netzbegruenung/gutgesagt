@@ -44,8 +44,8 @@
     <!-- Teams: das Ticket mit Motiv, Teamname und Nummer; das Motiv ist Zierde, der Name steht immer daneben. -->
     <ng-template #ticket let-zeile="zeile" let-name="name" let-nummer="nummer" let-nummerText="nummerText">
       <div class="team-ticket">
-        <span class="team-medaillon" *ngIf="motivBild">
-          <img [src]="motivBild" [alt]="'Motiv ' + motivName" width="36" height="36" />
+        <span class="team-medaillon" [class.emoji]="istEmoji" *ngIf="hatMotiv">
+          <app-team-motiv [motiv]="motiv" [name]="motivName ? 'Motiv ' + motivName : null" [zierde]="!motivName" [groesse]="36"></app-team-motiv>
         </span>
         <span class="team-ticket-text">
           <span class="team-zeile">{{ zeile }}</span>
@@ -59,7 +59,10 @@
       <h2 id="team-gruss" class="team-ueberschrift">{{ begruessungTitel(team) }}</h2>
       <!-- Vor dem Ja kein Ticket und kein Medaillon: Noch ist nichts zugeteilt. Das Motiv nur klein, mit Namen daneben. -->
       <p class="team-motiv-zeile" data-testid="team-motiv">
-        <img *ngIf="motivBild" [src]="motivBild" alt="" width="24" height="24" />
+        <!-- Emoji auf heller Scheibe: schwarze Zeichen bleiben im Dunkelmodus lesbar -->
+        <span *ngIf="hatMotiv" class="motiv-scheibe" [class.emoji]="istEmoji">
+          <app-team-motiv [motiv]="motiv" [name]="motivName" [zierde]="true" [groesse]="24"></app-team-motiv>
+        </span>
         <span>Team {{ team.name }}, Saison {{ team.saison }}<ng-container *ngIf="motivName"> · Motiv: {{ motivName }}</ng-container></span>
       </p>
       <p *ngIf="wortlautNeu" class="team-hinweis" role="alert" data-testid="team-wortlaut-neu">

@@ -103,8 +103,17 @@ form .email + button {
   overflow-wrap: anywhere;
 }
 
-.team-motiv-zeile img {
+.team-motiv-zeile .motiv-scheibe {
   flex: none;
+  display: inline-grid;
+  place-items: center;
+}
+
+.team-motiv-zeile .motiv-scheibe.emoji {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--emoji-grund);
 }
 
 /* Hinweis im Kasten, gut lesbar (nicht leise): betrifft, ob überhaupt gespeichert wird */
@@ -129,6 +138,11 @@ form .email + button {
   border: 3px solid var(--akzent-tanne);
   border-radius: 50%;
   background: var(--primaer-tint);
+}
+
+/* Emoji auf heller Scheibe, auch im Dunkelmodus */
+.team-medaillon.emoji {
+  background: var(--emoji-grund);
 }
 
 .team-ticket-text {

@@ -4,7 +4,7 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { stillerKontext } from '../selbst-nachladen';
 import { BeitretenAntwort, PruefenAntwort, TeamAntwort } from './team-einladung';
-import { TeamArt } from '../teams/teams';
+import { TeamArt, TeamMotivEintrag, TeamMotivKategorie } from '../teams/teams';
 
 // Grenzen wie im Backend (services/einladung_service.py).
 export const EINLADUNG_NOTIZ_MAX = 200;
@@ -42,6 +42,8 @@ export interface Einladung {
 export interface EinladungTeam {
   name: string;
   motiv: string | null;
+  /** Name des Motivs für Alt-Text und Beschriftung; ältere Server schicken keinen. */
+  motiv_name?: string | null;
   saison: string;
   /** Teamart; ältere Server schicken keine, dann gilt „anlass“. */
   art?: TeamArt;
@@ -71,7 +73,9 @@ export interface EinladungListe {
   aktuelle_saison?: string | null;
   /** Vorschlag für die Saison neuer Teamlinks: laufende oder nächste angelegte Saison, sonst die aktuelle. */
   saison_vorschlag?: string | null;
-  motive?: { schluessel: string; name: string }[];
+  /** Die feste Emoji-Liste (domain/team_emoji.py) mit deutschem Namen, Kategorie und Stichworten. */
+  motive?: TeamMotivEintrag[];
+  motiv_kategorien?: TeamMotivKategorie[];
   /** Hinweis zum Teamnamen fürs Formular. */
   teamname_hinweis?: string | null;
 }

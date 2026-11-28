@@ -67,19 +67,9 @@
         <p *ngIf="teamZustimmungFehlt" class="warnung team-fehler" role="alert" data-testid="team-zustimmung-fehlt">
           Bei einem Team nach Gruppe ist das Datum der schriftlichen Zustimmung Pflicht, höchstens heute.
         </p>
-        <div class="motiv-wahl">
-          <span id="motiv-label" class="motiv-label">Motiv</span>
-          <mat-radio-group name="teamMotiv" [(ngModel)]="teamMotiv" aria-labelledby="motiv-label" class="motive">
-            <mat-radio-button *ngFor="let m of motive" [value]="m.schluessel" class="motiv" data-testid="motiv">
-              <span class="motiv-inhalt">
-                <span class="medaillon" aria-hidden="true">
-                  <img *ngIf="motivBild(m.schluessel) as bild" [src]="bild" alt="" width="18" height="18" />
-                </span>
-                {{ m.name }}
-              </span>
-            </mat-radio-button>
-          </mat-radio-group>
-        </div>
+        <!-- Motiv aus der festen Emoji-Liste: Suche mit Vorschlägen, gruppiert nach Kategorien -->
+        <app-motiv-auswahl class="motiv-wahl" [motive]="motive" [kategorien]="motivKategorien"
+                           [(motiv)]="teamMotiv" data-testid="motiv-wahl"></app-motiv-auswahl>
         <p class="hinweis team-erklaerung">
           Ohne Teamname ist es ein reiner Kontolink wie bisher. Wer über einen Teamlink kommt, wird gefragt,
           ob das Team gespeichert werden darf; hier steht später nur die Zahl der Mitglieder, nie wer.
@@ -119,6 +109,7 @@
               <td class="text" data-label="Notiz">{{ e.notiz }}</td>
               <td *ngIf="teamsAktiv" class="team" data-label="Team" data-testid="team">
                 <app-team-pille *ngIf="e.team; else ohneTeam" [name]="e.team.name" [motiv]="e.team.motiv"
+                                [motivName]="motivNameZu(e.team.motiv, e.team.motiv_name)"
                                 [saison]="e.team.saison" [klein]="true"></app-team-pille>
                 <span *ngIf="e.team?.art === 'gruppe'" class="hinweis team-art" data-testid="team-art-zeile">
                   Nach Gruppe<ng-container *ngIf="e.team?.zustimmung_am">, Zustimmung vom {{ tag(e.team!.zustimmung_am!) }}</ng-container>
