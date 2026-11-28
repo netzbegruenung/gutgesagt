@@ -14,16 +14,18 @@ Datenbank nicht erreichbar, gilt aus (wie ohne Eintrag), bis der naechste Versuc
 gelingt.
 
 Seit dem Schalter-Umbau (27.11.2026, docs/ARCHITECTURE.md "Schalter nach dem Umbau")
-gibt es nur noch vier Pakete (PAKET_SCHALTER) und sieben Einzelschalter
-(EINZEL_SCHALTER). Die frueheren Schalter der Basisfunktionen sind weg, der Code laeuft
-wie "an"; vier davon behalten als Not-Aus nur ihre Umgebungsvariable (NOTAUS,
-``notaus_wirksam``, ohne Admin-Wert).
+gibt es nur noch vier Pakete (PAKET_SCHALTER) und acht Einzelschalter
+(EINZEL_SCHALTER, seit 28.11. mit team_live). Die frueheren Schalter der
+Basisfunktionen sind weg, der Code laeuft wie "an"; vier davon behalten als Not-Aus
+nur ihre Umgebungsvariable (NOTAUS, ``notaus_wirksam``, ohne Admin-Wert).
 """
 
 import threading
 import time
 from dataclasses import dataclass
+from datetime import date, datetime
 from typing import Callable, Dict, List, Optional, Tuple
+from zoneinfo import ZoneInfo
 
 from core.config import Settings, settings as globale_settings
 from core.logging import get_logger
@@ -180,6 +182,28 @@ EINZEL_SCHALTER = (
         oeffentlich=True,
     ),
     Schalterart(
+        name="team_live",
+        rechtlich_freigegeben=True,
+        feld="team_live_aktiv",
+        umgebungsvariable="SEMANTIC_SEARCH_TEAM_LIVE_AKTIV",
+        erklaerung=(
+            "Team-Fortschritt quasi-live: In Teams ab 20 Mitgliedern mit Einwilligung "
+            "sehen Mitglieder unter „Meine Teams“ auch die Summe des laufenden Tages "
+            "bis zur letzten vollen Stunde (eine Stunde zählt erst ab 10 verschiedenen "
+            "Beitragenden, sonst mit der nächsten), die Zahl der Mitglieder und die "
+            "Quest in Dritteln. Nur für Veranstaltungen wie die BDK einschalten, "
+            "danach wieder aus. Wirkt nur zusammen mit dem Paket Teams."
+        ),
+        einschalt_hinweis=(
+            "Jura-Akte 28.11.2026 (Team-Fortschritt quasi-live): nur für die Tage der "
+            "Veranstaltung einschalten; nur in der App, keine Anzeige auf Beamer oder "
+            "Saalbildschirm; an nur mit dem Paket Teams. Endet automatisch nach dem "
+            "Tag in der Einstellung team_live_bis (BDK-Ende)"
+        ),
+        # Die Datenschutzerklaerung blendet ihre Saetze danach ein
+        oeffentlich=True,
+    ),
+    Schalterart(
         name="muster_stimmen",
         rechtlich_freigegeben=True,
         feld="muster_stimmen_aktiv",
@@ -293,6 +317,16 @@ NOTAUS: Dict[str, str] = {
 }
 
 
+# Schalter mit Enddatum (Jura-Akte 28.11.2026): Name -> Admin-Einstellung mit dem letzten
+# Tag (deutsche Zeit), an dem er wirkt (services/einstellungen_service.py). Danach wirkt
+# er nicht, auch wenn Obergrenze und Admin-Wert an sind; die Admin-Seite sagt es.
+ENDDATUM: Dict[str, str] = {"team_live": "team_live_bis"}
+
+
+def heute_berlin() -> date:
+    return datetime.now(ZoneInfo("Europe/Berlin")).date()
+
+
 class UnbekannterSchalter(KeyError):
     pass
 
@@ -322,7 +356,16 @@ class SchalterService:
         admin_wert_setzen: Callable[[str, bool, str], None],
         cache_sekunden: float = CACHE_SEKUNDEN,
         uhr: Callable[[], float] = time.monotonic,
+        enddatum: Optional[Callable[[str], Optional[date]]] = None,
+        heute: Callable[[], date] = heute_berlin,
     ):
+        """
+        ``enddatum``: liest zum Namen eines Schalters aus ENDDATUM den letzten Tag, an
+        dem er wirkt (None: kein Ende). Ohne Angabe gilt kein Enddatum (Tests); der
+        Dienst aus der Datenbank liest die Admin-Einstellungen.
+        """
+        self._enddatum = enddatum
+        self._heute = heute
         self._lesen = admin_werte_lesen
         self._setzen = admin_wert_setzen
         self._cache_sekunden = cache_sekunden
@@ -376,7 +419,23 @@ class SchalterService:
         # Datenbank dann nicht.
         if not getattr(einstellungen, _art(name).feld):
             return False
-        return _wirksam(name, einstellungen, self.admin_werte())
+        if not _wirksam(name, einstellungen, self.admin_werte()):
+            return False
+        return self.abgelaufen_am(name) is None
+
+    def abgelaufen_am(self, name: str) -> Optional[date]:
+        """Das Enddatum, wenn der Schalter eins hat und es vorbei ist; sonst None."""
+        if self._enddatum is None or name not in ENDDATUM:
+            return None
+        try:
+            bis = self._enddatum(name)
+        except Exception as e:
+            # Lieber aus als ueber das Ende hinaus an
+            logger.error(f"Enddatum von {name} nicht gelesen: {type(e).__name__}")
+            return date.min
+        if bis is not None and self._heute() > bis:
+            return bis
+        return None
 
     def stand(
         self, einstellungen: Settings, frisch: bool = False
@@ -385,7 +444,7 @@ class SchalterService:
         Admin-Werte am Cache vorbei."""
         werte = self.admin_werte(frisch=frisch)
         return [
-            _stand(art, einstellungen, werte)
+            _stand(art, einstellungen, werte, self.abgelaufen_am(art.name))
             for art in sorted(SCHALTER.values(), key=lambda a: GRUPPEN.index(a.gruppe))
         ]
 
@@ -400,16 +459,27 @@ class SchalterService:
 
 
 def _stand(
-    art: Schalterart, einstellungen: Settings, werte: Dict[str, bool]
+    art: Schalterart,
+    einstellungen: Settings,
+    werte: Dict[str, bool],
+    abgelaufen: Optional[date] = None,
 ) -> Schalterstand:
     hinweis = art.einschalt_hinweis or (DSFA_HINWEIS if art.dsfa_hinweis else None)
+    erklaerung = art.erklaerung
+    if abgelaufen is not None:
+        erklaerung += (
+            f" Abgelaufen: wirkt seit dem Ende am {abgelaufen.strftime('%d.%m.%Y')} "
+            f"(Einstellung {ENDDATUM[art.name]}) nicht mehr, auch wenn er an steht."
+            if abgelaufen != date.min
+            else f" Enddatum ({ENDDATUM[art.name]}) nicht lesbar: wirkt nicht."
+        )
     return Schalterstand(
         name=art.name,
-        erklaerung=art.erklaerung,
+        erklaerung=erklaerung,
         umgebungsvariable=art.umgebungsvariable,
         obergrenze=bool(getattr(einstellungen, art.feld)),
         admin_wert=bool(werte.get(art.name, False)),
-        wirksam=_wirksam(art.name, einstellungen, werte),
+        wirksam=_wirksam(art.name, einstellungen, werte) and abgelaufen is None,
         dsfa_hinweis=hinweis,
         gruppe=art.gruppe,
         wartet_auf_recht=bool(hinweis) and not art.rechtlich_freigegeben,
@@ -429,6 +499,8 @@ VORAUSSETZUNG: Dict[str, str] = {
     # Ohne Teams keine Teams am Namen und keine Quests
     "teams_oeffentlich": "teams",
     "team_quests": "teams",
+    # Live-Stand nur zur Summe des Teams (Jura-Akte 28.11.2026)
+    "team_live": "teams",
     # Ohne Danke-Knopf (Paket Wirkungs-Echo) kein Danke ohne Konto
     "danke_ohne_konto": "wirkungs_echo",
 }
@@ -473,7 +545,16 @@ def _aus_datenbank() -> SchalterService:
     return SchalterService(
         admin_werte_lesen=lambda: get_schalter_repository().admin_werte(),
         admin_wert_setzen=lambda n, a, w: get_schalter_repository().setzen(n, a, w),
+        enddatum=_enddatum_aus_einstellungen,
     )
+
+
+def _enddatum_aus_einstellungen(name: str) -> Optional[date]:
+    """Das Enddatum aus der Admin-Einstellung; unlesbar: date.min (wirkt nicht)."""
+    from services.einstellungen_service import datum_lesen, get_einstellungen_service
+
+    wert = get_einstellungen_service().wert(ENDDATUM[name])
+    return datum_lesen(wert) or date.min
 
 
 _service: Optional[SchalterService] = None

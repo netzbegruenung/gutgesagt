@@ -394,7 +394,9 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
 ### T17 Team-Fortschritt und Team-Quests (DSFA V29; gebaut, ausgeschaltet)
 
 - **Zweck:** Mitgliedern eines Teams zeigen, was das Team in der letzten abgeschlossenen Woche
-  gemeinsam bewirkt hat, und ihnen ein gemeinsames Wochenziel aus dem Bedarf geben.
+  und, ab 20 Mitgliedern, am laufenden Tag bis zur letzten vollen Stunde gemeinsam bewirkt hat
+  (Schalter `team_live`, nur für Veranstaltungen wie die BDK, Jura-Akte 28.11.2026), und ihnen
+  ein gemeinsames Wochenziel aus dem Bedarf geben.
 - **Rechtsgrundlage:** die Team-Einwilligung aus T13 (Wortlaut `team-2026-11-26`), die die
   Team-Summe ausdrücklich nennt (Art. 6 Abs. 1 lit. a, Art. 9 Abs. 2 lit. a). Für Quest-Punkte
   an der Person zusätzlich die Einwilligung aus T16 im Wortlaut `spielgefuehl-2026-11-28`, der
@@ -404,18 +406,33 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   Kommentaren, Bewertungen und Meldungen „Ja, gepostet“, `team_wochen`). Je Team und Woche eine
   Quest mit Thema und Ziel (`team_quests`). Beides ohne Kennung, Beitrag und Zeitpunkt. Entdoppelt wird über
   einen Wochen-Prüfwert nur im Arbeitsspeicher, der Schlüssel entsteht jede Woche neu.
-  Quest-Punkte werden beim Abruf berechnet und nicht gespeichert.
-- **Empfänger:** nur Mitglieder des Teams, nur die letzte abgeschlossene Woche, erst ab 5
-  Mitgliedern mit Einwilligung, gerundet, ohne Namen. Admins keine Liste. Bekannte
+  Quest-Punkte werden beim Abruf berechnet und nicht gespeichert. Mit `team_live`:
+  Stundenzähler je Team (Zahl, ohne Kennung; `team_stunden` mit Stand der Vorberechnung,
+  freigegebener Zahl und Mitgliederzahl zum Zeitpunkt), Löschung mit Wochenende; die
+  verschiedenen Beitragenden je Stunde zählt der Dienst über HMAC-Prüfwerte nur im
+  Arbeitsspeicher (Schlüssel je Tag).
+- **Empfänger:** nur Mitglieder des Teams, erst ab 5 Mitgliedern mit Einwilligung, gerundet,
+  ohne Namen: die letzte abgeschlossene Woche und, mit `team_live` in Teams ab 20 Mitgliedern
+  mit Einwilligung, der laufende Tag bis zur letzten vollen Stunde (eine Stunde erst ab 10
+  verschiedenen Beitragenden, sonst mit der nächsten; auf 10 abgerundet), die Mitgliederzahl
+  (auf 10 abgerundet, stündlich) und die Quest in Dritteln. Nur in der App, kein öffentlicher
+  Endpunkt, keine Anzeige auf Beamer oder Saalbildschirm. Admins keine Liste. Bekannte
   Restinformation: „geschafft“ und das Ziel verraten grob die Zahl der Mitglieder mit
-  Einwilligung.
+  Einwilligung; mit `team_live` dazu, dass in einer Stunde weniger als 10 Mitglieder aktiv
+  waren, und das Beitrittsfenster einer beobachteten Person auf etwa eine Stunde.
 - **Fristen:** LK „Fristen“: `team_wochen` und `team_quests` ohne Personenbezug, unbefristet,
-  gehen mit dem Team (eine Team-Löschung gibt es noch nicht). Prüfwerte verfallen mit dem
+  gehen mit dem Team (eine Team-Löschung gibt es noch nicht). `team_stunden` mit dem
+  Wochenwechsel; die Prüfwerte der Stunden verfallen mit ihrer Freigabe, sonst mit dem Tag. Prüfwerte verfallen mit dem
   Wochenwechsel. „Team verlassen“ und die Kontolöschung lassen die Zähler stehen; das geht, weil
   sie keiner Person zugeordnet sind.
 - **TOM:** DSFA-Nachtrag „Teams“ und Spielgefühl V23/V29. Schalter `team_fortschritt` (nur mit
   `teams`) und `team_quests` (nur mit `team_fortschritt`), Standard aus. Schwelle 5, Rundung,
-  keine laufende Woche (gegen Rückschluss aus der Differenz zweier Stände).
+  keine laufende Woche (gegen Rückschluss aus der Differenz zweier Stände). `team_live` (nur
+  mit `teams`, Standard aus, nur die Tage der Veranstaltung, endet automatisch nach dem Tag
+  in der Einstellung `team_live_bis`, Standard 06.12.2026): 1-h-Blöcke, 15 min nach
+  Blockende einmal vorberechnet, Freigabe ab 10 verschiedenen Beitragenden mit Übertrag, nach
+  einem Neustart übertragen statt freigegeben, Live ab 20, Tagessumme auf 10 abgerundet, kein
+  laufender Stand.
 
 ### T18 Muster-Hinweise gegen Absprachen, auch aus Zustimmungen (DSFA V30; gebaut, ausgeschaltet)
 

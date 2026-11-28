@@ -144,3 +144,46 @@ export function teamQuestGeschafft(thema: string | null): string {
   const ort = thema ? ` im Beet ${thema}` : '';
   return `Euer Wochenziel letzte Woche${ort} ist geschafft. Danke, dass du dabei bist.`;
 }
+
+/**
+ * Team-Fortschritt quasi-live (Schalter `team_live`, Jura-Akte 28.11.2026): die heute
+ * freigegebene Summe bis zur vollen Stunde, etwa „Heute bis 14 Uhr: rund 80“. Zahl und
+ * Rundung (auf 10 abgerundet, unter 10 „weniger als 10“) kommen vom Server.
+ */
+export function teamLiveTag(bis: number, tagessumme: string): string {
+  return `Heute bis ${bis} Uhr: ${tagessumme}`;
+}
+
+/** Solange heute noch keine Stunde freigegeben ist (unter 10 verschiedenen Beitragenden). */
+export const TEAM_LIVE_LAEUFT_NOCH = 'Heute: läuft noch';
+
+/** Neben der Tagessumme, wenn die letzte volle Stunde noch nicht freigegeben ist. */
+export const TEAM_LIVE_STUNDE_LAEUFT_NOCH = 'Die letzte Stunde läuft noch.';
+
+/** Die Mitgliederzahl, vom Server ab 20 auf 10 abgerundet, also eine Untergrenze. */
+export function teamLiveMitglieder(mitglieder: number): string {
+  return `Mindestens ${mitglieder} sind dabei.`;
+}
+
+/** Die Quest-Stufe in Dritteln (1, 2; 3 geschafft), nur aus freigegebenen Stunden; sonst nichts. */
+export function teamQuestStufe(stufe: number | null | undefined): string | null {
+  switch (stufe) {
+    case 1:
+      return 'Euer Wochenziel: ein Drittel geschafft.';
+    case 2:
+      return 'Euer Wochenziel: zwei Drittel geschafft.';
+    case 3:
+      return 'Euer Wochenziel ist geschafft. Danke, dass du dabei bist.';
+    default:
+      return null;
+  }
+}
+
+/**
+ * Hinweis an Bestandsmitglieder, wortgleich aus der Jura-Akte vom 28.11.2026: unter „Meine
+ * Teams“, wenn ein Team live ist und die Person vor dem Einschalten eingewilligt hat, einmal
+ * je Sitzung der App. Eine erneute Einwilligung braucht es nicht. Der letzte Satz verlinkt
+ * die Erklärung.
+ */
+export const TEAM_LIVE_HINWEIS = 'Neu: Ab jetzt siehst du die Summe deines Teams auch für heute, zur vollen Stunde und nie mit einzelnen Namen.';
+export const TEAM_LIVE_HINWEIS_MEHR = 'Mehr in der Datenschutzerklärung.';

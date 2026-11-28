@@ -281,9 +281,13 @@ class Settings(BaseSettings):
     # Begruessung nach ?k= und die Karte mit dem Saal-Spruch; nur Anzeige.
     k_begruessung_aktiv: bool = False
     # Einzelschalter. team_quests wirkt nur mit teams (Quest-Punkte nur mit dem Paket
-    # Spielgefuehl), teams_oeffentlich nur mit teams, muster_stimmen nur mit
+    # Spielgefuehl), team_live und teams_oeffentlich nur mit teams, muster_stimmen nur mit
     # spielgefuehl_buehne, danke_ohne_konto nur mit wirkungs_echo.
     team_quests_aktiv: bool = False
+    # Team-Fortschritt quasi-live (Jura-Akte 28.11.2026): Stundenbloecke ab 10
+    # Beitragenden in Teams ab 20 Mitgliedern; nur fuer Veranstaltungen wie die BDK
+    # einschalten, danach wieder aus. Wirkt nur mit teams.
+    team_live_aktiv: bool = False
     muster_stimmen_aktiv: bool = False
     # Teams oeffentlich am Namen (eigene Einwilligung, domain/teams.py): aus, bis die
     # Datenschutzbeauftragte geraten hat.

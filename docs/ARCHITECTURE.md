@@ -542,6 +542,22 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   `tests/unit/test_team_loeschung_nimmt_zaehler_mit.py` fails on Python, SQL and shell code that
   deletes `einladungen` or `team_nummern` in the usual forms without them (not on table names
   built at run time).
+- `SEMANTIC_SEARCH_TEAM_LIVE_AKTIV` - upper bound of the Schalter `team_live` (team progress
+  quasi-live, Jura file 28.11.2026), default `false`; works only with `teams` and only until the
+  day in the admin setting `team_live_bis` (German time, default 2026-12-06, BDK end). While on,
+  every counted event of a team with at least 20 consenting members also raises the hour
+  counter `team_stunden` (team, Saison, block start, count, no Kennung) and remembers an HMAC
+  check value per member, team and block in process memory only (key per day). A task
+  (`live_im_takt`, started only when both upper bounds are on) computes each hour block (full
+  hour, Europe/Berlin) once, 15 minutes after it ended: released from 10 distinct contributors
+  together with the carried blocks of the same day, else carried; after a restart carried, never
+  released. `GET /api/v1/teams/meine` then carries `live` per own team (today's released sum
+  rounded down to 10, the hour it reaches, whether the last hour is still running, members
+  rounded down to 10, quest step in thirds, one-time notice for members who consented before
+  switch-on), read from `TeamFortschrittService.live_werte` (person-free model, the only source
+  for any later view). App only for members: no public endpoint, no big-screen view. The
+  deletion run removes `team_stunden` before the Monday (UTC) of the current week. With several
+  workers each sees part of the check values and releases less often, never too early.
 - `SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV` - upper bound of the Schalter `teams_oeffentlich`
   (default `false`; stays off on production until the data protection officer has advised).
   Own bound, deliberately not coupled to `SEMANTIC_SEARCH_ABZEICHEN_SICHTBAR_AKTIV`; works only
@@ -586,7 +602,8 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
 
 #### Schalter nach dem Umbau (27.11.2026)
 
-Since the switch-over before v1.0.0 there are 4 packages and 7 single switches
+Since the switch-over before v1.0.0 there are 4 packages and 7 single switches (8 since
+`team_live`, 28.11.2026)
 (`PAKET_SCHALTER`, `EINZEL_SCHALTER` in `services/schalter_service.py`). Each still has an upper
 bound (`SEMANTIC_SEARCH_<NAME>_AKTIV`, default `false`) and an admin value (Admin, "Schalter",
 off without an entry); the admin page shows two groups, "Pakete" and "Einzelschalter". A package
@@ -609,6 +626,7 @@ leaderboard of the Spielgefühl package.
 | `wirkungs_echo` | package | `wirkungs_echo`, `danke_knopf` | – | cleared |
 | `k_begruessung` | package | `k_begruessung`, `saal_spruch` (BDK hint at login only with `?k=bdk`) | – | cleared |
 | `team_quests` | single | – | `teams`; quest points only with wording -28 and `spielgefuehl_buehne` | cleared |
+| `team_live` | single | – | `teams`; ends after the admin setting `team_live_bis` (default 2026-12-06, German time) even when on | cleared (Jura file 28.11.2026) |
 | `muster_stimmen` | single | – | `spielgefuehl_buehne` | cleared |
 | `teams_oeffentlich` | single | – | `teams` | waiting (Art. 9, DPO); the trust line before login is only true while it is off |
 | `merkliste` | single | – | – | waiting |

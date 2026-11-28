@@ -273,6 +273,21 @@ async def lifespan(app: FastAPI):
             pruefen_im_takt(herkunft_pruefen_bauen())
         )
 
+        # Team-Fortschritt quasi-live (team_live, Jura-Akte 28.11.2026): 15 min nach
+        # jeder vollen Stunde die abgelaufenen Stundenbloecke einmal vorberechnen. Der
+        # Takt laeuft, wenn die Obergrenzen es erlauben; ob er rechnet, entscheidet je
+        # Lauf der Admin-Wert (services/team_fortschritt_service.py).
+        if settings.teams_aktiv and settings.team_live_aktiv:
+            from services.team_fortschritt_service import (
+                get_team_fortschritt_service,
+                live_im_takt,
+            )
+
+            app.state.team_live = asyncio.create_task(
+                live_im_takt(get_team_fortschritt_service())
+            )
+            logger.info("✅ Team live hour block task started")
+
         # Seitenaufrufe (#761): Tagespseudonyme vergangener Tage zu Tageszahlen
         # verdichten und loeschen, auch bei ausgeschaltetem Schalter (loescht nur).
         app.state.aufrufe_verdichten = asyncio.create_task(
@@ -302,6 +317,7 @@ async def lifespan(app: FastAPI):
                 "abzeichen_rechnen",
                 "herkunft_pruefen",
                 "aufrufe_verdichten",
+                "team_live",
             ):
                 task = getattr(app.state, name, None)
                 if task is not None:

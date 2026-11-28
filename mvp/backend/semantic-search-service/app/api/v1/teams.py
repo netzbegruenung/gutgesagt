@@ -69,6 +69,26 @@ class TeamQuestResponse(BaseModel):
     vorige_thema_name: Optional[str] = None
 
 
+class TeamLiveResponse(BaseModel):
+    """
+    Team-Fortschritt quasi-live (Schalter team_live, Jura-Akte 28.11.2026): nur in
+    Teams ab 20 Mitgliedern mit Einwilligung, nur aus vorberechneten Stundenbloecken.
+    ``tagessumme`` ist die heute freigegebene Summe auf 10 abgerundet ("weniger als
+    10", "rund 80"), ``bis`` die volle Stunde (deutsche Zeit), bis zu der sie reicht;
+    beide null, solange heute noch kein Block freigegeben ist. ``laeuft_noch``: Die
+    letzte Stunde ist noch nicht freigegeben. ``mitglieder``: auf 10 abgerundet.
+    ``quest_stufe``: 0 bis 3 (Drittel, 3 geschafft), null ohne Quest. ``hinweis_neu``:
+    Die Person hat vor dem Einschalten eingewilligt (einmaliger Hinweis).
+    """
+
+    laeuft_noch: bool
+    mitglieder: Optional[int] = None
+    bis: Optional[int] = None
+    tagessumme: Optional[str] = None
+    quest_stufe: Optional[int] = None
+    hinweis_neu: bool = False
+
+
 class MeinTeamResponse(BaseModel):
     # Zum Verlassen: DELETE /api/v1/teams/meine/{id}
     id: uuid.UUID
@@ -87,6 +107,8 @@ class MeinTeamResponse(BaseModel):
     wirkung: Optional[TeamWirkungResponse] = None
     # Nur mit Schalter team_quests und ab der Schwelle, sonst null
     quest: Optional[TeamQuestResponse] = None
+    # Nur mit Schalter team_live und ab 20 Mitgliedern mit Einwilligung, sonst null
+    live: Optional[TeamLiveResponse] = None
 
 
 class MeineTeamsResponse(BaseModel):
@@ -120,6 +142,12 @@ def _fortschritt() -> TeamFortschrittService:
 def _thema_name(schluessel: Optional[str]) -> Optional[str]:
     thema = THEMEN_NACH_SCHLUESSEL.get(schluessel or "")
     return thema.name if thema else None
+
+
+def _live_response(stand: Optional[TeamStand]) -> Optional[TeamLiveResponse]:
+    if stand is None or stand.live is None:
+        return None
+    return TeamLiveResponse(**vars(stand.live))
 
 
 def _quest_response(stand: Optional[TeamStand]) -> Optional[TeamQuestResponse]:
@@ -159,7 +187,8 @@ async def meine_teams(
     Liste mit ``teams_aktiv: false``, kein 404: "Meine Beitraege" laedt selbst nach, und
     das Gateway sperrt eine IP nach 50 Antworten 404 (docs/ARCHITECTURE.md).
     Je Team mit Schalter team_fortschritt die Wirkung der letzten abgeschlossenen
-    Woche und mit team_quests die Quest; nur fuer die eigenen Teams.
+    Woche, mit team_quests die Quest und mit team_live den Live-Stand des Tages; nur
+    fuer die eigenen Teams.
     """
     teams = await asyncio.to_thread(service.meine, user_id)
     aktiv = service.wirksam()
@@ -200,6 +229,7 @@ async def meine_teams(
                     else None
                 ),
                 quest=_quest_response(staende.get((t.team_name, t.saison))),
+                live=_live_response(staende.get((t.team_name, t.saison))),
             )
             for t in teams
         ],

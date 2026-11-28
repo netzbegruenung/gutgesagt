@@ -48,6 +48,10 @@ Kampagnenwort in services/ankunft_service.py (angewendet hier).
 - Verlauf der Schalter (#708, Entscheidung Maintainer 18.11.2026): Eintraege
   SCHALTER_VERLAUF_TAGE nach der Aenderung. Der aktuelle Admin-Wert in ``schalter``
   bleibt, er ist der Stand, nach dem der Dienst sich richtet.
+- Stundenzaehler des Team-Fortschritts quasi-live (team_stunden, Schalter team_live,
+  Jura-Akte 28.11.2026): mit dem Wochenwechsel, also jeder Block vor dem Montag (UTC)
+  der laufenden Woche. Danach bleibt nur der Wochenzaehler. Der Lauf um Mitternacht
+  (UTC) faellt mit dem Wochenwechsel zusammen.
 - Stimmen haben keine eigene Frist: Aus ihnen entsteht die Guete eines Beitrags, sie
   leben so lange wie er und gehen mit ihm.
 
@@ -72,10 +76,11 @@ from repositories.loeschauftrag_repository import LoeschauftragRepository
 from repositories.schalter_repository import SchalterRepository
 from repositories.search_tracking_repository import SearchTrackingRepository
 from repositories.sperre_repository import SperreRepository
+from repositories.team_fortschritt_repository import TeamFortschrittRepository
 from repositories.team_repository import TeamRepository
 from services.ankunft_service import ANKUNFT_TAGE
 from services.moderation_service import ModerationService
-from utils.utc_tag import heute_utc, sekunden_bis_mitternacht
+from utils.utc_tag import heute_utc, sekunden_bis_mitternacht, wochenbeginn
 
 logger = get_logger(__name__)
 
@@ -123,6 +128,7 @@ class LoeschfristenService:
         schalter: Optional[SchalterRepository] = None,
         teams: Optional[TeamRepository] = None,
         ankuenfte: Optional[AnkunftRepository] = None,
+        team_stunden: Optional[TeamFortschrittRepository] = None,
     ):
         self._meldungen = meldungen
         self._einwuerfe = einwuerfe
@@ -135,6 +141,7 @@ class LoeschfristenService:
         self._schalter = schalter
         self._teams = teams
         self._ankuenfte = ankuenfte
+        self._team_stunden = team_stunden
         # True, wenn der letzte Lauf Suchereignisse nicht verdichten konnte.
         self.verdichten_offen = False
 
@@ -184,6 +191,12 @@ class LoeschfristenService:
                 self._ankuenfte.loeschen_vor,
                 _grenze(heute, ANKUNFT_TAGE),
                 "Ankuenfte per Kampagnenwort and day",
+            )
+        if self._team_stunden is not None:
+            await self._frist_anwenden(
+                self._team_stunden.stunden_loeschen_vor,
+                datetime.combine(wochenbeginn(heute), time.min, timezone.utc),
+                "team hour counters of past weeks",
             )
         if self._konten is not None:
             await self._nie_benutzte_konten(heute)

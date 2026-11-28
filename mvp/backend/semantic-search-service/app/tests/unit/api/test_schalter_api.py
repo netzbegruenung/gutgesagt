@@ -74,8 +74,8 @@ def test_liste_ohne_eintrag_aus(werte):
     assert stand["merkliste"]["obergrenze"] is False
     assert stand["merkliste"]["gruppe"] == "Einzelschalter"
     assert stand["merkliste"]["wartet_auf_recht"] is True
-    # Nur noch Pakete und Einzelschalter (Schalter-Umbau 27.11.)
-    assert len(stand) == 11
+    # Nur noch Pakete und Einzelschalter (Schalter-Umbau 27.11., team_live seit 28.11.)
+    assert len(stand) == 12
     assert "punkte" not in stand and "sharepic" not in stand
 
 

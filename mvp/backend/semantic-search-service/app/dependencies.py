@@ -70,6 +70,7 @@ from repositories.sperre_repository import get_sperre_repository
 from repositories.loeschauftrag_repository import get_loeschauftrag_repository
 from repositories.schalter_repository import get_schalter_repository
 from repositories.team_repository import get_team_repository
+from repositories.team_fortschritt_repository import get_team_fortschritt_repository
 from repositories.ankunft_repository import get_ankunft_repository
 from core.fehler import INTERNER_FEHLER
 from core.logging import get_logger
@@ -597,6 +598,8 @@ def get_loeschfristen_service() -> LoeschfristenService:
         get_team_repository(),
         # Ankuenfte je Kampagnenwort und Tag nach zwoelf Monaten.
         ankuenfte=get_ankunft_repository(),
+        # Stundenzaehler des Team-Fortschritts quasi-live mit dem Wochenwechsel.
+        team_stunden=get_team_fortschritt_repository(),
     )
 
 

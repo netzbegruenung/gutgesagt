@@ -10,7 +10,8 @@ der die Settings direkt liest, bliebe dort gruen. Diese Datei schliesst die Luec
   Dienst des Autouse-Fixtures ausdruecklich (``admin_werte``). Die Gegenprobe mit allen
   Admin-Werten an zeigt, dass jeder Fall wirklich am Schalter haengt.
 - ``test_kein_direktzugriff_auf_die_obergrenze``: Ausserhalb von core/config.py,
-  services/schalter_service.py und dem Start des Abzeichen-Takts in main.py liest kein
+  services/schalter_service.py und dem Start der Takte fuer Abzeichen und Stundenbloecke
+  in main.py liest kein
   Code die Obergrenze direkt.
 """
 
@@ -305,6 +306,9 @@ ERLAUBT = {
     Path("main.py"): {
         # Der Takt rechnet die Abzeichen fuer die Rangliste des Pakets Spielgefuehl.
         "settings.spielgefuehl_buehne_aktiv",
+        # Der Takt rechnet die Stundenbloecke des Team-Fortschritts quasi-live vor.
+        "settings.teams_aktiv",
+        "settings.team_live_aktiv",
     },
 }
 
