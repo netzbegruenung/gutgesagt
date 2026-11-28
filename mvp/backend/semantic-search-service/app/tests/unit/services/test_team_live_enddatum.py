@@ -67,10 +67,15 @@ def test_admin_seite_zeigt_das_ende():
     assert "Abgelaufen" in stand["team_live"].erklaerung
     assert "06.12.2026" in stand["team_live"].erklaerung
     assert "team_live_bis" in stand["team_live"].erklaerung
-    # Vor dem Ende steht kein Vermerk
+    # Vor dem Ende steht, wann er endet
     vorher = {s.name: s for s in _dienst(ENDE).stand(AN)}
-    assert vorher["team_live"].erklaerung == SCHALTER["team_live"].erklaerung
+    assert vorher["team_live"].erklaerung == (
+        SCHALTER["team_live"].erklaerung
+        + " Endet nach dem 06.12.2026 (Einstellung team_live_bis)."
+    )
     assert vorher["team_live"].wirksam is True
+    # Ohne Enddatum (andere Schalter) kein Vermerk
+    assert vorher["teams"].erklaerung == SCHALTER["teams"].erklaerung
 
 
 def test_enddatum_nicht_lesbar_wirkt_nicht():

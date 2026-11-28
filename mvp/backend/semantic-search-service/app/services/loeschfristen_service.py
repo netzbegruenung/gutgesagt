@@ -49,8 +49,8 @@ Kampagnenwort in services/ankunft_service.py (angewendet hier).
   SCHALTER_VERLAUF_TAGE nach der Aenderung. Der aktuelle Admin-Wert in ``schalter``
   bleibt, er ist der Stand, nach dem der Dienst sich richtet.
 - Stundenzaehler des Team-Fortschritts quasi-live (team_stunden, Schalter team_live,
-  Jura-Akte 28.11.2026): mit dem Wochenwechsel, also jeder Block vor dem Montag (UTC)
-  der laufenden Woche. Danach bleibt nur der Wochenzaehler. Der Lauf um Mitternacht
+  Jura-Akte 28.11.2026): mit dem Wochenwechsel, also jeder Block vor Montag 0 Uhr
+  (deutsche Zeit) der laufenden Woche. Danach bleibt nur der Wochenzaehler. Der Lauf um Mitternacht
   (UTC) faellt mit dem Wochenwechsel zusammen. Wirkt team_live nicht mehr, loescht
   schon der Takt live_im_takt alle (services/team_fortschritt_service.py).
 - Stimmen haben keine eigene Frist: Aus ihnen entsteht die Guete eines Beitrags, sie
@@ -64,6 +64,7 @@ Bereinigungsjob: Die Fristen stehen im Loeschkonzept ohne Bedingung.
 import asyncio
 from datetime import date, datetime, time, timedelta, timezone
 from functools import partial
+from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
 
 from core.logging import get_logger
@@ -196,7 +197,9 @@ class LoeschfristenService:
         if self._team_stunden is not None:
             await self._frist_anwenden(
                 self._team_stunden.stunden_loeschen_vor,
-                datetime.combine(wochenbeginn(heute), time.min, timezone.utc),
+                datetime.combine(
+                    wochenbeginn(heute), time.min, tzinfo=ZoneInfo("Europe/Berlin")
+                ).astimezone(timezone.utc),
                 "team hour counters of past weeks",
             )
         if self._konten is not None:

@@ -228,8 +228,17 @@ class TestTeamStunden:
     ):
         await service.fristen_anwenden(heute)
 
+        # Montag 0 Uhr deutsche Zeit (Winter: 23 Uhr UTC am Sonntag), passend zum Tag
+        # der Stundenbloecke
         stunden.stunden_loeschen_vor.assert_called_once_with(
-            datetime(2026, 12, 7, tzinfo=timezone.utc)
+            datetime(2026, 12, 6, 23, tzinfo=timezone.utc)
+        )
+
+    async def test_sommerzeit(self, service, stunden):
+        await service.fristen_anwenden(date(2026, 7, 8))
+
+        stunden.stunden_loeschen_vor.assert_called_once_with(
+            datetime(2026, 7, 5, 22, tzinfo=timezone.utc)
         )
 
     async def test_fehler_haelt_die_anderen_nicht_auf(

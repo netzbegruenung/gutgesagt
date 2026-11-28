@@ -423,16 +423,20 @@ class SchalterService:
             return False
         return self.abgelaufen_am(name) is None
 
-    def abgelaufen_am(self, name: str) -> Optional[date]:
-        """Das Enddatum, wenn der Schalter eins hat und es vorbei ist; sonst None."""
+    def enddatum_von(self, name: str) -> Optional[date]:
+        """Der letzte Tag, an dem der Schalter wirkt; None ohne Ende, date.min unlesbar."""
         if self._enddatum is None or name not in ENDDATUM:
             return None
         try:
-            bis = self._enddatum(name)
+            return self._enddatum(name)
         except Exception as e:
             # Lieber aus als ueber das Ende hinaus an
             logger.error(f"Enddatum von {name} nicht gelesen: {type(e).__name__}")
             return date.min
+
+    def abgelaufen_am(self, name: str) -> Optional[date]:
+        """Das Enddatum, wenn der Schalter eins hat und es vorbei ist; sonst None."""
+        bis = self.enddatum_von(name)
         if bis is not None and self._heute() > bis:
             return bis
         return None
@@ -444,7 +448,13 @@ class SchalterService:
         Admin-Werte am Cache vorbei."""
         werte = self.admin_werte(frisch=frisch)
         return [
-            _stand(art, einstellungen, werte, self.abgelaufen_am(art.name))
+            _stand(
+                art,
+                einstellungen,
+                werte,
+                self.abgelaufen_am(art.name),
+                self.enddatum_von(art.name),
+            )
             for art in sorted(SCHALTER.values(), key=lambda a: GRUPPEN.index(a.gruppe))
         ]
 
@@ -463,9 +473,15 @@ def _stand(
     einstellungen: Settings,
     werte: Dict[str, bool],
     abgelaufen: Optional[date] = None,
+    bis: Optional[date] = None,
 ) -> Schalterstand:
     hinweis = art.einschalt_hinweis or (DSFA_HINWEIS if art.dsfa_hinweis else None)
     erklaerung = art.erklaerung
+    if abgelaufen is None and bis is not None:
+        erklaerung += (
+            f" Endet nach dem {bis.strftime('%d.%m.%Y')} (Einstellung "
+            f"{ENDDATUM[art.name]})."
+        )
     if abgelaufen is not None:
         erklaerung += (
             f" Abgelaufen: wirkt seit dem Ende am {abgelaufen.strftime('%d.%m.%Y')} "

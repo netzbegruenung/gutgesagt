@@ -115,6 +115,7 @@ from domain.team_fortschritt import (
     quest_stufe,
     quest_ziel,
     tagesbeginn,
+    wochenbeginn_live,
     zeigbar,
 )
 from domain.themen import THEMEN
@@ -366,8 +367,6 @@ class TeamFortschrittService:
         self._live_seit = live_seit or _team_live_eingeschaltet_am
         # Der zuletzt vorberechnete Block in diesem Prozess
         self._vorberechnet_bis: Optional[datetime] = None
-        # Ob die Stundenzaehler seit dem letzten Ausschalten schon geloescht sind
-        self._aus_geloescht = False
 
     @property
     def _einstellungen(self) -> Settings:
@@ -518,13 +517,11 @@ class TeamFortschrittService:
             return {}
         jetzt = self._jetzt()
         heute_ab = tagesbeginn(jetzt)
-        woche_ab = datetime.combine(
-            wochenbeginn(jetzt.astimezone(timezone.utc).date()),
-            time.min,
-            tzinfo=timezone.utc,
-        )
+        woche_ab = wochenbeginn_live(jetzt)
+        # Bis der letzte Block des Vortags vorberechnet ist (0:15), zaehlt der davor
+        frisch_ab = heute_ab - 2 * BLOCK
         je_team: Dict[TeamSchluessel, List[Stunde]] = {}
-        for stunde in self._repository.stunden(teams, min(heute_ab - BLOCK, woche_ab)):
+        for stunde in self._repository.stunden(teams, min(frisch_ab, woche_ab)):
             if stunde.stand != OFFEN:
                 je_team.setdefault(stunde.schluessel, []).append(stunde)
         ergebnis: Dict[TeamSchluessel, TeamLiveWerte] = {}
@@ -533,7 +530,7 @@ class TeamFortschrittService:
             if not fertig:
                 continue
             letzte = fertig[-1]
-            if letzte.block_beginn < heute_ab - BLOCK or not live_zeigbar(
+            if letzte.block_beginn < frisch_ab or not live_zeigbar(
                 letzte.mitglieder or 0
             ):
                 continue
@@ -601,18 +598,15 @@ class TeamFortschrittService:
         Bloecke zurueck.
 
         Wirkt team_live nicht (aus oder nach team_live_bis): verwirft die Pruefwerte,
-        rechnet nichts und loescht einmal je Ausschalten sofort alle Stundenzaehler
-        (Jura 28.11.: die DSE nennt sie dann nicht mehr). Ein Fehler beim Loeschen wird
-        im naechsten Lauf wiederholt.
+        rechnet nichts und loescht sofort alle Stundenzaehler (Jura 28.11.: die DSE
+        nennt sie dann nicht mehr), in jedem Lauf: Waehrend des Schalter-Caches kann
+        ein Ereignis noch einen Zaehler anlegen.
         """
         if not self.live_wirksam():
             self._stunden.leeren()
             self._vorberechnet_bis = None
-            if not self._aus_geloescht:
-                self._repository.stunden_loeschen_vor(self._jetzt() + BLOCK)
-                self._aus_geloescht = True
+            self._repository.stunden_loeschen_vor(self._jetzt() + BLOCK)
             return 0
-        self._aus_geloescht = False
         letzter = blockbeginn(self._jetzt() - VEROEFFENTLICHUNG_NACH - BLOCK)
         tag_ab = tagesbeginn(letzter)
         block = tag_ab
@@ -765,9 +759,17 @@ class TeamFortschrittService:
 
 
 def _team_live_eingeschaltet_am() -> Optional[datetime]:
-    from repositories.schalter_repository import get_schalter_repository
+    """
+    Seit wann team_live wirkt: der frueheste Stundenblock. Wirkt der Schalter nicht,
+    loescht der Takt alle Stundenzaehler; der frueheste ist also der erste seit dem
+    letzten Wirksamwerden (Obergrenze, Admin-Wert und Enddatum zusammen), nicht der
+    Zeitpunkt des Admin-Werts allein.
+    """
+    from repositories.team_fortschritt_repository import (
+        get_team_fortschritt_repository,
+    )
 
-    return get_schalter_repository().eingeschaltet_am("team_live")
+    return get_team_fortschritt_repository().erste_stunde()
 
 
 def _sekunden_bis_zum_takt(jetzt: datetime) -> float:

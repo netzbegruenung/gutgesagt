@@ -284,6 +284,13 @@ class TeamFortschrittRepository:
             )
             return ergebnis.rowcount > 0
 
+    def erste_stunde(self) -> Optional[datetime]:
+        """Der frueheste Blockbeginn aller Stundenzaehler; None ohne Zaehler."""
+        with self.db.get_session() as session:
+            return session.execute(
+                select(func.min(TeamStundeZeile.block_beginn))
+            ).scalar()
+
     def stunden_loeschen_vor(self, grenze: datetime) -> int:
         """Stundenzaehler mit Blockbeginn vor der Grenze loeschen (Wochenwechsel)."""
         with self.db.get_session() as session:

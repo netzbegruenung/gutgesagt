@@ -22,6 +22,7 @@ from domain.team_fortschritt import (
     mitglieder_anzeige,
     quest_stufe,
     tagesbeginn,
+    wochenbeginn_live,
 )
 
 pytestmark = pytest.mark.unit
@@ -106,6 +107,14 @@ class TestZeit:
     def test_tagesbeginn_deutsche_zeit_sommer(self):
         z = datetime(2026, 7, 1, 12, tzinfo=timezone.utc)
         assert tagesbeginn(z) == datetime(2026, 6, 30, 22, tzinfo=timezone.utc)
+
+    def test_wochenbeginn_montag_null_uhr_deutsche_zeit(self):
+        # Montag 7.12. 0:30 deutsche Zeit ist Sonntag 23:30 UTC: schon die neue Woche
+        z = datetime(2026, 12, 6, 23, 30, tzinfo=timezone.utc)
+        assert wochenbeginn_live(z) == datetime(2026, 12, 6, 23, tzinfo=timezone.utc)
+        # Sonntag 22:30 UTC ist noch die alte Woche
+        z = datetime(2026, 12, 6, 22, 30, tzinfo=timezone.utc)
+        assert wochenbeginn_live(z) == datetime(2026, 11, 29, 23, tzinfo=timezone.utc)
 
     def test_bis_stunde_deutsche_zeit(self):
         # Block 12:00 UTC = 13 bis 14 Uhr deutsche Zeit

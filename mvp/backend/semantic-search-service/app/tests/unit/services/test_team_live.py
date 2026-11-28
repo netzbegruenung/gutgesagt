@@ -466,6 +466,21 @@ class TestFreigabe:
         assert live.tagessumme == "rund 10"
 
 
+class TestMitternacht:
+    def test_kein_flackern_bis_der_letzte_block_vorberechnet_ist(self, team, uhr):
+        """0:00 bis 0:15: noch der Stand von 22 bis 23 Uhr, der Tag beginnt neu."""
+        dienst = _dienst(team, uhr)
+        _beitragen(dienst, uhr, konten(10), utc(21, 10))  # 22 bis 23 Uhr deutsche Zeit
+        uhr.jetzt = utc(22, 16)
+        dienst.bloecke_veroeffentlichen()
+
+        live = _live(dienst, uhr, konten(1)[0], utc(23, 5))  # 0:05 am Samstag
+        assert live is not None
+        assert live.tagessumme is None
+        assert live.laeuft_noch is True
+        assert live.mitglieder == 30
+
+
 class TestNeustart:
     def test_nach_neustart_uebertragen_statt_freigegeben(self, team, uhr):
         dienst = _dienst(team, uhr)
@@ -654,9 +669,12 @@ class TestSchalter:
         # Auch der laufende Block
         assert team.stunden_zeilen == {}
         assert dienst.live_werte([TEAM]) == {}
-        # Einmal je Ausschalten, nicht in jedem Lauf
+        # In jedem Lauf, solange er nicht wirkt: Waehrend des Schalter-Caches kann
+        # noch ein Ereignis einen Zaehler anlegen
+        team.stunde_erhoehen([TEAM], utc(12))
         dienst.bloecke_veroeffentlichen()
-        assert team.loeschungen == 1
+        assert team.stunden_zeilen == {}
+        assert team.loeschungen == 2
 
     def test_nach_wiedereinschalten_und_ausschalten_wieder_geloescht(
         self, team, uhr, schalter_admin_alle_an
@@ -676,7 +694,6 @@ class TestSchalter:
         dienst.bloecke_veroeffentlichen()
 
         assert team.stunden_zeilen == {}
-        assert team.loeschungen == 2
 
     def test_nach_dem_enddatum_geloescht(self, team, uhr):
         """Nach team_live_bis wirkt der Schalter nicht mehr: dieselbe Loeschung."""

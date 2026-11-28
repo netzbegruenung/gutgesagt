@@ -180,6 +180,17 @@ def tagesbeginn(zeitpunkt: datetime) -> datetime:
     return datetime.combine(tag, time.min, tzinfo=ZEITZONE).astimezone(timezone.utc)
 
 
+def wochenbeginn_live(zeitpunkt: datetime) -> datetime:
+    """
+    Montag 0 Uhr (deutsche Zeit) der Woche, in die der Zeitpunkt faellt, in UTC: die
+    Wochengrenze der Stundenzaehler (Loeschung, Quest-Stufe), passend zum Tag in
+    deutscher Zeit.
+    """
+    tag = zeitpunkt.astimezone(ZEITZONE).date()
+    montag = tag - timedelta(days=tag.weekday())
+    return datetime.combine(montag, time.min, tzinfo=ZEITZONE).astimezone(timezone.utc)
+
+
 def bis_stunde(block: datetime) -> int:
     """Die volle Stunde (deutsche Zeit), mit der der Block endet; Mitternacht als 24."""
     stunde = (block + BLOCK).astimezone(ZEITZONE).hour
