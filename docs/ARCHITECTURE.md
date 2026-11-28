@@ -619,7 +619,9 @@ leaderboard of the Spielgefühl package.
 
 `GET /api/v1/funktionen` reports the 4 packages, the public single switches (all except
 `aufrufe_zaehlen`) and the emergency-off functions `gepostet_ohne_konto`, `null_treffer_anzahl`,
-`feedback_gestoert` (the latter also `false` from 31.12.2026).
+`feedback_gestoert` (the latter also `false` from 31.12.2026), plus the derived `bdk_hinweis`
+(package `k_begruessung` on and today, German time, between the admin settings `bdk_hinweis_von`
+and `bdk_hinweis_bis`, defaults 2026-12-04 and 2026-12-06; `services/bdk_hinweis.py`).
 
 | Name | Kind | Replaces / contains | Works only with | Legal state (27.11.) |
 |------|------|---------------------|-----------------|----------------------|
@@ -724,7 +726,9 @@ The app reads `?k=<word>` once at start (`shared/kampagnenwort.service.ts`), low
 
 - `k_begruessung`: for `sticker` and `bdk` the Willkommen line shows a matching greeting
   (`K_BEGRUESSUNG` in `rundgang/rundgang-daten.ts`) instead of "Neu hier?"; same tour, same
-  browser entry, same "Ausblenden". Other words change nothing.
+  browser entry, same "Ausblenden". Other words change nothing. During the BDK window
+  (`bdk_hinweis`, see above) the help section „Mitmachen“ (`#mitmachen`) says where to get an
+  invitation link (`BDK_EINLADUNG_HINWEIS`), for everyone, not only with `?k=bdk`.
 - `k_ankuenfte`: once per page load `POST /api/v1/ankunft` with `{"k": "<word>"}` in the body
   (unknown fields 422), only when `/api/v1/funktionen` reports the switch on; an unknown state
   (older server, failed request) sends nothing, so a mixed rollout cannot produce 401/404. The service counts only words of `SEMANTIC_SEARCH_K_WOERTER` (default

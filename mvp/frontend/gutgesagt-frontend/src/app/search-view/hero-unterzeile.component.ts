@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { MatDialog } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -9,6 +10,8 @@ import { GetMetricsResponse, ZuwachsDto } from '../services/dtos/metricsDtos';
 import { ROUTES } from '../shared/constants/app.constants';
 import { selbstNachladen } from '../shared/selbst-nachladen';
 import { Bestandszahl, abgerundet, bestandszahl } from './bestandszahl';
+import { AuthService } from '../auth/auth.service';
+import { HILFE_MITMACHEN, hilfeOeffnen } from '../help-dialog/help-dialog.component';
 
 /** Die Unterzeile ohne Zahl: vor der ersten Antwort, bei zu wenig Bestand oder nach einem Fehler. */
 export const HERO_UNTERZEILE = 'Bewährte Argumente aus der Community.';
@@ -60,7 +63,8 @@ export interface Unterzeile {
  * Maintainers vom 25. und 26.11.2026): „800 Antworten, 10 neu diese Woche – ist deine die
  * nächste?“, mit weniger als drei neuen oder ohne Zuwachswert „800 Antworten aus der Community
  * – ist deine die nächste?“. Gezählt werden nur die Antworten (Kommentare); die Frage am Ende
- * führt auf „Beitragen“. Ohne Bestandszahl die bisherige Unterzeile, ohne Link.
+ * führt Angemeldete auf „Beitragen“, Abgemeldete in die Hilfe, Abschnitt „Mitmachen“ (wie man
+ * ein Konto bekommt; Sebastian 28.11.). Ohne Bestandszahl die bisherige Unterzeile, ohne Link.
  *
  * Die Bestandszahl hängt an keinem Schalter: Sie zählt nur Inhalte, die ohnehin für alle
  * sichtbar sind, und /getMetrics liefert sie anonym (öffentlich, im Server 60 s gecacht, nie
@@ -80,7 +84,13 @@ export interface Unterzeile {
     @if (zeile; as z) {
       <span class="teil" data-testid="hero-unterzeile">{{ bestandText(z) }}</span>&ngsp;
       <!-- Umbruch nur hier, nach dem Gedankenstrich: beide Teile brechen selbst nicht um -->
-      <a class="teil naechste" data-testid="hero-beitragen" [routerLink]="beitragen">{{ naechsteFrage }}</a>
+      @if (angemeldet()) {
+        <a class="teil naechste" data-testid="hero-beitragen" [routerLink]="beitragen">{{ naechsteFrage }}</a>
+      } @else {
+        <!-- Ohne Konto: die Hilfe „Mitmachen“ statt der Anmeldung, die /contribute verlangt -->
+        <button type="button" class="teil naechste textknopf" data-testid="hero-mitmachen"
+                aria-haspopup="dialog" (click)="mitmachenHilfe()">{{ naechsteFrage }}</button>
+      }
     } @else {
       <span data-testid="hero-unterzeile">{{ ohneZahl }}</span>
     }
@@ -102,6 +112,17 @@ export interface Unterzeile {
       .naechste:hover {
         text-decoration-thickness: 2px;
       }
+      .textknopf {
+        padding: 0;
+        border: 0;
+        background: none;
+        font: inherit;
+        cursor: pointer;
+      }
+      .textknopf:focus-visible {
+        outline: 2px solid var(--akzent-tanne);
+        outline-offset: 2px;
+      }
     `,
   ],
 })
@@ -112,6 +133,13 @@ export class HeroUnterzeileComponent implements OnInit {
   protected readonly naechsteFrage = NAECHSTE_FRAGE;
   protected readonly bestandText = bestandTeil;
   protected readonly beitragen = ROUTES.CONTRIBUTE;
+
+  /** Angemeldet: der Link auf Beitragen; sonst der Knopf in die Hilfe. */
+  protected readonly angemeldet = toSignal(
+    inject(AuthService).userInfo$.pipe(map((info) => info?.isAuthenticated === true)),
+    { initialValue: false },
+  );
+  private readonly dialog = inject(MatDialog);
 
   private readonly metrics = inject(MetricsService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -128,6 +156,11 @@ export class HeroUnterzeileComponent implements OnInit {
     // sofort da, statt erst die Zeile ohne Zahl zu zeigen. Das Nachladen fragt still und frisch.
     this.laden(false).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(folgen);
     selbstNachladen(() => this.laden(true), this.destroyRef, folgen, BESTAND_NACHLADEN_MS);
+  }
+
+  /** Abgemeldet: die Hilfe gleich beim Abschnitt „Mitmachen“. */
+  mitmachenHilfe(): void {
+    hilfeOeffnen(this.dialog, HILFE_MITMACHEN);
   }
 
   private laden(still: boolean): Observable<Unterzeile | null> {

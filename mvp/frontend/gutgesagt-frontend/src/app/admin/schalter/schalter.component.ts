@@ -85,6 +85,9 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
   aktuelle_saison: 'Aktuelle Saison',
   // Jura-Akte 28.11.2026: danach wirkt team_live nicht mehr, auch wenn er an steht
   team_live_bis: 'Team-Fortschritt quasi-live bis (BDK-Ende)',
+  // Rundgang 28.11.: Hinweis zum Einladungslink in der Hilfe, nur mit Paket k_begruessung
+  bdk_hinweis_von: 'BDK-Hinweis zum Einladungslink ab',
+  bdk_hinweis_bis: 'BDK-Hinweis zum Einladungslink bis',
 };
 
 /**

@@ -27,12 +27,13 @@ export const VERTRAUENSZEILE =
 
 /**
  * Hinweis unter „Noch kein Konto?“, nur mit Kampagnenwort ``bdk`` (UX-Review 26.11.2026,
- * Befund 4): Am Stand gibt es den Teamlink, die Seite nannte ihn nicht. Wie die Begrüßung nach
+ * Befund 4): Am Stand gibt es den Teamlink, die Seite nannte ihn nicht. Ort wie in der Hilfe
+ * „Mitmachen“ (Rundgang 28.11.). Wie die Begrüßung nach
  * dem Kampagnenwort nur Anzeige und nur mit Schalter `k_begruessung`.
  */
 export const BDK_KONTO_HINWEIS = {
   titel: 'Auf der BDK?',
-  satz: 'Am Gut-gesagt-Stand bekommst du einen Teamlink, damit legst du dein Konto in einer Minute an.',
+  satz: 'Am Stand der Netzbegrünung im CityCube bekommst du einen Teamlink, damit legst du dein Konto in einer Minute an.',
 } as const;
 
 interface AuthModes {

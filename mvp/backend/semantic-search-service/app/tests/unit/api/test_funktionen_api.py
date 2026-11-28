@@ -36,6 +36,8 @@ GEMELDET = {
     "gepostet_ohne_konto",
     "null_treffer_anzahl",
     "feedback_gestoert",
+    # Hinweis zum Einladungslink waehrend der BDK (services/bdk_hinweis.py)
+    "bdk_hinweis",
 }
 ALLE_OBERGRENZEN = dict(
     teams_aktiv=True,
@@ -79,6 +81,14 @@ def _funktionen(**obergrenzen) -> dict:
 
 def test_genau_diese_namen(werte):
     assert set(_funktionen()) == GEMELDET
+
+
+def test_bdk_hinweis_aus_dem_dienst(werte):
+    """Paket und Zeitfenster prueft services/bdk_hinweis.py (test_bdk_hinweis.py)."""
+    with patch("api.v1.funktionen.bdk_hinweis_an", return_value=True):
+        assert _funktionen(**ALLE_OBERGRENZEN)["bdk_hinweis"] is True
+    with patch("api.v1.funktionen.bdk_hinweis_an", return_value=False):
+        assert _funktionen(**ALLE_OBERGRENZEN)["bdk_hinweis"] is False
 
 
 def test_ohne_admin_wert_alle_schalter_aus_not_aus_an(werte):

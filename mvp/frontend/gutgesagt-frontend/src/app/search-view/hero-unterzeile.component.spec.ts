@@ -2,6 +2,10 @@ import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testin
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
+import { BehaviorSubject } from 'rxjs';
+import { AuthService, UserInfo } from '../auth/auth.service';
+import { HILFE_MITMACHEN } from '../help-dialog/help-dialog.component';
 
 import {
   BESTAND_NACHLADEN_MS,
@@ -45,11 +49,22 @@ describe('zuwachsZahl', () => {
 describe('HeroUnterzeileComponent', () => {
   let fixture: ComponentFixture<HeroUnterzeileComponent>;
   let http: HttpTestingController;
+  let nutzer: BehaviorSubject<UserInfo | null>;
+  let dialog: jasmine.SpyObj<MatDialog>;
 
   beforeEach(async () => {
+    // Die meisten Fälle angemeldet: dann führt die Frage auf Beitragen
+    nutzer = new BehaviorSubject<UserInfo | null>({ isAuthenticated: true, userId: 'kim', userName: null, claims: null });
+    dialog = jasmine.createSpyObj<MatDialog>('MatDialog', ['open']);
     await TestBed.configureTestingModule({
       imports: [HeroUnterzeileComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AuthService, useValue: { userInfo$: nutzer } },
+        { provide: MatDialog, useValue: dialog },
+      ],
     }).compileComponents();
     fixture = TestBed.createComponent(HeroUnterzeileComponent);
     http = TestBed.inject(HttpTestingController);
@@ -99,6 +114,26 @@ describe('HeroUnterzeileComponent', () => {
     expect(link.textContent!.trim()).toBe(NAECHSTE_FRAGE);
     expect(link.getAttribute('href')).toBe('/contribute');
     expect(text()).not.toMatch(/Menschen|Personen|Konten|Nutzer|genutzt/);
+  });
+
+  it('abgemeldet: die Frage öffnet die Hilfe beim Abschnitt „Mitmachen“ statt der Anmeldung (Sebastian 28.11.)', () => {
+    nutzer.next({ isAuthenticated: false, userId: null, userName: null, claims: null });
+    laden({ ...BESTAND, zuwachs: { neu_7_tage: 12, zuletzt_ergaenzt: null } });
+
+    expect(text()).toBe('800 Antworten, 10 neu diese Woche – ist deine die nächste?');
+    expect(beitragenLink()).toBeNull();
+    const knopf = fixture.nativeElement.querySelector('[data-testid="hero-mitmachen"]') as HTMLButtonElement;
+    expect(knopf.tagName).toBe('BUTTON');
+    expect(knopf.textContent!.trim()).toBe(NAECHSTE_FRAGE);
+    expect(getComputedStyle(knopf).whiteSpace).toBe('nowrap');
+    knopf.click();
+    expect(dialog.open).toHaveBeenCalledTimes(1);
+    expect(dialog.open.calls.mostRecent().args[1]!.data).toEqual({ abschnitt: HILFE_MITMACHEN });
+
+    // Meldet sich jemand an, wird daraus der Link auf Beitragen
+    nutzer.next({ isAuthenticated: true, userId: 'kim', userName: null, claims: null });
+    fixture.detectChanges();
+    expect(beitragenLink()!.getAttribute('href')).toBe('/contribute');
   });
 
   it('auch nach dem Startbestand-Import nie mehr neu als Antworten', () => {

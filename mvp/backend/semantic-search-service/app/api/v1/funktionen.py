@@ -25,6 +25,7 @@ from pydantic import BaseModel
 from core.config import Settings
 from core.logging import get_logger
 from dependencies import get_settings
+from services.bdk_hinweis import bdk_hinweis_an
 from services.feedback_service import gestoert_knopf_an
 from services.schalter_service import (
     notaus_wirksam,
@@ -60,6 +61,8 @@ def funktionen(settings: Settings = Depends(get_settings)) -> FunktionenResponse
     )
     # Not-Aus und Ende der Startphase am 31.12.2026
     gemeldet["feedback_gestoert"] = gestoert_knopf_an(settings)
+    # Hinweis zum Einladungslink in der Hilfe: Paket k_begruessung und Zeitfenster der BDK
+    gemeldet["bdk_hinweis"] = bdk_hinweis_an(settings)
     return FunktionenResponse(funktionen=gemeldet)
 
 

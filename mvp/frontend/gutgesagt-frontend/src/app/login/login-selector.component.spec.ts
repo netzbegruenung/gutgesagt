@@ -336,7 +336,7 @@ describe('LoginSelectorComponent: Hinweis für die BDK', () => {
     const el = hinweis()!;
     expect(el.textContent).toContain('Auf der BDK?');
     expect(el.textContent).toContain(
-      'Am Gut-gesagt-Stand bekommst du einen Teamlink, damit legst du dein Konto in einer Minute an.',
+      'Am Stand der Netzbegrünung im CityCube bekommst du einen Teamlink, damit legst du dein Konto in einer Minute an.',
     );
     expect(BDK_KONTO_HINWEIS.titel).toBe('Auf der BDK?');
     expect(fixture.nativeElement.querySelector('.registration-option')).toBe(el);
