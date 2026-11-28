@@ -2,12 +2,12 @@
 <!-- Linkvorschau (og:image) fuer Messenger und soziale Netzwerke, 1200 x 630 (1,91:1), das uebliche Mass fuer
      Signal, WhatsApp, Mastodon, Bluesky, Facebook und LinkedIn. Ersetzt linkvorschau-v1 (1200 x 500, 28.11.2026):
      Browser-Startseiten wie "Neueste Aktivitaet" schneiden aus dem Bild ein Quadrat aus der Mitte, bei v1 blieb
-     davon nur "...uf gibt's / ...gute Antwort." uebrig. Deshalb steht alles Lesbare in der sicheren Mitte
-     x 300-900 (600 x 600): Logo, der Satz "Darauf gibt's eine gute Antwort." (am 26.11.2026 von Sebastian
-     gewaehlt, siehe v1) und klein der Absender. Ausserhalb der Mitte nur angeschnittene Sprechblasen in
-     zartem Gruen auf dem App-Gelb (#e2f177, 8 % Tannengruen auf dem Gelb); sie halten 60 px Abstand zur
-     Mitte. Der Satz passt ueber jede geteilte Seite: Bei /beitrag/<id> und /result setzt nginx nur Titel und
-     Beschreibung ein, das Bild bleibt.
+     davon nur "...uf gibt's / ...gute Antwort." uebrig. Das Mittelquadrat ist x 285-915 (630 x 630); alles
+     Lesbare steht mit Luft darin, in x 300-900: Logo, der Satz "Darauf gibt's eine gute Antwort." (am 26.11.2026
+     von Sebastian gewaehlt, siehe v1) und klein der Absender. Ausserhalb der Mitte nur angeschnittene
+     Sprechblasen in zartem Gruen auf dem App-Gelb (#e2f177, 8 % Tannengruen auf dem Gelb); sie bleiben 45 px
+     ausserhalb des Mittelquadrats. Der Satz passt ueber jede geteilte Seite: Bei /beitrag/<id> und /result setzt
+     nginx nur Titel und Beschreibung ein, das Bild bleibt.
      Absender Netzbegruenung, keine Personen, keine Anzeigenamen. linkvorschau-v2.png ist aus dieser Zeichnung
      gerendert (Chromium, Schriften aus ../fonts/). Logo: logo-v2.svg (Hand "Thumbs up" aus Fluent Emoji,
      Copyright (c) Microsoft Corporation, MIT-Lizenz, siehe FLUENT-EMOJI-LIZENZ.txt). Schriften: GrueneType und

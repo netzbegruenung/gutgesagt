@@ -46,7 +46,8 @@ def test_og_bild_im_grossformat():
 def test_og_bild_lesbares_nur_in_der_quadratischen_mitte():
     # Browser-Startseiten ("Neueste Aktivitaet") schneiden ein Quadrat aus der Mitte (28.11.2026).
     # Links und rechts davon nur Gelb und die zarten Blasen: Tannengruen (Gruenwert 84) hat dort
-    # auch als Kantenpixel nichts zu suchen.
+    # auch als Kantenpixel nichts zu suchen. Geprueft wird nur der Gruenwert: Er faengt das Tannengruen
+    # der Marke, nicht etwa weisse Schrift.
     from PIL import Image
 
     meta = _meta()
@@ -57,6 +58,8 @@ def test_og_bild_lesbares_nur_in_der_quadratischen_mitte():
     for links in (0, breite - rand):
         streifen = bild.crop((links, 0, links + rand, hoehe))
         assert streifen.getextrema()[1][0] >= 235, f"Zeichnung im Rand ab x={links}"
+    # und in der Mitte steht tatsaechlich etwas
+    assert bild.crop((rand, 0, rand + hoehe, hoehe)).getextrema()[1][0] < 100
 
 
 def test_og_title_gleicht_seitentitel():
