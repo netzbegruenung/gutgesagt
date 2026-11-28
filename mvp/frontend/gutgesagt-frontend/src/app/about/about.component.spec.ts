@@ -43,6 +43,22 @@ describe('AboutComponent', () => {
     expect(kopf.textContent).toContain('Gesammelt und verbessert von vielen');
   });
 
+  // Startseite zur BDK (27.11.): die Traegerin ganz oben, die Geschichte bleibt darunter
+  it('nennt im Kopf die Netzbegrünung als Trägerin und verlinkt sie in neuem Tab', () => {
+    const traeger = seite.querySelector('.hero-section .traeger')!;
+
+    expect(einzeilig(traeger)).toContain(`Gut gesagt ist ein Projekt der ${ORGANISATION.vereinsname}`);
+    expect(einzeilig(traeger)).toContain(ORGANISATION.beschreibung);
+    const link = traeger.querySelector('a')!;
+    expect(link.getAttribute('href')).toBe(ORGANISATION.url);
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.textContent).toContain('(öffnet in neuem Tab)');
+  });
+
+  it('gibt den Menschen hinter Gut gesagt einen Anker für den Link von der Startseite', () => {
+    expect(seite.querySelector('#menschen h2')!.textContent).toContain('Die Menschen hinter Gut gesagt');
+  });
+
   it('zeigt das Logo im neuen Auftritt', () => {
     expect(seite.querySelector('.hero-section img')!.getAttribute('src')).toBe('marke/logo-v2.svg');
   });

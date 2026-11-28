@@ -13,6 +13,19 @@
     @extend .subtitle-secondary;
   }
 
+  // Ein Satz zur Traegerin unter dem Untertitel (Startseite zur BDK, 27.11.)
+  .traeger {
+    margin: 0.75rem auto 0;
+    max-width: 40rem;
+    font-size: 1rem;
+    color: var(--text);
+
+    a {
+      color: var(--akzent-schrift);
+      text-decoration: underline;
+    }
+  }
+
   .hero-logo {
     display: block;
     margin: 0 auto 1rem;

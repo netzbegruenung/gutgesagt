@@ -10,7 +10,11 @@
 export const ORGANISATION = {
   name: 'Netzbegrünung',
   vereinsname: 'Netzbegrünung e.V.',
+  /** Was der Verein ist, in seinen eigenen Worten: der Zusatz im eingetragenen Namen (`legal-entity.ts`). */
+  beschreibung: 'Verein für grüne Netzkultur',
   url: 'https://netzbegruenung.de/',
+  /** Die Adresse ohne Protokoll, als sichtbarer Linktext. */
+  urlText: 'netzbegruenung.de',
   /** Mitglied werden: der Weg zum Konto über den Netzbegrünung-Login (Anmeldeseite, Designrunde 17.11.). */
   mitgliedsantragUrl: 'https://netzbegruenung.de/verein/mitgliedsantrag/',
   /**

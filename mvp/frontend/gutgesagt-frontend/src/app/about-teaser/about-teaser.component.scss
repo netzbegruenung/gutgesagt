@@ -4,144 +4,87 @@
   // Mehr Abstand zum Karussell darueber (Designrunde 17.11.)
   margin: var(--spacing-xxl) auto var(--spacing-xl);
 
-  h2 {
-    margin-bottom: 1rem;
-    /* Uses global h2 styles for green color and larger font */
-  }
-
   @media (max-width: 768px) {
     padding: 0 var(--page-margin-mobile);
     margin: var(--spacing-xl) auto var(--spacing-lg);
   }
 }
 
-.about-teaser-content {
-  .teaser-text {
-    font-size: 1rem;
-    line-height: 1.6;
-    color: var(--text);
-    margin: 0 0 1rem;
-
-    @media (max-width: 599px) {
-      font-size: 0.95rem;
-    }
-  }
-
-  // Portraet klein neben Name und Rolle
-  .profil {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .profile-image {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-
-  .profile-info {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .profil-name {
-    font-weight: 500;
-    color: var(--text);
-  }
-
-  .role {
-    color: var(--akzent-schrift);
-    font-size: 0.9rem;
-  }
-
-  .cta-container {
-    display: flex;
-    justify-content: flex-start;
-    margin-top: 1rem;
-
-    a {
-      display: inline-flex;
-      align-items: center;
-
-      mat-icon {
-        margin-right: 0.5rem;
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-    }
-
-    @media (max-width: 599px) {
-      a {
-        width: 100%;
-        justify-content: center;
-      }
-    }
-  }
-}
-
-// Zitat: als Zitat erkennbar, mit Bild und Name darunter (Designrunde 17.11.)
-.zitat {
-  margin: var(--spacing-xl) 0 0;
-  padding: var(--spacing-md) var(--spacing-lg);
+// Karte der Traegerin: Flaeche und Kleeleiste wie vorher das Zitat (Startseite zur BDK, 27.11.)
+.traeger-karte {
+  padding: var(--spacing-lg);
   border-left: 4px solid var(--akzent-klee);
   background: var(--karte-kommentar, var(--flaeche));
   border-radius: 0 var(--border-radius-medium) var(--border-radius-medium) 0;
-  // Zweispaltig: Zitat links, Bild und Name rechts; schmal untereinander (Designrunde 17.11.)
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--spacing-lg);
 
-  blockquote {
-    position: relative;
-    margin: 0;
-    padding-left: 2rem;
+  h2 {
+    /* Uses global h2 styles for green color and larger font */
+    margin: 0 0 0.5rem;
+  }
 
-    &::before {
-      content: '“';
-      position: absolute;
-      left: 0;
-      top: -0.2rem;
-      font-size: 3rem;
-      line-height: 1;
-      color: var(--akzent-klee);
+  @media (max-width: 599px) {
+    padding: var(--spacing-md);
+  }
+}
+
+.traeger-verein {
+  margin: 0 0 1rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.traeger-link,
+.macher-link {
+  color: var(--akzent-schrift);
+  text-decoration: underline;
+}
+
+.teaser-text {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text);
+  margin: 0 0 1rem;
+
+  @media (max-width: 599px) {
+    font-size: 0.95rem;
+  }
+}
+
+.cta-container {
+  display: flex;
+  justify-content: flex-start;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+
+    mat-icon {
+      margin-right: 0.5rem;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
     }
+  }
 
-    p {
-      margin: 0;
-      font-size: 1.1rem;
-      font-style: italic;
-      line-height: 1.5;
-      color: var(--text);
+  @media (max-width: 599px) {
+    a {
+      width: 100%;
+      justify-content: center;
     }
   }
 }
 
-// Bild und Name rechts neben dem Zitat
-.zitat {
-  .profil {
-    flex-direction: column;
-    text-align: center;
-    gap: 6px;
-  }
+// Die Person klein unter der Karte: wer es gebaut hat, ohne Bild (Startseite zur BDK, 27.11.)
+.macher {
+  margin: 1rem 0 0;
+  font-size: 0.9rem;
+  // 4,85:1 auf --karte-kommentar (AA 4,5:1): wird eine der beiden Farben geaendert, hier nachrechnen
+  color: var(--text-leise);
 
-  .profile-info {
-    align-items: center;
-  }
-
-  @media (max-width: 599px) {
-    grid-template-columns: 1fr;
-
-    .profil {
-      flex-direction: row;
-      text-align: left;
-    }
-
-    .profile-info {
-      align-items: flex-start;
-    }
+  // Zielgroesse 24 px (WCAG 2.2, 2.5.8) fuer den Link in der kleinen Zeile
+  .macher-link {
+    display: inline-block;
+    min-height: 24px;
+    line-height: 24px;
   }
 }

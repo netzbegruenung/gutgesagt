@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
+import { ORGANISATION } from '../shared/organisation';
 
 @Component({
   selector: 'app-about-teaser',
@@ -18,4 +19,6 @@ import { RouterModule } from '@angular/router';
   templateUrl: './about-teaser.component.html',
   styleUrls: ['./about-teaser.component.scss']
 })
-export class AboutTeaserComponent {}
+export class AboutTeaserComponent {
+  readonly organisation = ORGANISATION;
+}

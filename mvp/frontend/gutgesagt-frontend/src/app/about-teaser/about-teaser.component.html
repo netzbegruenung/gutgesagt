@@ -1,7 +1,13 @@
-<section class="about-teaser-section">
-  <h2>Die Geschichte hinter Gut gesagt</h2>
-  <div class="about-teaser-content">
-    <!-- Erst kurz erklaeren, dann der Knopf, darunter das Zitat mit Bild und Name (Designrunde 17.11.) -->
+<!-- Traegerin vorn, die Person klein darunter (Startseite zur BDK, 27.11.): Gut gesagt soll als
+     Projekt des Vereins erkennbar sein. Ohne Vereinslogo, weil im Repo keines mit Lizenz liegt. -->
+<section class="about-teaser-section" aria-labelledby="traeger-titel">
+  <div class="traeger-karte">
+    <h2 id="traeger-titel">Ein Projekt der {{ organisation.vereinsname }}</h2>
+    <p class="traeger-verein">
+      {{ organisation.beschreibung }}:
+      <a class="traeger-link" [href]="organisation.url" target="_blank" rel="noopener">{{ organisation.urlText }}<span class="visually-hidden"> (öffnet in neuem Tab)</span></a>
+    </p>
+
     <p class="teaser-text">
       Ob im Netz, am Stammtisch oder am Infostand: Immer wieder fallen dieselben Sprüche, und jede
       Person sucht ihre Antwort von vorn. Gut gesagt sammelt deshalb gute Antworten, damit alle sie finden.
@@ -11,26 +17,13 @@
       <a mat-raised-button
          color="primary"
          routerLink="/about">
-        <mat-icon>arrow_forward</mat-icon>
+        <mat-icon aria-hidden="true">arrow_forward</mat-icon>
         Mehr über Gut gesagt erfahren
       </a>
     </div>
 
-    <figure class="zitat">
-      <blockquote>
-        <p>Gut gesagt sammelt Antworten, die Unentschiedene mitnehmen: von vielen geschrieben,
-          von vielen verbessert und frei für alle.</p>
-      </blockquote>
-      <figcaption class="profil">
-        <img src="/profilbild-2026-11.jpg"
-             alt=""
-             class="profile-image"
-             width="56" height="56">
-        <span class="profile-info">
-          <span class="profil-name">Sebastian Banach</span>
-          <span class="role">Entwickler & Gründer</span>
-        </span>
-      </figcaption>
-    </figure>
+    <p class="macher">
+      Idee und Umsetzung: <a routerLink="/about" fragment="menschen" class="macher-link">Sebastian Banach</a>
+    </p>
   </div>
 </section>
