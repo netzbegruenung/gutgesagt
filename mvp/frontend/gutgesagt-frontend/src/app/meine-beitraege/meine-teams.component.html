@@ -40,8 +40,20 @@
                 (click)="verlassen(team)">{{ verlassenText }}</button>
 
         <!-- Team-Fortschritt und Team-Quest: nur fuer die aktuelle Saison, nur was der Server
-             gerundet liefert; nie live, nie Team gegen Team -->
-        <div *ngIf="team.aktuelle_saison && (team.wirkung || team.quest)" class="team-fortschritt" data-testid="team-fortschritt">
+             gerundet liefert; nie Team gegen Team. Quasi-live nur mit team_live, aus Stundenbloecken,
+             die der Server vorberechnet (Jura-Akte 28.11.2026) -->
+        <div *ngIf="team.aktuelle_saison && (team.wirkung || team.quest || team.live)" class="team-fortschritt" data-testid="team-fortschritt">
+            <p *ngIf="hinweisFuer.has(team.id)" class="team-live-hinweis" data-testid="team-live-hinweis">
+                {{ liveHinweis }} <a routerLink="/datenschutz" fragment="teams">{{ liveHinweisMehr }}</a>
+            </p>
+            <div *ngIf="team.live as live" class="team-live" data-testid="team-live">
+                <p class="team-live-tag" data-testid="team-live-tag">
+                    <ng-container *ngIf="live.bis !== null && live.tagessumme; else laeuftNoch">{{ liveTag(live.bis, live.tagessumme) }}<ng-container *ngIf="live.laeuft_noch"> · <span data-testid="team-live-stunde">{{ liveStundeLaeuftNoch }}</span></ng-container></ng-container>
+                    <ng-template #laeuftNoch>{{ liveLaeuftNoch }}</ng-template>
+                </p>
+                <p *ngIf="live.mitglieder" class="team-live-mitglieder" data-testid="team-live-mitglieder">{{ liveMitglieder(live.mitglieder) }}</p>
+                <p *ngIf="questStufe(live.quest_stufe) as stufe" class="team-live-quest" data-testid="team-live-quest">{{ stufe }}</p>
+            </div>
             <ng-container *ngIf="team.wirkung as wirkung">
                 <p *ngIf="wirkung.waechst_noch" class="team-waechst" data-testid="team-waechst">{{ waechstNoch }}</p>
                 <!-- Die gezeigte Woche endete vor dem eigenen Beitritt: keine leere Vorwoche (UX-Review 26.11.) -->

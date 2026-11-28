@@ -27,6 +27,7 @@ from infrastructure.database.models import (
     TeamMitgliedschaftZeile,
     TeamNummerZeile,
     TeamQuestZeile,
+    TeamStundeZeile,
     TeamWocheZeile,
 )
 
@@ -198,7 +199,7 @@ def _namen_nachziehen(session, saison_id: uuid.UUID, alt: str, neu: str) -> None
     Eine umbenannte Saison (nur solange sie geplant ist, domain/saisons.py) nimmt ihre
     Teams mit (Befund 6): Teamlinks mit ihrer ID oder ohne ID mit dem alten Namen (die
     bekommen die ID) und alle Kopien des alten Namens an Mitgliedschaften, Nummern,
-    Wochenzaehlern und Quests. In derselben Transaktion wie die Umbenennung, damit nie
+    Wochenzaehlern, Stundenzaehlern und Quests. In derselben Transaktion wie die Umbenennung, damit nie
     zwei Namen fuer eine Saison gelten. Teams, die schon unter dem neuen Namen stehen
     (Freitext aus der Zeit vor den Saisons), werden zusammengefuehrt; gibt es dasselbe
     Team unter beiden Namen, bricht die Umbenennung mit SaisonUngueltig ab.
@@ -207,7 +208,7 @@ def _namen_nachziehen(session, saison_id: uuid.UUID, alt: str, neu: str) -> None
     einem Team bei, kann das unter dem alten Namen landen (die Sperre gilt nur der
     Tabelle saisons); Umbenennen geht nur bei geplanten Saisons.
     """
-    for tabelle in (TeamNummerZeile, TeamWocheZeile, TeamQuestZeile):
+    for tabelle in (TeamNummerZeile, TeamWocheZeile, TeamQuestZeile, TeamStundeZeile):
         alt_teams = select(tabelle.team_name).where(tabelle.saison == alt)
         if session.execute(
             select(tabelle.team_name)
@@ -234,5 +235,6 @@ def _namen_nachziehen(session, saison_id: uuid.UUID, alt: str, neu: str) -> None
         TeamNummerZeile,
         TeamWocheZeile,
         TeamQuestZeile,
+        TeamStundeZeile,
     ):
         session.execute(update(tabelle).where(tabelle.saison == alt).values(saison=neu))

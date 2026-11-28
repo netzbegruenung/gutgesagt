@@ -7,7 +7,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { of } from 'rxjs';
 
 import { MeineTeamsComponent, verlassenFrage } from './meine-teams.component';
-import { MeinTeam, MeineTeams } from '../services/teams.service';
+import { MeinTeam, MeineTeams, TeamLive } from '../services/teams.service';
 import { environment } from '../../environments/environment';
 
 const URL = `${environment.baseUrl}/api/v1/teams`;
@@ -317,6 +317,97 @@ describe('MeineTeamsComponent', () => {
       );
 
       expect(el().querySelector('[data-testid="team-fortschritt"]')).toBeNull();
+    });
+  });
+
+  describe('Team-Fortschritt quasi-live (team_live)', () => {
+    const live: TeamLive = {
+      laeuft_noch: false,
+      mitglieder: 40,
+      bis: 14,
+      tagessumme: 'rund 80',
+      quest_stufe: 2,
+      hinweis_neu: false,
+    };
+    const HINWEIS =
+      'Neu: Ab jetzt siehst du die Summe deines Teams auch für heute, zur vollen Stunde und nie mit einzelnen Namen. ' +
+      'Mehr in der Datenschutzerklärung.';
+
+    function mit(teil: Partial<TeamLive>, extra: Partial<MeinTeam> = {}): MeineTeams {
+      return stand({ teams: [team({ id: 'm1', eingetreten_am: '2026-11-10', live: { ...live, ...teil }, ...extra })] });
+    }
+
+    function text(testid: string): string | null {
+      return el().querySelector(`[data-testid="${testid}"]`)?.textContent?.replace(/\s+/g, ' ').trim() ?? null;
+    }
+
+    it('zeigt die Tagessumme bis zur vollen Stunde, die Mitglieder und die Quest-Stufe', () => {
+      laden(mit({}));
+
+      expect(text('team-live-tag')).toBe('Heute bis 14 Uhr: rund 80');
+      expect(text('team-live-mitglieder')).toBe('Mindestens 40 sind dabei.');
+      expect(text('team-live-quest')).toBe('Euer Wochenziel: zwei Drittel geschafft.');
+      expect(el().querySelector('[data-testid="team-live-stunde"]')).toBeNull();
+    });
+
+    it('sagt „läuft noch“, solange heute nichts freigegeben ist', () => {
+      laden(mit({ bis: null, tagessumme: null, laeuft_noch: true, quest_stufe: 0 }));
+
+      expect(text('team-live-tag')).toBe('Heute: läuft noch');
+      expect(el().querySelector('[data-testid="team-live-quest"]')).toBeNull();
+    });
+
+    it('nennt neben der Tagessumme, dass die letzte Stunde noch läuft', () => {
+      laden(mit({ laeuft_noch: true, tagessumme: 'weniger als 10', bis: 11 }));
+
+      expect(text('team-live-tag')).toBe('Heute bis 11 Uhr: weniger als 10 · Die letzte Stunde läuft noch.');
+    });
+
+    const STUFEN: [number | null, string | null][] = [
+      [1, 'Euer Wochenziel: ein Drittel geschafft.'],
+      [3, 'Euer Wochenziel ist geschafft. Danke, dass du dabei bist.'],
+      [null, null],
+    ];
+    for (const [stufe, erwartet] of STUFEN) {
+      it(`Quest-Stufe ${stufe}: ${erwartet ?? 'ohne Quest nichts'}`, () => {
+        laden(mit({ quest_stufe: stufe }));
+        expect(text('team-live-quest')).toBe(erwartet);
+      });
+    }
+
+    it('fehlt ohne team_live (null) und bei vergangenen Saisons', () => {
+      laden(stand({ teams: [team({ id: 'm1', live: null }), team({ id: 'm2', aktuelle_saison: false, live })] }));
+
+      expect(el().querySelector('[data-testid="team-live"]')).toBeNull();
+      expect(el().querySelector('[data-testid="team-live-hinweis"]')).toBeNull();
+    });
+
+    it('zeigt Bestandsmitgliedern den Hinweis wortgleich aus der Akte, mit Verweis auf die Erklärung', () => {
+      laden(mit({ hinweis_neu: true }));
+
+      expect(text('team-live-hinweis')).toBe(HINWEIS);
+      const verweis = el().querySelector('[data-testid="team-live-hinweis"] a')!;
+      expect(verweis.getAttribute('href')).toBe('/datenschutz#teams');
+    });
+
+    it('zeigt den Hinweis nur, wenn der Server ihn meldet', () => {
+      laden(mit({ hinweis_neu: false }));
+
+      expect(el().querySelector('[data-testid="team-live-hinweis"]')).toBeNull();
+    });
+
+    it('zeigt den Hinweis einmal je Sitzung: in der Karte bleibt er, eine neue Karte zeigt ihn nicht mehr', () => {
+      laden(mit({ hinweis_neu: true }));
+      expect(el().querySelector('[data-testid="team-live-hinweis"]')).not.toBeNull();
+
+      const zweite = TestBed.createComponent(MeineTeamsComponent);
+      zweite.detectChanges();
+      http.expectOne(`${URL}/meine`).flush(mit({ hinweis_neu: true }));
+      zweite.detectChanges();
+
+      expect((zweite.nativeElement as HTMLElement).querySelector('[data-testid="team-live-hinweis"]')).toBeNull();
+      expect(el().querySelector('[data-testid="team-live-hinweis"]')).not.toBeNull();
+      zweite.destroy();
     });
   });
 });

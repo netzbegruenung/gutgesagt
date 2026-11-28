@@ -207,6 +207,50 @@ class TestAnkuenfte:
         beitraege.geloeschte_laden.assert_awaited_once()
 
 
+class TestTeamStunden:
+    """Stundenzaehler (team_live) mit dem Wochenwechsel (Jura-Akte 28.11.2026)."""
+
+    @pytest.fixture
+    def stunden(self):
+        return Mock(**{"stunden_loeschen_vor.return_value": 0})
+
+    @pytest.fixture
+    def service(self, meldungen, einwuerfe, beitraege, moderation, sperren, stunden):
+        return LoeschfristenService(
+            meldungen, einwuerfe, beitraege, moderation, sperren, team_stunden=stunden
+        )
+
+    @pytest.mark.parametrize(
+        "heute", [date(2026, 12, 7), date(2026, 12, 9), date(2026, 12, 13)]
+    )
+    async def test_alles_vor_dem_montag_der_laufenden_woche_geht(
+        self, service, stunden, heute
+    ):
+        await service.fristen_anwenden(heute)
+
+        # Montag 0 Uhr deutsche Zeit (Winter: 23 Uhr UTC am Sonntag), passend zum Tag
+        # der Stundenbloecke
+        stunden.stunden_loeschen_vor.assert_called_once_with(
+            datetime(2026, 12, 6, 23, tzinfo=timezone.utc)
+        )
+
+    async def test_sommerzeit(self, service, stunden):
+        await service.fristen_anwenden(date(2026, 7, 8))
+
+        stunden.stunden_loeschen_vor.assert_called_once_with(
+            datetime(2026, 7, 5, 22, tzinfo=timezone.utc)
+        )
+
+    async def test_fehler_haelt_die_anderen_nicht_auf(
+        self, service, stunden, beitraege
+    ):
+        stunden.stunden_loeschen_vor.side_effect = RuntimeError("db weg")
+
+        await service.fristen_anwenden(HEUTE)
+
+        beitraege.geloeschte_laden.assert_awaited_once()
+
+
 class TestPostgres:
     async def test_suchereignisse_abgeschlossener_tage_werden_verdichtet(
         self, service, suchereignisse

@@ -196,6 +196,12 @@ export class DatenschutzComponent {
   /** Team-Quests (#792): Absatz unter „Teams“; wirkt nur mit dem Paket teams. */
   readonly teamQuests = this.funktionen.an('team_quests');
   /**
+   * Team-Fortschritt quasi-live (team_live, wirkt nur mit dem Paket teams): ersetzt den Satz
+   * „Diese Summe sehen …“ durch den Wortlaut der Jura-Akte vom 28.11.2026, samt Satz zur
+   * Mitgliederzahl und Quest-Satz.
+   */
+  readonly teamLive = this.funktionen.an('team_live');
+  /**
    * Paket Wirkungs-Echo (#790, #791): dritte gespeicherte Zahl, der Zählerstand des Echos und
    * die Sätze zum Danke und zum Tages-Prüfwert.
    */
