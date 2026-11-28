@@ -43,6 +43,22 @@ def test_og_bild_im_grossformat():
     assert meta.get("og:image:alt")
 
 
+def test_og_bild_lesbares_nur_in_der_quadratischen_mitte():
+    # Browser-Startseiten ("Neueste Aktivitaet") schneiden ein Quadrat aus der Mitte (28.11.2026).
+    # Links und rechts davon nur Gelb und die zarten Blasen: Tannengruen (Gruenwert 84) hat dort
+    # auch als Kantenpixel nichts zu suchen.
+    from PIL import Image
+
+    meta = _meta()
+    with Image.open(FRONTEND / "public" / meta["og:image"].removeprefix(PRODUKTION)) as im:
+        bild = im.convert("RGB")
+    breite, hoehe = bild.size
+    rand = (breite - hoehe) // 2
+    for links in (0, breite - rand):
+        streifen = bild.crop((links, 0, links + rand, hoehe))
+        assert streifen.getextrema()[1][0] >= 235, f"Zeichnung im Rand ab x={links}"
+
+
 def test_og_title_gleicht_seitentitel():
     titel = re.search(r"<title>([^<]+)</title>", INDEX.read_text(encoding="utf-8")).group(1)
     assert _meta()["og:title"] == titel

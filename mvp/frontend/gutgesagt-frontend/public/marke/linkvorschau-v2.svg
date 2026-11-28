@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<!-- Linkvorschau (og:image) fuer Messenger und soziale Netzwerke, 1200 x 630 (1,91:1), das uebliche Mass fuer
+     Signal, WhatsApp, Mastodon, Bluesky, Facebook und LinkedIn. Ersetzt linkvorschau-v1 (1200 x 500, 28.11.2026):
+     Browser-Startseiten wie "Neueste Aktivitaet" schneiden aus dem Bild ein Quadrat aus der Mitte, bei v1 blieb
+     davon nur "...uf gibt's / ...gute Antwort." uebrig. Deshalb steht alles Lesbare in der sicheren Mitte
+     x 300-900 (600 x 600): Logo, der Satz "Darauf gibt's eine gute Antwort." (am 26.11.2026 von Sebastian
+     gewaehlt, siehe v1) und klein der Absender. Ausserhalb der Mitte nur angeschnittene Sprechblasen in
+     zartem Gruen auf dem App-Gelb (#e2f177, 8 % Tannengruen auf dem Gelb); sie halten 60 px Abstand zur
+     Mitte. Der Satz passt ueber jede geteilte Seite: Bei /beitrag/<id> und /result setzt nginx nur Titel und
+     Beschreibung ein, das Bild bleibt.
+     Absender Netzbegruenung, keine Personen, keine Anzeigenamen. linkvorschau-v2.png ist aus dieser Zeichnung
+     gerendert (Chromium, Schriften aus ../fonts/). Logo: logo-v2.svg (Hand "Thumbs up" aus Fluent Emoji,
+     Copyright (c) Microsoft Corporation, MIT-Lizenz, siehe FLUENT-EMOJI-LIZENZ.txt). Schriften: GrueneType und
+     PT Sans wie in der App (src/styles.css). Farben wie v1 und das Teilen-Bild (sharepic.ts): #f6ff7c, #005437;
+     Tannengruen auf dem Gelb ueber 4,5:1. -->
+<style>
+@font-face{font-family:GT;src:url(../fonts/GrueneTypeNeue-Regular.woff2)}
+@font-face{font-family:PTB;src:url(../fonts/PTS75F.ttf)}
+.gt{font-family:GT;fill:#005437;font-size:76px}
+.f{font-family:PTB;fill:#005437;font-size:30px}
+.blase{fill:#e2f177}
+</style>
+<rect width="1200" height="630" fill="#f6ff7c"/>
+<!-- links: grosse Blase oben, kleine unten; rechts gespiegelt. Alles bei x <= 240 bzw. x >= 960. -->
+<g class="blase">
+  <rect x="-90" y="70" width="330" height="250" rx="64"/><path d="M150 300 L210 395 L90 318 Z"/>
+  <rect x="40" y="440" width="170" height="130" rx="36"/><path d="M70 556 L50 615 L120 568 Z"/>
+  <rect x="960" y="300" width="330" height="250" rx="64"/><path d="M1050 300 L990 205 L1110 282 Z"/>
+  <rect x="990" y="60" width="170" height="130" rx="36"/><path d="M1130 74 L1150 15 L1080 62 Z"/>
+</g>
+<image href="logo-v2.svg" x="510" y="56" width="180" height="180"/>
+<text class="gt" x="600" y="340" text-anchor="middle">Darauf gibt’s</text>
+<text class="gt" x="600" y="428" text-anchor="middle">eine gute Antwort.</text>
+<text class="f" x="600" y="525" text-anchor="middle">Gut gesagt · Netzbegrünung</text>
+</svg>
