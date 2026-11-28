@@ -304,6 +304,16 @@ describe('HelpDialogComponent', () => {
     expect(text).toContain('„Feedback“');
   });
 
+  it('Mitmachen ohne Konto: Knopf „Einladung einlösen“ schliesst die Hilfe und führt auf /einladung (Rundgang 2)', () => {
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    const knopf = fixture.nativeElement.querySelector(`#${HILFE_MITMACHEN} [data-testid="hilfe-einladung"]`) as HTMLAnchorElement;
+    expect(knopf.textContent!.trim()).toBe('Einladung einlösen');
+    expect(knopf.getAttribute('href')).toBe('/einladung');
+    knopf.click();
+    expect(TestBed.inject(MatDialogRef).close).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith(['/einladung'], { fragment: undefined });
+  });
+
   it('nennt den BDK-Stand nur, solange der Server „bdk_hinweis“ meldet (Paket an, BDK-Tage)', () => {
     const hinweis = () => fixture.nativeElement.querySelector('[data-testid="bdk-hinweis"]') as HTMLElement | null;
     expect(hinweis()).toBeNull();

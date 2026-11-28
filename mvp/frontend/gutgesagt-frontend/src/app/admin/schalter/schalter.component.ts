@@ -82,7 +82,8 @@ export interface SchalterGruppe {
 
 /** Anzeigenamen der Einstellungen; unbekannte zeigen ihren technischen Namen. */
 const EINSTELLUNG_TITEL: Record<string, string> = {
-  aktuelle_saison: 'Aktuelle Saison',
+  // Rundgang 2 (28.11.2026): nicht verwechseln mit dem Abschnitt „Saisons“ darunter
+  aktuelle_saison: 'Rückfall-Saisonname (nur ohne laufende Saison)',
   // Jura-Akte 28.11.2026: danach wirkt team_live nicht mehr, auch wenn er an steht
   team_live_bis: 'Team-Fortschritt quasi-live bis (BDK-Ende)',
   // Rundgang 28.11.: Hinweis zum Einladungslink in der Hilfe, nur mit Paket k_begruessung
@@ -220,11 +221,26 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
         </ul>
       </section>
 
-      <!-- Einstellungen mit Textwert, etwa die aktuelle Saison der Teams -->
+      <!-- Einstellungen mit Textwert, etwa der Rückfall-Saisonname der Teams -->
       <section *ngFor="let e of einstellungen" class="karte mat-elevation-z1" data-testid="einstellung">
         <div class="kopf">
           <h3 [id]="'einstellung-titel-' + e.name">{{ einstellungTitel(e) }}</h3>
         </div>
+        <p *ngIf="e.hinweis" class="dsfa" data-testid="einstellung-hinweis">
+          <mat-icon aria-hidden="true">info</mat-icon>
+          {{ e.hinweis }}
+        </p>
+        <!-- Ersetzt eine laufende Saison den Wert, ist er zugeklappt (Rundgang 2, 28.11.2026):
+             sonst stehen zwei Eingaben namens „Saison“ auf der Seite -->
+        <details *ngIf="e.ersetzt; else einstellungOffen" class="zugeklappt" data-testid="einstellung-zugeklappt">
+          <summary>Gilt gerade nicht · ansehen oder ändern</summary>
+          <ng-container *ngTemplateOutlet="einstellungInhalt; context: { $implicit: e }"></ng-container>
+        </details>
+        <ng-template #einstellungOffen>
+          <ng-container *ngTemplateOutlet="einstellungInhalt; context: { $implicit: e }"></ng-container>
+        </ng-template>
+      </section>
+      <ng-template #einstellungInhalt let-e>
         <p>{{ e.erklaerung }}</p>
         <form class="einstellung" (ngSubmit)="einstellungSpeichern(e)">
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
@@ -236,11 +252,7 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
                   [disabled]="!einstellungGeaendert(e) || setzend !== null">Speichern</button>
         </form>
         <p class="zustand" role="status" data-testid="einstellung-stand">Gespeichert: {{ e.wert }}</p>
-        <p *ngIf="e.hinweis" class="dsfa" data-testid="einstellung-hinweis">
-          <mat-icon aria-hidden="true">info</mat-icon>
-          {{ e.hinweis }}
-        </p>
-      </section>
+      </ng-template>
       <!-- Saisons mit Gemeinschaftsziel (#782) -->
       <app-saisons></app-saisons>
       <!-- Saal-Sprüche je Tag (Paket k_begruessung) -->
@@ -313,6 +325,10 @@ const EINSTELLUNG_TITEL: Record<string, string> = {
     .kopf h3 { margin: 0; font-family: inherit; font-size: 17px; font-weight: 700; color: var(--akzent-schrift); }
     .einstellung { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin: 8px 16px 4px; }
     .einstellung mat-form-field { flex: 1 1 220px; max-width: 320px; }
+    .zugeklappt { margin: 4px 16px; }
+    .zugeklappt summary { min-height: 24px; padding: 4px 0; cursor: pointer; color: var(--akzent-schrift); font-weight: 500; }
+    .zugeklappt > p { margin: 4px 0; }
+    .zugeklappt .einstellung { margin: 8px 0 4px; }
   `],
 })
 export class SchalterComponent implements OnInit {

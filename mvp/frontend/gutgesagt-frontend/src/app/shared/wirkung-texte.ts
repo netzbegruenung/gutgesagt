@@ -12,7 +12,8 @@ export const DANKE_ANGEKOMMEN = 'Dein Danke ist angekommen.';
  * Konto, Beitrag gerade nicht lesbar), nennt der Text nur die Regel und behauptet nichts
  * ueber diese Person.
  */
-export const DANKE_NICHT_GEZAEHLT = 'Danke! Gezählt wird höchstens ein Danke am Tag.';
+// Ohne „Danke!“ vorn: Direkt darunter steht oft schon ein Dank (Rundgang 2, V10)
+export const DANKE_NICHT_GEZAEHLT = 'Gezählt wird höchstens ein Danke am Tag.';
 export const DANKE_FEHLER = 'Das Danke hat gerade nicht geklappt. Versuch es gleich noch einmal.';
 
 /** „3-mal öffentlich gepostet“; null bei 0 oder ohne Zahl: dann steht nichts da. */

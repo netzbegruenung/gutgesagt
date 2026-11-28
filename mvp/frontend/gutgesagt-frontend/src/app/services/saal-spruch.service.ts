@@ -19,6 +19,17 @@ export interface SaalSpruch {
   text: string;
 }
 
+/** Der heutige Saal-Spruch auf der Startseite. */
+export interface SaalSpruchHeute {
+  spruch: string;
+  /**
+   * Findet die Suche zum Spruch etwas? false: „Antworten ansehen“ führte auf „noch nichts
+   * drin“, die Karte führt dann zum Beitragen. null: unbekannt (älteres Backend, Suche
+   * gescheitert), die Karte bleibt beim Ansehen.
+   */
+  antworten: boolean | null;
+}
+
 export interface SaalSpruchListe {
   /** Ab heute, nach Datum */
   sprueche: SaalSpruch[];
@@ -26,6 +37,8 @@ export interface SaalSpruchListe {
   /** Der heutige Tag in deutscher Zeit (ISO-Datum), früher lässt sich nichts festlegen */
   heute: string;
   text_max: number;
+  /** Nur in der Antwort aufs Speichern: Treffer der Suche zum gespeicherten Spruch (0: warnen). */
+  treffer_gespeichert?: number | null;
 }
 
 /**
@@ -43,16 +56,22 @@ export class SaalSpruchService {
    * den Schalter sicher aus, fragt die Startseite den Endpunkt gar nicht; sonst antwortet
    * er auch bei Schalter aus mit 200 (`aktiv: false`), nie 404 (Gateway-fail2ban,
    * Saal-WLAN). Ein 404 käme nur von einem älteren Backend und gilt ebenso als aus.
+   * Mit dem Spruch kommt, ob die Suche dazu Antworten findet.
    */
-  heute(): Observable<string | null> {
+  heute(): Observable<SaalSpruchHeute | null> {
     return this.funktionen.stand$(SAAL_SPRUCH_SCHALTER).pipe(
       switchMap((an) =>
         an === false
           ? of(null)
           : this.http
-              .get<{ spruch: string | null; aktiv?: boolean }>(SAAL_SPRUCH_HEUTE_URL, { context: stillerKontext() })
+              .get<{ spruch: string | null; aktiv?: boolean; antworten?: boolean | null }>(SAAL_SPRUCH_HEUTE_URL, {
+                context: stillerKontext(),
+              })
               .pipe(
-                map((antwort) => (antwort?.aktiv === false ? null : antwort?.spruch?.trim() || null)),
+                map((antwort) => {
+                  const spruch = antwort?.aktiv === false ? null : antwort?.spruch?.trim() || null;
+                  return spruch ? { spruch, antworten: antwort.antworten ?? null } : null;
+                }),
                 catchError((fehler: { status?: number }) =>
                   fehler?.status === 404 ? of(null) : throwError(() => fehler),
                 ),

@@ -35,6 +35,15 @@ export interface RundgangSchritt {
    * Beispiel zum Ausprobieren. Was jemand schon eingetippt hat, bleibt stehen.
    */
   vorbelegen?: string;
+  /**
+   * Erscheint auf der Seite statt des Ziels dieses Element (ohneTreffer.ziel), gilt der
+   * Schritt als „ohne Treffer“: Der Rundgang nimmt dann diesen Ersatzschritt und lässt die
+   * Schritte mit `nurMitTreffern` weg; Zählung und Balken passen sich an (Rundgang 2, V2:
+   * vorher „Schritt 2, 2, 5“ über „noch nichts drin“).
+   */
+  ohneTreffer?: RundgangSchritt;
+  /** Fällt weg, wenn ein früherer Schritt keine Treffer fand (ohneTreffer). */
+  nurMitTreffern?: boolean;
 }
 
 export type RundgangId = 'antwort-finden' | 'mitmachen';
@@ -224,7 +233,9 @@ export const RUNDGAENGE: Record<RundgangId, Rundgang> = {
         text:
           'Füge den Text ein, auf den du antworten willst – einen Post oder Kommentar –, oder tippe die Aussage ein. ' +
           `Probier’s mit „${STARTBEISPIEL}“: Die nächsten Schritte zeigen die Treffer dazu.`,
-        ziel: 'app-search.start-suche .search-field',
+        // Der umrandete Kasten, nicht das ganze mat-form-field: Dessen Zeile für Hinweise darunter
+        // (22 px) zog den Rahmen über den Knopf „Suchen“ (Rundgang 2, V1)
+        ziel: 'app-search.start-suche .search-field .mat-mdc-text-field-wrapper',
         seite: { pfad: '/search' },
         // Dieselbe Aussage suchen die Schritte 2 bis 4 (#601)
         vorbelegen: STARTBEISPIEL,
@@ -237,24 +248,34 @@ export const RUNDGAENGE: Record<RundgangId, Rundgang> = {
           'Je mehr Menschen bewerten, desto mehr zählt ihr Urteil. Ein Klick oder Tipp darauf erklärt es.',
         // Sätze zum Siegel: es fiel nicht auf und erklärte sich nicht selbst (Ersteindruck-Test 14.11.);
         // kürzer als der Absatz #siegel auf der Über-Seite, sagt aber dasselbe (Güte aus Regeln und Stimmen)
-        ziel: 'app-beitragskarte',
+        // Nur Treffer: Unter „noch nichts drin“ stehen sonst andere Karten (Rundgang 2)
+        ziel: '.ergebnisse app-beitragskarte',
         seite: { pfad: '/result', query: { searchQuery: STARTBEISPIEL } },
+        ohneTreffer: {
+          titel: 'Noch keine Antwort',
+          text:
+            'Zu dieser Aussage ist noch nichts drin. Hier schreibst du die erste Antwort, dafür brauchst ' +
+            'du ein Konto. Weiter unten stehen Aussagen, zu denen es schon Antworten gibt.',
+          ziel: '.unified-empty-state app-nicht-dabei',
+        },
       },
       {
         titel: 'Kommentar kopieren',
         text:
           '„Kopieren“ legt den Kommentar in deine Zwischenablage. Dann musst du ihn nur noch unter dem ' +
           'Post einfügen.',
-        ziel: 'app-beitragskarte .kopieren-knopf',
+        ziel: '.ergebnisse app-beitragskarte .kopieren-knopf',
         seite: { pfad: '/result', query: { searchQuery: STARTBEISPIEL } },
+        nurMitTreffern: true,
       },
       {
         titel: 'Abstimmen',
         text:
           'War der Kommentar hilfreich? Angemeldet zeigt deine Stimme anderen, welche Kommentare gut ' +
           'ankommen. Nach deiner Stimme siehst du kurz unten, ob du unter den Ersten bist.',
-        ziel: 'app-beitragskarte .stimmen',
+        ziel: '.ergebnisse app-beitragskarte .stimmen',
         seite: { pfad: '/result', query: { searchQuery: STARTBEISPIEL } },
+        nurMitTreffern: true,
       },
       {
         titel: 'Jederzeit wieder',

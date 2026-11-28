@@ -22,10 +22,12 @@ describe('Saal-Spruch (Schalter saal_spruch)', () => {
   describe('startVorrang mit Saal-Spruch', () => {
     const keins = new Set<never>();
 
-    it('geht allgemeinen Zahlen vor, nicht dem Vorschlag', () => {
+    it('geht allgemeinen Zahlen und dem Vorschlag vor (Rundgang 2, 28.11.)', () => {
       const allgemein = { nutzung_seit_letztem_besuch: 0, neue_einwuerfe: 3, unbeantwortete_aussagen: 2 };
       expect(startVorrang(allgemein, keins, false, true)).toBe('spruch');
-      expect(startVorrang(allgemein, keins, true, true)).toBe('karte');
+      expect(startVorrang(allgemein, keins, true, true)).toBe('spruch');
+      // Ausdrücklich über die Kachel geholt: dann doch der Vorschlag
+      expect(startVorrang(allgemein, keins, true, true, true)).toBe('karte');
       // Die allgemeinen Zahlen treten zurück
       expect(startKacheln(allgemein, keins, 'spruch')).toEqual([]);
     });
@@ -36,8 +38,8 @@ describe('Saal-Spruch (Schalter saal_spruch)', () => {
 
     it('wartet, solange seine Antwort aussteht; ohne Spruch wie bisher', () => {
       expect(startVorrang(null, keins, false, 'offen')).toBe('offen');
-      // Mit Vorschlag wartet nichts auf den Saal-Spruch
-      expect(startVorrang(null, keins, true, 'offen')).toBe('karte');
+      // Auch mit Vorschlag: Der Spruch ginge vor, also kurz warten statt umspringen
+      expect(startVorrang(null, keins, true, 'offen')).toBe('offen');
       expect(startVorrang(null, keins, true, false)).toBe('karte');
       expect(startVorrang(null, keins, true)).toBe('karte');
     });
@@ -153,7 +155,7 @@ describe('Saal-Spruch (Schalter saal_spruch)', () => {
       });
     }
 
-    it('Angemeldete mit Vorschlag: „Dein nächster Schritt“ geht vor', () => {
+    it('Angemeldete mit Vorschlag: der Saal-Spruch geht vor (Rundgang 2, 28.11.)', () => {
       einrichten(true, ANGEMELDET);
       const neues = TestBed.inject(SeitLetztemBesuchService);
       neues.naechsterSchrittDa$.next(true);
@@ -162,12 +164,44 @@ describe('Saal-Spruch (Schalter saal_spruch)', () => {
       fixture.detectChanges();
       http.expectOne(SAAL_SPRUCH_HEUTE_URL).flush({ spruch: SPRUCH });
       fixture.detectChanges();
-      expect(karte(fixture.nativeElement)).toBeNull();
+      expect(karte(fixture.nativeElement)).not.toBeNull();
 
-      // Ohne Vorschlag tritt nur der Block mit allgemeinen Zahlen zurück
+      // Ohne Vorschlag ebenso
       neues.naechsterSchrittDa$.next(false);
       fixture.detectChanges();
       expect(karte(fixture.nativeElement)).not.toBeNull();
+    });
+
+    for (const [wer, info, satz] of [
+      ['Besucher', BESUCHER, 'Mit Konto schreibst du die erste.'],
+      ['Angemeldete', ANGEMELDET, 'Schreib die erste!'],
+    ] as const) {
+      it(`ohne Antworten: ${wer} sehen „Antwort beitragen“ statt der Sackgasse`, () => {
+        einrichten(true, info);
+        TestBed.inject(SeitLetztemBesuchService).naechsterSchrittDa$.next(false);
+        besuch.next({ nutzung_seit_letztem_besuch: 0 });
+        const fixture = TestBed.createComponent(SaalSpruchComponent);
+        fixture.detectChanges();
+        http.expectOne(SAAL_SPRUCH_HEUTE_URL).flush({ spruch: SPRUCH, aktiv: true, antworten: false });
+        fixture.detectChanges();
+
+        const el: HTMLElement = fixture.nativeElement;
+        const knopf = el.querySelector('[data-testid="saal-spruch-knopf"]') as HTMLAnchorElement;
+        expect(knopf.textContent).toContain('Antwort beitragen');
+        expect(knopf.getAttribute('href')).toBe(`/workflow/add-commentary?searchQuery=${encodeURIComponent(SPRUCH)}`);
+        expect(el.querySelector('[data-testid="saal-spruch-ohne-antwort"]')!.textContent).toContain(satz);
+        expect(el.textContent).not.toContain('Wie würdest du antworten?');
+      });
+    }
+
+    it('Antwortstand unbekannt (null): bleibt bei „Antworten ansehen“', () => {
+      einrichten(true, BESUCHER);
+      const fixture = TestBed.createComponent(SaalSpruchComponent);
+      fixture.detectChanges();
+      http.expectOne(SAAL_SPRUCH_HEUTE_URL).flush({ spruch: SPRUCH, aktiv: true, antworten: null });
+      fixture.detectChanges();
+      const knopf = fixture.nativeElement.querySelector('[data-testid="saal-spruch-knopf"]') as HTMLAnchorElement;
+      expect(knopf.textContent).toContain('Antworten ansehen');
     });
 
     it('Angemeldete: eigenes Neues geht vor, allgemeine Zahlen nicht', () => {
@@ -188,7 +222,7 @@ describe('Saal-Spruch (Schalter saal_spruch)', () => {
 
     it('bei der Rückkehr steht der Spruch sofort da und wird still neu gefragt', () => {
       einrichten(true, BESUCHER);
-      TestBed.inject(SeitLetztemBesuchService).saalSpruchGemerkt = { tag: browserTag(), spruch: SPRUCH };
+      TestBed.inject(SeitLetztemBesuchService).saalSpruchGemerkt = { tag: browserTag(), spruch: { spruch: SPRUCH, antworten: true } };
       const fixture = TestBed.createComponent(SaalSpruchComponent);
       fixture.detectChanges();
       expect(karte(fixture.nativeElement)).not.toBeNull();

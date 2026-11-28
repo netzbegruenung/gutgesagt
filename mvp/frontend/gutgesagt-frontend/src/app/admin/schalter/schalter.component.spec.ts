@@ -472,6 +472,22 @@ describe('SchalterComponent', () => {
       expect(einstellung().querySelector('[data-testid="einstellung-hinweis"]')!.textContent).toContain(hinweis);
     });
 
+    it('klappt den Rückfall-Saisonnamen zu, solange eine Saison läuft (Rundgang 2)', () => {
+      mitEinstellungen([schalter({ name: 'teams' })], [{ ...SAISON, hinweis: 'Gilt gerade nicht: …', ersetzt: true }]);
+      const zu = einstellung().querySelector('[data-testid="einstellung-zugeklappt"]') as HTMLDetailsElement;
+      expect(zu).not.toBeNull();
+      expect(zu.open).toBeFalse();
+      expect(zu.querySelector('input')).not.toBeNull();
+      // Der Grund steht sichtbar außerhalb
+      expect(einstellung().querySelector('[data-testid="einstellung-hinweis"]')!.closest('details')).toBeNull();
+    });
+
+    it('ohne laufende Saison offen', () => {
+      mitEinstellungen([schalter({ name: 'teams' })]);
+      expect(einstellung().querySelector('[data-testid="einstellung-zugeklappt"]')).toBeNull();
+      expect(einstellung().querySelector('input')).not.toBeNull();
+    });
+
     it('ohne laufende Saison kein Hinweis an der Einstellung', () => {
       mitEinstellungen([schalter({ name: 'teams' })]);
       expect(einstellung().querySelector('[data-testid="einstellung-hinweis"]')).toBeNull();
@@ -484,7 +500,7 @@ describe('SchalterComponent', () => {
       fixture.detectChanges();
 
       const karte = einstellung();
-      expect(karte.querySelector('h3')!.textContent).toBe('Aktuelle Saison');
+      expect(karte.querySelector('h3')!.textContent).toBe('Rückfall-Saisonname (nur ohne laufende Saison)');
       expect(karte.textContent).toContain('Saison der Teams, die am Namen erscheinen.');
       expect(karte.textContent).toContain('Standard: 2026');
       const feld = karte.querySelector('input') as HTMLInputElement;

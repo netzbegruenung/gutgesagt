@@ -224,3 +224,8 @@ form .email + button {
     text-align: center;
   }
 }
+
+/* Leer, solange nichts fehlt: kein Abstand (Rundgang 2, V8a) */
+.warnung:empty {
+  display: none;
+}

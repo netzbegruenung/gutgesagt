@@ -29,10 +29,12 @@ import {
   GEPOSTET_GEMELDET,
   GEPOSTET_RUECKKEHR,
   GEPOSTET_RUECKKEHR_OHNE_KONTO,
+  GEPOSTET_EINLADUNG,
   GEPOSTET_WEITER,
   GEPOSTET_WEITER_LINK,
   JA_GEPOSTET,
 } from './gepostet-texte';
+import { EINLADUNG_EINLOESEN, EINLADUNG_PFAD } from '../../shared/einladung/einladung-weg';
 
 /**
  * So lange nach dem Kopieren gilt das Zurückkommen erst als Rückkehr: Wer kurz nach dem
@@ -107,6 +109,10 @@ export type GepostetStand = 'aus' | 'frage' | 'sendet' | 'gemeldet';
         <!-- Nach dem Dank ein nächster Schritt (UX-Review 26.11.): noch ein Spruch -->
         <p class="erfolg-weiter" *ngIf="sichtbar && gepostet === 'gemeldet'" data-testid="gepostet-weiter">
           {{ weiter }}&ngsp;<a class="erfolg-weiter-link" [routerLink]="suche" [fragment]="suchfeld">{{ weiterLink }}</a>
+        </p>
+        <!-- Ohne Konto: wer den Einladungslink schon hat, kommt hier ins Konto (Rundgang 2, V13) -->
+        <p class="erfolg-weiter" *ngIf="sichtbar && gepostet === 'gemeldet' && ohneKonto" data-testid="gepostet-einladung">
+          {{ einladung }}&ngsp;<a class="erfolg-weiter-link" [routerLink]="einladungPfad">{{ einladungLink }}</a>
         </p>
       </div>
       <!-- Ausserhalb der Status-Region: Der Knopf soll nicht mit angesagt werden -->
@@ -265,6 +271,9 @@ export class KopiertErfolgComponent implements OnChanges, AfterViewChecked, OnDe
   readonly beitragPfad = ROUTES.BEITRAG;
   readonly weiter = GEPOSTET_WEITER;
   readonly weiterLink = GEPOSTET_WEITER_LINK;
+  readonly einladung = GEPOSTET_EINLADUNG;
+  readonly einladungLink = EINLADUNG_EINLOESEN;
+  readonly einladungPfad = EINLADUNG_PFAD;
   readonly suche = ROUTES.SEARCH;
   readonly suchfeld = SUCHFELD_FOKUS_FRAGMENT;
 

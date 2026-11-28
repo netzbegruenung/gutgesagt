@@ -114,7 +114,7 @@ export class EinladungenComponent implements OnInit {
   }
   /**
    * Vorschlag vom Server, bis jemand selbst etwas einträgt: die laufende oder nächste angelegte
-   * Saison (Schalter → Saisons), ohne angelegte Saison die Einstellung „Aktuelle Saison“.
+   * Saison (Schalter → Saisons), ohne angelegte Saison die Einstellung „Rückfall-Saisonname“.
    */
   teamSaison = '';
   private saisonVorschlag = '';

@@ -67,12 +67,13 @@ EINSTELLUNGEN: Dict[str, Einstellungsart] = {
         Einstellungsart(
             name=AKTUELLE_SAISON,
             erklaerung=(
-                "Gilt nur, solange noch keine Saison begonnen hat. Danach folgt die "
-                "aktuelle Saison der laufenden Saison (Abschnitt Saisons), zwischen zwei "
-                "Saisons der zuletzt beendeten. Sie bestimmt, welche Teams am Namen "
+                "Nur ein Rückfall, solange noch keine Saison begonnen hat: Dann gilt "
+                "dieser Name als aktuelle Saison der Teams. Sobald eine Saison läuft "
+                "(Abschnitt Saisons), gilt sie, zwischen zwei Saisons die zuletzt "
+                "beendete. Die aktuelle Saison bestimmt, welche Teams am Namen "
                 "erscheinen und in „Meine Teams“ aktuell sind. Neue Teamlinks bekommen "
                 "die laufende oder nächste Saison als Vorschlag, ohne angelegte Saison "
-                "diesen Wert."
+                "diesen Namen."
             ),
             max_laenge=SAISON_MAX,
             standard=lambda: str(heute_utc().year),

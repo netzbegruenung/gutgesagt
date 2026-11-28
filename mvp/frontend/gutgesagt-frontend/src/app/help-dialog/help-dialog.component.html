@@ -108,6 +108,13 @@
         @if (bdkHinweisAn()) {
             <p class="hilfe-bdk-hinweis" data-testid="bdk-hinweis">{{ bdkHinweis }}</p>
         }
+        <!-- Wer den Link schon hat, braucht einen Knopf, nicht nur Text (Rundgang 2, V13) -->
+        @if (!angemeldet) {
+            <p>
+                <a mat-stroked-button class="hilfe-einladung-knopf" data-testid="hilfe-einladung"
+                   [href]="einladungPfad" (click)="zurEinladung($event)">{{ einladungEinloesen }}</a>
+            </p>
+        }
     </section>
 
     <!-- Als App installieren, je Geraet (Entscheidung Maintainer 18.11.). Knopf nur, wenn

@@ -56,13 +56,14 @@ export const NAECHSTER_SCHRITT_URL = `${environment.baseUrl}/api/v1/usage/users/
         }
         <div class="naechster-schritt-knoepfe">
           @if (eintrag.anzeige.ziel) {
-            <a mat-flat-button class="naechster-schritt-los" [routerLink]="eintrag.anzeige.ziel"
+            <!-- Hauptknopf voll wie „Antworten ansehen“, Nebenknopf Kontur (Rundgang 2, V15) -->
+            <a mat-raised-button class="gutgesagt-primary-dark naechster-schritt-los" [routerLink]="eintrag.anzeige.ziel"
                [queryParams]="eintrag.anzeige.queryParams" [fragment]="eintrag.anzeige.fragment">
               {{ eintrag.anzeige.knopf }}
               <mat-icon iconPositionEnd aria-hidden="true">arrow_forward</mat-icon>
             </a>
           } @else {
-            <button mat-flat-button type="button" class="naechster-schritt-los" (click)="zurSuche()">
+            <button mat-raised-button type="button" class="gutgesagt-primary-dark naechster-schritt-los" (click)="zurSuche()">
               {{ eintrag.anzeige.knopf }}
             </button>
           }
@@ -131,6 +132,14 @@ export const NAECHSTER_SCHRITT_URL = `${environment.baseUrl}/api/v1/usage/users/
       .naechster-schritt-knoepfe a,
       .naechster-schritt-knoepfe button {
         min-height: 48px;
+      }
+
+      /* Sichtbarer Tastaturfokus (WCAG 2.4.7): Material nimmt den Rahmen weg, nur ein Grau
+         blieb (Rundgang 2, V15); 3 px wie in Garten und Profilbild */
+      .naechster-schritt-knoepfe a:focus-visible,
+      .naechster-schritt-knoepfe button:focus-visible {
+        outline: 3px solid var(--akzent-tanne);
+        outline-offset: 2px;
       }
     `,
   ],

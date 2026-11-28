@@ -147,6 +147,52 @@ describe('RundgangComponent', () => {
       flush();
     }));
 
+    it('misst den Rahmen neu, wenn das Ziel wächst oder die Seite es verschiebt (Rundgang 2, V1)', async () => {
+      const zweiBilder = () => new Promise((fertig) => requestAnimationFrame(() => requestAnimationFrame(fertig)));
+      const haupt = document.createElement('main');
+      haupt.id = 'hauptinhalt';
+      haupt.style.height = '10px';
+      seite.appendChild(haupt);
+      service.aktiv.set({ rundgang: PROBE, index: 0 });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      await zweiBilder();
+      expect(parseFloat(kegel()!.style.height)).toBeCloseTo(40 + 16, 0);
+
+      // Das Feld wächst nach dem Einsetzen des Beispiels: ohne Scrollen, ohne neue Fenstergröße
+      const ziel = seite.querySelector('#probe-eins') as HTMLElement;
+      ziel.style.height = '100px';
+      await zweiBilder();
+      expect(parseFloat(kegel()!.style.height)).toBeCloseTo(100 + 16, 0);
+
+      // Eine Karte darüber lädt nach (der Hauptinhalt wird höher) und schiebt das Ziel
+      ziel.style.top = '160px';
+      haupt.style.height = '400px';
+      await zweiBilder();
+      expect(parseFloat(kegel()!.style.top)).toBeCloseTo(ziel.getBoundingClientRect().top - 8, 0);
+      service.beenden();
+      fixture.detectChanges();
+    });
+
+    it('ohne Treffer: meldet dem Dienst den Ersatzschritt, statt auf das Ziel zu warten (Rundgang 2, V2)', fakeAsync(() => {
+      const mitErsatz: Rundgang = {
+        ...PROBE,
+        schritte: [
+          { titel: 'Treffer', text: 't', ziel: '#gibt-es-nicht', ohneTreffer: { titel: 'Keine', text: 'k', ziel: '#probe-zwei' } },
+          { titel: 'Kopieren', text: 'c', ziel: '#gibt-es-nicht .knopf', nurMitTreffern: true },
+        ],
+      };
+      const ohneTreffer = jasmine.createSpy('ohneTreffer');
+      (service as unknown as { ohneTreffer: jasmine.Spy }).ohneTreffer = ohneTreffer;
+      service.aktiv.set({ rundgang: mitErsatz, index: 0 });
+      fixture.detectChanges();
+      tick();
+      expect(ohneTreffer).toHaveBeenCalledTimes(1);
+      // Gezeigt wird nichts vom alten Schritt: Den Ersatz setzt der Dienst
+      expect(blase()).toBeNull();
+      flush();
+    }));
+
     it('zeigt den Schritt ohne Lichtkegel, wenn das Ziel nicht erscheint', fakeAsync(() => {
       starten(2);
       expect(blase()).toBeNull();

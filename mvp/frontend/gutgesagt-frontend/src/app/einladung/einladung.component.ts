@@ -321,6 +321,17 @@ export class EinladungComponent implements OnInit {
     }
   }
 
+  /** Die Felder des Formulars in ihrer Reihenfolge; nach „Ja“/„Nein“ und bei Fehlendem gebraucht. */
+  @ViewChild('vornameFeld') private vornameFeld?: ElementRef<HTMLInputElement>;
+  @ViewChild('nachnameFeld') private nachnameFeld?: ElementRef<HTMLInputElement>;
+  @ViewChild('emailFeld') private emailFeld?: ElementRef<HTMLInputElement>;
+
+  /**
+   * Was beim Klick auf „Konto anlegen“ noch fehlte, als Namen der Felder (WCAG 3.3.1):
+   * Der Knopf ist nicht mehr nur grau, er sagt, was fehlt (Rundgang 2, V8a).
+   */
+  fehlendeFelder: string[] = [];
+
   @ViewChild('ueberschrift')
   set ueberschrift(el: ElementRef<HTMLElement> | undefined) {
     if (el && this.ueberschriftFokussieren) {
@@ -462,6 +473,9 @@ export class EinladungComponent implements OnInit {
     if (!this.angemeldet) {
       this.teamWahl = antwort;
       this.teamWahlFehlt = false;
+      // Das Formular steht weit darunter: hinscrollen und das erste leere Feld fokussieren,
+      // sonst wirkt die Wahl folgenlos (Rundgang 2, V8a)
+      afterNextRender(() => this.zumErstenLeerenFeld(), { injector: this.injector });
       return;
     }
     if (antwort === 'ja' && this.team) {
@@ -574,11 +588,44 @@ export class EinladungComponent implements OnInit {
     return !!(this.email.trim() && this.vorname.trim() && this.nachname.trim());
   }
 
-  einloesen() {
-    const email = this.email.trim();
-    if (!this.vollstaendig || this.stand === 'sendet') {
+  /** Die leeren Pflichtfelder in der Reihenfolge des Formulars, mit Namen und Feld. */
+  private leereFelder(): { name: string; feld?: ElementRef<HTMLInputElement> }[] {
+    return [
+      { name: 'Vorname', wert: this.vorname, feld: this.vornameFeld },
+      { name: 'Nachname', wert: this.nachname, feld: this.nachnameFeld },
+      { name: 'Mail-Adresse', wert: this.email, feld: this.emailFeld },
+    ].filter((f) => !f.wert.trim());
+  }
+
+  /** Scrollt zum ersten leeren Feld (sonst zum Vornamen) und fokussiert es. */
+  private zumErstenLeerenFeld(): void {
+    const feld = (this.leereFelder()[0]?.feld ?? this.vornameFeld)?.nativeElement;
+    if (!feld) {
       return;
     }
+    const ruhig = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    feld.scrollIntoView?.({ block: 'center', behavior: ruhig ? 'auto' : 'smooth' });
+    feld.focus({ preventScroll: true });
+  }
+
+  /** Feld geändert: Was fehlt, steht nur noch, solange es wirklich fehlt. */
+  feldGeaendert(): void {
+    if (this.fehlendeFelder.length) {
+      this.fehlendeFelder = this.leereFelder().map((f) => f.name);
+    }
+  }
+
+  einloesen() {
+    const email = this.email.trim();
+    if (this.stand === 'sendet') {
+      return;
+    }
+    if (!this.vollstaendig) {
+      this.fehlendeFelder = this.leereFelder().map((f) => f.name);
+      this.zumErstenLeerenFeld();
+      return;
+    }
+    this.fehlendeFelder = [];
     if (this.team && this.teamWahl === null) {
       this.teamWahlFehlt = true;
       return;

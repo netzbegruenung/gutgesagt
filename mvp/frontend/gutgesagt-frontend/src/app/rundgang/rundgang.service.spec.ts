@@ -6,7 +6,7 @@ import { AuthService, UserInfo } from '../auth/auth.service';
 import { Art9EinwilligungService } from '../services/art9-einwilligung.service';
 import { RundgangService } from './rundgang.service';
 import { MITMACHEN_ANGEBOT, RUNDGAENGE, WILLKOMMEN, WILLKOMMEN_ANGEMELDET } from './rundgang-daten';
-import { STARTBEISPIEL } from '../shared/startbeispiel';
+import { HOT_TAKES, STARTBEISPIEL } from '../shared/startbeispiel';
 import { MITMACHEN_SCHLUESSEL, WILLKOMMEN_SCHLUESSEL } from './rundgang-merker';
 
 describe('RundgangService', () => {
@@ -248,6 +248,36 @@ describe('RundgangService', () => {
       expect(service.aktiv()?.index).toBe(0);
     });
 
+    it('ohne Treffer: Ersatzschritt statt „Passende Treffer“, Kopieren und Abstimmen fallen weg (Rundgang 2)', async () => {
+      await service.starten('antwort-finden');
+      await service.weiter();
+      expect(service.aktiv()?.rundgang.schritte[1].titel).toBe('Passende Treffer');
+      service.ohneTreffer();
+
+      const s = service.aktiv()!;
+      expect(s.index).toBe(1);
+      expect(s.rundgang.schritte.map((x) => x.titel)).toEqual(['Aussage eingeben', 'Noch keine Antwort', 'Jederzeit wieder']);
+      // Weiter zählt jetzt 2 → 3 von 3, ohne Sprung
+      await service.weiter();
+      expect(service.aktiv()?.index).toBe(2);
+      expect(service.aktiv()?.rundgang.schritte[2].titel).toBe('Jederzeit wieder');
+      // Die Daten selbst bleiben: Ein neuer Start hat wieder alle fünf
+      expect(RUNDGAENGE['antwort-finden'].schritte.length).toBe(5);
+      await service.starten('antwort-finden');
+      expect(service.aktiv()?.rundgang.schritte.length).toBe(5);
+    });
+
+    it('ohneTreffer tut nichts auf Schritten ohne Ersatz', async () => {
+      await service.starten('antwort-finden');
+      service.ohneTreffer();
+      expect(service.aktiv()?.rundgang.schritte.length).toBe(5);
+    });
+
+    it('Rundgang-Beispiel und erster Platzhalter des Suchfelds sind derselbe Satz (Rundgang 2)', () => {
+      expect(HOT_TAKES[0].text).toBe(STARTBEISPIEL);
+      expect(RUNDGAENGE['antwort-finden'].schritte[0].vorbelegen).toBe(STARTBEISPIEL);
+    });
+
     it('endet nach dem letzten Schritt mit Weiter', async () => {
       userInfo.next(angemeldet);
       await service.starten('mitmachen');
@@ -447,7 +477,7 @@ describe('RundgangService', () => {
   it('zeigt im Schritt „Abstimmen“ auf die Stimm-Knöpfe und nennt den Sofort-Dank darunter (20.11.2026)', () => {
     const schritt = RUNDGAENGE['antwort-finden'].schritte.find((s) => s.titel === 'Abstimmen');
 
-    expect(schritt?.ziel).toBe('app-beitragskarte .stimmen');
+    expect(schritt?.ziel).toBe('.ergebnisse app-beitragskarte .stimmen');
     expect(schritt?.text).toContain('unter den Ersten');
   });
 });

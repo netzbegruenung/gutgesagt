@@ -336,6 +336,21 @@ describe('EinladungComponent mit Team', () => {
       expect(el().querySelector('[data-testid="team-wahl-fehlt"]')?.textContent).toContain('mit Team oder ohne Team');
     });
 
+    it('fokussiert nach der Wahl das erste leere Feld des Formulars (Rundgang 2, V8a)', async () => {
+      starten('Code123');
+      pruefen({ einloesbar: true, team: team() });
+      klick('team-ja');
+      await fixture.whenStable();
+      expect(document.activeElement).toBe(el().querySelector('input[name="vorname"]'));
+
+      fixture.componentInstance.vorname = 'Anna';
+      fixture.componentInstance.nachname = 'Beispiel';
+      fixture.detectChanges();
+      klick('team-nein');
+      await fixture.whenStable();
+      expect(document.activeElement).toBe(el().querySelector('input[name="email"]'));
+    });
+
     it('schickt nach „Ja“ die Einwilligung mit und merkt sich nur Code und Kennung für den Rücksprung', () => {
       starten('Code123');
       pruefen({ einloesbar: true, team: team() });

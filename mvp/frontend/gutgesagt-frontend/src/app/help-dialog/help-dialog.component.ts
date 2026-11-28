@@ -19,6 +19,7 @@ import { AppInstallierenService } from '../rundgang/app-installieren.service';
 import { RundgangId, rundgangBeschriftung } from '../rundgang/rundgang-daten';
 import { SiegelComponent } from '../shared/components/siegel/siegel.component';
 import { FunktionenService } from '../services/funktionen.service';
+import { EINLADUNG_EINLOESEN, EINLADUNG_PFAD } from '../shared/einladung/einladung-weg';
 
 /**
  * Rueckkehrziel-Parameter: Nach der Anmeldung aus der Hilfe oeffnet die App sie wieder.
@@ -84,6 +85,8 @@ export class HelpDialogComponent implements AfterViewInit {
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   private readonly daten = inject<HilfeDaten | null>(MAT_DIALOG_DATA, { optional: true });
   readonly bdkHinweis = BDK_EINLADUNG_HINWEIS;
+  readonly einladungPfad = EINLADUNG_PFAD;
+  readonly einladungEinloesen = EINLADUNG_EINLOESEN;
   readonly bdkHinweisAn = inject(FunktionenService).an('bdk_hinweis');
 
   constructor(
@@ -124,9 +127,18 @@ export class HelpDialogComponent implements AfterViewInit {
    * und hebt sonst den Sprung zum Anker auf. Mit Strg/Cmd/Umschalt öffnet der Browser das href.
    */
   zuUeber(event: MouseEvent, fragment?: string): void {
+    this.schliessenUndHin(event, '/about', fragment);
+  }
+
+  /** „Einladung einlösen“ unter „Mitmachen“: wie zuUeber erst schliessen, dann auf /einladung. */
+  zurEinladung(event: MouseEvent): void {
+    this.schliessenUndHin(event, this.einladungPfad);
+  }
+
+  private schliessenUndHin(event: MouseEvent, pfad: string, fragment?: string): void {
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;
     event.preventDefault();
-    this.dialogRef.afterClosed().subscribe(() => void this.router.navigate(['/about'], { fragment }));
+    this.dialogRef.afterClosed().subscribe(() => void this.router.navigate([pfad], { fragment }));
     this.dialogRef.close();
   }
 
