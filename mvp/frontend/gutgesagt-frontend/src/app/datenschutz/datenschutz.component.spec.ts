@@ -1,9 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ViewportScroller } from '@angular/common';
+import { ActivatedRoute, NavigationEnd, Router, provideRouter } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { BehaviorSubject, Subject } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { AuthService, UserInfo } from '../auth/auth.service';
 import { environment } from '../../environments/environment';
 
@@ -1869,5 +1872,156 @@ describe('DatenschutzComponent: Zustimmungen in den Muster-Hinweisen', () => {
     expect(dseDatum('2026-13-01')).toBeNull();
     expect(dseDatum(null)).toBeNull();
     expect(dseMusterStimmen('kein Datum')).toContain('Seit dem Einschalten');
+  });
+});
+
+/**
+ * Fotos am Stand und Antworten außerhalb der App: Wortlaut der juristischen Prüfung vom
+ * 28.11.2026 (Kanäle nach S8), ohne Schalter. Geprüft wird der Wortlaut zeichengenau.
+ */
+describe('DatenschutzComponent: Fotos am Stand und Antworten außerhalb der App (Jura 28.11.2026)', () => {
+  const FOTOS =
+    'Auf Veranstaltungen wie der BDK fotografieren wir an unserem Stand nur Menschen ab 18, die vorher ' +
+    'schriftlich eingewilligt haben (Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a DSGVO). Die Fotos zeigen ' +
+    'wir auf gruene.social (Mastodon) und in den Signal-Gruppen Netzfeuerwehr und Erste Entdecker. ' +
+    'gruene.social betreiben wir selbst; Mastodon verteilt Beiträge an andere Server weltweit, auch ' +
+    'außerhalb der EU. Löschen wir ein Foto, senden wir die Löschung an diese Server, können aber nicht ' +
+    'garantieren, dass jeder sie umsetzt. Nicht genutzte Fotos löschen wir nach vier Wochen, genutzte, wenn ' +
+    'du widerrufst oder wir sie nicht mehr brauchen. Das Kärtchen mit deiner Einwilligung bewahren wir als ' +
+    'Nachweis auf, solange das Foto genutzt wird, und danach drei Jahre. Widerrufen kannst du jederzeit mit ' +
+    'der Nummer deines Kärtchens an backoffice@netzbegruenung.de. Du hast die Rechte aus dem Abschnitt ' +
+    '‚Deine Rechte‘, auch das Recht auf Beschwerde bei einer Aufsichtsbehörde.';
+  const AUSSERHALB =
+    'Öffentliche Antworten zeigen wir manchmal auch außerhalb der App, etwa als Antwort des Tages am Stand ' +
+    'oder in unseren Kanälen. Das geschieht ohne deinen Namen, außer du hast ausdrücklich eingewilligt ' +
+    '(Art. 6 Abs. 1 lit. f DSGVO, unser Interesse: zeigen, was die Community schreibt).';
+
+  /** Alle Schalter aus: beide Texte stehen trotzdem (Basis, kein Schalter). */
+  function seite(): HTMLElement {
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: FunktionenService, useValue: { an: () => signal(false), stand$: () => new Subject<boolean | null>() } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('Fotos am Stand: Wortlaut, Anker #fotos, im Abschnitt zur Netzbegrünung als Verantwortliche, ohne Schalter', () => {
+    const el = seite();
+    const fotos = el.querySelector('#fotos') as HTMLElement;
+
+    expect(fotos).withContext('Anker #fotos').not.toBeNull();
+    expect(normalisiert(fotos.querySelector('h3')?.textContent ?? null)).toBe('Fotos am Stand');
+    expect(normalisiert(fotos.querySelector('p')?.textContent ?? null)).toBe(FOTOS);
+    expect(fotos.closest('section')?.id).toBe('verantwortlicher');
+    expect(abschnittIn(el, 'Verantwortlicher')).toContain(FOTOS);
+    expect(fotos.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('Fotos am Stand: Widerruf an dieselbe Adresse wie im Impressum, als Mail-Link', () => {
+    const link = seite().querySelector('#fotos a[href^="mailto:"]') as HTMLAnchorElement;
+
+    expect(link.getAttribute('href')).toBe('mailto:backoffice@netzbegruenung.de');
+    expect(link.textContent?.trim()).toBe('backoffice@netzbegruenung.de');
+  });
+
+  it('Antworten außerhalb der App: Wortlaut im Abschnitt zu den Beiträgen (CC0), ohne Schalter', () => {
+    const el = seite();
+    const satz = el.querySelector('[data-testid="dse-antworten-ausserhalb"]');
+
+    expect(normalisiert(satz?.textContent ?? null)).toBe(AUSSERHALB);
+    expect(abschnittIn(el, 'Beiträge, die du einstellst')).toContain(AUSSERHALB);
+  });
+
+  it('Stand: 28. November 2026', () => {
+    expect(stand(seite())).toBe('28. November 2026');
+  });
+});
+
+/**
+ * /datenschutz#fotos vom Kärtchen am Stand: Am Handy klebt der Kopf oben; der Anker muss
+ * darunter landen, nicht dahinter (WCAG 2.4.11). Der Kopf greift die echte Regel
+ * html:has(app-mobile-header) aus styles.css. Den Sprung des Routers (anchorScrolling in
+ * app.config.ts: ein Takt nach NavigationEnd, window.scrollTo ohne scroll-padding) spielt der
+ * Test nach, weil RouterTestingHarness den RouterScroller nicht startet.
+ */
+describe('DatenschutzComponent: Anker #fotos unter dem klebenden Kopf', () => {
+  let kopf: HTMLElement;
+
+  beforeEach(() => {
+    window.scrollTo(0, 0);
+    kopf = document.createElement('app-mobile-header');
+    kopf.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; height: 57px; z-index: 10';
+    document.body.prepend(kopf);
+  });
+
+  afterEach(() => {
+    kopf.remove();
+    window.scrollTo(0, 0);
+  });
+
+  it('landet nach dem Router-Sprung direkt unter dem Kopf, mit Fokus auf dem Abschnitt', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([{ path: 'datenschutz', component: DatenschutzComponent }]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: FunktionenService, useValue: { an: () => signal(false), stand$: () => new Subject<boolean | null>() } },
+      ],
+    });
+    const scroller = TestBed.inject(ViewportScroller);
+    const routerSprung = jasmine.createSpy('routerSprung');
+    TestBed.inject(Router)
+      .events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe(() =>
+        setTimeout(() => {
+          scroller.scrollToAnchor('fotos');
+          routerSprung();
+        }),
+      );
+
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/datenschutz#fotos');
+    await new Promise((fertig) => setTimeout(fertig, 50));
+
+    const abstand = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop);
+    const fotos = harness.routeNativeElement!.querySelector('#fotos') as HTMLElement;
+    const oben = fotos.getBoundingClientRect().top;
+
+    expect(routerSprung).toHaveBeenCalledTimes(1);
+    expect(abstand).withContext('scroll-padding-top der Regel für den klebenden Kopf').toBeGreaterThanOrEqual(57);
+    expect(window.scrollY).withContext('die Seite ist gescrollt').toBeGreaterThan(0);
+    expect(oben).withContext('Überschrift nicht unter dem Kopf').toBeGreaterThanOrEqual(kopf.getBoundingClientRect().bottom);
+    expect(Math.abs(oben - abstand)).withContext(`oben=${oben}, scroll-padding-top=${abstand}`).toBeLessThan(2);
+    expect(document.activeElement).toBe(fotos);
+  });
+
+  /*
+   * Chrome rückt ein fokussierbares Ziel schon beim Fokus des Routers unter scroll-padding;
+   * verlässlich (andere Browser, Ziel ohne tabindex) ist erst scrollIntoView der Seite selbst.
+   */
+  it('springt selbst mit scrollIntoView, wenn das Ziel schon beim ersten Zeichnen steht', async () => {
+    TestBed.configureTestingModule({
+      imports: [DatenschutzComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { fragment: 'fotos' } } },
+        { provide: FunktionenService, useValue: { an: () => signal(false), stand$: () => new Subject<boolean | null>() } },
+      ],
+    });
+    const springen = spyOn(Element.prototype, 'scrollIntoView');
+    const fixture = TestBed.createComponent(DatenschutzComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await new Promise((fertig) => setTimeout(fertig));
+
+    expect(springen).toHaveBeenCalledOnceWith({ block: 'start' });
+    expect(springen.calls.mostRecent().object).toBe(fixture.nativeElement.querySelector('#fotos'));
+    fixture.nativeElement.remove();
   });
 });
