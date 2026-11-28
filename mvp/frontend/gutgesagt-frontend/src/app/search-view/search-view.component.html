@@ -48,35 +48,23 @@
 
 <app-recent-content id="recent-content"></app-recent-content>
 
-<!-- Zwei Wege zum Mitmachen, unter den Community-Karten: Der Weg ohne Konto kommt zuerst
-     (Persona-Runde 18.11.). Beide Ziele sind geschuetzt; ohne Anmeldung leitet der AuthGuard
-     erst auf "Das erwartet dich mit Konto" (/mit-konto), von dort zur Anmeldung und danach
-     zurueck. Anonym sagt "mit Konto" das vorher (#644). Je ein kurzer Halbsatz sagt sichtbar,
-     was dahinter passiert (Persona-Runde 18.11.). -->
+<!-- Drei Aktionen in einer Kachelart (Startseite 28.11.), unter den Community-Karten: Der Weg
+     ohne Konto kommt zuerst (Persona-Runde 18.11.). Einwerfen und Beitragen sind geschuetzt;
+     ohne Anmeldung leitet der AuthGuard erst auf "Das erwartet dich mit Konto" (/mit-konto),
+     von dort zur Anmeldung und danach zurueck. Anonym sagt "mit Konto" das vorher (#644). Je ein
+     kurzer Halbsatz sagt sichtbar, was dahinter passiert (Persona-Runde 18.11.). Themen im
+     Ueberblick (#783) fuer alle, ohne Schalter. -->
 <section class="start-kacheln" aria-label="Mitmachen">
-    <a class="start-kachel" routerLink="/einwerfen">
-        <span class="kachel-icon" aria-hidden="true">{{ kettenIcons.einwerfen }}</span>
-        <span class="kachel-text">
-            <span class="kachel-titel">Einwerfen@if (anonym$ | async) {&nbsp;<span class="kachel-konto">mit Konto</span>}</span>
-            <span class="kachel-satz">Spruch oder Fundstück schicken</span>
-        </span>
-        <mat-icon class="kachel-pfeil" aria-hidden="true">arrow_forward</mat-icon>
-    </a>
-
-    <a class="start-kachel" routerLink="/contribute">
-        <span class="kachel-icon" aria-hidden="true">{{ kettenIcons.verfassen }}</span>
-        <span class="kachel-text">
-            <span class="kachel-titel">Beitragen@if (anonym$ | async) {&nbsp;<span class="kachel-konto">mit Konto</span>}</span>
-            <span class="kachel-satz">Eigene Antwort schreiben</span>
-        </span>
-        <mat-icon class="kachel-pfeil" aria-hidden="true">arrow_forward</mat-icon>
-    </a>
+    <app-start-kachel ziel="/einwerfen" [icon]="kettenIcons.einwerfen" titel="Einwerfen"
+        satz="Spruch oder Fundstück schicken" [mitKonto]="(anonym$ | async) === true"></app-start-kachel>
+    <app-start-kachel ziel="/contribute" [icon]="kettenIcons.verfassen" titel="Beitragen"
+        satz="Eigene Antwort schreiben" [mitKonto]="(anonym$ | async) === true"></app-start-kachel>
+    <app-start-kachel [ziel]="gartenZiel" [icon]="themenIcon" [titel]="gartenTitel"
+        satz="Wo es schon viele Antworten gibt und wo noch welche fehlen"></app-start-kachel>
 </section>
 
-<!-- „Was hat dich gestört?“ fuer die Startphase (Schalter feedback_gestoert) -->
+<!-- „Was hat dich gestört?“ fuer die Startphase (Schalter feedback_gestoert): eine Textzeile
+     unter den Kacheln, keine eigene Karte (Startseite 28.11.) -->
 <app-gestoert-einstieg></app-gestoert-einstieg>
-
-<!-- Weg zur Gartenansicht, fuer alle (#783, Schalter gartenansicht) -->
-<app-garten-hinweis></app-garten-hinweis>
 
 <app-about-teaser></app-about-teaser>

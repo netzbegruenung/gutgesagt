@@ -178,8 +178,9 @@ for (const modus of ['light', 'dark'] as const) {
 
         test('Startseite: Marke „mit Konto“ steht in beiden Kacheln neben dem Titel', async ({ page }) => {
           await page.goto('/search');
-          const kacheln = page.locator('.start-kachel');
-          await expect(kacheln.locator('.kachel-konto')).toHaveCount(2);
+          // Themen im Ueberblick braucht kein Konto und traegt keine Marke (Startseite 28.11.)
+          const kacheln = page.locator('.start-kachel:has(.kachel-konto)');
+          await expect(kacheln).toHaveCount(2);
           // Breiten haengen an der Schrift: erst messen, wenn sie geladen ist
           await page.evaluate(() => document.fonts.ready.then(() => undefined));
           const lagen = await kacheln.evaluateAll((alle) =>
