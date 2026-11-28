@@ -423,6 +423,30 @@ describe('SchalterComponent', () => {
       return (fixture.nativeElement as HTMLElement).querySelector('[data-testid="einstellung"]') as HTMLElement;
     }
 
+    it('zeigt team_live mit Namen, Kopplung an das Paket und das Enddatum als Einstellung (Jura 28.11.)', () => {
+      const ende: Einstellung = {
+        name: 'team_live_bis',
+        erklaerung: 'BDK-Ende: Bis zu diesem Tag (deutsche Zeit, einschließlich) wirkt …',
+        wert: '2026-12-06',
+        standard: '2026-12-06',
+        max_laenge: 10,
+      };
+      const abgelaufen = 'Abgelaufen: wirkt seit dem Ende am 06.12.2026 (Einstellung team_live_bis) nicht mehr';
+      mitEinstellungen(
+        [
+          schalter({ name: 'teams', admin_wert: true, wirksam: true }),
+          schalter({ name: 'team_live', admin_wert: true, wirksam: false, erklaerung: `Team-Fortschritt quasi-live. ${abgelaufen}` }),
+        ],
+        [ende],
+      );
+
+      const live = karten()[1];
+      expect(live.querySelector('h4')!.textContent).toBe('Team-Fortschritt quasi-live');
+      expect(live.textContent).toContain(abgelaufen);
+      expect(einstellung().querySelector('h3')!.textContent).toBe('Team-Fortschritt quasi-live bis (BDK-Ende)');
+      expect(einstellung().textContent).toContain('Gespeichert: 2026-12-06');
+    });
+
     it('zeigt das Paket teams und den Einzelschalter teams_oeffentlich mit Namen', () => {
       mitEinstellungen([schalter({ name: 'teams' }), schalter({ name: 'teams_oeffentlich' })]);
 

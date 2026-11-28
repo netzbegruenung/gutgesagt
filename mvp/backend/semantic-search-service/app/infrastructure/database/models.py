@@ -580,6 +580,36 @@ class TeamWocheZeile(Base):
     gepostet = Column(Integer, nullable=False, server_default=text("0"))
 
 
+class TeamStundeZeile(Base):
+    """
+    Der Stundenzaehler eines Teams fuer den Team-Fortschritt quasi-live (Schalter
+    team_live, Jura-Akte 28.11.2026): je Team, Saison und Stundenblock (Beginn in UTC,
+    volle Stunde) nur die Zahl der gezaehlten Ereignisse, ohne Kennung und ohne
+    Beitrag. Wer beigetragen hat, steht nirgends; die verschiedenen Beitragenden je
+    Block zaehlt der Dienst ueber Pruefwerte nur im Arbeitsspeicher
+    (services/team_fortschritt_service.py).
+
+    ``stand``: offen (laeuft oder noch nicht vorberechnet), uebertragen (unter 10
+    verschiedenen Beitragenden, geht in den naechsten Block), freigegeben. ``freigabe``
+    ist die beim Vorberechnen freigegebene Zahl (dieser Block samt der uebertragenen
+    davor), ``mitglieder`` die Zahl der Mitglieder mit Einwilligung zu diesem Zeitpunkt.
+    Geloescht mit dem Wochenwechsel (services/loeschfristen_service.py), danach bleibt
+    nur der Wochenzaehler.
+    """
+
+    __tablename__ = "team_stunden"
+
+    team_name = Column(String(40), primary_key=True)
+    saison = Column(String(20), primary_key=True)
+    block_beginn = Column(DateTime(timezone=True), primary_key=True)
+    anzahl = Column(Integer, nullable=False, server_default=text("0"))
+    stand = Column(String(12), nullable=False, server_default=text("'offen'"))
+    freigabe = Column(Integer, nullable=True)
+    mitglieder = Column(Integer, nullable=True)
+
+    __table_args__ = (Index("idx_team_stunden_block_beginn", "block_beginn"),)
+
+
 class TeamQuestZeile(Base):
     """
     Die Team-Quest einer Woche (#792): Thema und Ziel, festgelegt beim ersten Abruf in
