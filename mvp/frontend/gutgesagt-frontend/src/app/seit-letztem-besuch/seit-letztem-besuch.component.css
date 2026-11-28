@@ -61,10 +61,14 @@ button.seit-besuch-kachel {
   cursor: pointer;
 }
 
+/* So hoch wie die Zahl der Nachbarkachel (32 px * 1,1), damit die Woerter darunter auf einer Linie stehen */
 .seit-besuch-titel {
+  display: flex;
+  align-items: center;
+  min-height: 35px;
   font-size: 20px;
   font-weight: 700;
-  line-height: 1.6;
+  line-height: 1.2;
   color: var(--akzent-schrift);
 }
 
@@ -208,6 +212,11 @@ button.seit-besuch-kachel {
 
   .seit-besuch-zahl {
     font-size: 26px;
+  }
+
+  .seit-besuch-titel {
+    min-height: 29px;
+    font-size: 17px;
   }
 
   .seit-besuch-wort {
