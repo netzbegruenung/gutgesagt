@@ -24,7 +24,7 @@ EMOJI_KATEGORIEN: Tuple[Tuple[str, str], ...] = (
 )
 
 # (Zeichen, Name, Kategorie, Stichworte für die Suche)
-# 866 Einträge
+# 837 Einträge
 EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ("🐵", "Affengesicht", "tiere-natur", "affe banane dschungel gesicht tier zoo"),
     ("🐒", "Affe", "tiere-natur", "tier"),
@@ -223,7 +223,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ("🍄", "Fliegenpilz", "tiere-natur", "giftig pilz"),
     ("🍇", "Trauben", "essen-trinken", "frucht obst traube wein"),
     ("🍈", "Honigmelone", "essen-trinken", "cantaloupe frucht melone obst"),
-    ("🍉", "Wassermelone", "essen-trinken", "frucht melone obst wasser"),
     ("🍊", "Mandarine", "essen-trinken", "apfelsine frucht obst orange vitamin"),
     ("🍋", "Zitrone", "essen-trinken", "frucht obst sauer zitrusfrucht"),
     ("🍌", "Banane", "essen-trinken", "frucht obst schale"),
@@ -367,12 +366,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ("🍣", "Sushi", "essen-trinken", "japanisches gericht restaurant"),
     ("🍤", "frittierte Garnele", "essen-trinken", "garnele restaurant tempura"),
     ("🍥", "Fischfrikadelle", "essen-trinken", "fisch restaurant spirale"),
-    (
-        "🥮",
-        "Mondkuchen",
-        "essen-trinken",
-        "essen fest festival herbst kuchen mondfest pinyin yuebing",
-    ),
     (
         "🍡",
         "Dango",
@@ -566,7 +559,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ("🏠", "Haus", "reisen-orte", "gebäude zuhause"),
     ("🏡", "Haus mit Garten", "reisen-orte", "baum haus haus mit baum"),
     ("🏢", "Bürogebäude", "reisen-orte", "hochhaus"),
-    ("🏣", "japanisches Postgebäude", "reisen-orte", "japan post"),
     ("🏤", "Postgebäude", "reisen-orte", "europa europäisches postgebäude post"),
     ("🏦", "Bank", "reisen-orte", "gebäude geld"),
     ("🏨", "Hotel", "reisen-orte", "gebäude unterkunft übernachten"),
@@ -997,18 +989,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
         "böller feier juhu knaller konfetti party super yay",
     ),
     ("🎊", "Konfettiball", "aktivitaeten", "feier konfetti party"),
-    ("🎋", "Tanabata-Baum", "aktivitaeten", "baum fest japan sternenfest zettel"),
-    ("🎍", "Piniendekoration", "aktivitaeten", "japan neujahrsfest"),
-    ("🎎", "japanische Puppen", "aktivitaeten", "puppenfest japan"),
-    (
-        "🎏",
-        "traditionelle japanische Windsäcke",
-        "aktivitaeten",
-        "feier karpfen windsäcke",
-    ),
-    ("🎐", "japanisches Windspiel", "aktivitaeten", "bimmel feier glocke wind"),
-    ("🎑", "traditionelles Mondfest", "aktivitaeten", "japan mond mondfest"),
-    ("🧧", "roter Umschlag", "aktivitaeten", "geld geschenk glück hong bao hongbao"),
     ("🎀", "pinke Schleife", "aktivitaeten", "feier geschenk pink rosa schleife"),
     (
         "🎁",
@@ -1018,7 +998,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ),
     ("🎟️", "Eintrittskarten", "aktivitaeten", "billet eintrittskarte ticket"),
     ("🎫", "Ticket", "aktivitaeten", "konzert unterhaltung"),
-    ("🎖️", "Militärorden", "aktivitaeten", "orden"),
     (
         "🏆",
         "Pokal",
@@ -1113,12 +1092,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ("♟️", "Bauer Schach", "aktivitaeten", "schach"),
     ("🃏", "Jokerkarte", "aktivitaeten", "joker spielkarte"),
     ("🀄", "Mahjong-Stein", "aktivitaeten", "mahjong roter drache spiel"),
-    (
-        "🎴",
-        "japanische Blumenkarte",
-        "aktivitaeten",
-        "blume blumenkarte hanafuda japan karte",
-    ),
     ("🎭", "Masken", "aktivitaeten", "kunst theater unterhaltung"),
     (
         "🖼️",
@@ -1142,12 +1115,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
         "gegenstaende",
         "augenschutz brille schweißen schweißerbrille schwimmen tauchen taucherbrille",
     ),
-    (
-        "🥼",
-        "Laborkittel",
-        "gegenstaende",
-        "arzt arztkittel doc doktor experiment kleidung kleidungsstück labormantel weiße jacke weißer mantel wissenschaftler",
-    ),
     ("🦺", "Sicherheitsweste", "gegenstaende", "kleidung notfall sicherheit weste"),
     ("👔", "Hemd mit Krawatte", "gegenstaende", "hemd kleidung kragen schlips"),
     ("👕", "T-Shirt", "gegenstaende", "kleidung shirt"),
@@ -1156,17 +1123,12 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ("🧤", "Handschuhe", "gegenstaende", "hand handschuh"),
     ("🧥", "Mantel", "gegenstaende", "brr jacke kalt kleidung warm anziehen"),
     ("🧦", "Socken", "gegenstaende", "strumpf strümpfe"),
-    ("👗", "Kleid", "gegenstaende", "kleidung"),
-    ("👘", "Kimono", "gegenstaende", "japanisch kleid kleidung"),
-    ("🥻", "Sari", "gegenstaende", "kleid kleidung"),
     (
         "🩳",
         "Shorts",
         "gegenstaende",
         "badebekleidung badehose boxershorts kleidung schwimmshorts",
     ),
-    ("👚", "Bluse", "gegenstaende", "damenmode kleidung oberbekleidung shirt"),
-    ("👛", "Geldbörse", "gegenstaende", "accessoire brieftasche münzen portemonnaie"),
     ("👜", "Handtasche", "gegenstaende", "accessoire einkaufen tasche"),
     (
         "👝",
@@ -1176,7 +1138,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ),
     ("🛍️", "Einkaufstüten", "gegenstaende", "einkaufen shoppen shopping tasche tüte"),
     ("🎒", "Schulranzen", "gegenstaende", "ranzen rucksack schule tornister"),
-    ("👞", "Herrenschuh", "gegenstaende", "gehen herren schuh"),
     (
         "👟",
         "Sportschuh",
@@ -1195,22 +1156,8 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
         "gegenstaende",
         "ballerina ballet-pumps bequem frauenschuh kleidungsstück schuh slipper",
     ),
-    (
-        "👠",
-        "Stöckelschuh",
-        "gegenstaende",
-        "absatz absatzschuh damen elegant high heel highheels pumps rot schuh vornehm",
-    ),
-    ("👡", "Damensandale", "gegenstaende", "damen sandale schuh"),
     ("🩰", "Ballettschuhe", "gegenstaende", "ballett kleidung schuhe tanz"),
-    ("👢", "Damenstiefel", "gegenstaende", "damen schuh stiefel"),
     ("👑", "Krone", "gegenstaende", "kopfbedeckung könig königin majestät"),
-    (
-        "👒",
-        "Damenhut",
-        "gegenstaende",
-        "damenhut mit schleife hut kleidung kopfbedeckung schleife",
-    ),
     (
         "🎩",
         "Zylinder",
@@ -1224,13 +1171,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
         "gegenstaende",
         "baseball baseball-kappe baseball-mütze baseballkappe mütze schirmkappe",
     ),
-    (
-        "⛑️",
-        "Rettungshelm",
-        "gegenstaende",
-        "bergen erste hilfe helm helm mit weißem kreuz hilfe kreuz retten roter helm sanitäter",
-    ),
-    ("💄", "Lippenstift", "gegenstaende", "kosmetik make-up makeup rot schminke"),
     ("💍", "Ring", "gegenstaende", "diamantring edelstein schmuck verlobung"),
     ("💎", "Edelstein", "gegenstaende", "diamant"),
     (
@@ -1346,12 +1286,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ("🕯️", "Kerze", "gegenstaende", "licht"),
     ("💡", "Glühbirne", "gegenstaende", "hell idee lampe licht"),
     ("🔦", "Taschenlampe", "gegenstaende", "lampe licht"),
-    (
-        "🏮",
-        "rote Papierlaterne",
-        "gegenstaende",
-        "izakaya japanische laterne japanisches lokal",
-    ),
     ("📔", "Notizbuch mit dekorativem Einband", "gegenstaende", "einband notizbuch"),
     ("📕", "geschlossenes Buch", "gegenstaende", "buch geschlossen"),
     (
@@ -1812,9 +1746,7 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ),
     ("♻️", "Recycling-Symbol", "symbole", "grüne punkt grüner punkt recycling"),
     ("⚜️", "Lilie", "symbole", "fleur-de-lis"),
-    ("🔱", "Dreizack", "symbole", "anker poseidon triton"),
     ("📛", "Namensschild", "symbole", "schild"),
-    ("🔰", "japanisches Anfänger-Zeichen", "symbole", "anfänger japanisches symbol"),
     ("⭕", "hohler roter Kreis", "symbole", "großer kreis kreis o rot"),
     ("✅", "weißes Häkchen", "symbole", "abgehakt erledigt"),
     (
@@ -1967,7 +1899,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
         "symbole",
         "aufwärts dreieck rot rotes dreieck mit spitze oben",
     ),
-    ("🔻", "rotes Dreieck mit der Spitze nach unten", "symbole", "abwärts dreieck rot"),
     ("💠", "Rautenform mit Punkt", "symbole", "diamant mit punkt rautenform"),
     ("🔘", "Optionsfeld", "symbole", "schaltfläche"),
     (

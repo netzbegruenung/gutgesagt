@@ -106,6 +106,15 @@ def test_liste_ohne_doppelte_und_gross_genug():
         "🍆",
         "🍑",
         "🔞",
+        "🔻",
+        "🍉",
+        # Herkunft, Gesundheit und Gender ueber Kleidung und Zeichen (Review 28.11.)
+        "👘",
+        "🥻",
+        "🔱",
+        "⛑️",
+        "🥼",
+        "👡",
     ],
 )
 def test_stichproben_aus_den_sperrkategorien_fehlen(gesperrt):
