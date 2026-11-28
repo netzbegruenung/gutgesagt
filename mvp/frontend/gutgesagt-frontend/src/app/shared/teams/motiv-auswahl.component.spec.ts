@@ -8,7 +8,7 @@ import { TeamMotivEintrag, TeamMotivKategorie } from './teams';
 
 const MOTIVE: TeamMotivEintrag[] = [
   { schluessel: '🐝', name: 'Biene', kategorie: 'tiere-natur', stichworte: 'insekt honig' },
-  { schluessel: '🌻', name: 'Sonnenblume', kategorie: 'tiere-natur', stichworte: 'blume sonne' },
+  { schluessel: '🌱', name: 'Spross', kategorie: 'tiere-natur', stichworte: 'junge pflanze' },
   { schluessel: '🚲', name: 'Fahrrad', kategorie: 'reisen-orte', stichworte: 'rad' },
   { schluessel: '⚖️', name: 'Waage', kategorie: 'gegenstaende', stichworte: 'gerechtigkeit' },
 ];
@@ -26,7 +26,7 @@ const KATEGORIEN: TeamMotivKategorie[] = [
 class GastComponent {
   motive = MOTIVE;
   kategorien = KATEGORIEN;
-  motiv = '🌻';
+  motiv = '🌱';
 }
 
 describe('MotivAuswahlComponent', () => {
@@ -72,8 +72,8 @@ describe('MotivAuswahlComponent', () => {
   it('zeigt das gewählte Motiv mit Namen in einer Live-Region', () => {
     const gewaehlt = el().querySelector('[data-testid="motiv-gewaehlt"]')!;
     expect(gewaehlt.getAttribute('aria-live')).toBe('polite');
-    expect(gewaehlt.textContent).toContain('Gewählt: Sonnenblume');
-    expect(gewaehlt.textContent).toContain('🌻');
+    expect(gewaehlt.textContent).toContain('Gewählt: Spross');
+    expect(gewaehlt.textContent).toContain('🌱');
   });
 
   it('listet die Treffer nach Kategorien gruppiert, jedes Motiv mit Namen', fakeAsync(() => {
@@ -88,7 +88,7 @@ describe('MotivAuswahlComponent', () => {
     const optionen = Array.from(overlay.querySelectorAll('[data-testid="motiv-option"]'));
     expect(optionen.map((o) => o.textContent!.replace(/\s+/g, ''))).toEqual([
       '🐝Biene',
-      '🌻Sonnenblume',
+      '🌱Spross',
       '🚲Fahrrad',
       '⚖️Waage',
     ]);
@@ -135,7 +135,7 @@ describe('MotivAuswahlComponent', () => {
     const ereignis = taste('Enter');
 
     expect(ereignis.defaultPrevented).toBeTrue();
-    expect(fixture.componentInstance.motiv).toBe('🌻');
+    expect(fixture.componentInstance.motiv).toBe('🌱');
     flush();
   }));
 });

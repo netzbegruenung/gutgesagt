@@ -153,8 +153,8 @@ class TestAdmin:
         # Zur Auswahl die Emoji der Positivliste mit Name und Kategorie; die sechs
         # frueheren Schluessel bleiben gueltig, stehen aber nicht mehr zur Wahl.
         motive = {m["schluessel"]: m for m in body["motive"]}
-        assert motive["🌻"]["name"] == "Sonnenblume"
-        assert motive["🌻"]["kategorie"] == "tiere-natur"
+        assert motive["🌱"]["name"] == "Spross"
+        assert motive["🌱"]["kategorie"] == "tiere-natur"
         assert "vogel" not in motive
         assert [k["name"] for k in body["motiv_kategorien"]][0] == "Tiere & Natur"
         assert body["teamname_hinweis"] == (
@@ -304,7 +304,7 @@ class TestAdmin:
         assert antwort.status_code == 201
         assert einladung_repo.anlegen.call_args.kwargs["team_name"] is None
 
-    @pytest.mark.parametrize("motiv", ["🌻", "⚖️", "vogel", "sprechblase"])
+    @pytest.mark.parametrize("motiv", ["🌱", "⚖️", "vogel", "sprechblase"])
     def test_anlegen_mit_emoji_oder_frueherem_motiv(
         self, einladung_repo, team_repo, motiv
     ):
@@ -377,11 +377,15 @@ class TestAdmin:
             "🙏",
             "🍆",
             "🍑",
+            # Politische bzw. Zugehoerigkeits-Symbole
+            "🌹",
+            "🕊️",
+            "🌻",
             # Nicht genau der Eintrag: ohne Variantenwaehler, ZWJ-Sequenz, Freitext
             "⚖",
-            "🌻\ufe0f",
+            "🌱\ufe0f",
             "🐦\u200d⬛",
-            "🌻🌻",
+            "🌱🌱",
             "drache",
             "",
         ],

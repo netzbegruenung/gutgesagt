@@ -106,8 +106,12 @@ def test_liste_ohne_doppelte_und_gross_genug():
         "🍆",
         "🍑",
         "🔞",
+        # Politische bzw. Zugehoerigkeits-Symbole (Entscheidung 28.11.)
         "🔻",
         "🍉",
+        "🌹",
+        "🕊️",
+        "🌻",
         # Herkunft, Gesundheit und Gender ueber Kleidung und Zeichen (Review 28.11.)
         "👘",
         "🥻",
@@ -153,11 +157,11 @@ def test_fruehere_schluessel_bleiben_gueltig(schluessel, name):
 
 
 def test_deutscher_kurzname_und_nur_exakte_eintraege():
-    assert motiv_name("🌻") == "Sonnenblume"
+    assert motiv_name("🌱") == "Spross"
     assert motiv_gueltig("⚖️")
     # Ohne Variantenwaehler ist es nicht genau der Eintrag
     assert not motiv_gueltig("⚖")
     # Ein angehaengter Variantenwaehler macht es ebenso zu einem anderen Text
-    assert not motiv_gueltig("🌻" + VARIANTE)
+    assert not motiv_gueltig("🌱" + VARIANTE)
     assert not motiv_gueltig(None)
     assert not motiv_gueltig("")

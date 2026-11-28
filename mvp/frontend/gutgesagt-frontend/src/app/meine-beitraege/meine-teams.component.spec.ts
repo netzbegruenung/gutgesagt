@@ -90,15 +90,15 @@ describe('MeineTeamsComponent', () => {
   });
 
   it('zeigt ein Emoji-Motiv als Zeichen und den Namen des Motivs sichtbar daneben', () => {
-    laden({ ...stand(), teams: [team({ id: 'm3', motiv: '🌻', motiv_name: 'Sonnenblume' })] });
+    laden({ ...stand(), teams: [team({ id: 'm3', motiv: '🌱', motiv_name: 'Spross' })] });
 
     const eintrag = el().querySelector('[data-testid="team"]')!;
     const emoji = eintrag.querySelector('[data-testid="motiv-emoji"]')!;
-    expect(emoji.textContent!.trim()).toBe('🌻');
+    expect(emoji.textContent!.trim()).toBe('🌱');
     // Der Name steht sichtbar daneben; das Zeichen selbst liest der Screenreader nicht doppelt
     expect(emoji.getAttribute('aria-hidden')).toBe('true');
-    expect(emoji.getAttribute('title')).toBe('Sonnenblume');
-    expect(eintrag.querySelector('[data-testid="team-motiv-name"]')!.textContent).toContain('Motiv: Sonnenblume');
+    expect(emoji.getAttribute('title')).toBe('Spross');
+    expect(eintrag.querySelector('[data-testid="team-motiv-name"]')!.textContent).toContain('Motiv: Spross');
     expect(eintrag.querySelector('.medaillon.emoji')).not.toBeNull();
   });
 

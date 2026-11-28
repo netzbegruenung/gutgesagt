@@ -44,16 +44,16 @@ describe('teamSaisonGueltig', () => {
 
 describe('motivEmoji', () => {
   it('zeichnet Emoji der Liste als Text, frühere Schlüssel nicht', () => {
-    expect(motivEmoji('🌻')).toBe('🌻');
+    expect(motivEmoji('🌱')).toBe('🌱');
     expect(motivEmoji('⚖️')).toBe('⚖️');
     expect(motivEmoji('vogel')).toBeNull();
-    expect(motivBild('🌻')).toBeNull();
+    expect(motivBild('🌱')).toBeNull();
   });
 
   it('nimmt keine Sequenzen, keinen Text und nichts Leeres', () => {
     expect(motivEmoji('🐦\u200d⬛')).toBeNull();
     expect(motivEmoji('👍🏽')).toBeNull();
-    expect(motivEmoji('🌻🌻')).toBeNull();
+    expect(motivEmoji('🌱🌱')).toBeNull();
     expect(motivEmoji('<b>')).toBeNull();
     expect(motivEmoji('a')).toBeNull();
     expect(motivEmoji('')).toBeNull();

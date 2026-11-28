@@ -122,7 +122,7 @@ describe('EinladungenComponent', () => {
     // Ein Ausschnitt der festen Emoji-Liste (domain/team_emoji.py), wie der Server sie schickt
     const MOTIVE = [
       { schluessel: '🐝', name: 'Biene', kategorie: 'tiere-natur', stichworte: 'insekt honig' },
-      { schluessel: '🌻', name: 'Sonnenblume', kategorie: 'tiere-natur', stichworte: 'blume sonne' },
+      { schluessel: '🌱', name: 'Spross', kategorie: 'tiere-natur', stichworte: 'junge pflanze' },
       { schluessel: '🚲', name: 'Fahrrad', kategorie: 'reisen-orte', stichworte: 'rad' },
       { schluessel: '⚖️', name: 'Waage', kategorie: 'gegenstaende', stichworte: 'gerechtigkeit' },
     ];
@@ -171,9 +171,9 @@ describe('EinladungenComponent', () => {
       expect(suche.getAttribute('role')).toBe('combobox');
       expect(block.querySelector('[data-testid="motiv-kategorie"]')).not.toBeNull();
       expect(block.querySelector('[data-testid="motiv"]')).toBeNull();
-      // Vorauswahl Sonnenblume, mit Namen sichtbar
-      expect(fixture.componentInstance.teamMotiv).toBe('🌻');
-      expect(block.querySelector('[data-testid="motiv-gewaehlt"]')!.textContent).toContain('Gewählt: Sonnenblume');
+      // Vorauswahl Spross, mit Namen sichtbar
+      expect(fixture.componentInstance.teamMotiv).toBe('🌱');
+      expect(block.querySelector('[data-testid="motiv-gewaehlt"]')!.textContent).toContain('Gewählt: Spross');
       expect(fixture.componentInstance.teamSaison).toBe('2026');
       expect((block.querySelector('input[name="teamName"]') as HTMLInputElement).maxLength).toBe(40);
     });
@@ -448,7 +448,7 @@ describe('EinladungenComponent', () => {
       expect(k.gueltigBis).not.toBe('2026-12-24');
       expect(k.teamName).toBe('');
       expect(k.teamSaison).toBe('Winter 26/27');
-      expect(k.teamMotiv).toBe('🌻');
+      expect(k.teamMotiv).toBe('🌱');
       expect(k.teamArt).toBe('anlass');
       const notiz = el().querySelector('input[name="notiz"]') as HTMLInputElement;
       expect(notiz.value).toBe('');

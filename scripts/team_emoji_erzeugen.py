@@ -15,7 +15,7 @@ Aufgenommen werden nur (Vorgabe Jura, vorläufig, 28.11.2026):
 - Emoji bis Version 12.0 (2019), damit auch ältere Geräte sie zeichnen;
 - ohne die Untergruppen und Zeichen in AUSGESCHLOSSEN_* unten (Religion und
   Weltanschauung, Gender und Sexualität, Gesundheit, Behinderung, Medizin und Körper,
-  Herkunft, Waffen, mehrdeutige Zeichen).
+  Herkunft, Waffen, politische bzw. Zugehörigkeits-Symbole, mehrdeutige Zeichen).
 
 Alltagsessen bleibt drin, auch wenn es aus einer Küche kommt (Döner, Sushi, Taco):
 Es sagt etwas über Geschmack, nicht über Herkunft. Draußen sind Kleidung, Feste und
@@ -139,12 +139,16 @@ AUSGESCHLOSSEN_ZEICHEN = {
     0x1F484: "Lippenstift",
     # Militär
     0x1F396: "Militärorden",
-    # Mehrdeutig oder politisch besetzt
+    # Mehrdeutig
     0x1F346: "Aubergine",
     0x1F351: "Pfirsich",
     0x1F51E: "Minderjährigen verboten",
+    # Politische bzw. Zugehörigkeits-Symbole (Entscheidung 28.11.)
     0x1F53B: "rotes Dreieck nach unten (Kennzeichen der Hamas)",
     0x1F349: "Wassermelone (Symbol einer politischen Haltung)",
+    0x1F339: "Rose (Sozialdemokratie)",
+    0x1F54A: "Taube (Friedensbewegung)",
+    0x1F33B: "Sonnenblume (Grüne, Hidden Disabilities)",
     # Gesundheit, Behinderung und Sexualität über Symbole (Review 28.11.)
     0x1F9E9: "Puzzleteil (Autismus)",
     0x1F980: "Krebs (Name liest sich als Krankheit, Sternzeichen)",

@@ -103,7 +103,7 @@ test.describe('Teams gegen den echten Stack', () => {
     await karte.getByLabel('Saison').fill(TEAM_A.saison);
     // Motiv über die Suche mit der Tastatur wählen (feste Emoji-Liste)
     await karte.getByTestId('motiv-suche').fill('fahrrad');
-    await karte.getByTestId('motiv-suche').press('ArrowDown');
+    // Der erste Treffer ist vorausgewählt: Enter übernimmt ihn
     await karte.getByTestId('motiv-suche').press('Enter');
     await expect(karte.getByTestId('motiv-gewaehlt')).toContainText('Gewählt: Fahrrad');
     await karte.getByRole('button', { name: 'Einladung anlegen' }).click();

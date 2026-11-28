@@ -37,7 +37,7 @@ import {
 } from '../../shared/teams/teams';
 
 /** Vorauswahl des Motivs: grün, ohne Bedeutung über das Team hinaus. */
-const MOTIV_VORSCHLAG = '🌻';
+const MOTIV_VORSCHLAG = '🌱';
 
 /** Heute plus n Tage als JJJJ-MM-TT, im Kalender des Browsers. */
 function inTagen(tage: number, heute = new Date()): string {
@@ -98,7 +98,7 @@ export class EinladungenComponent implements OnInit {
   motivKategorien: readonly TeamMotivKategorie[] = [];
   teamnameHinweis = TEAMNAME_HINWEIS;
   teamName = '';
-  /** Vorauswahl, bis die Admin etwas anderes wählt: die Sonnenblume, sonst das erste Emoji. */
+  /** Vorauswahl, bis die Admin etwas anderes wählt: der Spross, sonst das erste Emoji. */
   teamMotiv = '';
   /** Teamart; Standard „Team nach Anlass, Ort oder Saison“. */
   readonly teamArten = TEAM_ARTEN;
@@ -199,7 +199,7 @@ export class EinladungenComponent implements OnInit {
     );
   }
 
-  /** Vorauswahl im Formular: die Sonnenblume, wenn es sie gibt, sonst das erste Emoji. */
+  /** Vorauswahl im Formular: der Spross, wenn es ihn gibt, sonst das erste Emoji. */
   get motivVorschlag(): string {
     return (this.motive.find((m) => m.schluessel === MOTIV_VORSCHLAG) ?? this.motive[0])?.schluessel ?? '';
   }

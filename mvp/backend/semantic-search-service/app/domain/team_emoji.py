@@ -24,7 +24,7 @@ EMOJI_KATEGORIEN: Tuple[Tuple[str, str], ...] = (
 )
 
 # (Zeichen, Name, Kategorie, Stichworte für die Suche)
-# 824 Einträge
+# 821 Einträge
 EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ("🐵", "Affengesicht", "tiere-natur", "affe banane dschungel gesicht tier zoo"),
     ("🐒", "Affe", "tiere-natur", "tier"),
@@ -111,7 +111,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ),
     ("🐦", "Vogel", "tiere-natur", "papagei taube tier vogelkopf"),
     ("🐧", "Pinguin", "tiere-natur", "pinguinkopf tier vogel"),
-    ("🕊️", "Taube", "tiere-natur", "fliegen friede frieden friedenstaube vogel"),
     ("🦅", "Adler", "tiere-natur", "tier vogel"),
     ("🦆", "Ente", "tiere-natur", "tier vogel"),
     ("🦢", "Schwan", "tiere-natur", "hässliches entlein tier vogel"),
@@ -191,7 +190,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ("🌸", "Kirschblüte", "tiere-natur", "blume blüte kirsche pflanze"),
     ("💮", "Blumenstempel", "tiere-natur", "blume"),
     ("🏵️", "Rosette", "tiere-natur", "pflanze"),
-    ("🌹", "Rose", "tiere-natur", "blume blüte pflanze"),
     (
         "🥀",
         "welke Blume",
@@ -199,7 +197,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
         "am sterben blume sterbend verwelkt welk welkende blume",
     ),
     ("🌺", "Hibiskus", "tiere-natur", "blume blüte pflanze rosa"),
-    ("🌻", "Sonnenblume", "tiere-natur", "blume blüte pflanze sonne"),
     ("🌼", "gelbe Blüte", "tiere-natur", "blume blüte pflanze"),
     ("🌷", "Tulpe", "tiere-natur", "blume blüte pflanze"),
     ("🌱", "Spross", "tiere-natur", "junge pflanze"),
