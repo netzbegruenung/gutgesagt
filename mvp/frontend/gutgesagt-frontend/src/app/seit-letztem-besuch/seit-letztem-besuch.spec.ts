@@ -12,6 +12,7 @@ import {
   startVorrang,
 } from './seit-letztem-besuch.component';
 import { START_WARTEZEIT_MS, SeitLetztemBesuchService, alteBesuchMerkerEntfernen } from './seit-letztem-besuch.service';
+import { rueckwegSichtbar } from './neues-liste';
 import { AuthService, UserInfo } from '../auth/auth.service';
 import { BesuchResponse, UsageTrackingService } from '../services/usage-tracking.service';
 
@@ -394,6 +395,26 @@ describe('Seit deinem letzten Besuch (Nutzerfuehrung 13.11.)', () => {
       expect(startKacheln(stand, keins, 'offen')).toEqual([]);
       // Kam keine Antwort zum Besuch (Fehler, Zeitgrenze), bekommt die Karte den Platz
       expect(startVorrang(null, keins, true)).toBe('karte');
+    });
+
+    it('Rückweg (Rundgang 28.11.): nur im Block, nicht beim ersten Besuch, zählt in die vier Kacheln', () => {
+      const stand = { nutzung_seit_letztem_besuch: 2, neue_einwuerfe: 3, unbeantwortete_aussagen: 4, neue_beitraege: 5, ausformulierte_einwuerfe: 1 };
+      expect(rueckwegSichtbar(stand, 'block', true)).toBeTrue();
+      expect(rueckwegSichtbar(stand, 'block', false)).toBeFalse();
+      expect(rueckwegSichtbar(stand, 'karte', true)).toBeFalse();
+      expect(rueckwegSichtbar(stand, 'spruch', true)).toBeFalse();
+      expect(rueckwegSichtbar({ ...stand, erster_besuch: true }, 'block', true)).toBeFalse();
+      expect(rueckwegSichtbar(null, 'block', true)).toBeFalse();
+      expect(startKacheln(stand, keins, 'block').length).toBe(MAX_KACHELN);
+      expect(startKacheln(stand, keins, 'block', true).length).toBe(MAX_KACHELN - 1);
+    });
+
+    it('ein geholter Vorschlag geht auch eigenem Neuen vor, aber nur mit Vorschlag', () => {
+      const stand = { nutzung_seit_letztem_besuch: 2 };
+      expect(startVorrang(stand, keins, true)).toBe('block');
+      expect(startVorrang(stand, keins, true, false, true)).toBe('karte');
+      expect(startVorrang(stand, keins, false, false, true)).toBe('block');
+      expect(startVorrang(stand, keins, undefined, false, true)).toBe('offen');
     });
 
     it('ohne Stand nichts', () => {

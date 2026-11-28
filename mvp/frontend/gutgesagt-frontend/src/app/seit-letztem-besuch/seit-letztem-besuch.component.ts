@@ -22,6 +22,12 @@ export {
 } from './neues-liste';
 export type { NeuesArt, NeuesEintrag, NeuesStand, StartVorrang } from './neues-liste';
 
+/** Die Kachel des Rückwegs zu „Dein nächster Schritt“ (Rundgang 28.11.). */
+export const RUECKWEG_TITEL = 'Nächster Schritt';
+export const RUECKWEG_KNOPF = 'Vorschlag holen';
+/** Für Screenreader und die breite Zeile, wenn sie allein steht. */
+export const RUECKWEG_SATZ = 'Vorschläge für deinen nächsten Schritt hast du ausgeblendet.';
+
 /**
  * „Seit deinem letzten Besuch“ auf der Startseite, nur fuer Angemeldete (Nutzerfuehrung
  * 13.11.): bis zu vier kleine Kacheln mit Zahl im Stil der Mitmachen-Kacheln, die ganze
@@ -38,11 +44,22 @@ export type { NeuesArt, NeuesEintrag, NeuesStand, StartVorrang } from './neues-l
   imports: [AsyncPipe, RouterLink, MatButtonModule, MatIconModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (eintraege$ | async; as eintraege) {
-      @if (eintraege.length) {
+    @if (block$ | async; as block) {
+      @let eintraege = block.kacheln;
+      @if (eintraege.length || block.rueckweg) {
         <nav class="seit-besuch" aria-labelledby="seit-besuch-titel">
           <h2 id="seit-besuch-titel">Seit deinem letzten Besuch</h2>
-          @if (eintraege.length === 1) {
+          @if (!eintraege.length) {
+            <!-- Nur der Rückweg: breite Zeile wie eine einzelne Kachel -->
+            <div class="seit-besuch-zeile rueckweg">
+              <mat-icon class="seit-besuch-icon" aria-hidden="true">lightbulb</mat-icon>
+              <p class="seit-besuch-satz" id="seit-besuch-satz">{{ rueckwegSatz }}</p>
+              <button mat-flat-button type="button" class="seit-besuch-knopf" data-testid="vorschlag-holen"
+                      aria-describedby="seit-besuch-satz" (click)="neues.vorschlagHolen()">
+                {{ rueckwegKnopf }}
+              </button>
+            </div>
+          } @else if (eintraege.length === 1 && !block.rueckweg) {
             @let eintrag = eintraege[0];
             <div [class]="'seit-besuch-zeile ' + eintrag.art">
               <mat-icon class="seit-besuch-icon" aria-hidden="true">{{ eintrag.icon }}</mat-icon>
@@ -57,8 +74,9 @@ export type { NeuesArt, NeuesEintrag, NeuesStand, StartVorrang } from './neues-l
               </a>
             </div>
           } @else {
-            <ul class="seit-besuch-kacheln" [class.vier]="eintraege.length === 4"
-                [style.--seit-besuch-spalten]="eintraege.length">
+            @let anzahl = eintraege.length + (block.rueckweg ? 1 : 0);
+            <ul class="seit-besuch-kacheln" [class.vier]="anzahl === 4"
+                [style.--seit-besuch-spalten]="anzahl">
               @for (eintrag of eintraege; track eintrag.art) {
                 <li>
                   <a [routerLink]="eintrag.ziel" [queryParams]="eintrag.queryParams" [fragment]="eintrag.fragment"
@@ -75,6 +93,19 @@ export type { NeuesArt, NeuesEintrag, NeuesStand, StartVorrang } from './neues-l
                   </a>
                 </li>
               }
+              @if (block.rueckweg) {
+                <!-- Rückweg zu „Dein nächster Schritt“ (Rundgang 28.11.): ein Knopf, kein Link -->
+                <li>
+                  <button type="button" class="seit-besuch-kachel rueckweg" data-testid="vorschlag-holen"
+                          [attr.aria-label]="rueckwegTitel + ': ' + rueckwegKnopf" (click)="neues.vorschlagHolen()">
+                    <span class="seit-besuch-kopf">
+                      <mat-icon class="seit-besuch-icon" aria-hidden="true">lightbulb</mat-icon>
+                      <span class="seit-besuch-titel">{{ rueckwegTitel }}</span>
+                    </span>
+                    <span class="seit-besuch-wort">{{ rueckwegKnopf }}</span>
+                  </button>
+                </li>
+              }
             </ul>
           }
         </nav>
@@ -85,17 +116,23 @@ export type { NeuesArt, NeuesEintrag, NeuesStand, StartVorrang } from './neues-l
 })
 export class SeitLetztemBesuchComponent {
   protected readonly neues = inject(SeitLetztemBesuchService);
+  protected readonly rueckwegTitel = RUECKWEG_TITEL;
+  protected readonly rueckwegKnopf = RUECKWEG_KNOPF;
+  protected readonly rueckwegSatz = RUECKWEG_SATZ;
 
-  /** Je Konto: Wechselt die Kennung, kommt ein neuer Besuch und die Klicks gelten nicht mehr. */
-  readonly eintraege$: Observable<NeuesEintrag[]> = inject(AuthService).userInfo$.pipe(
+  /**
+   * Je Konto: Wechselt die Kennung, kommt ein neuer Besuch und die Klicks gelten nicht mehr.
+   * Die Kacheln und ob der Rückweg zu „Dein nächster Schritt“ dazukommt.
+   */
+  readonly block$: Observable<{ kacheln: NeuesEintrag[]; rueckweg: boolean }> = inject(AuthService).userInfo$.pipe(
     map((info) => (info?.isAuthenticated && info.userId ? info.userId : null)),
     distinctUntilChanged(),
     switchMap((kennung) => {
       if (!kennung) {
-        return of([]);
+        return of({ kacheln: [], rueckweg: false });
       }
       this.neues.fuer(kennung);
-      return this.neues.start$.pipe(map((start) => start.kacheln));
+      return this.neues.start$.pipe(map((start) => ({ kacheln: start.kacheln, rueckweg: start.rueckweg })));
     }),
   );
 }

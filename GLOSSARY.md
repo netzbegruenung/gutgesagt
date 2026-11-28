@@ -452,7 +452,7 @@ Die Seite „Themen im Überblick“ (#783): je Thema eine Kachel mit Motiv und 
 _Avoid_: Lagekarte, Karte, Dashboard
 
 **Nächster Schritt**:
-Die Karte „Dein nächster Schritt“ auf der Startseite (#789): genau ein Vorschlag aus dem eigenen Stand (suchen, einwerfen, bewerten, eine unbeantwortete Aussage beantworten, eine Kurzfassung ergänzen), ohne Frist und ohne Zähler. Wegklicken zeigt den nächsten Vorschlag; das merkt sich nur der Browser für sieben Tage. Basisfunktion.
+Die Karte „Dein nächster Schritt“ auf der Startseite (#789): genau ein Vorschlag aus dem eigenen Stand (suchen, einwerfen, bewerten, eine unbeantwortete Aussage beantworten, eine Kurzfassung ergänzen), ohne Frist und ohne Zähler. Wegklicken zeigt den nächsten Vorschlag; das merkt sich nur der Browser für sieben Tage. Wer alle weggeklickt hat, holt sie über die Kachel „Nächster Schritt · Vorschlag holen“ in „Seit deinem letzten Besuch“ zurück; der Klick löscht den Eintrag im Browser (Rundgang 28.11.). Basisfunktion.
 _Avoid_: Tagesaufgabe, Quest (eine Quest ist eine gestellte Aufgabe mit Punkten), Mission
 
 **Suchanfrage**:

@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, combineLatest, of, timer } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, combineLatest, of, timer } from 'rxjs';
 import { distinctUntilChanged, map, shareReplay, startWith, switchMap } from 'rxjs/operators';
 
 import { UsageTrackingService } from '../services/usage-tracking.service';
-import { NeuesArt, NeuesEintrag, StartVorrang, startKacheln, startVorrang } from './neues-liste';
+import { NeuesArt, NeuesEintrag, StartVorrang, rueckwegSichtbar, startKacheln, startVorrang } from './neues-liste';
 import type { Vorschlag } from '../naechster-schritt/naechster-schritt';
 
 export type { NeuesArt } from './neues-liste';
@@ -19,6 +19,8 @@ export const START_WARTEZEIT_MS = 1500;
 export interface StartStand {
   vorrang: StartVorrang;
   kacheln: NeuesEintrag[];
+  /** Die Kachel „Nächster Schritt · Vorschlag holen“ steht im Block (Rundgang 28.11.). */
+  rueckweg: boolean;
 }
 
 /** Liefert den Wert sofort; steht er noch aus (null), erst undefined und nach der Wartezeit null. */
@@ -69,6 +71,15 @@ export class SeitLetztemBesuchService {
    */
   readonly naechsterSchrittDa$ = new BehaviorSubject<boolean | null>(null);
   /**
+   * Ob die Karte einen Vorschlag hätte, den die Person weggeklickt hat (Rückweg, Rundgang
+   * 28.11.); gemeldet von der Karte wie `naechsterSchrittDa$`.
+   */
+  readonly naechsterSchrittHolbar$ = new BehaviorSubject<boolean>(false);
+  /** Die Person hat über die Kachel einen Vorschlag geholt; gilt für diesen App-Start. */
+  readonly vorschlagGewuenscht$ = new BehaviorSubject<boolean>(false);
+  /** Klick auf „Vorschlag holen“: Die Karte leert ihren Merker und zeigt wieder einen Vorschlag. */
+  readonly vorschlagHolen$ = new Subject<void>();
+  /**
    * Die letzten Vorschläge der Karte in diesem App-Start; null, solange keine kamen. Die
    * Karte zeigt sie bei der Rückkehr sofort und fragt im Hintergrund neu.
    */
@@ -92,12 +103,17 @@ export class SeitLetztemBesuchService {
     this.erledigt$,
     mitZeitgrenze(this.naechsterSchrittDa$).pipe(map((da) => (da === null ? false : da))),
     mitZeitgrenze(this.saalSpruchDa$).pipe(map((da) => (da === undefined ? 'offen' : da === null ? false : da))),
+    this.naechsterSchrittHolbar$,
+    this.vorschlagGewuenscht$,
   ]).pipe(
-    map(([stand, erledigt, da, spruch]) => {
-      const vorrang = startVorrang(stand, erledigt, da, spruch);
-      return { vorrang, kacheln: startKacheln(stand, erledigt, vorrang) };
+    map(([stand, erledigt, da, spruch, holbar, gewuenscht]) => {
+      const vorrang = startVorrang(stand, erledigt, da, spruch, gewuenscht);
+      const rueckweg = rueckwegSichtbar(stand, vorrang, holbar);
+      return { vorrang, kacheln: startKacheln(stand, erledigt, vorrang, rueckweg), rueckweg };
     }),
-    distinctUntilChanged((a, b) => a.vorrang === b.vorrang && gleicheKacheln(a.kacheln, b.kacheln)),
+    distinctUntilChanged(
+      (a, b) => a.vorrang === b.vorrang && a.rueckweg === b.rueckweg && gleicheKacheln(a.kacheln, b.kacheln),
+    ),
     shareReplay({ bufferSize: 1, refCount: true }),
   );
 
@@ -112,7 +128,14 @@ export class SeitLetztemBesuchService {
     if (kennung !== this.kennung) {
       this.kennung = kennung;
       this.erledigt$.next(new Set());
+      this.vorschlagGewuenscht$.next(false);
     }
+  }
+
+  /** „Vorschlag holen“ auf der Kachel: Die Karte zeigt wieder einen Vorschlag und geht vor. */
+  vorschlagHolen(): void {
+    this.vorschlagGewuenscht$.next(true);
+    this.vorschlagHolen$.next();
   }
 
   /** Nach dem Klick auf einen Link: Er verschwindet, die Sache ist gesehen. */

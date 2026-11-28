@@ -91,11 +91,11 @@ visit at most one card that points the person somewhere new (review Spielgefühl
 
 | # | Card | Who sees it | Shown when |
 |---|------|-------------|------------|
-| 1 | Hero and search; the subtitle carries the Bestandszahl (`app-hero-unterzeile`, `/getMetrics`, no Schalter) and its growth (Schalter `bestandszahl_zuwachs`, links to card 6 „Frisch aus der Community“) | everyone | always; without a number the plain subtitle |
+| 1 | Hero and search; the subtitle carries the Bestandszahl (`app-hero-unterzeile`, `/getMetrics`, no Schalter) and its growth („diese Woche“, last seven days); the closing question „ist deine die nächste?“ links to Beitragen (Rundgang 28.11.) | everyone | always; without a number the plain subtitle |
 | 2 | Rundgang line (`app-rundgang-band`, Willkommen) | everyone | until answered; signed in without „Ein Konto brauchst du nicht“ (`WILLKOMMEN_ANGEMELDET`) |
 | 2a | „Heute im Netz zur BDK:“ (`app-saal-spruch`) | everyone, Schalter `saal_spruch` | an admin has set a Saal-Spruch for today (Europe/Berlin); not while a Rundgang offer (`imInhalt`: Willkommen, home screen, app install) is on the start page, except the slim Willkommen line („Neu hier?“, or its Kampagnenwort greeting such as „Von der BDK?“); signed in only when card 3 shows no own news and card 4 has no suggestion |
-| 3 | „Seit deinem letzten Besuch“ | signed in | not on the very first visit (`erster_besuch` from `POST /users/me/besuch`); next to a suggestion of card 4 only with news about the person's own Beiträge (`EIGENES_NEUES`: answers, uses, Wirkungs-Echo, ausformulierte Einwürfe) |
-| 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion and card 3 shows no own news |
+| 3 | „Seit deinem letzten Besuch“ | signed in | not on the very first visit (`erster_besuch` from `POST /users/me/besuch`); next to a suggestion of card 4 only with news about the person's own Beiträge (`EIGENES_NEUES`: answers, uses, Wirkungs-Echo, ausformulierte Einwürfe). Extra tile „Nächster Schritt · Vorschlag holen“ when card 4 has a suggestion the person clicked away (`naechsterSchrittHolbar$`); a click clears the browser entry and lets card 4 win for this App-Start (`vorschlagGewuenscht$`) |
+| 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion and card 3 shows no own news, or the person fetched one through the tile in card 3 |
 | 5 | Saison goal | everyone, Schalter `saison_ziel` | from the threshold (#782) |
 | 6 | Oft genutzt, Konter-Probe, Frisch aus der Community, Mitmachen tiles, „Was hat dich gestört?“ (Schalter `feedback_gestoert`), Garten, About | everyone | as each card decides |
 
