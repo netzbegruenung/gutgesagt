@@ -176,14 +176,21 @@ describe('SpielgefuehlComponent', () => {
     expect(knopf('wechsel-rangliste')).not.toBeNull();
   });
 
-  it('zeigt den schon bekannten Stand sofort, ohne auf das Laden zu warten (Platzwechsel)', () => {
+  it('übernimmt den frisch geladenen Stand von „Meine Beiträge“ ohne zweiten Abruf', () => {
     TestBed.inject(SpielgefuehlService).melden(stand({ stufe: 'aus' }));
     erstellen();
 
     expect(knopf('stand').textContent).toContain('Aus');
-    http.expectOne((r) => r.method === 'GET' && r.url === URL).flush(stand({ stufe: 'fuer_mich' }));
-    fixture.detectChanges();
-    expect(knopf('stand').textContent).toContain('Nur für mich');
+    http.expectNone((r) => r.method === 'GET' && r.url === URL);
+  });
+
+  it('offene Frage luftiger gesetzt: Absätze 15 px statt 14 px (Rundgang 28.11.)', () => {
+    erstellen();
+    laden(stand());
+
+    const einleitung = el().querySelector('.spielgefuehl-einleitung') as HTMLElement;
+    expect(getComputedStyle(einleitung).fontSize).toBe('15px');
+    expect(parseFloat(getComputedStyle(einleitung).lineHeight)).toBeCloseTo(24, 0);
   });
 
   it('nennt einmal den Hinweis zu den Abzeichen', () => {

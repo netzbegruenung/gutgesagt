@@ -119,3 +119,67 @@ describe('FooterComponent - Meldeweg', () => {
     expect(fixture.nativeElement.querySelector('.footer').lastElementChild!.classList).toContain('traeger');
   });
 });
+
+describe('buildKennung', () => {
+  it('kuerzt den Commit auf sieben Zeichen', () => {
+    expect(buildKennung('1.1.0', '3523b55f0e1d2c3b4a5968778695a4b3c2d1e0f9')).toBe('v1.1.0 · 3523b55');
+  });
+
+  it('sagt dev ohne Commit oder mit unersetztem Platzhalter', () => {
+    expect(buildKennung('1.1.0', undefined)).toBe('v1.1.0 · dev');
+    expect(buildKennung('1.1.0', '')).toBe('v1.1.0 · dev');
+    expect(buildKennung('1.1.0', '${GIT_SHA}')).toBe('v1.1.0 · dev');
+  });
+
+  // #327: Beim Release-Build kommt die Version aus dem Git-Tag, package.json muss nicht mit.
+  it('nimmt die Version aus dem Git-Tag, wenn der Build sie mitgibt', () => {
+    expect(buildKennung('0.8.0', '3523b55f0e1d', 'v0.9.0')).toBe('v0.9.0 · 3523b55');
+    expect(buildKennung('0.8.0', '3523b55f0e1d', '0.9.0')).toBe('v0.9.0 · 3523b55');
+  });
+
+  // Entscheidung @BanSe 03.11. (#542): Builds auf main zeigen "main" statt einer Version.
+  it('zeigt main ohne v fuer Builds auf main', () => {
+    expect(buildKennung('0.8.0', '3523b55f0e1d', 'main')).toBe('main · 3523b55');
+  });
+
+  it('nimmt package.json ohne Tag-Version oder mit unersetztem Platzhalter', () => {
+    expect(buildKennung('0.8.0', '3523b55', undefined)).toBe('v0.8.0 · 3523b55');
+    expect(buildKennung('0.8.0', '3523b55', '')).toBe('v0.8.0 · 3523b55');
+    expect(buildKennung('0.8.0', '3523b55', '${APP_VERSION}')).toBe('v0.8.0 · 3523b55');
+  });
+});
+
+describe('buildWerteAusSeite', () => {
+  function seite(kopf: string): Document {
+    return new DOMParser().parseFromString(`<html><head>${kopf}</head><body></body></html>`, 'text/html');
+  }
+
+  it('liest Commit und Version aus den meta-Tags, die replace-env.sh fuellt', () => {
+    const werte = buildWerteAusSeite(seite(
+      '<meta name="gutgesagt-commit" content="b511305abc"><meta name="gutgesagt-version" content="main">'));
+
+    expect(werte).toEqual({ gitSha: 'b511305abc', appVersion: 'main' });
+    expect(buildKennung('0.8.5', werte.gitSha, werte.appVersion)).toBe('main · b511305');
+  });
+
+  it('faellt ohne meta-Tags auf dev und package.json zurueck', () => {
+    const werte = buildWerteAusSeite(seite(''));
+
+    expect(werte).toEqual({ gitSha: undefined, appVersion: undefined });
+    expect(buildKennung('0.8.5', werte.gitSha, werte.appVersion)).toBe('v0.8.5 · dev');
+  });
+
+  it('faellt mit unersetzten Platzhaltern (ng serve) auf dev und package.json zurueck', () => {
+    const werte = buildWerteAusSeite(seite(
+      '<meta name="gutgesagt-commit" content="${GIT_SHA}"><meta name="gutgesagt-version" content="${APP_VERSION}">'));
+
+    expect(buildKennung('0.8.5', werte.gitSha, werte.appVersion)).toBe('v0.8.5 · dev');
+  });
+
+  it('nimmt package.json bei leerer Version aus replace-env.sh', () => {
+    const werte = buildWerteAusSeite(seite(
+      '<meta name="gutgesagt-commit" content="b511305"><meta name="gutgesagt-version" content="">'));
+
+    expect(buildKennung('0.8.5', werte.gitSha, werte.appVersion)).toBe('v0.8.5 · b511305');
+  });
+});

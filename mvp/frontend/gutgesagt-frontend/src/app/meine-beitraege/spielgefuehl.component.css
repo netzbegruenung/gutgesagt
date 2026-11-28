@@ -29,7 +29,7 @@
   line-height: 1.25;
 }
 
-.spielgefuehl--frage p {
+.spielgefuehl.spielgefuehl--frage p {
   margin-bottom: var(--spacing-md);
   font-size: 15px;
   line-height: 1.6;

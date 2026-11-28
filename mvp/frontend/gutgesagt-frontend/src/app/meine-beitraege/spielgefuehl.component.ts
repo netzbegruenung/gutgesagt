@@ -108,15 +108,19 @@ export class SpielgefuehlComponent implements OnInit {
   private momentGeladen = false;
 
   ngOnInit(): void {
-    // Der schon bekannte Stand sofort: Wechselt die Karte ihren Platz (Meine Beiträge), steht
-    // sie ohne Aufblitzen da; das Laden gleich danach bringt den frischen.
+    // Hat „Meine Beiträge“ den Stand gerade frisch geladen (um den Platz der Karte zu wählen),
+    // gilt er sofort und ohne zweiten Abruf; sonst lädt die Karte selbst gleich.
+    let bekannt = false;
     this.service.stand$.pipe(take(1)).subscribe((stand) => {
       if (stand !== undefined) {
         this.stand = stand;
+        this.erstes = false;
+        this.aus = stand === null;
+        bekannt = true;
       }
     });
     const abo = nachladeStrom(() => this.service.laden(!this.erstes), {
-      sofort: true,
+      sofort: !bekannt,
       ms: () => (this.aus ? AUS_NACHLADEN_MS : NACHLADEN_MS),
       aufhoerenBei: ohneRechte,
       anstoss$: this.anstoss$,

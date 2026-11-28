@@ -382,6 +382,9 @@ describe('Dein nächster Schritt (#789)', () => {
       expect(fixture.nativeElement.querySelector('#seit-besuch-titel')!.textContent).toContain('Seit deinem letzten Besuch');
       expect(holen(fixture)!.textContent!.trim()).toBe('Vorschlag holen');
       expect(fixture.nativeElement.querySelector('.seit-besuch-zeile.rueckweg mat-icon')!.textContent!.trim()).toBe('lightbulb');
+      expect(fixture.nativeElement.querySelector('.seit-besuch-zeile.rueckweg .seit-besuch-satz')!.textContent!.trim()).toBe(
+        'Nächster Schritt: Deine Vorschläge hast du ausgeblendet.',
+      );
 
       holen(fixture)!.click();
       fixture.detectChanges();

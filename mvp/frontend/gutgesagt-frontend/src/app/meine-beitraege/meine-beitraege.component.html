@@ -64,7 +64,7 @@
 
         <!-- Spielgefuehl als eine Einstellung in drei Stufen; ohne Schalter spielgefuehl_buehne leer.
              Offene Frage oben unter dem Deckel, beantwortet hier unten (spielgefuehlOben). -->
-        <ng-container *ngIf="!spielgefuehlOben || isLoading || ladefehler" [ngTemplateOutlet]="spielgefuehlKarte"></ng-container>
+        <ng-container *ngIf="spielgefuehlBereit && (!spielgefuehlOben || ladefehler)" [ngTemplateOutlet]="spielgefuehlKarte"></ng-container>
         <ng-template #spielgefuehlKarte><app-spielgefuehl></app-spielgefuehl></ng-template>
 
         <!-- Widerruf jederzeit (Art. 7 Abs. 3 DSGVO), auch wenn die Spielgefühl-Karte leer ist (Schalter aus):

@@ -25,8 +25,8 @@ export type { NeuesArt, NeuesEintrag, NeuesStand, StartVorrang } from './neues-l
 /** Die Kachel des Rückwegs zu „Dein nächster Schritt“ (Rundgang 28.11.). */
 export const RUECKWEG_TITEL = 'Nächster Schritt';
 export const RUECKWEG_KNOPF = 'Vorschlag holen';
-/** Für Screenreader und die breite Zeile, wenn sie allein steht. */
-export const RUECKWEG_SATZ = 'Vorschläge für deinen nächsten Schritt hast du ausgeblendet.';
+/** Der Satz der breiten Zeile, wenn der Rückweg allein steht (hinter „Nächster Schritt:“). */
+export const RUECKWEG_SATZ = 'Deine Vorschläge hast du ausgeblendet.';
 
 /**
  * „Seit deinem letzten Besuch“ auf der Startseite, nur fuer Angemeldete (Nutzerfuehrung
@@ -53,7 +53,7 @@ export const RUECKWEG_SATZ = 'Vorschläge für deinen nächsten Schritt hast du 
             <!-- Nur der Rückweg: breite Zeile wie eine einzelne Kachel -->
             <div class="seit-besuch-zeile rueckweg">
               <mat-icon class="seit-besuch-icon" aria-hidden="true">lightbulb</mat-icon>
-              <p class="seit-besuch-satz" id="seit-besuch-satz">{{ rueckwegSatz }}</p>
+              <p class="seit-besuch-satz" id="seit-besuch-satz"><strong>{{ rueckwegTitel }}:</strong> {{ rueckwegSatz }}</p>
               <button mat-flat-button type="button" class="seit-besuch-knopf" data-testid="vorschlag-holen"
                       aria-describedby="seit-besuch-satz" (click)="neues.vorschlagHolen()">
                 {{ rueckwegKnopf }}
