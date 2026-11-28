@@ -242,7 +242,7 @@ test.describe('Teams über Einladungslinks', () => {
     await expect(kasten).toContainText(`Team ${TEAM.name}`);
     await expect(kasten).toContainText(`Schon ${ANDERE} dabei.`);
     // Vor der Frage: was gespeichert wird, wer es sieht, wie man widerruft
-    await expect(kasten).toContainText('Das siehst nur du, unter „Meine Teams“.');
+    await expect(kasten).toContainText('Das siehst nur du, in „Meine Beiträge“ unter „Meine Teams“.');
     await expect(kasten).toContainText('mit „Team verlassen“ widerrufen');
     // teams_oeffentlich aus: keine zweite Frage
     await expect(page.getByTestId('team-oeffentlich')).toHaveCount(0);

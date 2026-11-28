@@ -589,8 +589,16 @@ describe('DatenschutzComponent', () => {
       );
       expect(text).toContain('Welche Einladung du genutzt hast, speichern wir nicht.');
       expect(text).toContain('Sagst du nein, speichern wir nichts davon');
-      expect(text).toContain('Deine Teams siehst nur du, unter „Meine Teams“.');
+      expect(text).toContain('Deine Teams siehst nur du, in „Meine Beiträge“ unter „Meine Teams“.');
       expect(text).toContain('sehen je Team nur, wie viele dabei sind, keine Namen und keine Liste');
+    });
+
+    it('Teams: Dauer nennt den Ort „Meine Teams“ in „Meine Beiträge“ (juristische Prüfung 28.11.2026)', () => {
+      const text = abschnitt('Teams').replace(/\s+/g, ' ');
+
+      expect(text).toContain(
+        '(in „Meine Beiträge“ unter „Meine Teams“, „Team verlassen“; damit widerrufst du die Einwilligung für dieses Team, und wir löschen den Eintrag sofort)'
+      );
     });
 
     it('Teams: auch nach einer Gruppe, die zugestimmt hat; die Gruppe bekommt keine Daten', () => {

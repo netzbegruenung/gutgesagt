@@ -274,7 +274,7 @@ describe('EinladungComponent mit Team', () => {
       expect(kasten.textContent).toContain('Schon 36 dabei.');
       expect(kasten.textContent).toContain('Die Nummer steht erst fest, wenn dein Konto angelegt ist');
       // Die Sätze vor dem Ja: was, wer es sieht, Widerruf
-      expect(kasten.textContent).toContain('Das siehst nur du, unter „Meine Teams“.');
+      expect(kasten.textContent).toContain('Das siehst nur du, in „Meine Beiträge“ unter „Meine Teams“.');
       expect(kasten.textContent).toContain('mit „Team verlassen“ widerrufen');
       // Vor dem Ja kein Ticket und kein Medaillon; das Motiv klein, mit Namen daneben
       const bild = kasten.querySelector('img')!;

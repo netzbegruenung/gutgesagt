@@ -69,7 +69,7 @@ describe('Kurzfassung der Datenschutzerklärung (dse_kurzfassung)', () => {
     expect(kasten(element) !== null).toBe(kurzfassungFertig(KURZFASSUNG_SAETZE));
   });
 
-  it('Wortlaut Jura (vorläufig 26.11.2026): fünf Sätze, der Name wie im Abschnitt „Verantwortlicher“', () => {
+  it('Wortlaut Jura (vorläufig 26.11.2026, Widerrufswege 28.11.2026): fünf Sätze, der Name wie im Abschnitt „Verantwortlicher“', () => {
     expect(kurzfassungFertig(KURZFASSUNG_SAETZE)).toBeTrue();
     const ganz = [...KURZFASSUNG_SAETZE.map((satz) => satz.text), KURZFASSUNG_SCHLUSS].join(' ');
     expect(ganz).toBe(
@@ -77,8 +77,9 @@ describe('Kurzfassung der Datenschutzerklärung (dse_kurzfassung)', () => {
       `Verantwortlich für Gut gesagt ist ${LEGAL_ENTITY.NAME.replace(/\.$/, '')}. Suchen und Lesen geht ohne Konto. ` +
         'Wer mitmacht, gibt uns Beiträge und Bewertungen; was sich daraus über deine politische ' +
         'Haltung schließen lässt, verarbeiten wir nur mit deiner ausdrücklichen Einwilligung. ' +
-        'Jede Einwilligung kannst du unter „Meine Beiträge“ widerrufen und dein Konto jederzeit ' +
-        'löschen. Alle Einzelheiten stehen unten.',
+        'Jede Einwilligung kannst du jederzeit widerrufen: die zur Mitwirkung in den ' +
+        'Datenschutz-Einstellungen im Profilmenü, alle anderen unter „Meine Beiträge“. Dein ' +
+        'Konto kannst du jederzeit löschen. Alle Einzelheiten stehen unten.',
     );
 
     const element = seite();
