@@ -504,7 +504,9 @@ describe('DatenschutzComponent', () => {
     it('Wo deine Daten liegen: Anmeldedienst samt Mailversand beim Auftragsverarbeiter (Entscheidung 03.11.2026)', () => {
       const text = abschnitt('Wo deine Daten liegen');
 
-      expect(text).toContain('Dazu gehört auch der Anmeldedienst samt Mailversand. Weitere Empfänger gibt es nicht.');
+      expect(text).toContain(
+        'Dazu gehört auch der Anmeldedienst samt Mailversand. Weitere Empfänger der Daten aus der App gibt es nicht.'
+      );
     });
 
     it('Pflichtangaben: E-Mail-Adresse bei jeder Kontoart', () => {
@@ -1939,6 +1941,58 @@ describe('DatenschutzComponent: Fotos am Stand und Antworten außerhalb der App 
 
   it('Stand: 28. November 2026', () => {
     expect(stand(seite())).toBe('28. November 2026');
+  });
+
+  /** Auflösung des Widerspruchs zu „Keine Übermittlung außerhalb der EU“ u. a. (Jura 28.11.2026). */
+  const ABDECKUNG =
+    'Diese Erklärung beschreibt die Verarbeitungen auf dieser Plattform und, im Abschnitt ‚Fotos am Stand‘, ' +
+    'was wir außerhalb der App zeigen: Fotos vom Stand und Antworten des Tages.';
+  const EMPFAENGER =
+    'Weitere Empfänger der Daten aus der App gibt es nicht. Was wir selbst außerhalb der App zeigen, also ' +
+    'Fotos vom Stand mit deiner Einwilligung und Antworten des Tages ohne Namen, sehen die Mitglieder der ' +
+    'Signal-Gruppen Netzfeuerwehr und Erste Entdecker und die Öffentlichkeit auf gruene.social (siehe ' +
+    '‚Fotos am Stand‘).';
+  const EU =
+    'Das gilt für die Verarbeitung in der App. Was wir auf gruene.social veröffentlichen (Fotos vom Stand mit ' +
+    'deiner Einwilligung, Antworten des Tages ohne Namen), ist öffentlich; Mastodon verteilt es auch an ' +
+    'Server außerhalb der EU (siehe ‚Fotos am Stand‘).';
+
+  function absatz(el: HTMLElement, testid: string): HTMLElement {
+    return el.querySelector(`[data-testid="${testid}"]`) as HTMLElement;
+  }
+
+  it('Was diese Erklärung abdeckt: erster Satz nach Jura, der Satz zu fremden Websites bleibt dahinter', () => {
+    expect(normalisiert(absatz(seite(), 'dse-abdeckung').textContent)).toBe(
+      ABDECKUNG + ' Sie beschreibt nicht, was auf anderen Websites geschieht, auf die von hier aus verlinkt wird.',
+    );
+  });
+
+  it('Wo deine Daten liegen: Empfänger der Daten aus der App und was wir außerhalb zeigen', () => {
+    const el = seite();
+    expect(normalisiert(absatz(el, 'dse-empfaenger').textContent)).toBe(
+      EMPFAENGER + ' Wir geben keine Daten zu Werbezwecken weiter, wir setzen keine Analysedienste Dritter ein, und wir verkaufen nichts.',
+    );
+    expect(abschnittIn(el, 'Wo deine Daten liegen')).not.toContain('Weitere Empfänger gibt es nicht.');
+  });
+
+  it('Keine Übermittlung außerhalb der EU: Absatz zu gruene.social direkt hinter dem fett gesetzten Absatz', () => {
+    const el = seite();
+    const neu = absatz(el, 'dse-eu-gruene-social');
+
+    expect(normalisiert(neu.textContent)).toBe(EU);
+    expect(normalisiert(neu.previousElementSibling?.querySelector('strong')?.textContent ?? null)).toMatch(
+      /^Beiträge, Suchanfragen und verlinkte Bilder werden nicht/,
+    );
+    expect(abschnittIn(el, 'Keine Übermittlung außerhalb der EU')).toContain(EU);
+  });
+
+  it('„‚Fotos am Stand‘“ verlinkt in allen drei Sätzen auf #fotos', () => {
+    const el = seite();
+    for (const testid of ['dse-abdeckung', 'dse-empfaenger', 'dse-eu-gruene-social']) {
+      const link = absatz(el, testid).querySelector('a') as HTMLAnchorElement;
+      expect(link.getAttribute('href')).withContext(testid).toBe('/datenschutz#fotos');
+      expect(link.textContent?.trim()).withContext(testid).toBe('‚Fotos am Stand‘');
+    }
   });
 });
 

@@ -75,8 +75,11 @@
 
     <section class="legal-section" id="was-diese-erklaerung-abdeckt" tabindex="-1">
       <h2>Was diese Erklärung abdeckt</h2>
-      <p>
-        Diese Erklärung beschreibt die Verarbeitungen auf dieser Plattform. Sie beschreibt
+      <!-- Erster Satz: Wortlaut der juristischen Prüfung vom 28.11.2026 (Fotos am Stand) -->
+      <p data-testid="dse-abdeckung">
+        Diese Erklärung beschreibt die Verarbeitungen auf dieser Plattform und, im Abschnitt
+        <a href="/datenschutz#fotos" (click)="springen($event, 'fotos')">‚Fotos am Stand‘</a>, was
+        wir außerhalb der App zeigen: Fotos vom Stand und Antworten des Tages. Sie beschreibt
         nicht, was auf anderen Websites geschieht, auf die von hier aus verlinkt wird.
       </p>
       <p>
@@ -103,8 +106,14 @@
         stehen in einem Rechenzentrum in Deutschland. Dazu gehört auch der Anmeldedienst
         samt Mailversand.
       </p>
-      <p>
-        Weitere Empfänger gibt es nicht. Wir geben keine Daten zu Werbezwecken weiter, wir
+      <!-- Empfänger außerhalb der App: Wortlaut der juristischen Prüfung vom 28.11.2026 -->
+      <p data-testid="dse-empfaenger">
+        Weitere Empfänger der Daten aus der App gibt es nicht. Was wir selbst außerhalb der App
+        zeigen, also Fotos vom Stand mit deiner Einwilligung und Antworten des Tages ohne Namen,
+        sehen die Mitglieder der Signal-Gruppen Netzfeuerwehr und Erste Entdecker und die
+        Öffentlichkeit auf gruene.social (siehe
+        <a href="/datenschutz#fotos" (click)="springen($event, 'fotos')">‚Fotos am Stand‘</a>).
+        Wir geben keine Daten zu Werbezwecken weiter, wir
         setzen keine Analysedienste Dritter ein, und wir verkaufen nichts.
       </p>
     </section>
@@ -1464,6 +1473,13 @@
         Dienste außerhalb der Europäischen Union übermittelt.</strong> Die Berechnung der
         Suchähnlichkeit läuft auf unseren eigenen Servern. Wir setzen keinen
         Sprach- oder Bilderkennungsdienst eines Anbieters außerhalb der EU ein.
+      </p>
+      <!-- gruene.social: Wortlaut der juristischen Prüfung vom 28.11.2026 -->
+      <p data-testid="dse-eu-gruene-social">
+        Das gilt für die Verarbeitung in der App. Was wir auf gruene.social veröffentlichen
+        (Fotos vom Stand mit deiner Einwilligung, Antworten des Tages ohne Namen), ist
+        öffentlich; Mastodon verteilt es auch an Server außerhalb der EU (siehe
+        <a href="/datenschutz#fotos" (click)="springen($event, 'fotos')">‚Fotos am Stand‘</a>).
       </p>
       <p>
         Davon zu unterscheiden ist der oben beschriebene Fall der eingebundenen Bilder: Ein
