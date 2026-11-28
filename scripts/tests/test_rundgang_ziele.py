@@ -14,6 +14,9 @@ Beitragen-Seite hat contribute-view.component.spec.ts.
 
 Grenzen: Klassen zaehlen im ganzen Baum, nicht je Element; Ziele in Dialogen und Klassen aus
 `[ngClass]` oder `[class]="…"` findet er nicht und meldet sie dann (laut, nicht still).
+Klassen von Angular Material (`mat-mdc-…`, etwa der umrandete Kasten eines Felds) stehen in
+keinem Template; sie zaehlen, wenn der Baum ein Material-Element (`<mat-…>`) enthaelt.
+Ein Ersatzschritt ohne Treffer (`ohneTreffer: { … }`) laeuft auf der Seite seines Schritts.
 """
 
 import pathlib
@@ -103,16 +106,16 @@ def _schritte() -> list[tuple[str, str, str | None]]:
     schritte = []
     for block in re.split(r"\n\s*\{\n\s*titel:", rundgaenge)[1:]:
         titel = re.match(r"\s*'([^']+)'", block).group(1)
-        ziel = re.search(r"ziel:\s*'([^']+)'", block)
-        if not ziel:
-            continue
         pfad = re.search(r"seite:\s*\{\s*pfad:\s*'([^']+)'", block)
-        schritte.append((titel, ziel.group(1), pfad.group(1) if pfad else None))
+        # Auch das Ziel eines Ersatzschritts (ohneTreffer) im selben Block
+        for ziel in re.findall(r"ziel:\s*'([^']+)'", block):
+            schritte.append((titel, ziel, pfad.group(1) if pfad else None))
     return schritte
 
 
 def _fehlt(ziel: str, baum: dict[str, str]) -> list[str]:
     alle_klassen = set().union(*(_klassen(t) for t in baum.values()))
+    material = any(re.search(r"<mat-[\w-]+", t) for t in baum.values())
     fehlend = []
     for alternative in ziel.split(","):
         for teil in alternative.split():
@@ -124,6 +127,8 @@ def _fehlt(ziel: str, baum: dict[str, str]) -> list[str]:
             ):
                 fehlend.append(f"<{element.group(1)}> in {alternative.strip()!r}")
             for klasse in re.findall(r"\.([\w-]+)", teil):
+                if material and klasse.startswith("mat-mdc-"):
+                    continue
                 if klasse not in alle_klassen:
                     fehlend.append(f".{klasse} in {alternative.strip()!r}")
     return fehlend
