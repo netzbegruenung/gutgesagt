@@ -14,6 +14,7 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { Subject } from 'rxjs';
+import { take } from 'rxjs/operators';
 
 import {
   SpielgefuehlService,
@@ -107,6 +108,13 @@ export class SpielgefuehlComponent implements OnInit {
   private momentGeladen = false;
 
   ngOnInit(): void {
+    // Der schon bekannte Stand sofort: Wechselt die Karte ihren Platz (Meine Beiträge), steht
+    // sie ohne Aufblitzen da; das Laden gleich danach bringt den frischen.
+    this.service.stand$.pipe(take(1)).subscribe((stand) => {
+      if (stand !== undefined) {
+        this.stand = stand;
+      }
+    });
     const abo = nachladeStrom(() => this.service.laden(!this.erstes), {
       sofort: true,
       ms: () => (this.aus ? AUS_NACHLADEN_MS : NACHLADEN_MS),

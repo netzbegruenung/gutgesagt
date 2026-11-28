@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { Observable, Subject, of } from 'rxjs';
-import { catchError, map, switchMap, takeUntil } from 'rxjs/operators';
+import { catchError, filter, map, switchMap, take, takeUntil } from 'rxjs/operators';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AlleMeineBeitraege } from '../services/meine-beitraege.service';
 import { CommonModule } from '@angular/common';
@@ -18,6 +18,7 @@ import { MeineTeamsComponent } from './meine-teams.component';
 import { RanglisteComponent } from './rangliste.component';
 import { PunkteComponent } from './punkte.component';
 import { SpielgefuehlComponent } from './spielgefuehl.component';
+import { SpielgefuehlService } from '../services/spielgefuehl.service';
 import { WiderrufbarComponent } from '../einwilligung/widerrufbar.component';
 import { tabMitTasteWaehlen } from '../shared/tab-tasten';
 import { MatButtonModule } from '@angular/material/button';
@@ -87,6 +88,7 @@ const GEMERKT_TAB = { wert: 'gemerkt' as const, name: 'Gemerkt' };
 })
 export class MeineBeitraegeComponent implements OnInit, OnDestroy {
   private readonly merkliste = inject(MerklisteService);
+  private readonly spielgefuehl = inject(SpielgefuehlService);
   tab: MeineTab = 'beitraege';
   /** Ab dem ersten Oeffnen bleibt der Merkliste-Tab stehen. */
   gemerktGeoeffnet = false;
@@ -113,6 +115,13 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
   readonly kommentarFormular = FORMULAR_PFAD.commentary;
   readonly hierFehltEineAntwortPfad = ROUTES.HIER_FEHLT_EINE_ANTWORT;
   readonly beantwortenParams = beantwortenParamsJeAussage();
+  /**
+   * Die Spielgefühl-Karte steht oben direkt unter dem Deckel, solange die Frage noch nie
+   * beantwortet wurde; sonst als kleine Karte unten an der bisherigen Stelle (Rundgang
+   * 28.11.). Entschieden einmal mit dem ersten bekannten Stand: Wer oben antwortet, behält die
+   * Karte für diesen Besuch oben, damit nichts springt und Fokus und Ansage bleiben.
+   */
+  spielgefuehlOben = false;
 
   constructor(
     private meineBeitraegeService: MeineBeitraegeService,
@@ -187,6 +196,16 @@ export class MeineBeitraegeComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
     });
+    this.spielgefuehl.stand$
+      .pipe(
+        filter((stand) => stand !== undefined),
+        take(1),
+        takeUntil(this.destroy$),
+      )
+      .subscribe((stand) => {
+        this.spielgefuehlOben = stand?.stufe === null;
+        this.cdr.markForCheck();
+      });
     this.ladenAbonnieren();
     this.laden();
     this.meilensteinLaden();

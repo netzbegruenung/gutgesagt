@@ -1,5 +1,6 @@
 <!-- Spielgefuehl in drei Stufen (Schalter spielgefuehl_buehne); ohne Schalter leer -->
-<section *ngIf="stand && (fragen || stand.stufe !== null)" class="spielgefuehl" aria-labelledby="spielgefuehl-titel" data-testid="spielgefuehl">
+<section *ngIf="stand && (fragen || stand.stufe !== null)" class="spielgefuehl"
+         [class.spielgefuehl--frage]="fragen" [class.spielgefuehl--stand]="!fragen" aria-labelledby="spielgefuehl-titel" data-testid="spielgefuehl">
     <ng-container *ngIf="fragen; else standAnzeige">
         <h2 id="spielgefuehl-titel" #titel tabindex="-1">{{ stand.aktueller_wortlaut.ueberschrift }}</h2>
         <p *ngIf="stand.abzeichen_hinweis" class="spielgefuehl-hinweis" data-testid="abzeichen-hinweis">{{ stand.abzeichen_hinweis }}</p>
@@ -40,14 +41,19 @@
     </ng-container>
 
     <ng-template #standAnzeige>
-        <h2 id="spielgefuehl-titel" #titel tabindex="-1">Spielgefühl</h2>
-        <p *ngIf="gewaehlt; else nichtAngeboten" class="spielgefuehl-stand" data-testid="stand">Deine Wahl: <strong>{{ gewaehlt }}</strong></p>
-        <!-- Gewählte Stufe gerade nicht angeboten (etwa Rangliste ausgeschaltet): kein leerer Text -->
-        <ng-template #nichtAngeboten>
-            <p class="spielgefuehl-stand" data-testid="stand-nicht-angeboten">{{ nichtAngebotenText }}</p>
-        </ng-template>
-        <!-- Umstellen an derselben Stelle mit einem Klick; heraufstufen zeigt erst den Wortlaut -->
+        <!-- Beantwortet: kleine Karte, Überschrift und Wahl in einer Zeile (Rundgang 28.11.) -->
+        <div class="spielgefuehl-kopf">
+            <h2 id="spielgefuehl-titel" #titel tabindex="-1">Spielgefühl</h2>
+            <p *ngIf="gewaehlt; else nichtAngeboten" class="spielgefuehl-stand" data-testid="stand">Deine Wahl: <strong>{{ gewaehlt }}</strong></p>
+            <!-- Gewählte Stufe gerade nicht angeboten (etwa Rangliste ausgeschaltet): kein leerer Text -->
+            <ng-template #nichtAngeboten>
+                <p class="spielgefuehl-stand" data-testid="stand-nicht-angeboten">{{ nichtAngebotenText }}</p>
+            </ng-template>
+        </div>
+        <!-- Umstellen an derselben Stelle mit einem Klick, „Aus“ also auch (Widerruf so leicht wie
+             die Einwilligung); heraufstufen zeigt erst den Wortlaut -->
         <div class="spielgefuehl-wechsel" role="group" aria-label="Spielgefühl ändern">
+            <span class="spielgefuehl-wechsel-name" aria-hidden="true">Ändern:</span>
             <button *ngFor="let s of andere" mat-stroked-button type="button" class="spielgefuehl-knopf"
                     [attr.data-testid]="'wechsel-' + s.stufe" [disabled]="speichert" (click)="wechseln(s.stufe)">{{ s.titel }}</button>
         </div>
