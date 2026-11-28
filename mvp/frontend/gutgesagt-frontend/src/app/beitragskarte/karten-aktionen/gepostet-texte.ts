@@ -47,6 +47,13 @@ export const GEPOSTET_WEITER = 'Noch ein Spruch, der dich ärgert?';
 export const GEPOSTET_WEITER_LINK = 'Spruch suchen';
 
 /**
+ * Ohne Konto darunter ein leiser Weg ins Konto (Rundgang 2, V13, Entscheidung Sebastian
+ * 28.11.2026): nur für die, die den Link schon haben, etwa vom Stand. Keine Aufforderung,
+ * sich anzumelden (#799), und keine Warteliste: Es gibt keine.
+ */
+export const GEPOSTET_EINLADUNG = 'Schon einen Einladungslink? Mit Konto schreibst du selbst Antworten.';
+
+/**
  * Der Dank nach „Ja, gepostet“; ``personen`` schließt die Person selbst ein. Die Zahl
  * ist eine Selbstauskunft, deshalb „gemeldet“.
  */

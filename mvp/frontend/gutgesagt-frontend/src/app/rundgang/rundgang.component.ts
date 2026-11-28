@@ -93,6 +93,13 @@ export class RundgangComponent implements OnDestroy {
   private readonly beimScrollen = () => this.ausrichten();
   /** Mobil: Platz unter dem Inhalt, den ein Ziel am Seitenende braucht (platzSchaffen). */
   private platzUnten: { el: HTMLElement; alt: string } | null = null;
+  /**
+   * Misst neu, wenn das Ziel oder die Seite die Größe ändert: Das Suchfeld wächst nach dem
+   * Einsetzen des Beispiels, Karten darüber laden nach und schieben es (Rundgang 2, V1:
+   * der Rahmen stand am Handy neben dem Feld). Scrollen und Fenstergröße fangen die
+   * Listener darüber ab.
+   */
+  private beobachter: ResizeObserver | null = null;
 
   constructor() {
     effect(() => {
@@ -165,7 +172,21 @@ export class RundgangComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     document.removeEventListener('scroll', this.beimScrollen, true);
+    this.beobachten(null);
     this.platzFreigeben();
+  }
+
+  /** Beobachtet Ziel und Seite auf Größenänderungen; null hört auf. */
+  private beobachten(ziel: HTMLElement | null): void {
+    this.beobachter?.disconnect();
+    this.beobachter = null;
+    if (!ziel || typeof ResizeObserver === 'undefined') return;
+    this.zone.runOutsideAngular(() => {
+      this.beobachter = new ResizeObserver(() => this.ausrichten());
+      this.beobachter.observe(ziel);
+      // Der Hauptinhalt, nicht body: body ist auf die Fensterhöhe festgelegt (styles.css)
+      this.beobachter.observe(document.getElementById('hauptinhalt') ?? document.body);
+    });
   }
 
   private async zeigen(s: RundgangStand | null): Promise<void> {
@@ -173,6 +194,7 @@ export class RundgangComponent implements OnDestroy {
     this.nachsuchen = 0;
     this.platzFreigeben();
     if (!s) {
+      this.beobachten(null);
       if (this.stand()) {
         this.stand.set(null);
         this.ziel = null;
@@ -189,8 +211,14 @@ export class RundgangComponent implements OnDestroy {
     this.ruhig = passt(RUHIG);
     this.kopfMobil = passt(KOPF_MOBIL);
     const schritt = s.rundgang.schritte[s.index];
-    const ziel = await this.zielFinden(schritt.ziel, lauf);
+    const sonst = schritt.ohneTreffer;
+    const ziel = await this.zielFinden(sonst ? `${schritt.ziel}, ${sonst.ziel}` : schritt.ziel, lauf);
     if (lauf !== this.lauf) return; // inzwischen weitergeklickt
+    if (sonst && ziel && !ziel.matches(schritt.ziel)) {
+      // Keine Treffer: Der Dienst setzt den Ersatzschritt, das zeigt diese Methode erneut
+      this.rundgang.ohneTreffer();
+      return;
+    }
     if (ziel && schritt.vorbelegen) {
       // Erst nach dem ersten Schreiben von ngModel (asynchron nach dem Laden der Seite),
       // sonst überschriebe es das Beispiel im Feld mit dem leeren Modell
@@ -199,6 +227,7 @@ export class RundgangComponent implements OnDestroy {
       vorbelegen(ziel, schritt.vorbelegen);
     }
     this.ziel = ziel;
+    this.beobachten(ziel);
     this.stand.set(s);
     // Den Schritt liest der Screenreader beim Fokus der Blase (Name und Beschreibung);
     // die Live-Region meldet nur das Ende, sonst kaeme alles doppelt.
@@ -286,6 +315,7 @@ export class RundgangComponent implements OnDestroy {
     if (!this.ziel?.isConnected && this.schritt) {
       // Die Seite hat das Element neu gezeichnet (etwa nach dem Laden der Treffer)
       this.ziel = sichtbaresElement(this.schritt.ziel);
+      this.beobachten(this.ziel);
       if (this.ziel) this.insBild(this.ziel);
       else this.spaeterAusrichten();
     }

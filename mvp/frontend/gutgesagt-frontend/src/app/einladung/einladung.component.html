@@ -135,7 +135,8 @@
         <ng-container *ngIf="!beitritt.neu">Du bist schon dabei (Nr. {{ beitritt.nummer }})</ng-container>
       </h2>
       <ng-container *ngTemplateOutlet="ticket; context: { zeile: beitritt.neu ? 'Neu in deiner Sammlung' : 'Du bist schon dabei', name: beitritt.name, nummer: beitritt.nummer, nummerText: 'Deine Nummer' }"></ng-container>
-      <p *ngIf="beitritt.neu">Deine Teams stehen unter „Meine Beiträge“. Nur du siehst sie.</p>
+      <!-- Ein Ort für Teams in allen Hinweisen: „Meine Beiträge“ → „Meine Teams“ (Rundgang 2, V9) -->
+      <p *ngIf="beitritt.neu">Deine Teams stehen unter „Meine Beiträge“ → „Meine Teams“. Nur du siehst sie.</p>
       <p *ngIf="!beitritt.neu">Dieser Link zählt für dich nicht noch einmal. Gib ihn gern weiter.</p>
       <!-- Erst der leichte erste Schritt (Suchen), dann die Teams (UX-Review 25.11., Vorschlag 5) -->
       <p data-testid="erster-spruch-satz">{{ ersterSpruch.satz }}</p>
@@ -192,15 +193,15 @@
       <div class="namen">
         <mat-form-field appearance="outline">
           <mat-label>Vorname</mat-label>
-          <input matInput name="vorname" [disabled]="stand === 'sendet'" autocomplete="given-name" [maxlength]="nameMax"
-                 aria-describedby="name-hinweis" [attr.aria-invalid]="stand === 'fehler' && fehler === 'name'"
-                 [(ngModel)]="vorname" required />
+          <input #vornameFeld matInput name="vorname" [disabled]="stand === 'sendet'" autocomplete="given-name" [maxlength]="nameMax"
+                 aria-describedby="name-hinweis" [attr.aria-invalid]="(stand === 'fehler' && fehler === 'name') || fehlendeFelder.includes('Vorname')"
+                 [(ngModel)]="vorname" (ngModelChange)="feldGeaendert()" required />
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Nachname</mat-label>
-          <input matInput name="nachname" [disabled]="stand === 'sendet'" autocomplete="family-name" [maxlength]="nameMax"
-                 aria-describedby="name-hinweis" [attr.aria-invalid]="stand === 'fehler' && fehler === 'name'"
-                 [(ngModel)]="nachname" required />
+          <input #nachnameFeld matInput name="nachname" [disabled]="stand === 'sendet'" autocomplete="family-name" [maxlength]="nameMax"
+                 aria-describedby="name-hinweis" [attr.aria-invalid]="(stand === 'fehler' && fehler === 'name') || fehlendeFelder.includes('Nachname')"
+                 [(ngModel)]="nachname" (ngModelChange)="feldGeaendert()" required />
         </mat-form-field>
       </div>
       <p class="hinweis" id="name-hinweis">
@@ -208,7 +209,9 @@
       </p>
       <mat-form-field appearance="outline" class="email">
         <mat-label>Mail-Adresse</mat-label>
-        <input matInput type="email" name="email" [disabled]="stand === 'sendet'" autocomplete="email" [(ngModel)]="email" required />
+        <input #emailFeld matInput type="email" name="email" [disabled]="stand === 'sendet'" autocomplete="email"
+               [attr.aria-invalid]="fehlendeFelder.includes('Mail-Adresse') || null"
+               [(ngModel)]="email" (ngModelChange)="feldGeaendert()" required />
       </mat-form-field>
       <ng-container *ngIf="stand === 'fehler'" [ngSwitch]="fehler">
         <p *ngSwitchCase="'adresse'" class="warnung" role="alert">
@@ -235,7 +238,9 @@
       <p *ngIf="teamWahlFehlt" class="warnung" role="alert" data-testid="team-wahl-fehlt">
         Bitte wähl oben zuerst: mit Team oder ohne Team.
       </p>
-      <button mat-raised-button color="primary" type="submit" [disabled]="!vollstaendig || stand === 'sendet'">
+      <!-- Aktiv auch mit leeren Feldern: Ein grauer Knopf sagt nicht, was fehlt (Rundgang 2, V8a) -->
+      <p class="warnung" role="alert" data-testid="felder-fehlen">@if (fehlendeFelder.length) {Es fehlt noch: {{ fehlendeFelder.join(', ') }}.}</p>
+      <button #kontoKnopf mat-raised-button color="primary" type="submit" [disabled]="stand === 'sendet'" data-testid="konto-anlegen">
         Konto anlegen
       </button>
       <p *ngIf="stand === 'sendet' && vielLos" class="viel-los" data-testid="viel-los">
@@ -245,13 +250,14 @@
 
     <ng-container *ngIf="stand === 'gesendet'">
       <!-- "drei Tage": MAIL_GUELTIG_SEKUNDEN in infrastructure/keycloak_konten.py -->
+      <!-- „Schau in dein Postfach.“ steht schon als Überschrift darüber (Rundgang 2, V10) -->
       <p>
-        Schau in dein Postfach: Dort ist eine Mail, mit der du dein Passwort festlegst. Der Link darin
+        Dort ist eine Mail, mit der du dein Passwort festlegst. Der Link darin
         gilt drei Tage. Danach meldest du dich gleich an.
       </p>
       <p *ngIf="team && teamWahl === 'ja'" data-testid="team-nach-mail">
         Ist dein Konto neu, speichern wir dein Team gleich mit; nach dem Anmelden siehst du es unter
-        „Meine Beiträge“. Gab es zu deiner Adresse schon ein Konto, speichern wir kein Team: Melde dich
+        „Meine Beiträge“ → „Meine Teams“. Gab es zu deiner Adresse schon ein Konto, speichern wir kein Team: Melde dich
         dann an, und wir fragen dich hier noch einmal.
       </p>
       <p>

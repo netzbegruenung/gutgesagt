@@ -5,6 +5,7 @@ import { distinctUntilChanged, map, shareReplay, startWith, switchMap } from 'rx
 import { UsageTrackingService } from '../services/usage-tracking.service';
 import { NeuesArt, NeuesEintrag, StartVorrang, rueckwegSichtbar, startKacheln, startVorrang } from './neues-liste';
 import type { Vorschlag } from '../naechster-schritt/naechster-schritt';
+import type { SaalSpruchHeute } from '../services/saal-spruch.service';
 
 export type { NeuesArt } from './neues-liste';
 
@@ -91,7 +92,7 @@ export class SeitLetztemBesuchService {
    */
   readonly saalSpruchDa$ = new BehaviorSubject<boolean | null>(false);
   /** Der letzte Saal-Spruch dieses App-Starts mit seinem Tag; null, solange keiner kam. */
-  saalSpruchGemerkt: { tag: string; spruch: string | null } | null = null;
+  saalSpruchGemerkt: { tag: string; spruch: SaalSpruchHeute | null } | null = null;
 
   /**
    * Die eine Stelle, die über den Vorrang auf der Startseite entscheidet (Review

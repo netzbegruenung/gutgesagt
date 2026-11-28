@@ -14,6 +14,9 @@ Beitragen-Seite hat contribute-view.component.spec.ts.
 
 Grenzen: Klassen zaehlen im ganzen Baum, nicht je Element; Ziele in Dialogen und Klassen aus
 `[ngClass]` oder `[class]="…"` findet er nicht und meldet sie dann (laut, nicht still).
+Den umrandeten Kasten eines Felds (`mat-mdc-text-field-wrapper`, Angular Material) hat kein
+Template; er zaehlt, wenn der Baum ein `<mat-form-field>` enthaelt (MATERIAL_KLASSEN).
+Ein Ersatzschritt ohne Treffer (`ohneTreffer: { … }`) laeuft auf der Seite seines Schritts.
 """
 
 import pathlib
@@ -23,6 +26,8 @@ WURZEL = pathlib.Path(__file__).resolve().parents[2]
 APP = WURZEL / "mvp/frontend/gutgesagt-frontend/src/app"
 DATEN = APP / "rundgang/rundgang-daten.ts"
 ROUTEN = APP / "app.routes.ts"
+# Klassen, die Angular Material selbst setzt, und das Element, das sie mitbringt
+MATERIAL_KLASSEN = {"mat-mdc-text-field-wrapper": "<mat-form-field"}
 
 
 def _komponenten() -> dict[str, str]:
@@ -103,16 +108,20 @@ def _schritte() -> list[tuple[str, str, str | None]]:
     schritte = []
     for block in re.split(r"\n\s*\{\n\s*titel:", rundgaenge)[1:]:
         titel = re.match(r"\s*'([^']+)'", block).group(1)
-        ziel = re.search(r"ziel:\s*'([^']+)'", block)
-        if not ziel:
-            continue
         pfad = re.search(r"seite:\s*\{\s*pfad:\s*'([^']+)'", block)
-        schritte.append((titel, ziel.group(1), pfad.group(1) if pfad else None))
+        # Auch das Ziel eines Ersatzschritts (ohneTreffer) im selben Block
+        for ziel in re.findall(r"ziel:\s*'([^']+)'", block):
+            schritte.append((titel, ziel, pfad.group(1) if pfad else None))
     return schritte
 
 
 def _fehlt(ziel: str, baum: dict[str, str]) -> list[str]:
     alle_klassen = set().union(*(_klassen(t) for t in baum.values()))
+    material = {
+        klasse
+        for klasse, element in MATERIAL_KLASSEN.items()
+        if any(element in t for t in baum.values())
+    }
     fehlend = []
     for alternative in ziel.split(","):
         for teil in alternative.split():
@@ -124,6 +133,8 @@ def _fehlt(ziel: str, baum: dict[str, str]) -> list[str]:
             ):
                 fehlend.append(f"<{element.group(1)}> in {alternative.strip()!r}")
             for klasse in re.findall(r"\.([\w-]+)", teil):
+                if klasse in material:
+                    continue
                 if klasse not in alle_klassen:
                     fehlend.append(f".{klasse} in {alternative.strip()!r}")
     return fehlend

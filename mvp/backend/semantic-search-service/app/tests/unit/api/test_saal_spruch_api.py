@@ -1,10 +1,14 @@
 """
 Saal-Spruch ueber die API: ``GET /heute`` ohne Anmeldung, nie 404, bei Schalter aus leer
 mit ``aktiv: false``; Pflege nur fuer Admins, auch bei Schalter aus. Speicher als Attrappe.
+Ob die Suche zum Spruch etwas findet (``antworten``, ``treffer_gespeichert``): Zaehler als
+Attrappe, die echte Suche braucht Qdrant.
 """
 
+import asyncio
+import time
 from datetime import date
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -40,6 +44,16 @@ def speicher():
     saal_spruch_service_setzen(None)
 
 
+@pytest.fixture(autouse=True)
+def zaehler():
+    """Die Suche findet zwei Treffer, bis ein Test es anders setzt; Cache je Test leer."""
+    modul._treffer_cache.clear()
+    modul._laufend.clear()
+    with patch.object(modul, "_treffer_zaehlen", AsyncMock(return_value=2)) as attrappe:
+        yield attrappe
+    modul._treffer_cache.clear()
+
+
 def _client(an: bool):
     app = FastAPI()
     app.include_router(router, prefix="/api/v1/saal-spruch")
@@ -54,7 +68,7 @@ def test_schalter_aus_leer_und_nie_404(speicher):
         antwort = client.get(HEUTE_URL)
 
     assert antwort.status_code == 200
-    assert antwort.json() == {"spruch": None, "aktiv": False}
+    assert antwort.json() == {"spruch": None, "aktiv": False, "antworten": None}
 
 
 def test_schalter_an_heutiger_spruch(speicher):
@@ -64,7 +78,116 @@ def test_schalter_an_heutiger_spruch(speicher):
         antwort = client.get(HEUTE_URL)
 
     assert antwort.status_code == 200
-    assert antwort.json() == {"spruch": "Das bringt doch nichts", "aktiv": True}
+    # Noch nie gezaehlt: unbekannt, gezaehlt wird im Hintergrund (nie im Aufruf)
+    assert antwort.json() == {
+        "spruch": "Das bringt doch nichts",
+        "aktiv": True,
+        "antworten": None,
+    }
+
+
+def test_gezaehlter_spruch_mit_und_ohne_treffer(speicher):
+    speicher[HEUTE] = "Das bringt doch nichts"
+    schalter, client = _client(True)
+    with schalter:
+        modul._treffer_cache["Das bringt doch nichts"] = (3, time.monotonic())
+        mit = client.get(HEUTE_URL).json()["antworten"]
+        modul._treffer_cache["Das bringt doch nichts"] = (0, time.monotonic())
+        ohne = client.get(HEUTE_URL).json()["antworten"]
+
+    assert mit is True
+    assert ohne is False
+
+
+def test_startseite_sucht_nicht_bei_gueltigem_stand(speicher, zaehler):
+    speicher[HEUTE] = "Das bringt doch nichts"
+    modul._treffer_cache["Das bringt doch nichts"] = (2, time.monotonic())
+    schalter, client = _client(True)
+    with schalter:
+        for _ in range(5):
+            client.get(HEUTE_URL)
+
+    assert zaehler.await_count == 0
+
+
+def test_festlegen_zaehlt_frisch_und_meldet_treffer(speicher, zaehler):
+    schalter, client = _client(True)
+    with schalter:
+        speicher[HEUTE] = "Klimaschutz kostet nur"
+        zaehler.return_value = 0
+        antwort = client.put(
+            f"{ADMIN_URL}/2026-12-04",
+            json={"text": "Klimaschutz kostet nur"},
+            headers=ADMIN,
+        )
+        heute = client.get(HEUTE_URL)
+
+    assert antwort.json()["treffer_gespeichert"] == 0
+    # Die Startseite nimmt den beim Speichern gezaehlten Stand, ohne neu zu suchen
+    assert heute.json()["antworten"] is False
+    assert zaehler.await_count == 1
+
+
+def test_festlegen_suche_gescheitert_treffer_null(speicher, zaehler):
+    zaehler.side_effect = RuntimeError("Qdrant weg")
+    schalter, client = _client(True)
+    with schalter:
+        antwort = client.put(
+            f"{ADMIN_URL}/2026-12-04", json={"text": "Klimaschutz"}, headers=ADMIN
+        )
+
+    assert antwort.status_code == 200
+    assert antwort.json()["treffer_gespeichert"] is None
+
+
+class TestTrefferImHintergrund:
+    """treffer(): Die Startseite wartet nie auf die Suche (stale-while-revalidate)."""
+
+    def test_erst_unbekannt_dann_gezaehlt_und_nur_einmal_zugleich(self, zaehler):
+        async def ablauf():
+            erste = [await modul.treffer("Spruch") for _ in range(5)]
+            await asyncio.gather(*list(modul._laufend.values()))
+            return erste, await modul.treffer("Spruch")
+
+        erste, danach = asyncio.run(ablauf())
+        assert erste == [None] * 5
+        assert danach == 2
+        assert zaehler.await_count == 1
+
+    def test_abgelaufen_liefert_alten_wert_und_zaehlt_neu(self, zaehler):
+        zaehler.return_value = 0
+        alt = time.monotonic() - modul.ANTWORTEN_CACHE_SEKUNDEN - 1
+        modul._treffer_cache["Spruch"] = (4, alt)
+
+        async def ablauf():
+            sofort = await modul.treffer("Spruch")
+            await asyncio.gather(*list(modul._laufend.values()))
+            return sofort, await modul.treffer("Spruch")
+
+        assert asyncio.run(ablauf()) == (4, 0)
+
+    def test_fehler_wird_kurz_gemerkt_kein_stau(self, zaehler):
+        zaehler.side_effect = RuntimeError("Qdrant weg")
+
+        async def ablauf():
+            await modul.treffer("Spruch")
+            await asyncio.gather(*list(modul._laufend.values()))
+            for _ in range(5):
+                await modul.treffer("Spruch")
+            return list(modul._laufend)
+
+        assert asyncio.run(ablauf()) == []
+        assert zaehler.await_count == 1
+        assert modul._treffer_cache["Spruch"][0] is None
+
+    def test_zeitgrenze(self, zaehler, monkeypatch):
+        async def haengt(_text):
+            await asyncio.sleep(5)
+            return 3
+
+        monkeypatch.setattr(modul, "_treffer_zaehlen", haengt)
+        monkeypatch.setattr(modul, "ZAEHLEN_TIMEOUT_SEKUNDEN", 0.01)
+        assert asyncio.run(modul.treffer("Spruch", frisch=True)) is None
 
 
 def test_schalter_an_ohne_spruch_200_leer(speicher):
@@ -74,7 +197,7 @@ def test_schalter_an_ohne_spruch_200_leer(speicher):
         antwort = client.get(HEUTE_URL)
 
     assert antwort.status_code == 200
-    assert antwort.json() == {"spruch": None, "aktiv": True}
+    assert antwort.json() == {"spruch": None, "aktiv": True, "antworten": None}
 
 
 def test_pflege_nur_fuer_admins(speicher):
@@ -110,6 +233,7 @@ def test_festlegen_auch_bei_schalter_aus(speicher):
     assert daten["schalter_wirksam"] is False
     assert daten["heute"] == "2026-12-04"
     assert daten["text_max"] == 200
+    assert daten["treffer_gespeichert"] == 2
 
 
 def test_festlegen_ungueltig_422(speicher):

@@ -25,10 +25,13 @@ export interface HotTake {
  * die Suche nach Bedeutung findet, nicht nach Wortlaut. „Beispiel ausprobieren“ soll trotzdem genau
  * diese Aussage erkennen (am lokalen Stack geprüft, 18.11.). Die Aussagen prüft im Backend
  * tests/unit/test_suche_testset_aufbau.py (TestStartbeispiel), die Paare stehen als Fälle in
- * tests/regression/suche_testset.py. Der erste gehört zum Startbeispiel.
+ * tests/regression/suche_testset.py. Der erste ist wörtlich das Startbeispiel (Rundgang 2,
+ * 28.11.2026): Der Rundgang „Antwort finden“ setzt es ins Feld, und vorher tippte das Feld
+ * einen anderen Satz vor („Windräder killen doch massenhaft Vögel!“, weiter als Fall S107 im
+ * Testset). Die übrigen zeigen das Finden nach Bedeutung.
  */
 export const HOT_TAKES: readonly HotTake[] = [
-  { text: 'Windräder killen doch massenhaft Vögel!', aussage: STARTBEISPIEL },
+  { text: STARTBEISPIEL, aussage: STARTBEISPIEL },
   { text: 'Die Grünen wollen uns die Heizung wegnehmen!', aussage: 'Die Grünen wollen mir meine Heizung verbieten!' },
   { text: 'E-Autos sind auch nicht klimafreundlicher!', aussage: 'E-Autos sind auch nicht besser für die Umwelt!' },
   { text: 'Tempolimit? Bringt fürs Klima gar nichts!', aussage: 'Ein Tempolimit bringt doch nichts fürs Klima!' },

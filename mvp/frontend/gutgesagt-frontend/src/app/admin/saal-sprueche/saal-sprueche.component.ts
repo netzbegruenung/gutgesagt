@@ -33,8 +33,9 @@ export function saalTag(iso: string): string {
       <div class="kopf"><h3 id="saal-sprueche-titel">Saal-Sprüche</h3></div>
       <p>
         Jeden Morgen den Spruch wählen, der gerade unter Beiträgen zur BDK im Netz kursiert. Die Startseite zeigt
-        ihn an diesem Tag oben als „Heute im Netz zur BDK:“, mit dem Knopf „Antworten ansehen“. Nur öffentlicher
-        Text, keine Namen. Der Tag gilt in deutscher Zeit.
+        ihn an diesem Tag oben als „Heute im Netz zur BDK:“, mit dem Knopf „Antworten ansehen“; findet die Suche
+        dazu nichts, heißt der Knopf „Antwort beitragen“. Nur öffentlicher Text, keine Namen. Der Tag gilt in
+        deutscher Zeit.
       </p>
       @if (liste; as l) {
         <p class="zustand" data-testid="saal-sprueche-zustand">
@@ -62,6 +63,9 @@ export function saalTag(iso: string): string {
             </li>
           }
         </ul>
+
+        <!-- Bleibt stehen, bis der nächste Spruch gespeichert wird (Rundgang 2, 28.11.2026) -->
+        <p role="status" class="warnung" data-testid="saal-spruch-warnung">{{ warnung }}</p>
 
         <form class="formular" (ngSubmit)="speichern()" data-testid="saal-spruch-formular">
           <h4>Spruch festlegen</h4>
@@ -92,6 +96,8 @@ export function saalTag(iso: string): string {
       .kopf { display: flex; align-items: center; min-height: 48px; margin-bottom: 8px; padding: 4px 8px 4px 16px; background: var(--karte-kommentar); }
       .kopf h3 { margin: 0; font-family: inherit; font-size: 17px; font-weight: 700; color: var(--akzent-schrift); }
       .zustand { font-weight: 500; }
+      .warnung { margin: 8px 16px; padding: 8px 12px; border-left: 4px solid var(--hinweis-rand); background: var(--hinweis-tint); color: var(--hinweis-text); }
+      .warnung:empty { display: none; }
       .leise { color: var(--text-leise); }
       .liste { margin: 8px 16px; padding: 0; list-style: none; }
       .liste li { padding: 8px 0; border-top: 1px solid var(--linie); }
@@ -109,6 +115,8 @@ export class SaalSpruecheComponent implements OnInit {
   speichernd = false;
   datum = '';
   text = '';
+  /** Hinweis nach dem Speichern eines Spruchs, zu dem die Suche nichts findet. */
+  warnung = '';
 
   protected readonly tag = saalTag;
   protected readonly ergebnisse = ROUTES.RESULT;
@@ -145,14 +153,21 @@ export class SaalSpruecheComponent implements OnInit {
       return;
     }
     const datum = this.datum;
+    const text = this.text.trim();
     this.speichernd = true;
-    this.service.festlegen(datum, this.text.trim()).subscribe({
+    this.warnung = '';
+    this.service.festlegen(datum, text).subscribe({
       next: (daten) => {
         this.speichernd = false;
         this.datum = '';
         this.text = '';
         this.uebernehmen(daten);
         this.snackBar.open(`Spruch für ${saalTag(datum)} gespeichert.`, 'OK', { duration: 4000 });
+        if (daten.treffer_gespeichert === 0) {
+          this.warnung =
+            `Zu „${text}“ (${saalTag(datum)}) findet die Suche noch keine Antwort. Die Startseite zeigt dann ` +
+            '„Antwort beitragen“ statt „Antworten ansehen“. Besser einen Spruch mit Antworten wählen oder vorher eine Antwort ergänzen.';
+        }
       },
       error: (fehler: { status?: number; error?: { detail?: unknown } }) => {
         this.speichernd = false;

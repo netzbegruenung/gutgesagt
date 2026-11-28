@@ -182,9 +182,23 @@ describe('EinladungComponent', () => {
     fixture.detectChanges();
 
     const knopf = Array.from(el().querySelectorAll('button')).find((b) => b.textContent?.includes('Konto anlegen'));
-    expect(knopf!.disabled).toBeTrue();
-    fixture.componentInstance.einloesen();
+    // Aktiv, sagt aber beim Klick, was fehlt (Rundgang 2, V8a)
+    expect(knopf!.disabled).toBeFalse();
+    knopf!.click();
+    fixture.detectChanges();
     http.expectNone(`${URL}/einloesen`);
+    const meldung = el().querySelector('[data-testid="felder-fehlen"]')!;
+    expect(meldung.getAttribute('role')).toBe('alert');
+    expect(meldung.textContent).toContain('Es fehlt noch: Vorname, Nachname.');
+    expect(document.activeElement).toBe(el().querySelector('input[name="vorname"]'));
+    expect(el().querySelector('input[name="vorname"]')!.getAttribute('aria-invalid')).toBe('true');
+    expect(el().querySelector('input[name="email"]')!.getAttribute('aria-invalid')).toBeNull();
+
+    // Nachgetragen: Die Liste schrumpft mit
+    fixture.componentInstance.vorname = 'Anna';
+    fixture.componentInstance.feldGeaendert();
+    fixture.detectChanges();
+    expect(meldung.textContent).toContain('Es fehlt noch: Nachname.');
   });
 
   it('meldet Zeichen im Namen, die Keycloak ablehnt, ohne Anfrage', () => {

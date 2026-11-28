@@ -66,6 +66,28 @@ describe('SaalSpruecheComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Sa 05.12.2026');
   });
 
+  for (const [treffer, warnt] of [[0, true], [3, false], [null, false]] as const) {
+    it(`warnt nach dem Speichern bei ${treffer} Treffern: ${warnt} (Rundgang 2)`, () => {
+      http.expectOne(URL).flush(liste({ sprueche: [] }));
+      fixture.detectChanges();
+      const komponente = fixture.componentInstance;
+      komponente.datum = '2026-12-05';
+      komponente.text = 'Klimaschutz kostet nur.';
+      komponente.speichern();
+      http.expectOne(`${URL}/2026-12-05`).flush(liste({ treffer_gespeichert: treffer }));
+      fixture.detectChanges();
+
+      const warnung = fixture.nativeElement.querySelector('[data-testid="saal-spruch-warnung"]') as HTMLElement;
+      expect(warnung.getAttribute('role')).toBe('status');
+      if (warnt) {
+        expect(warnung.textContent).toContain('findet die Suche noch keine Antwort');
+        expect(warnung.textContent).toContain('„Klimaschutz kostet nur.“');
+      } else {
+        expect(warnung.textContent!.trim()).toBe('');
+      }
+    });
+  }
+
   it('entfernt einen Spruch und lädt die Liste neu', () => {
     http.expectOne(URL).flush(liste());
     fixture.detectChanges();

@@ -221,12 +221,14 @@ export type StartVorrang = 'offen' | 'block' | 'spruch' | 'karte';
 
 /**
  * Vorrang: Neues zu eigenen Beiträgen geht vor (es ist, was die Person bewirkt hat), dann
- * der eine Vorschlag, dann an seinen Tagen der Saal-Spruch, sonst der Block mit den
- * allgemeinen Zahlen. Der Saal-Spruch verdrängt also nur die allgemeinen Zahlen (Auftrag
- * Strategiewichtel Nr. 3, #846), nichts Persönliches. `undefined` heißt „Antwort steht
- * noch aus“ (beim Saal-Spruch 'offen'; auf ihn wird nur gewartet, wenn kein Vorschlag da
- * ist), null beim Stand „keine Antwort“ (Fehler, Zeitgrenze). Ohne Angabe zum Saal-Spruch
- * gibt es heute keinen.
+ * an seinen Tagen der Saal-Spruch, dann der eine Vorschlag, sonst der Block mit den
+ * allgemeinen Zahlen. Der Saal-Spruch verdrängt die allgemeinen Zahlen (Auftrag
+ * Strategiewichtel Nr. 3, #846) und seit Rundgang 2 (28.11.2026) auch den Vorschlag: Der
+ * ist eine allgemeine Aufforderung („Such den Spruch, der dich zuletzt geärgert hat“), der
+ * Saal-Spruch der Anlass des Tages, gerade für die am BDK-Stand neu Angemeldeten. Nichts
+ * Persönliches tritt zurück. `undefined` heißt „Antwort steht noch aus“ (beim Saal-Spruch
+ * 'offen': dann zeigt keine Karte etwas, höchstens START_WARTEZEIT_MS), null beim Stand
+ * „keine Antwort“ (Fehler, Zeitgrenze). Ohne Angabe zum Saal-Spruch gibt es heute keinen.
  *
  * `vorschlagGewuenscht`: Die Person hat über die Kachel „Nächster Schritt“ ausdrücklich
  * einen Vorschlag geholt (Rundgang 28.11.); dann geht die Karte auch eigenem Neuen vor,
@@ -248,13 +250,13 @@ export function startVorrang(
   if (eigenesNeuesSichtbar(stand, erledigt)) {
     return 'block';
   }
-  if (naechsterSchrittDa) {
-    return 'karte';
-  }
   if (saalSpruchDa === 'offen') {
     return 'offen';
   }
-  return saalSpruchDa ? 'spruch' : 'block';
+  if (saalSpruchDa) {
+    return 'spruch';
+  }
+  return naechsterSchrittDa ? 'karte' : 'block';
 }
 
 /**

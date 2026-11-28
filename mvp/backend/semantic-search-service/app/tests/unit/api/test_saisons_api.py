@@ -193,3 +193,16 @@ class TestHinweisAnDerEinstellung:
 
     def test_ohne_laufende_saison_kein_hinweis(self, repository):
         assert self._hinweis(_client(repository, saisons=())) is None
+
+    def _ersetzt(self, client):
+        antwort = client.get("/api/v1/moderation/schalter", headers=ADMIN)
+        [einstellung] = [
+            e for e in antwort.json()["einstellungen"] if e["name"] == "aktuelle_saison"
+        ]
+        return einstellung["ersetzt"]
+
+    def test_laufende_saison_ersetzt_zum_zuklappen(self, repository):
+        assert self._ersetzt(_client(repository)) is True
+
+    def test_ohne_saison_nicht_ersetzt(self, repository):
+        assert self._ersetzt(_client(repository, saisons=())) is False

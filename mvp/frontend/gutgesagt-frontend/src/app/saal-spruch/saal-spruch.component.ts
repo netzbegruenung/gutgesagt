@@ -7,10 +7,10 @@ import { distinctUntilChanged, map } from 'rxjs/operators';
 
 import { AuthService } from '../auth/auth.service';
 import { RundgangService } from '../rundgang/rundgang.service';
-import { SaalSpruchService } from '../services/saal-spruch.service';
+import { SaalSpruchHeute, SaalSpruchService } from '../services/saal-spruch.service';
 import { SeitLetztemBesuchService } from '../seit-letztem-besuch/seit-letztem-besuch.service';
 import { ROUTES } from '../shared/constants/app.constants';
-import { SUCHTEXT_PARAM } from '../shared/formular-adresse';
+import { FORMULAR_PFAD, SUCHTEXT_PARAM, aussageParameter } from '../shared/formular-adresse';
 import { AUS_NACHLADEN_MS, selbstNachladen } from '../shared/selbst-nachladen';
 
 /** Der Tag im Browser als JJJJ-MM-TT, damit ein gemerkter Spruch nicht über Mitternacht hält. */
@@ -24,7 +24,10 @@ export function browserTag(jetzt = new Date()): string {
  * „Saal-Spruch“): der Spruch, den ein Admin für diesen Tag gewählt hat, weil er gerade unter
  * Beiträgen zur BDK im Netz kursiert (im Saal bei den Grünen fallen solche Sprüche nicht,
  * Entscheidung 27.11.2026), und der Knopf „Antworten ansehen“, der die Suche mit dem Spruch
- * startet. Ohne Spruch für heute oder bei Schalter aus gibt es die Karte nicht.
+ * startet. Ohne Spruch für heute oder bei Schalter aus gibt es die Karte nicht. Findet die
+ * Suche zum Spruch nichts (Server: `antworten: false`), führte „Antworten ansehen“ auf „noch
+ * nichts drin“; dann heißt der Knopf „Antwort beitragen“ und öffnet das Kommentar-Formular
+ * mit dem Spruch (Besucher über „Das erwartet dich mit Konto“, Rundgang 2, 28.11.2026).
  *
  * Höchstens ein Aufruf über dem Feed (Review Spielgefühl 25.11.): Den Vorrang gegenüber
  * „Seit deinem letzten Besuch“ und „Dein nächster Schritt“ entscheidet
@@ -46,19 +49,30 @@ export function browserTag(jetzt = new Date()): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, MatButtonModule, MatIconModule],
   template: `
-    @if (sichtbar(); as spruch) {
+    @if (sichtbar(); as s) {
       <section class="saal-spruch" aria-labelledby="saal-spruch-titel" data-testid="saal-spruch">
         <h2 id="saal-spruch-titel" class="saal-spruch-titel">
           <mat-icon aria-hidden="true">campaign</mat-icon>
           Heute im Netz zur BDK:
         </h2>
-        <blockquote class="saal-spruch-zitat" data-testid="saal-spruch-text">„{{ spruch }}“</blockquote>
-        <p class="saal-spruch-frage">Wie würdest du antworten?</p>
-        <a mat-raised-button class="gutgesagt-primary-dark saal-spruch-knopf" data-testid="saal-spruch-knopf"
-           [routerLink]="ergebnisse" [queryParams]="suche(spruch)">
-          Antworten ansehen
-          <mat-icon iconPositionEnd aria-hidden="true">arrow_forward</mat-icon>
-        </a>
+        <blockquote class="saal-spruch-zitat" data-testid="saal-spruch-text">„{{ s.spruch }}“</blockquote>
+        @if (s.antworten === false) {
+          <p class="saal-spruch-frage" data-testid="saal-spruch-ohne-antwort">
+            Dazu gibt es noch keine Antwort. {{ anonym() ? 'Mit Konto schreibst du die erste.' : 'Schreib die erste!' }}
+          </p>
+          <a mat-raised-button class="gutgesagt-primary-dark saal-spruch-knopf" data-testid="saal-spruch-knopf"
+             [routerLink]="kommentarFormular" [queryParams]="beitragen(s.spruch)">
+            Antwort beitragen
+            <mat-icon iconPositionEnd aria-hidden="true">arrow_forward</mat-icon>
+          </a>
+        } @else {
+          <p class="saal-spruch-frage">Wie würdest du antworten?</p>
+          <a mat-raised-button class="gutgesagt-primary-dark saal-spruch-knopf" data-testid="saal-spruch-knopf"
+             [routerLink]="ergebnisse" [queryParams]="suche(s.spruch)">
+            Antworten ansehen
+            <mat-icon iconPositionEnd aria-hidden="true">arrow_forward</mat-icon>
+          </a>
+        }
       </section>
     }
   `,
@@ -120,14 +134,16 @@ export function browserTag(jetzt = new Date()): string {
 export class SaalSpruchComponent {
   readonly ergebnisse = ROUTES.RESULT;
   readonly suche = (spruch: string) => ({ [SUCHTEXT_PARAM]: spruch });
+  readonly kommentarFormular = FORMULAR_PFAD.commentary;
+  readonly beitragen = (spruch: string) => aussageParameter(null, spruch);
 
   private readonly service = inject(SaalSpruchService);
   private readonly neues = inject(SeitLetztemBesuchService);
   private readonly rundgang = inject(RundgangService);
-  private readonly spruch = signal<string | null>(null);
+  private readonly spruch = signal<SaalSpruchHeute | null>(null);
 
   private readonly start = toSignal(this.neues.start$);
-  private readonly anonym = toSignal(
+  protected readonly anonym = toSignal(
     inject(AuthService).userInfo$.pipe(
       map((info) => info?.isAuthenticated === false),
       distinctUntilChanged(),
@@ -146,7 +162,7 @@ export class SaalSpruchComponent {
     return !!band?.imInhalt && !band.schlank;
   });
 
-  /** Der Spruch, wenn die Karte ihn zeigen darf; sonst null. */
+  /** Der Spruch (mit Antwortstand), wenn die Karte ihn zeigen darf; sonst null. */
   readonly sichtbar = computed(() => {
     const spruch = this.spruch();
     if (!spruch || this.rundgangHier()) {
@@ -167,7 +183,7 @@ export class SaalSpruchComponent {
       this.neues.saalSpruchDa$.next(null);
     }
     const folgen = {
-      next: (spruch: string | null) => this.uebernehmen(spruch),
+      next: (spruch: SaalSpruchHeute | null) => this.uebernehmen(spruch),
       // Beiwerk der Startseite: ohne Antwort keine Karte, der nächste Takt versucht es neu
       error: () => this.uebernehmen(null),
     };
@@ -178,7 +194,7 @@ export class SaalSpruchComponent {
     selbstNachladen(() => this.service.heute(), destroyRef, folgen, AUS_NACHLADEN_MS);
   }
 
-  private uebernehmen(spruch: string | null): void {
+  private uebernehmen(spruch: SaalSpruchHeute | null): void {
     this.spruch.set(spruch);
     this.neues.saalSpruchGemerkt = { tag: browserTag(), spruch };
     this.neues.saalSpruchDa$.next(spruch !== null);

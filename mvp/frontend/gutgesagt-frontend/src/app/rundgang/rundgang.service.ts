@@ -186,6 +186,22 @@ export class RundgangService {
   }
 
   /**
+   * Der aktuelle Schritt fand statt seines Ziels die Seite ohne Treffer (RundgangSchritt.
+   * ohneTreffer): Für den Rest dieses Rundgangs gilt sein Ersatzschritt, die Schritte mit
+   * `nurMitTreffern` fallen weg. So zählt „Schritt x von y“ nur, was es zu zeigen gibt, und
+   * „Weiter“ hängt nicht auf Schritten ohne Ziel (Rundgang 2, 28.11.2026).
+   */
+  ohneTreffer(): void {
+    const s = this.stand();
+    const ersatz = s?.rundgang.schritte[s.index].ohneTreffer;
+    if (!s || !ersatz) return;
+    const vorher = s.rundgang.schritte.slice(0, s.index).filter((x) => !x.nurMitTreffern);
+    const nachher = s.rundgang.schritte.slice(s.index + 1).filter((x) => !x.nurMitTreffern);
+    this.wechsel++;
+    this.stand.set({ rundgang: { ...s.rundgang, schritte: [...vorher, ersatz, ...nachher] }, index: vorher.length });
+  }
+
+  /**
    * Erst die Seite, dann der Schritt: Sonst faende der Schritt sein Ziel noch auf der
    * alten Seite (eine Karte unter „Neueste Inhalte“ statt eines Treffers).
    */

@@ -61,6 +61,25 @@ describe('KopiertErfolgComponent: nächster Schritt und ins Bild', () => {
     expect(link.getAttribute('href')).toBe('/search#suchen');
   });
 
+  for (const ohneKonto of [true, false]) {
+    it(`nach „Ja, gepostet“ ${ohneKonto ? 'ohne Konto der Weg „Einladung einlösen“' : 'mit Konto kein Einladungsweg'} (Rundgang 2)`, () => {
+      fixture.componentRef.setInput('sichtbar', true);
+      fixture.componentRef.setInput('ohneKonto', ohneKonto);
+      fixture.componentRef.setInput('gepostet', 'gemeldet');
+      fixture.detectChanges();
+
+      const einladung = fixture.nativeElement.querySelector('[data-testid="gepostet-einladung"]') as HTMLElement | null;
+      if (!ohneKonto) {
+        expect(einladung).toBeNull();
+        return;
+      }
+      expect(einladung!.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+        'Schon einen Einladungslink? Mit Konto schreibst du selbst Antworten. Einladung einlösen',
+      );
+      expect(einladung!.querySelector('a')!.getAttribute('href')).toBe('/einladung');
+    });
+  }
+
   it('holt den Kasten beim Erscheinen ins Bild, sanft und nur so weit wie nötig', () => {
     fixture.componentRef.setInput('sichtbar', true);
     fixture.componentRef.setInput('kopierLauf', 1);

@@ -60,6 +60,9 @@ class EinstellungResponse(BaseModel):
     max_laenge: int
     # Warum der Wert gerade nicht gilt, etwa weil eine Saison laeuft (#782)
     hinweis: Optional[str] = None
+    # True: Der Wert gilt gerade nicht, weil eine Saison ihn ersetzt; die Admin-Seite
+    # klappt ihn dann zu (Rundgang 2, 28.11.2026: zwei Dinge namens "Saison")
+    ersetzt: bool = False
 
 
 class SchalterListeResponse(BaseModel):
@@ -82,6 +85,13 @@ def _service() -> SchalterService:
 
 def _einstellungen() -> EinstellungenService:
     return get_einstellungen_service()
+
+
+def _ersetzt(name: str) -> bool:
+    """aktuelle_saison gilt nicht, solange eine Saison die aktuelle der Teams ist."""
+    return (
+        name == AKTUELLE_SAISON and get_saison_service().saison_fuer_teams() is not None
+    )
 
 
 def _hinweis(name: str) -> Optional[str]:
@@ -121,7 +131,9 @@ def _liste(
             SchalterResponse(**vars(s)) for s in dienst.stand(settings, frisch=True)
         ],
         einstellungen=[
-            EinstellungResponse(**vars(e), hinweis=_hinweis(e.name))
+            EinstellungResponse(
+                **vars(e), hinweis=_hinweis(e.name), ersetzt=_ersetzt(e.name)
+            )
             for e in einstellungen.stand(frisch=True)
         ],
     )

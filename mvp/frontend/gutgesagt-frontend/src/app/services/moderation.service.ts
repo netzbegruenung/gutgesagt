@@ -31,6 +31,8 @@ export interface Einstellung {
   max_laenge: number;
   /** Warum der Wert gerade nicht gilt, etwa weil eine Saison läuft (#782); fehlt sonst. */
   hinweis?: string | null;
+  /** Eine laufende Saison ersetzt den Wert gerade; die Seite klappt ihn zu. Fehlt bei älteren Servern. */
+  ersetzt?: boolean;
 }
 
 export interface SchalterListe {

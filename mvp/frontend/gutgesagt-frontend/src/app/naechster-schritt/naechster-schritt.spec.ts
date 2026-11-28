@@ -314,6 +314,17 @@ describe('Dein nächster Schritt (#789)', () => {
       expect(fixture.nativeElement.textContent).toContain('Windräder töten Vögel');
     });
 
+    it('Hauptknopf voll, Nebenknopf Kontur, Fokus mit sichtbarem Rahmen (Rundgang 2, WCAG 2.4.7)', () => {
+      const fixture = starten(true, true);
+      http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [{ art: 'einwerfen' }, BRACHE] });
+      fixture.detectChanges();
+      const los = fixture.nativeElement.querySelector('.naechster-schritt-los') as HTMLElement;
+      const weg = fixture.nativeElement.querySelector('.naechster-schritt-weg') as HTMLElement;
+      expect(los.classList).toContain('mat-mdc-raised-button');
+      expect(los.classList).toContain('gutgesagt-primary-dark');
+      expect(weg.classList).toContain('mat-mdc-outlined-button');
+    });
+
     it('setzt bei „Zur Suche“ den Fokus ins Suchfeld', () => {
       const feld = document.createElement('input');
       feld.id = 'suche';

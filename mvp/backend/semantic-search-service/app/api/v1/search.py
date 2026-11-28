@@ -55,7 +55,10 @@ from services.suchen_ohne_treffer_service import (
     SuchenOhneTrefferService,
 )
 from services.schalter_service import notaus_wirksam
-from services.embeddings.qdrant_embeddings_manager import einbettungen_geteilt
+from services.embeddings.qdrant_embeddings_manager import (
+    einbettungen_geteilt,
+    einbettungen_teilen,
+)
 from services.search.search_query_statement import (
     SearchQueryStatementRecorder,
     get_search_query_statement_recorder,
@@ -204,6 +207,36 @@ async def treffer_sammeln(
     )
     await orchestrator.collect_direct(query_text, limit)
     orchestrator.sort_and_truncate(limit)
+
+
+async def treffer_zaehlen(query_text: str, limit: int = 10) -> int:
+    """
+    Wie viele Beitraege die Suche zu ``query_text`` zeigte, ohne Spuren: keine Aussage
+    anlegen, kein Suchereignis, kein Zaehler "Suchen ohne Treffer". Fuer den Saal-Spruch
+    (api/v1/saal_spruch.py): Hat er keine Antwort, fuehrte "Antworten ansehen" auf
+    "noch nichts drin". Dieselbe Pipeline wie searchByText, ohne die Anreicherung.
+    """
+    statement_service = get_statement_service()
+    with einbettungen_teilen():
+        statement_index_results, polarity_metadata = await aussagetreffer_finden(
+            statement_service, query_text
+        )
+        orchestrator = SearchOrchestrator(
+            suchspezifikationen(
+                get_commentary_service(),
+                get_generic_text_service(),
+                get_post_service(),
+                get_image_service(),
+            ),
+            reference_service=get_reference_service(),
+            usage_service=get_usage_service(),
+            voting_service=get_voting_service(),
+            inhaltstor=inhaltstor_fuer(statement_service),
+        )
+        await treffer_sammeln(
+            orchestrator, query_text, limit, statement_index_results, polarity_metadata
+        )
+    return len(orchestrator.inhalte())
 
 
 def suchspezifikationen(
