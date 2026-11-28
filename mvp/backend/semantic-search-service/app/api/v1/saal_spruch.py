@@ -15,7 +15,7 @@ Ob die Suche zum Spruch Antworten findet (Rundgang 2, 28.11.2026): ``/heute`` sa
 drin") zum Beitragen fuehrt; das Speichern im Admin liefert die Trefferzahl in
 ``treffer_gespeichert``, damit der Admin bei 0 gleich gewarnt wird. Gezaehlt wird mit
 search.treffer_zaehlen, ohne Aussage, Suchereignis oder Zaehler; fuer die Startseite
-hoechstens alle ANTWORTEN_CACHE_SEKUNDEN je Text.
+hoechstens alle ANTWORTEN_CACHE_SEKUNDEN je Text und nur im Hintergrund (``treffer``).
 """
 
 import asyncio
@@ -47,9 +47,14 @@ admin_router = APIRouter()
 
 # Die Startseite fragt bei jedem Aufruf; gesucht wird hoechstens so oft je Spruch.
 ANTWORTEN_CACHE_SEKUNDEN = 300.0
-# Text -> (Trefferzahl, gezaehlt um); ein Eintrag je Spruch, alte fallen beim Speichern weg
-_treffer_cache: Dict[str, Tuple[int, float]] = {}
-_treffer_sperre = asyncio.Lock()
+# Scheitert das Zaehlen, wird es erst nach dieser Zeit wieder versucht (kein Stau bei Qdrant weg)
+FEHLER_CACHE_SEKUNDEN = 60.0
+# Laenger zaehlt niemand: im Hintergrund fuer die Startseite, beim Speichern fuer den Admin
+ZAEHLEN_TIMEOUT_SEKUNDEN = 10.0
+# Text -> (Trefferzahl oder None nach Fehler, gezaehlt um); wenige Eintraege
+_treffer_cache: Dict[str, Tuple[Optional[int], float]] = {}
+# Laufende Zaehlungen je Text: hoechstens eine (Single-Flight)
+_laufend: Dict[str, "asyncio.Task[Optional[int]]"] = {}
 
 
 async def _treffer_zaehlen(text: str) -> int:
@@ -59,25 +64,43 @@ async def _treffer_zaehlen(text: str) -> int:
     return await treffer_zaehlen(text)
 
 
-async def treffer(text: str, frisch: bool = False) -> Optional[int]:
-    """Trefferzahl der Suche zum Spruch, aus dem Cache; None, wenn die Suche scheitert."""
-    async with _treffer_sperre:
-        eintrag = _treffer_cache.get(text)
-        if (
-            not frisch
-            and eintrag is not None
-            and time.monotonic() - eintrag[1] < ANTWORTEN_CACHE_SEKUNDEN
-        ):
-            return eintrag[0]
-        try:
-            anzahl = await _treffer_zaehlen(text)
-        except Exception as e:
-            # Nur der Fehlertyp; ohne Zahl bleibt die Karte, wie sie war
-            logger.warning(f"Saal-Spruch: Treffer nicht gezaehlt: {type(e).__name__}")
-            return None
+async def _zaehlen_und_merken(text: str) -> Optional[int]:
+    try:
+        anzahl: Optional[int] = await asyncio.wait_for(
+            _treffer_zaehlen(text), ZAEHLEN_TIMEOUT_SEKUNDEN
+        )
+    except Exception as e:
+        # Nur der Fehlertyp; ohne Zahl bleibt die Karte, wie sie war
+        logger.warning(f"Saal-Spruch: Treffer nicht gezaehlt: {type(e).__name__}")
+        anzahl = None
+    if text not in _treffer_cache and len(_treffer_cache) >= 8:
         _treffer_cache.clear()
-        _treffer_cache[text] = (anzahl, time.monotonic())
-        return anzahl
+    _treffer_cache[text] = (anzahl, time.monotonic())
+    return anzahl
+
+
+def _gueltig(eintrag: Tuple[Optional[int], float]) -> bool:
+    anzahl, um = eintrag
+    frist = ANTWORTEN_CACHE_SEKUNDEN if anzahl is not None else FEHLER_CACHE_SEKUNDEN
+    return time.monotonic() - um < frist
+
+
+async def treffer(text: str, frisch: bool = False) -> Optional[int]:
+    """
+    Trefferzahl der Suche zum Spruch; None, solange sie unbekannt ist oder die Suche
+    scheiterte. Die Startseite wartet nie auf die Suche (stale-while-revalidate): Sie
+    bekommt den gemerkten Wert, auch einen abgelaufenen, und ein Abgelaufener wird im
+    Hintergrund neu gezaehlt, je Text hoechstens einmal zugleich. ``frisch`` (Speichern im
+    Admin) zaehlt sofort und wartet darauf.
+    """
+    if frisch:
+        return await _zaehlen_und_merken(text)
+    eintrag = _treffer_cache.get(text)
+    if (eintrag is None or not _gueltig(eintrag)) and text not in _laufend:
+        aufgabe = asyncio.create_task(_zaehlen_und_merken(text))
+        _laufend[text] = aufgabe
+        aufgabe.add_done_callback(lambda _a: _laufend.pop(text, None))
+    return eintrag[0] if eintrag is not None else None
 
 
 class HeuteResponse(BaseModel):

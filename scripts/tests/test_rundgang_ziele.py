@@ -14,8 +14,8 @@ Beitragen-Seite hat contribute-view.component.spec.ts.
 
 Grenzen: Klassen zaehlen im ganzen Baum, nicht je Element; Ziele in Dialogen und Klassen aus
 `[ngClass]` oder `[class]="…"` findet er nicht und meldet sie dann (laut, nicht still).
-Klassen von Angular Material (`mat-mdc-…`, etwa der umrandete Kasten eines Felds) stehen in
-keinem Template; sie zaehlen, wenn der Baum ein Material-Element (`<mat-…>`) enthaelt.
+Den umrandeten Kasten eines Felds (`mat-mdc-text-field-wrapper`, Angular Material) hat kein
+Template; er zaehlt, wenn der Baum ein `<mat-form-field>` enthaelt (MATERIAL_KLASSEN).
 Ein Ersatzschritt ohne Treffer (`ohneTreffer: { … }`) laeuft auf der Seite seines Schritts.
 """
 
@@ -26,6 +26,8 @@ WURZEL = pathlib.Path(__file__).resolve().parents[2]
 APP = WURZEL / "mvp/frontend/gutgesagt-frontend/src/app"
 DATEN = APP / "rundgang/rundgang-daten.ts"
 ROUTEN = APP / "app.routes.ts"
+# Klassen, die Angular Material selbst setzt, und das Element, das sie mitbringt
+MATERIAL_KLASSEN = {"mat-mdc-text-field-wrapper": "<mat-form-field"}
 
 
 def _komponenten() -> dict[str, str]:
@@ -115,7 +117,11 @@ def _schritte() -> list[tuple[str, str, str | None]]:
 
 def _fehlt(ziel: str, baum: dict[str, str]) -> list[str]:
     alle_klassen = set().union(*(_klassen(t) for t in baum.values()))
-    material = any(re.search(r"<mat-[\w-]+", t) for t in baum.values())
+    material = {
+        klasse
+        for klasse, element in MATERIAL_KLASSEN.items()
+        if any(element in t for t in baum.values())
+    }
     fehlend = []
     for alternative in ziel.split(","):
         for teil in alternative.split():
@@ -127,7 +133,7 @@ def _fehlt(ziel: str, baum: dict[str, str]) -> list[str]:
             ):
                 fehlend.append(f"<{element.group(1)}> in {alternative.strip()!r}")
             for klasse in re.findall(r"\.([\w-]+)", teil):
-                if material and klasse.startswith("mat-mdc-"):
+                if klasse in material:
                     continue
                 if klasse not in alle_klassen:
                     fehlend.append(f".{klasse} in {alternative.strip()!r}")

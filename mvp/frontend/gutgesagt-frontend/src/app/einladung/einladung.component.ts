@@ -325,6 +325,7 @@ export class EinladungComponent implements OnInit {
   @ViewChild('vornameFeld') private vornameFeld?: ElementRef<HTMLInputElement>;
   @ViewChild('nachnameFeld') private nachnameFeld?: ElementRef<HTMLInputElement>;
   @ViewChild('emailFeld') private emailFeld?: ElementRef<HTMLInputElement>;
+  @ViewChild('kontoKnopf', { read: ElementRef }) private kontoKnopf?: ElementRef<HTMLButtonElement>;
 
   /**
    * Was beim Klick auf „Konto anlegen“ noch fehlte, als Namen der Felder (WCAG 3.3.1):
@@ -597,9 +598,9 @@ export class EinladungComponent implements OnInit {
     ].filter((f) => !f.wert.trim());
   }
 
-  /** Scrollt zum ersten leeren Feld (sonst zum Vornamen) und fokussiert es. */
+  /** Scrollt zum ersten leeren Feld (alle gefüllt: zu „Konto anlegen“) und fokussiert es. */
   private zumErstenLeerenFeld(): void {
-    const feld = (this.leereFelder()[0]?.feld ?? this.vornameFeld)?.nativeElement;
+    const feld = (this.leereFelder()[0]?.feld ?? this.kontoKnopf)?.nativeElement;
     if (!feld) {
       return;
     }

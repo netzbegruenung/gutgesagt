@@ -240,7 +240,7 @@
       </p>
       <!-- Aktiv auch mit leeren Feldern: Ein grauer Knopf sagt nicht, was fehlt (Rundgang 2, V8a) -->
       <p class="warnung" role="alert" data-testid="felder-fehlen">@if (fehlendeFelder.length) {Es fehlt noch: {{ fehlendeFelder.join(', ') }}.}</p>
-      <button mat-raised-button color="primary" type="submit" [disabled]="stand === 'sendet'" data-testid="konto-anlegen">
+      <button #kontoKnopf mat-raised-button color="primary" type="submit" [disabled]="stand === 'sendet'" data-testid="konto-anlegen">
         Konto anlegen
       </button>
       <p *ngIf="stand === 'sendet' && vielLos" class="viel-los" data-testid="viel-los">

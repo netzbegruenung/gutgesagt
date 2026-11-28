@@ -232,7 +232,7 @@ export const RUNDGAENGE: Record<RundgangId, Rundgang> = {
         titel: 'Aussage eingeben',
         text:
           'Füge den Text ein, auf den du antworten willst – einen Post oder Kommentar –, oder tippe die Aussage ein. ' +
-          `Probier’s mit „${STARTBEISPIEL}“: Die nächsten Schritte zeigen die Treffer dazu.`,
+          `Probier’s mit „${STARTBEISPIEL}“: Die nächsten Schritte zeigen, was die Suche dazu findet.`,
         // Der umrandete Kasten, nicht das ganze mat-form-field: Dessen Zeile für Hinweise darunter
         // (22 px) zog den Rahmen über den Knopf „Suchen“ (Rundgang 2, V1)
         ziel: 'app-search.start-suche .search-field .mat-mdc-text-field-wrapper',
@@ -254,8 +254,8 @@ export const RUNDGAENGE: Record<RundgangId, Rundgang> = {
         ohneTreffer: {
           titel: 'Noch keine Antwort',
           text:
-            'Zu dieser Aussage ist noch nichts drin. Hier schreibst du die erste Antwort, dafür brauchst ' +
-            'du ein Konto. Weiter unten stehen Aussagen, zu denen es schon Antworten gibt.',
+            'Zu dieser Aussage ist noch nichts drin. Hier schreibst du die erste Antwort (mit Konto). ' +
+            'Weiter unten stehen Aussagen, zu denen es schon Antworten gibt.',
           ziel: '.unified-empty-state app-nicht-dabei',
         },
       },

@@ -349,6 +349,13 @@ describe('EinladungComponent mit Team', () => {
       klick('team-nein');
       await fixture.whenStable();
       expect(document.activeElement).toBe(el().querySelector('input[name="email"]'));
+
+      // Alles ausgefüllt: weiter zu „Konto anlegen“
+      fixture.componentInstance.email = 'neu@example.org';
+      fixture.detectChanges();
+      klick('team-ja');
+      await fixture.whenStable();
+      expect(document.activeElement).toBe(el().querySelector('[data-testid="konto-anlegen"]'));
     });
 
     it('schickt nach „Ja“ die Einwilligung mit und merkt sich nur Code und Kennung für den Rücksprung', () => {
