@@ -51,7 +51,8 @@ Kampagnenwort in services/ankunft_service.py (angewendet hier).
 - Stundenzaehler des Team-Fortschritts quasi-live (team_stunden, Schalter team_live,
   Jura-Akte 28.11.2026): mit dem Wochenwechsel, also jeder Block vor dem Montag (UTC)
   der laufenden Woche. Danach bleibt nur der Wochenzaehler. Der Lauf um Mitternacht
-  (UTC) faellt mit dem Wochenwechsel zusammen.
+  (UTC) faellt mit dem Wochenwechsel zusammen. Wirkt team_live nicht mehr, loescht
+  schon der Takt live_im_takt alle (services/team_fortschritt_service.py).
 - Stimmen haben keine eigene Frist: Aus ihnen entsteht die Guete eines Beitrags, sie
   leben so lange wie er und gehen mit ihm.
 

@@ -366,6 +366,8 @@ class TeamFortschrittService:
         self._live_seit = live_seit or _team_live_eingeschaltet_am
         # Der zuletzt vorberechnete Block in diesem Prozess
         self._vorberechnet_bis: Optional[datetime] = None
+        # Ob die Stundenzaehler seit dem letzten Ausschalten schon geloescht sind
+        self._aus_geloescht = False
 
     @property
     def _einstellungen(self) -> Settings:
@@ -596,12 +598,21 @@ class TeamFortschrittService:
         Jeden Block, der seit mindestens 15 min abgelaufen ist und in diesem Prozess
         noch nicht vorberechnet wurde, einmal vorberechnen (nur Bloecke des Tages, in
         den der letzte faellige faellt); synchron. Gibt die Zahl der freigegebenen
-        Bloecke zurueck. Schalter aus: verwirft die Pruefwerte, rechnet nichts.
+        Bloecke zurueck.
+
+        Wirkt team_live nicht (aus oder nach team_live_bis): verwirft die Pruefwerte,
+        rechnet nichts und loescht einmal je Ausschalten sofort alle Stundenzaehler
+        (Jura 28.11.: die DSE nennt sie dann nicht mehr). Ein Fehler beim Loeschen wird
+        im naechsten Lauf wiederholt.
         """
         if not self.live_wirksam():
             self._stunden.leeren()
             self._vorberechnet_bis = None
+            if not self._aus_geloescht:
+                self._repository.stunden_loeschen_vor(self._jetzt() + BLOCK)
+                self._aus_geloescht = True
             return 0
+        self._aus_geloescht = False
         letzter = blockbeginn(self._jetzt() - VEROEFFENTLICHUNG_NACH - BLOCK)
         tag_ab = tagesbeginn(letzter)
         block = tag_ab
@@ -771,7 +782,7 @@ async def live_im_takt(service: "TeamFortschrittService") -> None:
     """
     Hintergrund-Task: rechnet sofort und dann 15 min nach jeder vollen Stunde die
     abgelaufenen Stundenbloecke vor (``bloecke_veroeffentlichen``), bis er abgebrochen
-    wird. Ein Fehler wird nur protokolliert; der naechste Lauf holt nach.
+    wird; wirkt team_live nicht, loescht er die Stundenzaehler. Ein Fehler wird nur protokolliert; der naechste Lauf holt nach.
     """
     while True:
         try:

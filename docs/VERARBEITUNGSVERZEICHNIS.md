@@ -422,7 +422,7 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   waren, und das Beitrittsfenster einer beobachteten Person auf etwa eine Stunde.
 - **Fristen:** LK „Fristen“: `team_wochen` und `team_quests` ohne Personenbezug, unbefristet,
   gehen mit dem Team (eine Team-Löschung gibt es noch nicht). `team_stunden` mit dem
-  Wochenwechsel; die Prüfwerte der Stunden verfallen mit ihrer Freigabe, sonst mit dem Tag. Prüfwerte verfallen mit dem
+  Wochenwechsel, sofort, wenn `team_live` nicht mehr wirkt; die Prüfwerte der Stunden verfallen mit ihrer Freigabe, sonst mit dem Tag. Prüfwerte verfallen mit dem
   Wochenwechsel. „Team verlassen“ und die Kontolöschung lassen die Zähler stehen; das geht, weil
   sie keiner Person zugeordnet sind.
 - **TOM:** DSFA-Nachtrag „Teams“ und Spielgefühl V23/V29. Schalter `team_fortschritt` (nur mit

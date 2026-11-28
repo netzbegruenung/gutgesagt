@@ -169,6 +169,13 @@ class Speicher:
         zeile.update(stand=stand, freigabe=freigabe, mitglieder=mitglieder)
         return True
 
+    def stunden_loeschen_vor(self, grenze):
+        self.loeschungen = getattr(self, "loeschungen", 0) + 1
+        alt = [k for k in self.stunden_zeilen if k[1] < grenze]
+        for k in alt:
+            del self.stunden_zeilen[k]
+        return len(alt)
+
     def zeile(self, block, team=TEAM):
         return self.stunden_zeilen.get((team, block))
 
@@ -628,6 +635,68 @@ class TestHinweis:
 
 
 class TestSchalter:
+    def test_aus_loescht_die_stundenzaehler_sofort(
+        self, team, uhr, schalter_admin_alle_an
+    ):
+        """Jura 28.11.: wirkt team_live nicht mehr, gehen die Stundenzaehler sofort."""
+        dienst = _dienst(team, uhr)
+        _beitragen(dienst, uhr, konten(10), utc(11, 10))
+        uhr.jetzt = utc(12, 16)
+        dienst.bloecke_veroeffentlichen()
+        _beitragen(dienst, uhr, konten(3), utc(12, 20))
+        assert team.stunden_zeilen
+
+        schalter_admin_alle_an["team_live"] = False
+        get_schalter_service().admin_werte(frisch=True)
+        uhr.jetzt = utc(12, 30)
+        dienst.bloecke_veroeffentlichen()
+
+        # Auch der laufende Block
+        assert team.stunden_zeilen == {}
+        assert dienst.live_werte([TEAM]) == {}
+        # Einmal je Ausschalten, nicht in jedem Lauf
+        dienst.bloecke_veroeffentlichen()
+        assert team.loeschungen == 1
+
+    def test_nach_wiedereinschalten_und_ausschalten_wieder_geloescht(
+        self, team, uhr, schalter_admin_alle_an
+    ):
+        dienst = _dienst(team, uhr)
+        schalter_admin_alle_an["team_live"] = False
+        get_schalter_service().admin_werte(frisch=True)
+        dienst.bloecke_veroeffentlichen()
+        schalter_admin_alle_an["team_live"] = True
+        get_schalter_service().admin_werte(frisch=True)
+        _beitragen(dienst, uhr, konten(3), utc(12, 20))
+        uhr.jetzt = utc(13, 16)
+        dienst.bloecke_veroeffentlichen()
+        schalter_admin_alle_an["team_live"] = False
+        get_schalter_service().admin_werte(frisch=True)
+
+        dienst.bloecke_veroeffentlichen()
+
+        assert team.stunden_zeilen == {}
+        assert team.loeschungen == 2
+
+    def test_nach_dem_enddatum_geloescht(self, team, uhr):
+        """Nach team_live_bis wirkt der Schalter nicht mehr: dieselbe Loeschung."""
+        from services.schalter_service import SchalterService, schalter_service_setzen
+
+        dienst = _dienst(team, uhr)
+        _beitragen(dienst, uhr, konten(3), utc(12, 20))
+        schalter_service_setzen(
+            SchalterService(
+                admin_werte_lesen=lambda: {"teams": True, "team_live": True},
+                admin_wert_setzen=lambda *a: None,
+                enddatum=lambda name: date(2026, 12, 3),
+                heute=lambda: TAG,
+            )
+        )
+        uhr.jetzt = utc(13, 16)
+        dienst.bloecke_veroeffentlichen()
+
+        assert team.stunden_zeilen == {}
+
     @pytest.mark.parametrize("settings", [LIVE_AUS, TEAMS_AUS])
     def test_aus_kein_live_und_keine_vorberechnung(self, team, uhr, settings):
         an = _dienst(team, uhr)

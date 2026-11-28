@@ -548,7 +548,7 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   every counted event of a team with at least 20 consenting members also raises the hour
   counter `team_stunden` (team, Saison, block start, count, no Kennung) and remembers an HMAC
   check value per member, team and block in process memory only (key per day). A task
-  (`live_im_takt`, started only when both upper bounds are on) computes each hour block (full
+  (`live_im_takt`, always started) computes each hour block (full
   hour, Europe/Berlin) once, 15 minutes after it ended: released from 10 distinct contributors
   together with the carried blocks of the same day, else carried; after a restart carried, never
   released. `GET /api/v1/teams/meine` then carries `live` per own team (today's released sum
@@ -556,7 +556,9 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   rounded down to 10, quest step in thirds, one-time notice for members who consented before
   switch-on), read from `TeamFortschrittService.live_werte` (person-free model, the only source
   for any later view). App only for members: no public endpoint, no big-screen view. The
-  deletion run removes `team_stunden` before the Monday (UTC) of the current week. With several
+  deletion run removes `team_stunden` before the Monday (UTC) of the current week; while
+  `team_live` is not effective (off, no upper bound, after `team_live_bis`) the task deletes all
+  of them once per switch-off (one query at start-up on a server without the feature). With several
   workers each sees part of the check values and releases less often, never too early.
 - `SEMANTIC_SEARCH_TEAMS_OEFFENTLICH_AKTIV` - upper bound of the Schalter `teams_oeffentlich`
   (default `false`; stays off on production until the data protection officer has advised).

@@ -199,3 +199,21 @@ def test_offen_bleibt_offen_bis_zur_vorberechnung(datenbank):  # noqa: F811
     repo.stunde_erhoehen([SCHLUESSEL], utc(4, 12))
 
     assert [z["stand"] for z in _zeilen(datenbank, "team_stunden")] == [OFFEN]
+
+
+def test_schalter_aus_loescht_die_stundenzaehler_sofort(datenbank):  # noqa: F811
+    """Jura 28.11.: wirkt team_live nicht mehr, gehen die Zaehler der Woche sofort."""
+    repo = TeamFortschrittRepository(datenbank)
+    repo.stunde_erhoehen([SCHLUESSEL], utc(4, 11))
+    repo.stunde_abschliessen(SCHLUESSEL, utc(4, 11), FREIGEGEBEN, 12, 25)
+    repo.stunde_erhoehen([SCHLUESSEL], utc(4, 12))
+    repo.erhoehen([SCHLUESSEL], date(2026, 11, 30), Art.BEITRAG)
+    uhr = Uhr(utc(4, 12, 30))
+
+    _dienst(
+        datenbank, uhr, settings=Settings(teams_aktiv=True)
+    ).bloecke_veroeffentlichen()
+
+    assert _zeilen(datenbank, "team_stunden") == []
+    # Der Wochenzaehler bleibt
+    assert len(_zeilen(datenbank, "team_wochen")) == 1
