@@ -1,25 +1,31 @@
+// Ruhiger Abschluss der Startseite (Startseite 28.11.): Kanten wie die Kacheln darueber
+// (16 px Einzug, ab 752 px die mittige 720er-Spalte), Abstand wie zwischen den anderen Bloecken.
 .about-teaser-section {
-  max-width: 720px;
-  padding: 0 var(--page-margin);
-  // Mehr Abstand zum Karussell darueber (Designrunde 17.11.)
-  margin: var(--spacing-xxl) auto var(--spacing-xl);
+  margin: var(--spacing-xl) max(var(--spacing-md), calc((100% - var(--lesespalte, 720px)) / 2));
 
-  @media (max-width: 768px) {
-    padding: 0 var(--page-margin-mobile);
-    margin: var(--spacing-xl) auto var(--spacing-lg);
+  @media (max-width: 599px) {
+    margin-top: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
   }
 }
 
-// Karte der Traegerin: Flaeche und Kleeleiste wie vorher das Zitat (Startseite zur BDK, 27.11.)
+// Karte der Traegerin: Flaeche und Radius wie die Aktions-Kacheln (app-start-kachel), ohne
+// Schatten, weil sie keine Aktion ist; die Kleeleiste links ist das einzige Unterscheidungsmerkmal.
 .traeger-karte {
   padding: var(--spacing-lg);
   border-left: 4px solid var(--akzent-klee);
   background: var(--karte-kommentar, var(--flaeche));
-  border-radius: 0 var(--border-radius-medium) var(--border-radius-medium) 0;
+  border-radius: var(--border-radius-large);
 
+  // Groesse einer Abschnittsueberschrift in der Grundschrift, nicht die Display-Schrift des
+  // Seitentitels: wie der Titel der Kacheln
   h2 {
-    /* Uses global h2 styles for green color and larger font */
-    margin: 0 0 0.5rem;
+    margin: 0 0 var(--spacing-sm);
+    font-family: inherit;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: normal;
   }
 
   @media (max-width: 599px) {
