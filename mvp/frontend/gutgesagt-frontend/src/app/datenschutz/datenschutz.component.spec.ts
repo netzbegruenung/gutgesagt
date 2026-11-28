@@ -1979,7 +1979,10 @@ describe('DatenschutzComponent: Anker #fotos unter dem klebenden Kopf', () => {
       .events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe(() =>
         setTimeout(() => {
-          scroller.scrollToAnchor('fotos');
+          // Wie scrollToAnchor ohne den anschließenden Fokus: Chrome rückt ein fokussierbares
+          // Ziel beim Fokus selbst unter scroll-padding, andere Browser nicht verlässlich.
+          const ziel = document.getElementById('fotos')!;
+          scroller.scrollToPosition([0, ziel.getBoundingClientRect().top + window.scrollY]);
           routerSprung();
         }),
       );
@@ -2000,10 +2003,6 @@ describe('DatenschutzComponent: Anker #fotos unter dem klebenden Kopf', () => {
     expect(document.activeElement).toBe(fotos);
   });
 
-  /*
-   * Chrome rückt ein fokussierbares Ziel schon beim Fokus des Routers unter scroll-padding;
-   * verlässlich (andere Browser, Ziel ohne tabindex) ist erst scrollIntoView der Seite selbst.
-   */
   it('springt selbst mit scrollIntoView, wenn das Ziel schon beim ersten Zeichnen steht', async () => {
     TestBed.configureTestingModule({
       imports: [DatenschutzComponent],
