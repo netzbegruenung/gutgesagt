@@ -55,6 +55,8 @@ describe('GestoertEinstiegComponent (Not-Aus feedback_gestoert)', () => {
     an.set(true);
     fixture.detectChanges();
     expect(knopf()?.textContent).toContain('Was hat dich gestört?');
+    // Startseite 28.11.: eine Textzeile mit Knopf in Link-Optik statt eigener Karte
+    expect(knopf()?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Was hat dich gestört? Sag es uns in einem Satz arrow_forward');
 
     an.set(false);
     fixture.detectChanges();

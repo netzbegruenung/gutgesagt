@@ -10,7 +10,6 @@ import { AuthService, UserInfo } from '../auth/auth.service';
 import { FunktionenService } from '../services/funktionen.service';
 import { SUCHTEXT_PARAM } from '../shared/formular-adresse';
 import { GartenansichtComponent } from './gartenansicht.component';
-import { GartenHinweisComponent } from './garten-hinweis.component';
 import { Beet, antwortenText, beeteGruppieren, ohneAntwortText } from './garten.service';
 
 const URL = `${environment.baseUrl}/api/v1/search/garten`;
@@ -171,27 +170,6 @@ describe('Gartenansicht (#783)', () => {
       expect(status.getAttribute('role')).toBe('status');
       expect(status.textContent).toContain('Wir versuchen es gleich noch einmal.');
       expect(status.textContent).not.toMatch(/neu laden/i);
-    });
-  });
-
-  describe('Hinweis auf der Startseite', () => {
-    function hinweis() {
-      TestBed.configureTestingModule({
-        imports: [GartenHinweisComponent],
-        // Alle Schalter aus: der Hinweis braucht keinen
-        providers: [provideRouter([]), { provide: FunktionenService, useValue: { an: () => signal(false) } }],
-      });
-      const fixture = TestBed.createComponent(GartenHinweisComponent);
-      fixture.detectChanges();
-      return fixture.nativeElement as HTMLElement;
-    }
-
-    afterEach(() => TestBed.resetTestingModule());
-
-    it('führt ohne Schalter zur Gartenansicht', () => {
-      const link = hinweis().querySelector('a') as HTMLAnchorElement;
-      expect(new window.URL(link.href).pathname).toBe('/garten');
-      expect(link.textContent).toContain('Themen im Überblick');
     });
   });
 });

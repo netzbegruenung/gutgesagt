@@ -84,153 +84,23 @@ app-rundgang-band {
   }
 }
 
-// Die zwei Kacheln: nebeneinander, gleich gross; mobil untereinander und flach
+
+// Unterer Teil der Startseite (Startseite 28.11.): Aktions-Kacheln, darunter die Zeile
+// "Was hat dich gestoert?", zum Schluss die Traegerin. Zwischen den Bloecken einheitlich
+// --spacing-xl, mobil --spacing-lg; Kanten wie das Suchfeld im Band: 16 px Einzug, ab 752 px
+// die mittige 720er-Spalte.
 .start-kacheln {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: var(--spacing-md);
-  // Kanten wie das Suchfeld im Band darueber: 16 px Einzug, ab 752 px die mittige 720er-Spalte
-  margin: var(--spacing-xl) max(var(--spacing-md), calc((100% - var(--lesespalte)) / 2)) var(--spacing-xxl);
+  margin: var(--spacing-xl) max(var(--spacing-md), calc((100% - var(--lesespalte)) / 2)) 0;
 
   @media (max-width: 599px) {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-md);
     margin-top: var(--spacing-lg);
-    margin-bottom: var(--spacing-xl);
-  }
-}
-
-// Tonal wie ein zweiter Knopf: im Hellen zartes Klee-Gruen ohne sichtbaren Rand, Schrift Tanne
-// (Tokens --mitmachen-kachel-*, Designrunde 17.11.); ohne Token weiss mit tannengruenem Rand.
-// Bewusst ohne Typfarben. Gross wie ein Knopf: 72 px hoch, mobil 64 px.
-.start-kachel {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  box-sizing: border-box;
-  min-height: 72px;
-  padding: var(--spacing-md) var(--spacing-lg);
-  border: 2px solid var(--kachel-rand, var(--linie-tanne));
-  border-radius: 12px;
-  background: var(--karte-kommentar, var(--flaeche));
-  color: var(--text);
-  text-decoration: none;
-  // Als Knopf erkennbar: leicht erhoben in Ruhe, beim Zeigen hoeher und eine Spur dunkler,
-  // beim Druecken flach (Designrunde 17.11.)
-  box-shadow: var(--elevation-2, 0 2px 4px rgba(0, 0, 0, 0.15));
-  transition: box-shadow var(--transition-fast, 0.2s), transform var(--transition-fast, 0.2s),
-    background-color var(--transition-fast, 0.2s);
-
-  &:hover,
-  &:focus-visible {
-    box-shadow: var(--elevation-6, 0 4px 12px rgba(0, 0, 0, 0.2));
-    transform: translateY(-2px);
-    background: color-mix(in srgb, var(--karte-kommentar, var(--flaeche)) 92%, var(--akzent-tanne, #00563a));
   }
 
-  &:active {
-    box-shadow: var(--elevation-1, 0 1px 2px rgba(0, 0, 0, 0.15));
-    transform: translateY(0);
+  // Ab 720 px drei gleich breite Kacheln nebeneinander (app-start-kachel stellt dann um)
+  @media (min-width: 720px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
-
-    &:hover,
-    &:focus-visible {
-      transform: none;
-    }
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--akzent-tanne);
-    outline-offset: 2px;
-  }
-
-  @media (max-width: 599px) {
-    gap: var(--spacing-md);
-    min-height: 64px;
-    padding: var(--spacing-sm) var(--spacing-md);
-  }
-}
-
-.kachel-icon {
-  font-size: 36px;
-  line-height: 1;
-
-  @media (max-width: 599px) {
-    font-size: 32px;
-  }
-}
-
-.kachel-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  // Fuer die Marke "mit Konto": Beide Kacheln sind gleich breit, die Abfrage greift in beiden.
-  container-type: inline-size;
-}
-
-.kachel-titel {
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--akzent-schrift);
-
-  @media (max-width: 599px) {
-    font-size: 20px;
-  }
-}
-
-// Kurzer Halbsatz unter dem Titel: was dahinter passiert (Persona-Runde 18.11.)
-.kachel-satz {
-  font-size: 15px;
-  line-height: 1.3;
-  color: var(--text);
-
-  @media (max-width: 599px) {
-    font-size: 14px;
-  }
-}
-
-// Anonym: kleiner Hinweis neben dem Titel, dass es ein Konto braucht (#644). Reicht der Platz
-// neben dem laengeren Titel ("Einwerfen") nicht, rutscht er in beiden Kacheln unter den
-// Titel, nicht nur in einer (Designrunde 12.11.). Die Schwellen sind die Breite von
-// "Einwerfen" samt Marke, je Schriftgroesse des Titels (22/20 px: rund 167/152 px), mit etwas Luft.
-.kachel-konto {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--mitmachen-kachel-marke, var(--bg-main));
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-leise);
-  vertical-align: middle;
-}
-
-@container (max-width: 175.98px) {
-  .kachel-konto {
-    display: table;
-    margin: 2px 0 0;
-  }
-}
-
-@media (max-width: 599px) {
-  @container (min-width: 160px) {
-    .kachel-konto {
-      display: inline-block;
-      margin: 0 0 0 6px;
-    }
-  }
-}
-
-.kachel-pfeil {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  font-size: 28px;
-  color: var(--akzent-schrift);
 }
