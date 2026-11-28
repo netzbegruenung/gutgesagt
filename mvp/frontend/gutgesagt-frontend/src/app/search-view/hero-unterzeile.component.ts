@@ -13,100 +13,59 @@ import { Bestandszahl, abgerundet, bestandszahl } from './bestandszahl';
 /** Die Unterzeile ohne Zahl: vor der ersten Antwort, bei zu wenig Bestand oder nach einem Fehler. */
 export const HERO_UNTERZEILE = 'Bewährte Argumente aus der Community.';
 
-/** Zusatz hinter der Bestandszahl, wenn es nichts Neues zu nennen gibt. */
-export const OHNE_ZUWACHS = 'aus der Community.';
+/** Der Link am Ende der Zeile, auf „Beitragen“ (Rundgang 28.11.). */
+export const NAECHSTE_FRAGE = 'ist deine die nächste?';
 
 /** So oft lädt die Zahl nach; sie ist abgerundet und ändert sich selten. */
 export const BESTAND_NACHLADEN_MS = 5 * 60 * 1000;
 
-/** Ziel des Zusatzes: „Frisch aus der Community“ auf der Startseite. */
-export const FRISCH_ANKER = 'recent-content';
-
-/**
- * Statt der Zahl, wenn fast alles neu ist (Neustart, Startbestand eingespielt): „98 neu“
- * neben „90 Antworten“ las sich wie ein Widerspruch (UX-Review 26.11.2026, Befund 9).
- */
-export const FRISCH_GESAMMELT = 'frisch gesammelt';
-
-/** Ab diesem Anteil neuer Kommentare am Bestand gilt er als frisch gesammelt. */
-export const FRISCH_ANTEIL = 0.8;
-
-/** So weit zurück nennt die Unterzeile den Tag; älter heißt „aus der Community“. */
-const TAGE_HOECHSTENS = 7;
+/** Erst ab so vielen neuen Antworten in sieben Tagen nennt die Zeile den Zuwachs, nie „0 neu“. */
+export const ZUWACHS_AB = 3;
 
 const zahl = (wert: number): string => wert.toLocaleString('de-DE');
 
-/** „800 Antworten auf 250 Sprüche –“: der Teil vor dem Zusatz, mit Gedankenstrich. */
-export function bestandTeil(z: Bestandszahl): string {
-  return `${zahl(z.kommentare)} Antworten auf ${zahl(z.aussagen)} ${z.aussagen === 1 ? 'Spruch' : 'Sprüche'} –`;
-}
-
-/** Heutiger Kalendertag in deutscher Zeit als JJJJ-MM-TT (wie der Server ihn meldet). */
-export function heuteInDeutschland(jetzt: Date): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(jetzt);
-}
-
-function tageszahl(tag: string): number | null {
-  const teile = /^(\d{4})-(\d{2})-(\d{2})$/.exec(tag);
-  return teile ? Date.UTC(+teile[1], +teile[2] - 1, +teile[3]) / 86_400_000 : null;
-}
-
 /**
- * Der Zusatz mit Verweis auf „Frisch aus der Community“: ab 3 neuen die Zahl, gerundet wie
- * der Bestand (abgerundet) und nie größer als er; sind mindestens FRISCH_ANTEIL der
- * ``kommentare`` neu, „frisch gesammelt“ statt einer Zahl. Darunter der Tag des letzten
- * Kommentars (heute, gestern, am TT.MM.), nie eine Uhrzeit. null: nichts Neues in 7 Tagen,
- * keine Angabe oder ein unlesbarer Tag; dann steht „aus der Community.“.
+ * Der Zuwachs für die Zeile: ``neu_7_tage`` ab ZUWACHS_AB, abgerundet wie der Bestand und nie
+ * größer als er; sonst null, dann steht „aus der Community“.
  *
  * ``kommentare`` ist die genaue Zahl aus /getMetrics; ohne sie nur gerundet, ohne Deckel.
  */
-export function zuwachsText(zuwachs: ZuwachsDto | null | undefined, jetzt: Date, kommentare?: number): string | null {
-  if (!zuwachs) {
+export function zuwachsZahl(zuwachs: ZuwachsDto | null | undefined, kommentare?: number): number | null {
+  const neu = zuwachs?.neu_7_tage;
+  if (typeof neu !== 'number' || neu < ZUWACHS_AB) {
     return null;
   }
-  if (typeof zuwachs.neu_7_tage === 'number' && zuwachs.neu_7_tage >= 3) {
-    const bestand = typeof kommentare === 'number' && kommentare > 0 ? kommentare : null;
-    if (bestand !== null && zuwachs.neu_7_tage >= bestand * FRISCH_ANTEIL) {
-      return FRISCH_GESAMMELT;
-    }
-    const neu = bestand !== null ? Math.min(abgerundet(zuwachs.neu_7_tage), abgerundet(bestand)) : abgerundet(zuwachs.neu_7_tage);
-    return `${zahl(neu)} neu in 7 Tagen`;
-  }
-  const tag = zuwachs.zuletzt_ergaenzt ? tageszahl(zuwachs.zuletzt_ergaenzt) : null;
-  const heute = tageszahl(heuteInDeutschland(jetzt));
-  if (tag === null || heute === null) {
-    return null;
-  }
-  const vor = heute - tag;
-  if (vor > TAGE_HOECHSTENS) {
-    return null;
-  }
-  if (vor <= 0) {
-    return 'zuletzt ergänzt heute';
-  }
-  if (vor === 1) {
-    return 'zuletzt ergänzt gestern';
-  }
-  const [, monat, tagImMonat] = zuwachs.zuletzt_ergaenzt!.split('-');
-  return `zuletzt ergänzt am ${+tagImMonat}.${+monat}.`;
+  const bestand = typeof kommentare === 'number' && kommentare > 0 ? kommentare : null;
+  return bestand !== null ? Math.min(abgerundet(neu), abgerundet(bestand)) : abgerundet(neu);
+}
+
+/**
+ * Der Teil vor dem Link, mit Gedankenstrich: „800 Antworten, 10 neu diese Woche –“ oder
+ * ohne Zuwachs „800 Antworten aus der Community –“. „Diese Woche“ heißt die letzten sieben
+ * Tage, wie im Deckel von „Meine Beiträge“ und in der Datenschutzerklärung.
+ */
+export function bestandTeil(z: Unterzeile): string {
+  const antworten = `${zahl(z.bestand.kommentare)} Antworten`;
+  return z.neu !== null ? `${antworten}, ${zahl(z.neu)} neu diese Woche –` : `${antworten} aus der Community –`;
 }
 
 export interface Unterzeile {
   bestand: Bestandszahl;
-  /** Zuwachs bzw. „zuletzt ergänzt …“; null: „aus der Community.“ */
-  zuwachs: string | null;
+  /** Neue Antworten der letzten sieben Tage, abgerundet; null: zu wenige oder keine Angabe. */
+  neu: number | null;
 }
 
 /**
- * Unterzeile unter „Nie wieder sprachlos“ (Entscheidungen des Maintainers vom 25. und
- * 26.11.2026): Bestand und Zuwachs, ehrlich und nie „0 neu“, etwa „800 Antworten auf 250
- * Sprüche – 12 neu in 7 Tagen 🌱“. Ohne Bestandszahl die bisherige Unterzeile.
+ * Unterzeile unter „Nie wieder sprachlos“ (Rundgang 28.11., davor Entscheidungen des
+ * Maintainers vom 25. und 26.11.2026): „800 Antworten, 10 neu diese Woche – ist deine die
+ * nächste?“, mit weniger als drei neuen oder ohne Zuwachswert „800 Antworten aus der Community
+ * – ist deine die nächste?“. Gezählt werden nur die Antworten (Kommentare); die Frage am Ende
+ * führt auf „Beitragen“. Ohne Bestandszahl die bisherige Unterzeile, ohne Link.
  *
  * Die Bestandszahl hängt an keinem Schalter: Sie zählt nur Inhalte, die ohnehin für alle
- * sichtbar sind, und /getMetrics liefert sie schon heute anonym (öffentlich, im Server 60 s
- * gecacht, nie 401/404). Den Zuwachs liefert der Server nur mit dem Schalter
- * `bestandszahl_zuwachs`; ohne steht „aus der Community.“. Eine gescheiterte Zählung (Fehler
- * oder 0, so meldet /getMetrics einen Ausfall) behält die letzte Zeile.
+ * sichtbar sind, und /getMetrics liefert sie anonym (öffentlich, im Server 60 s gecacht, nie
+ * 401/404). Eine gescheiterte Zählung (Fehler oder 0, so meldet /getMetrics einen Ausfall)
+ * behält die letzte Zeile.
  *
  * Die Schrift kommt von der Startseite: Das Element trägt dort die Klasse `hero-subtitle`;
  * mobil hält sie zwei Zeilen frei, damit das Suchfeld nicht springt, wenn die Zahl kommt.
@@ -119,21 +78,9 @@ export interface Unterzeile {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (zeile; as z) {
-      <span class="teil" data-testid="hero-unterzeile">{{ bestandText(z.bestand) }}</span>&ngsp;
+      <span class="teil" data-testid="hero-unterzeile">{{ bestandText(z) }}</span>&ngsp;
       <!-- Umbruch nur hier, nach dem Gedankenstrich: beide Teile brechen selbst nicht um -->
-      @if (z.zuwachs) {
-        <a
-          class="teil zuwachs"
-          data-testid="hero-zuwachs"
-          [routerLink]="startseite"
-          [fragment]="anker"
-          (click)="springen($event)"
-          >{{ z.zuwachs }}<span class="visually-hidden">, zu „Frisch aus der Community“</span
-          ><span aria-hidden="true"> 🌱</span></a
-        >
-      } @else {
-        <span class="teil">{{ ohneZuwachs }}</span>
-      }
+      <a class="teil naechste" data-testid="hero-beitragen" [routerLink]="beitragen">{{ naechsteFrage }}</a>
     } @else {
       <span data-testid="hero-unterzeile">{{ ohneZahl }}</span>
     }
@@ -146,13 +93,13 @@ export interface Unterzeile {
       .teil {
         white-space: nowrap;
       }
-      .zuwachs {
+      .naechste {
         color: var(--akzent-tanne);
         font-weight: 600;
         text-decoration: underline;
         text-underline-offset: 3px;
       }
-      .zuwachs:hover {
+      .naechste:hover {
         text-decoration-thickness: 2px;
       }
     `,
@@ -162,10 +109,9 @@ export class HeroUnterzeileComponent implements OnInit {
   zeile: Unterzeile | null = null;
 
   protected readonly ohneZahl = HERO_UNTERZEILE;
-  protected readonly ohneZuwachs = OHNE_ZUWACHS;
+  protected readonly naechsteFrage = NAECHSTE_FRAGE;
   protected readonly bestandText = bestandTeil;
-  protected readonly startseite = ROUTES.SEARCH;
-  protected readonly anker = FRISCH_ANKER;
+  protected readonly beitragen = ROUTES.CONTRIBUTE;
 
   private readonly metrics = inject(MetricsService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -184,24 +130,6 @@ export class HeroUnterzeileComponent implements OnInit {
     selbstNachladen(() => this.laden(true), this.destroyRef, folgen, BESTAND_NACHLADEN_MS);
   }
 
-  /**
-   * Auf der Startseite direkt hinunter zu „Frisch aus der Community“, Fokus auf die Überschrift
-   * (WCAG 2.4.3); mit Strg/Cmd/Umschalt oder ohne Ziel macht der Link, was Links tun.
-   */
-  springen(ereignis: MouseEvent): void {
-    if (ereignis.ctrlKey || ereignis.metaKey || ereignis.shiftKey || ereignis.button !== 0) {
-      return;
-    }
-    const ziel = document.getElementById(FRISCH_ANKER);
-    if (!ziel) {
-      return;
-    }
-    ereignis.preventDefault();
-    const ruhig = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    ziel.scrollIntoView({ behavior: ruhig ? 'auto' : 'smooth', block: 'start' });
-    ziel.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
-  }
-
   private laden(still: boolean): Observable<Unterzeile | null> {
     return this.metrics.getMetrics(still).pipe(
       map((m: GetMetricsResponse) => {
@@ -209,7 +137,7 @@ export class HeroUnterzeileComponent implements OnInit {
           return this.zeile;
         }
         const bestand = bestandszahl(m.commentary_count, m.statement_count);
-        return bestand ? { bestand, zuwachs: zuwachsText(m.zuwachs, new Date(), m.commentary_count) } : null;
+        return bestand ? { bestand, neu: zuwachsZahl(m.zuwachs, m.commentary_count) } : null;
       }),
       catchError(() => of(this.zeile)),
     );
