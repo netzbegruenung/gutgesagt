@@ -379,6 +379,7 @@ class TestAdmin:
             "🍑",
             # Nicht genau der Eintrag: ohne Variantenwaehler, ZWJ-Sequenz, Freitext
             "⚖",
+            "🌻\ufe0f",
             "🐦\u200d⬛",
             "🌻🌻",
             "drache",

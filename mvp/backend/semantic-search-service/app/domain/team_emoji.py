@@ -24,7 +24,7 @@ EMOJI_KATEGORIEN: Tuple[Tuple[str, str], ...] = (
 )
 
 # (Zeichen, Name, Kategorie, Stichworte für die Suche)
-# 837 Einträge
+# 824 Einträge
 EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ("🐵", "Affengesicht", "tiere-natur", "affe banane dschungel gesicht tier zoo"),
     ("🐒", "Affe", "tiere-natur", "tier"),
@@ -152,7 +152,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ("🦈", "Hai", "tiere-natur", "fisch haifisch meer tier"),
     ("🐙", "Oktopus", "tiere-natur", "krake meer tier tintenfisch"),
     ("🐚", "Schneckenhaus", "tiere-natur", "muschel strand tier"),
-    ("🦀", "Krebs", "tiere-natur", "krabbe meer sternzeichen strand tierkreis"),
     (
         "🦞",
         "Hummer",
@@ -210,7 +209,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ("🌵", "Kaktus", "tiere-natur", "dürre natur pflanze trockenzeit wüste"),
     ("🌾", "Reisähre", "tiere-natur", "pflanze reis reispflanze ähre"),
     ("🌿", "Kräuter", "tiere-natur", "blätter pflanze"),
-    ("☘️", "Kleeblatt", "tiere-natur", "grün pflanze"),
     (
         "🍀",
         "Glücksklee",
@@ -894,7 +892,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ("🌖", "drittes Mondviertel", "reisen-orte", "abnehmend mond"),
     ("🌗", "abnehmender Halbmond", "reisen-orte", "abnehmend halbmond"),
     ("🌘", "letztes Mondviertel", "reisen-orte", "abnehmend mond nacht"),
-    ("🌙", "Mondsichel", "reisen-orte", "mond nacht"),
     ("🌚", "Neumond mit Gesicht", "reisen-orte", "gesicht mond mondgesicht neumond"),
     (
         "🌛",
@@ -903,7 +900,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
         "gesicht mond mondsichel weltall",
     ),
     ("🌜", "Mondsichel mit Gesicht rechts", "reisen-orte", "gesicht mondsichel nacht"),
-    ("🌡️", "Thermometer", "reisen-orte", "temperatur wetter"),
     ("☀️", "Sonne", "reisen-orte", "sonnenstrahlen sonnig strahlen wetter"),
     ("🌝", "Vollmond mit Gesicht", "reisen-orte", "gesicht vollmond"),
     (
@@ -989,7 +985,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
         "böller feier juhu knaller konfetti party super yay",
     ),
     ("🎊", "Konfettiball", "aktivitaeten", "feier konfetti party"),
-    ("🎀", "pinke Schleife", "aktivitaeten", "feier geschenk pink rosa schleife"),
     (
         "🎁",
         "Geschenk",
@@ -1074,12 +1069,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
         "casino spiel unterhaltung würfel würfeln zufall",
     ),
     (
-        "🧩",
-        "Puzzleteil",
-        "aktivitaeten",
-        "bestandteile hinweise hobby passen puzzeln puzzle puzzlestück puzzleteile spiel teile zusammenpassen zusammensetzen",
-    ),
-    (
         "🧸",
         "Teddybär",
         "aktivitaeten",
@@ -1130,12 +1119,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
         "badebekleidung badehose boxershorts kleidung schwimmshorts",
     ),
     ("👜", "Handtasche", "gegenstaende", "accessoire einkaufen tasche"),
-    (
-        "👝",
-        "Clutch",
-        "gegenstaende",
-        "accessoire beutel handtasche kulturbeutel tasche waschtasche",
-    ),
     ("🛍️", "Einkaufstüten", "gegenstaende", "einkaufen shoppen shopping tasche tüte"),
     ("🎒", "Schulranzen", "gegenstaende", "ranzen rucksack schule tornister"),
     (
@@ -1149,12 +1132,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
         "Wanderstiefel",
         "gegenstaende",
         "brauner schuh campen camping kleidungsstück outdoor rucksacktour schuh stiefel wandern wanderung",
-    ),
-    (
-        "🥿",
-        "flacher Schuh",
-        "gegenstaende",
-        "ballerina ballet-pumps bequem frauenschuh kleidungsstück schuh slipper",
     ),
     ("🩰", "Ballettschuhe", "gegenstaende", "ballett kleidung schuhe tanz"),
     ("👑", "Krone", "gegenstaende", "kopfbedeckung könig königin majestät"),
@@ -1283,7 +1260,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ("📼", "Videokassette", "gegenstaende", "vhs video"),
     ("🔍", "Lupe nach links", "gegenstaende", "suche vergrößerungsglas"),
     ("🔎", "Lupe nach rechts", "gegenstaende", "lupe suche vergrößerungsglas"),
-    ("🕯️", "Kerze", "gegenstaende", "licht"),
     ("💡", "Glühbirne", "gegenstaende", "hell idee lampe licht"),
     ("🔦", "Taschenlampe", "gegenstaende", "lampe licht"),
     ("📔", "Notizbuch mit dekorativem Einband", "gegenstaende", "einband notizbuch"),
@@ -1526,8 +1502,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
     ),
     ("🚰", "Trinkwasser", "symbole", "wasser wasserhahn"),
     ("🚾", "WC", "symbole", "toilette"),
-    ("🛂", "Passkontrolle", "symbole", "pass"),
-    ("🛃", "Zollkontrolle", "symbole", "zoll"),
     ("🛄", "Gepäckausgabe", "symbole", "gepäck"),
     ("🛅", "Gepäckaufbewahrung", "symbole", "gepäck schließfach"),
     ("⚠️", "Warnung", "symbole", "achtung dreieck vorsicht warnschild"),
@@ -1709,7 +1683,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
         "symbole",
         "division divisionszeichen geteilt geteiltzeichen mathe ÷",
     ),
-    ("♾️", "Unendlichkeit", "symbole", "ewig grenzenlos unendlich"),
     (
         "‼️",
         "doppeltes Ausrufezeichen",
@@ -1745,7 +1718,6 @@ EMOJI_MOTIVE: Tuple[Tuple[str, str, str, str], ...] = (
         "bezahlen dollar dollar-zeichen geld knete moneten teuer usd währung",
     ),
     ("♻️", "Recycling-Symbol", "symbole", "grüne punkt grüner punkt recycling"),
-    ("⚜️", "Lilie", "symbole", "fleur-de-lis"),
     ("📛", "Namensschild", "symbole", "schild"),
     ("⭕", "hohler roter Kreis", "symbole", "großer kreis kreis o rot"),
     ("✅", "weißes Häkchen", "symbole", "abgehakt erledigt"),

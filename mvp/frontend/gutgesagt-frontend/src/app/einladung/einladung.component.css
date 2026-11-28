@@ -103,8 +103,17 @@ form .email + button {
   overflow-wrap: anywhere;
 }
 
-.team-motiv-zeile app-team-motiv {
+.team-motiv-zeile .motiv-scheibe {
   flex: none;
+  display: inline-grid;
+  place-items: center;
+}
+
+.team-motiv-zeile .motiv-scheibe.emoji {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--emoji-grund);
 }
 
 /* Hinweis im Kasten, gut lesbar (nicht leise): betrifft, ob überhaupt gespeichert wird */

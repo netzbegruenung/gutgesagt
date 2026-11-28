@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatAutocompleteModule, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -28,7 +28,7 @@ interface Gruppe {
   template: `
     <div class="motiv-auswahl" role="group" aria-labelledby="motiv-auswahl-titel">
       <span id="motiv-auswahl-titel" class="motiv-titel">Motiv</span>
-      <p class="motiv-gewaehlt" aria-live="polite" data-testid="motiv-gewaehlt">
+      <p id="motiv-gewaehlt" class="motiv-gewaehlt" aria-live="polite" data-testid="motiv-gewaehlt">
         @if (motiv) {
           <span class="medaillon" aria-hidden="true">
             <app-team-motiv [motiv]="motiv" [name]="gewaehltName" [zierde]="true" [groesse]="20"></app-team-motiv>
@@ -51,9 +51,11 @@ interface Gruppe {
         <mat-form-field appearance="outline" subscriptSizing="dynamic" class="motiv-suche">
           <mat-label>Motiv suchen</mat-label>
           <input matInput type="text" autocomplete="off" [matAutocomplete]="auto" [(ngModel)]="suche"
-                 (ngModelChange)="aktualisieren()" data-testid="motiv-suche" />
+                 #trigger="matAutocompleteTrigger" aria-describedby="motiv-gewaehlt"
+                 (ngModelChange)="aktualisieren()" (keydown.enter)="enter($event, trigger)"
+                 data-testid="motiv-suche" />
           <mat-hint>Etwa „Baum“, „Fahrrad“ oder „Stern“. Pfeiltasten wählen, Enter übernimmt.</mat-hint>
-          <mat-autocomplete #auto="matAutocomplete" hideSingleSelectionIndicator
+          <mat-autocomplete #auto="matAutocomplete" hideSingleSelectionIndicator autoActiveFirstOption
                             (optionSelected)="waehlen($event.option.value)">
             @for (g of gruppen; track g.schluessel) {
               <mat-optgroup [label]="g.name">
@@ -123,6 +125,18 @@ export class MotivAuswahlComponent implements OnChanges {
     this.gruppen = namen
       .map((k) => ({ ...k, motive: treffer.filter((m) => m.kategorie === k.schluessel) }))
       .filter((g) => g.motive.length > 0);
+  }
+
+  /**
+   * Enter im Suchfeld schickt nie das Formular ab: Mit offener Liste übernimmt Material die
+   * aktive Option (die erste ist vorausgewählt), sonst öffnet Enter die Liste.
+   */
+  enter(event: Event, trigger: MatAutocompleteTrigger): void {
+    if (trigger.panelOpen && trigger.activeOption) {
+      return;
+    }
+    event.preventDefault();
+    trigger.openPanel();
   }
 
   waehlen(schluessel: string): void {

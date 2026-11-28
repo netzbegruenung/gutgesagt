@@ -66,6 +66,7 @@ describe('MotivAuswahlComponent', () => {
     fixture.detectChanges();
     flush();
     fixture.detectChanges();
+    return ereignis;
   }
 
   it('zeigt das gewählte Motiv mit Namen in einer Live-Region', () => {
@@ -120,5 +121,21 @@ describe('MotivAuswahlComponent', () => {
     expect(el().querySelector('[data-testid="motiv-gewaehlt"]')!.textContent).toContain('Gewählt: Fahrrad');
     // Danach ist das Suchfeld wieder leer
     expect(suche().value).toBe('');
+  }));
+
+  it('Enter ohne Pfeiltaste übernimmt den ersten Treffer und schickt kein Formular ab', fakeAsync(() => {
+    tippen('fahrrad');
+    const ereignis = taste('Enter');
+
+    expect(fixture.componentInstance.motiv).toBe('🚲');
+    expect(ereignis.defaultPrevented).toBeTrue();
+  }));
+
+  it('Enter bei geschlossener Liste schickt kein Formular ab', fakeAsync(() => {
+    const ereignis = taste('Enter');
+
+    expect(ereignis.defaultPrevented).toBeTrue();
+    expect(fixture.componentInstance.motiv).toBe('🌻');
+    flush();
   }));
 });

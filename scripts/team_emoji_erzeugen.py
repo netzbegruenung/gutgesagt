@@ -17,6 +17,10 @@ Aufgenommen werden nur (Vorgabe Jura, vorläufig, 28.11.2026):
   Weltanschauung, Gender und Sexualität, Gesundheit, Behinderung, Medizin und Körper,
   Herkunft, Waffen, mehrdeutige Zeichen).
 
+Alltagsessen bleibt drin, auch wenn es aus einer Küche kommt (Döner, Sushi, Taco):
+Es sagt etwas über Geschmack, nicht über Herkunft. Draußen sind Kleidung, Feste und
+Zeichen, die für eine Kultur oder einen Glauben stehen.
+
 Aufruf mit dem Verzeichnis einer vorhandenen Kopie von emojibase-data:
     python3 scripts/team_emoji_erzeugen.py <pfad>/node_modules/emojibase-data
 Danach Black über die erzeugte Datei laufen lassen (pre-commit macht das).
@@ -141,6 +145,22 @@ AUSGESCHLOSSEN_ZEICHEN = {
     0x1F51E: "Minderjährigen verboten",
     0x1F53B: "rotes Dreieck nach unten (Kennzeichen der Hamas)",
     0x1F349: "Wassermelone (Symbol einer politischen Haltung)",
+    # Gesundheit, Behinderung und Sexualität über Symbole (Review 28.11.)
+    0x1F9E9: "Puzzleteil (Autismus)",
+    0x1F980: "Krebs (Name liest sich als Krankheit, Sternzeichen)",
+    0x1F321: "Thermometer (Fieber)",
+    0x267E: "Unendlichkeit (Neurodiversität, Polyamorie)",
+    0x1F380: "pinke Schleife (Brustkrebs)",
+    # Religion und Herkunft über Symbole
+    0x1F56F: "Kerze (Andacht, wie die Diya-Lampe)",
+    0x1F319: "Mondsichel (wie der Halbmond)",
+    0x2618: "Kleeblatt (Nationalsymbol, Dreifaltigkeit)",
+    0x269C: "Lilie (Marien- und Königszeichen)",
+    0x1F6C2: "Passkontrolle (Migration)",
+    0x1F6C3: "Zoll (Migration)",
+    # Gender: Kleidung, die als Damenkleidung gilt
+    0x1F97F: "flacher Schuh",
+    0x1F45D: "Clutch",
     # Blutgruppen (Gesundheit)
     0x1F170: "Blutgruppe A",
     0x1F171: "Blutgruppe B",
@@ -178,7 +198,7 @@ def eintraege(quelle: pathlib.Path):
             continue
         # Vollqualifiziert wie in emoji-test.txt: Zeichen mit Textdarstellung als
         # Standard (type 0) bekommen U+FE0F, die anderen stehen allein.
-        zeichen = chr(cp) + ("️" if e["type"] == 0 else "")
+        zeichen = chr(cp) + ("\ufe0f" if e["type"] == 0 else "")
         stichworte = " ".join(
             t
             for t in dict.fromkeys(e.get("tags", []))

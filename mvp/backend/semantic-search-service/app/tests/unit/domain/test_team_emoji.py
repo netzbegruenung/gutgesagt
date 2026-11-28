@@ -9,8 +9,8 @@ import pytest
 from domain.team_emoji import EMOJI_KATEGORIEN, EMOJI_MOTIVE
 from domain.teams import MOTIVE, motiv_gueltig, motiv_name
 
-ZWJ = "‍"
-VARIANTE = "️"
+ZWJ = "\u200d"
+VARIANTE = "\ufe0f"
 KATEGORIEN = {k for k, _ in EMOJI_KATEGORIEN}
 
 
@@ -115,6 +115,20 @@ def test_liste_ohne_doppelte_und_gross_genug():
         "⛑️",
         "🥼",
         "👡",
+        # Gesundheit, Behinderung, Sexualitaet, Religion und Herkunft ueber Symbole
+        "🧩",
+        "🦀",
+        "🌡️",
+        "♾️",
+        "🎀",
+        "🕯️",
+        "🌙",
+        "☘️",
+        "⚜️",
+        "🛂",
+        "🛃",
+        "🥿",
+        "👝",
     ],
 )
 def test_stichproben_aus_den_sperrkategorien_fehlen(gesperrt):
@@ -143,5 +157,7 @@ def test_deutscher_kurzname_und_nur_exakte_eintraege():
     assert motiv_gueltig("⚖️")
     # Ohne Variantenwaehler ist es nicht genau der Eintrag
     assert not motiv_gueltig("⚖")
+    # Ein angehaengter Variantenwaehler macht es ebenso zu einem anderen Text
+    assert not motiv_gueltig("🌻" + VARIANTE)
     assert not motiv_gueltig(None)
     assert not motiv_gueltig("")
