@@ -84,7 +84,6 @@ app-rundgang-band {
   }
 }
 
-
 // Unterer Teil der Startseite (Startseite 28.11.): Aktions-Kacheln, darunter die Zeile
 // "Was hat dich gestoert?", zum Schluss die Traegerin. Zwischen den Bloecken einheitlich
 // --spacing-xl, mobil --spacing-lg; Kanten wie das Suchfeld im Band: 16 px Einzug, ab 752 px
@@ -99,7 +98,8 @@ app-rundgang-band {
     margin-top: var(--spacing-lg);
   }
 
-  // Ab 720 px drei gleich breite Kacheln nebeneinander (app-start-kachel stellt dann um)
+  // Ab 720 px drei gleich breite Kacheln nebeneinander (app-start-kachel stellt bei derselben
+  // Grenze um, start-kachel.component.scss; beide gemeinsam aendern)
   @media (min-width: 720px) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

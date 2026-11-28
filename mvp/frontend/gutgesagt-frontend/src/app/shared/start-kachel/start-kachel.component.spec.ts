@@ -26,11 +26,14 @@ describe('StartKachelComponent (eine Kachelart für Aktionen, Startseite 28.11.)
     expect(a.querySelector('.kachel-titel')!.textContent!.trim()).toBe('Themen im Überblick');
     expect(a.querySelector('.kachel-satz')!.textContent!.trim()).toBe('Wo es schon viele Antworten gibt und wo noch welche fehlen');
     expect(a.querySelector('.kachel-pfeil')!.getAttribute('aria-hidden')).toBe('true');
+    expect(a.getAttribute('aria-label')).toBe('Themen im Überblick: Wo es schon viele Antworten gibt und wo noch welche fehlen');
   });
 
   it('trägt die Marke „mit Konto“ nur auf Wunsch', () => {
     expect(kachel().querySelector('.kachel-konto')).toBeNull();
     TestBed.resetTestingModule();
-    expect(kachel(true).querySelector('.kachel-konto')!.textContent!.trim()).toBe('mit Konto');
+    const mitKonto = kachel(true);
+    expect(mitKonto.querySelector('.kachel-konto')!.textContent!.trim()).toBe('mit Konto');
+    expect(mitKonto.getAttribute('aria-label')).toBe('Themen im Überblick (mit Konto): Wo es schon viele Antworten gibt und wo noch welche fehlen');
   });
 });

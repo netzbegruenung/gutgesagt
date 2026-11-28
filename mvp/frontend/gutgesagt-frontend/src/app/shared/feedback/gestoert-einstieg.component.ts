@@ -11,7 +11,8 @@ import { FEEDBACK_GESTOERT_SCHALTER, gestoertOffen } from './feedback.service';
  * Textzeile unter den Kacheln mit einem Knopf in Link-Optik (Startseite 28.11.), der das
  * Feedback-Formular mit der Kategorie „gestoert“ öffnet (nur Freitext, ohne Kontakt).
  * Nur solange der Dienst `feedback_gestoert` als an meldet (Not-Aus der Basisfunktion); der
- * Stand kommt über FunktionenService und kommt beim Umschalten ohne Neuladen an. Ab dem 31.12.2026 (UTC) meldet der Dienst ihn aus, und die App prüft das
+ * Stand kommt über FunktionenService und kommt beim Umschalten ohne Neuladen an. Ab dem
+ * 31.12.2026 (UTC) meldet der Dienst ihn aus, und die App prüft das
  * Datum zusätzlich selbst (gestoertOffen): Ein älterer Stand zeigt ihn dann nicht mehr.
  */
 @Component({
@@ -22,8 +23,14 @@ import { FEEDBACK_GESTOERT_SCHALTER, gestoertOffen } from './feedback.service';
   template: `
     @if (an()) {
       <p class="gestoert-zeile">
-        <button type="button" class="gestoert-einstieg" data-testid="gestoert-einstieg" (click)="oeffnen()">
-          <!-- &ngsp;: Leerzeichen im zugänglichen Namen, sonst „gestört?Sag“ -->
+        <!-- Name ausdrücklich: Leerraum zwischen Flex-Items fällt im Layout weg, sonst „gestört?Sag“ -->
+        <button
+          type="button"
+          class="gestoert-einstieg"
+          data-testid="gestoert-einstieg"
+          aria-label="Was hat dich gestört? Sag es uns in einem Satz"
+          (click)="oeffnen()"
+        >
           <span class="gestoert-frage">Was hat dich gestört?</span>&ngsp;<span class="gestoert-link">Sag es uns in einem Satz</span>&ngsp;<mat-icon class="gestoert-pfeil" aria-hidden="true">arrow_forward</mat-icon>
         </button>
       </p>

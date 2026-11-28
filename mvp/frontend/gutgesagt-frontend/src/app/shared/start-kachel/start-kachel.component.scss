@@ -1,7 +1,10 @@
-// Eine Kachelart fuer Aktionen (Startseite 28.11.): Flaeche --karte-kommentar, kein Rahmen,
-// Schatten --elevation-2 und Radius --border-radius-large fuer alle Kacheln. Im Dunkeln traegt
-// der kraeftigere Schatten (--elevation-2 dort) die Kante. Bewusst ohne Typfarben.
-// Raster und Grenze (720 px) stehen in search-view.component.scss (.start-kacheln).
+// Eine Kachelart fuer Aktionen (Startseite 28.11.): Flaeche --karte-kommentar, Schatten
+// --elevation-2 und Radius --border-radius-large fuer alle Kacheln. Rand --kachel-rand wie die
+// uebrigen Karten der Startseite: im Hellen gleich der Flaeche (unsichtbar), im Dunkeln
+// --feldrand, damit die Kante dort sichtbar bleibt. Bewusst ohne Typfarben.
+// Raster und Grenze (720 px) stehen in search-view.component.scss (.start-kacheln); beide
+// Grenzen gemeinsam aendern. Titel 20 px/600/1.2 wie die Traegerin-Ueberschrift
+// (about-teaser.component.scss), dafuer gibt es kein Token.
 
 :host {
   display: block;
@@ -16,6 +19,7 @@
   height: 100%;
   min-height: 64px;
   padding: var(--spacing-sm) var(--spacing-md);
+  border: 2px solid var(--kachel-rand, transparent);
   border-radius: var(--border-radius-large);
   background: var(--karte-kommentar, var(--flaeche));
   color: var(--text);

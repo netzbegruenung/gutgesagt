@@ -58,7 +58,7 @@ export const AUTOFOKUS_MEDIEN = '(min-width: 960px) and (hover: hover) and (poin
 })
 export class SearchViewComponent implements AfterViewInit {
   readonly kettenIcons = KETTEN_ICONS;
-  /** Themen im Ueberblick (#783): Karte wie in den Fluent-Emoji der anderen Kacheln (Startseite 28.11.). */
+  /** Themen im Ueberblick (#783): Emoji-Zeichen wie die Symbole der anderen Kacheln (System-Emoji) (Startseite 28.11.). */
   readonly themenIcon = '🗺️';
   readonly gartenZiel = ROUTES.GARTEN;
   readonly gartenTitel = PAGE_TITLES.GARTEN;
