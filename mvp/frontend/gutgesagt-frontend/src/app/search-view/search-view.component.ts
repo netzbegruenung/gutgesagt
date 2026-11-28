@@ -16,7 +16,8 @@ import { RundgangBandComponent } from '../rundgang/rundgang-band.component';
 import { SeitLetztemBesuchComponent } from '../seit-letztem-besuch/seit-letztem-besuch.component';
 import { NaechsterSchrittComponent } from '../naechster-schritt/naechster-schritt.component';
 import { SaalSpruchComponent } from '../saal-spruch/saal-spruch.component';
-import { GartenHinweisComponent } from '../garten/garten-hinweis.component';
+import { StartKachelComponent } from '../shared/start-kachel/start-kachel.component';
+import { PAGE_TITLES, ROUTES } from '../shared/constants/app.constants';
 import { GestoertEinstiegComponent } from '../shared/feedback/gestoert-einstieg.component';
 import { SaisonZielComponent } from '../saison-ziel/saison-ziel.component';
 import { HeroUnterzeileComponent } from './hero-unterzeile.component';
@@ -46,7 +47,7 @@ export const AUTOFOKUS_MEDIEN = '(min-width: 960px) and (hover: hover) and (poin
     SeitLetztemBesuchComponent,
     NaechsterSchrittComponent,
     SaalSpruchComponent,
-    GartenHinweisComponent,
+    StartKachelComponent,
     GestoertEinstiegComponent,
     SaisonZielComponent,
     HeroUnterzeileComponent,
@@ -57,6 +58,10 @@ export const AUTOFOKUS_MEDIEN = '(min-width: 960px) and (hover: hover) and (poin
 })
 export class SearchViewComponent implements AfterViewInit {
   readonly kettenIcons = KETTEN_ICONS;
+  /** Themen im Ueberblick (#783): Emoji-Zeichen wie die Symbole der anderen Kacheln (System-Emoji) (Startseite 28.11.). */
+  readonly themenIcon = '🗺️';
+  readonly gartenZiel = ROUTES.GARTEN;
+  readonly gartenTitel = PAGE_TITLES.GARTEN;
   readonly autofokus = typeof window !== 'undefined' && !!window.matchMedia?.(AUTOFOKUS_MEDIEN).matches;
   /** Erst wenn feststeht, dass niemand angemeldet ist: kein Aufblitzen fuer Angemeldete. */
   readonly anonym$ = inject(AuthService).userInfo$.pipe(map((info) => info?.isAuthenticated === false));

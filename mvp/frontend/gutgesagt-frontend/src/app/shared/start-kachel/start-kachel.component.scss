@@ -1,0 +1,153 @@
+// Eine Kachelart fuer Aktionen (Startseite 28.11.): Flaeche --karte-kommentar, Schatten
+// --elevation-2 und Radius --border-radius-large fuer alle Kacheln. Rand --kachel-rand wie die
+// uebrigen Karten der Startseite: im Hellen gleich der Flaeche (unsichtbar), im Dunkeln
+// --feldrand, damit die Kante dort sichtbar bleibt. Bewusst ohne Typfarben.
+// Raster und Grenze (720 px) stehen in search-view.component.scss (.start-kacheln); beide
+// Grenzen gemeinsam aendern. Titel 20 px/600/1.2 wie die Traegerin-Ueberschrift
+// (about-teaser.component.scss), dafuer gibt es kein Token.
+
+:host {
+  display: block;
+}
+
+// Handy und schmale Spalte: eine Zeile, Symbol links, Pfeil rechts
+.start-kachel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 64px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 2px solid var(--kachel-rand, transparent);
+  border-radius: var(--border-radius-large);
+  background: var(--karte-kommentar, var(--flaeche));
+  color: var(--text);
+  text-decoration: none;
+  // Als Knopf erkennbar: leicht erhoben in Ruhe, beim Zeigen hoeher und eine Spur dunkler,
+  // beim Druecken flach (Designrunde 17.11.)
+  box-shadow: var(--elevation-2);
+  transition: box-shadow var(--transition-fast, 0.2s), transform var(--transition-fast, 0.2s),
+    background-color var(--transition-fast, 0.2s);
+
+  &:hover,
+  &:focus-visible {
+    box-shadow: var(--elevation-6);
+    transform: translateY(-2px);
+    background: color-mix(in srgb, var(--karte-kommentar, var(--flaeche)) 92%, var(--akzent-tanne, #00563a));
+  }
+
+  &:active {
+    box-shadow: var(--elevation-1);
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &:hover,
+    &:focus-visible {
+      transform: none;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--akzent-tanne);
+    outline-offset: 2px;
+  }
+}
+
+// Desktop, drei nebeneinander: Symbol oben links, Pfeil oben rechts, Titel und Halbsatz darunter
+@media (min-width: 720px) {
+  .start-kachel {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'icon pfeil'
+      'text text';
+    // Zeilen oben buendig: Titel stehen in allen drei Kacheln auf einer Hoehe
+    align-content: start;
+    align-items: center;
+    row-gap: var(--spacing-sm);
+    column-gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
+  }
+
+  .kachel-icon {
+    grid-area: icon;
+    // Gleich hohe Symbolzeile, auch wenn die Emoji verschieden hoch zeichnen
+    height: 32px;
+  }
+
+  .kachel-text {
+    grid-area: text;
+  }
+
+  .kachel-pfeil {
+    grid-area: pfeil;
+  }
+}
+
+.kachel-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.kachel-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  // Fuer die Marke "mit Konto": Alle Kacheln sind gleich breit, die Abfrage greift in allen.
+  container-type: inline-size;
+}
+
+.kachel-titel {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--akzent-schrift);
+}
+
+// Kurzer Halbsatz unter dem Titel: was dahinter passiert (Persona-Runde 18.11.)
+.kachel-satz {
+  font-size: 15px;
+  line-height: 1.3;
+  color: var(--text);
+
+  @media (max-width: 599px) {
+    font-size: 14px;
+  }
+}
+
+// Anonym: kleiner Hinweis neben dem Titel, dass es ein Konto braucht (#644). Reicht der Platz
+// neben dem laengeren Titel ("Einwerfen") nicht, rutscht er in beiden Kacheln unter den
+// Titel, nicht nur in einer (Designrunde 12.11.). Schwelle: Breite von "Einwerfen" samt
+// Marke bei 20 px Titel (rund 152 px), mit etwas Luft.
+.kachel-konto {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--mitmachen-kachel-marke, var(--bg-main));
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-leise);
+  vertical-align: middle;
+}
+
+@container (max-width: 159.98px) {
+  .kachel-konto {
+    display: table;
+    margin: 2px 0 0;
+  }
+}
+
+.kachel-pfeil {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  font-size: 28px;
+  color: var(--akzent-schrift);
+}

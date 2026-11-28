@@ -1392,6 +1392,46 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     expect(abschnittIn(seiteMit('teams'), 'Teams')).not.toContain('Quests');
   });
 
+  // Team-Fortschritt quasi-live: Wortlaute der Jura-Akte vom 28.11.2026, nur mit team_live
+  const TEAM_LIVE =
+    'Diese Summe sehen nur Mitglieder des Teams, erst wenn mindestens fünf Mitglieder eingewilligt haben, ' +
+    'gerundet und nie mit einzelnen Namen: für abgeschlossene Wochen und, in Teams mit mindestens 20 Mitgliedern ' +
+    'mit Einwilligung, auch für den laufenden Tag bis zur letzten vollen Stunde. Eine Stunde zählt dort erst mit, ' +
+    'wenn in ihr mindestens zehn verschiedene Mitglieder beigetragen haben; sonst kommt sie mit der nächsten dazu. ' +
+    'Diese Tageszahl runden wir auf zehn ab und zeigen sie nur, während wir sie für eine Veranstaltung ' +
+    'eingeschaltet haben. Die Stundenzahlen löschen wir mit Ende der Woche, danach bleibt nur die Wochensumme.';
+  const TEAM_LIVE_MITGLIEDER =
+    'In diesen Teams sehen Mitglieder auch, wie viele dabei sind, auf zehn gerundet und zur vollen Stunde aktualisiert.';
+  const TEAM_LIVE_QUEST = 'Wie weit das Team mit seiner Quest ist, zeigen wir in Dritteln, zur vollen Stunde aktualisiert.';
+
+  it('team_live: ersetzt den Satz zur Summe durch den Wortlaut der Akte, samt Mitgliederzahl', () => {
+    const text = abschnittIn(seiteMit('teams', 'team_live'), 'Teams');
+
+    expect(text).toContain(
+      'in eine Summe deines Teams eingehen. ' + TEAM_LIVE + ' ' + TEAM_LIVE_MITGLIEDER +
+        ' Was schon in die Summe deines Teams eingegangen ist',
+    );
+    expect(text).not.toContain('Diese Summe sehen nur Mitglieder des Teams, nur für abgeschlossene Wochen');
+  });
+
+  it('team_live mit team_quests: der Quest-Satz im Absatz zu Quests', () => {
+    const text = abschnittIn(seiteMit('teams', 'team_quests', 'team_live'), 'Teams');
+
+    expect(text).toContain('erst ab fünf Mitgliedern. ' + TEAM_LIVE_QUEST);
+  });
+
+  it('ohne team_live: der bisherige Satz, kein Wort zu Tagen, Stunden oder Dritteln', () => {
+    const text = abschnittIn(seiteMit('teams', 'team_quests'), 'Teams');
+
+    expect(text).toContain(
+      'Diese Summe sehen nur Mitglieder des Teams, nur für abgeschlossene Wochen, erst wenn mindestens fünf ' +
+        'Mitglieder eingewilligt haben, gerundet und nie mit einzelnen Namen.',
+    );
+    expect(text).not.toContain('laufenden Tag');
+    expect(text).not.toContain('Stunde');
+    expect(text).not.toContain('Dritteln');
+  });
+
   // Juristische Vorgabe vom 27.11.: Quest-Punkte im Absatz „Mit Punkten zeigen wir dir …“, nur mit
   // team_quests und spielgefuehl_buehne
   const PUNKTE_QUESTS =

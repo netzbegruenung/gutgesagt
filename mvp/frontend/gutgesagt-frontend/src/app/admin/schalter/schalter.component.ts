@@ -14,7 +14,7 @@ import { SaisonsComponent } from '../saisons/saisons.component';
 import { SaalSpruecheComponent } from '../saal-sprueche/saal-sprueche.component';
 
 /**
- * Anzeigenamen der Schalter (Schalter-Umbau 27.11.: vier Pakete, sieben Einzelschalter);
+ * Anzeigenamen der Schalter (Schalter-Umbau 27.11.: vier Pakete, acht Einzelschalter);
  * unbekannte zeigen ihren technischen Namen.
  */
 const TITEL: Record<string, string> = {
@@ -25,6 +25,7 @@ const TITEL: Record<string, string> = {
   k_begruessung: 'Paket BDK-Begrüßung',
   // Einzelschalter
   team_quests: 'Team-Quests',
+  team_live: 'Team-Fortschritt quasi-live',
   muster_stimmen: 'Muster-Hinweise aus Zustimmungen',
   teams_oeffentlich: 'Teams am Anzeigenamen',
   merkliste: 'Merkliste',
@@ -40,6 +41,7 @@ const TITEL: Record<string, string> = {
  */
 const VORAUSSETZUNG: Record<string, [string, string][]> = {
   team_quests: [['teams', 'Paket Teams']],
+  team_live: [['teams', 'Paket Teams']],
   teams_oeffentlich: [['teams', 'Paket Teams']],
   // Der Zweck Zustimmungen steht im Wortlaut des Spielgefühls
   muster_stimmen: [['spielgefuehl_buehne', 'Paket Spielgefühl']],
@@ -81,6 +83,8 @@ export interface SchalterGruppe {
 /** Anzeigenamen der Einstellungen; unbekannte zeigen ihren technischen Namen. */
 const EINSTELLUNG_TITEL: Record<string, string> = {
   aktuelle_saison: 'Aktuelle Saison',
+  // Jura-Akte 28.11.2026: danach wirkt team_live nicht mehr, auch wenn er an steht
+  team_live_bis: 'Team-Fortschritt quasi-live bis (BDK-Ende)',
 };
 
 /**

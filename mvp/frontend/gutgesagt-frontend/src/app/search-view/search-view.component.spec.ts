@@ -93,12 +93,22 @@ describe('SearchViewComponent', () => {
     expect(suche.beispielAnimation).toBeTrue();
   });
 
-  it('fuehrt mit zwei Kacheln zum Einwerfen und zum Verfassen', () => {
+  // Startseite 28.11.: eine Kachelart fuer alle drei Aktionen, Themen im Ueberblick ohne Schalter
+  it('fuehrt mit drei Kacheln derselben Art zum Einwerfen, zum Verfassen und zu den Themen', () => {
     const kacheln: HTMLAnchorElement[] = Array.from(
-      fixture.nativeElement.querySelectorAll('a.start-kachel'),
+      fixture.nativeElement.querySelectorAll('.start-kacheln > app-start-kachel a.start-kachel'),
     );
 
-    expect(kacheln.map((kachel) => kachel.getAttribute('href'))).toEqual(['/einwerfen', '/contribute']);
+    expect(kacheln.map((kachel) => kachel.getAttribute('href'))).toEqual(['/einwerfen', '/contribute', '/garten']);
+    expect(kacheln.map((kachel) => kachel.querySelector('.kachel-icon')!.textContent!.trim())).toEqual(['📥', '🖋️', '🗺️']);
+  });
+
+  it('stellt „Was hat dich gestört?“ als Zeile unter die Kacheln, die Traegerin zum Schluss', () => {
+    const kacheln: HTMLElement = fixture.nativeElement.querySelector('.start-kacheln');
+
+    expect(kacheln.nextElementSibling!.tagName.toLowerCase()).toBe('app-gestoert-einstieg');
+    expect(kacheln.nextElementSibling!.nextElementSibling!.tagName.toLowerCase()).toBe('app-about-teaser');
+    expect(fixture.nativeElement.querySelector('app-garten-hinweis')).toBeNull();
   });
 
   // Persona-Runde 18.11.: je ein kurzer Halbsatz sichtbar unter dem Titel
@@ -107,9 +117,13 @@ describe('SearchViewComponent', () => {
       fixture.nativeElement.querySelectorAll('a.start-kachel'),
     );
 
-    expect(kacheln.map((kachel) => kachel.querySelector('.kachel-titel')!.textContent!.trim())).toEqual(['Einwerfen', 'Beitragen']);
+    expect(kacheln.map((kachel) => kachel.querySelector('.kachel-titel')!.textContent!.trim())).toEqual(['Einwerfen', 'Beitragen', 'Themen im Überblick']);
     const saetze = kacheln.map((kachel) => kachel.querySelector('.kachel-satz') as HTMLElement);
-    expect(saetze.map((satz) => satz.textContent!.trim())).toEqual(['Spruch oder Fundstück schicken', 'Eigene Antwort schreiben']);
+    expect(saetze.map((satz) => satz.textContent!.trim())).toEqual([
+      'Spruch oder Fundstück schicken',
+      'Eigene Antwort schreiben',
+      'Wo es schon viele Antworten gibt und wo noch welche fehlen',
+    ]);
     saetze.forEach((satz) => expect(satz.hidden).toBeFalse());
   });
 
@@ -121,7 +135,7 @@ describe('SearchViewComponent', () => {
       );
     }
 
-    it('steht anonym an beiden Kacheln', () => {
+    it('steht anonym an Einwerfen und Beitragen, nicht an den Themen', () => {
       TestBed.inject(AuthService).setUserInfo({ isAuthenticated: false, userId: null, userName: null, claims: null });
       fixture.detectChanges();
       expect(hinweise()).toEqual(['mit Konto', 'mit Konto']);

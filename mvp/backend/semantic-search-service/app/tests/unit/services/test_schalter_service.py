@@ -2,7 +2,8 @@
 Schalter mit Obergrenze und Admin-Wert (#708): wirksam nur, wenn beide an sind; ohne
 Admin-Wert aus; Einschalten ueber die Obergrenze hinaus abgelehnt; kurzer Cache.
 
-Seit dem Schalter-Umbau (27.11.2026): vier Pakete, sieben Einzelschalter, vier
+Seit dem Schalter-Umbau (27.11.2026): vier Pakete, acht Einzelschalter (seit 28.11. mit
+team_live), vier
 Basisfunktionen mit Not-Aus; die uebrigen Basisfunktionen haben keinen Schalter mehr.
 """
 
@@ -31,6 +32,7 @@ from services.schalter_service import (
 PAKET_NAMEN = {"teams", "spielgefuehl_buehne", "wirkungs_echo", "k_begruessung"}
 EINZEL_NAMEN = {
     "team_quests",
+    "team_live",
     "muster_stimmen",
     "teams_oeffentlich",
     "merkliste",
@@ -111,7 +113,7 @@ ALLE_OBERGRENZEN = Settings(**{art.feld: True for art in SCHALTER.values()})
 # --- Bestand nach dem Umbau ----------------------------------------------------
 
 
-def test_genau_vier_pakete_und_sieben_einzelschalter():
+def test_genau_vier_pakete_und_acht_einzelschalter():
     assert len(BASISFUNKTIONEN) == 21
     assert {n for n, a in SCHALTER.items() if a.gruppe == PAKETE} == PAKET_NAMEN
     assert {n for n, a in SCHALTER.items() if a.gruppe == EINZELSCHALTER} == (
@@ -155,13 +157,13 @@ def test_obergrenze_von_haus_aus_aus(name):
 
 
 def test_rechtlich_freigegeben_und_wartet_auf_recht():
-    """Go 27.11.: freigegeben sind Pakete, team_quests und muster_stimmen; nur die
-    fuenf heiklen warten auf Recht."""
+    """Go 27.11.: freigegeben sind Pakete, team_quests und muster_stimmen, seit der
+    Jura-Akte 28.11. auch team_live; nur die fuenf heiklen warten auf Recht."""
     dienst, _, _ = _dienst()
     stand = {s.name: s for s in dienst.stand(Settings())}
 
     freigegeben = {n for n, a in SCHALTER.items() if a.rechtlich_freigegeben}
-    assert freigegeben == PAKET_NAMEN | {"team_quests", "muster_stimmen"}
+    assert freigegeben == PAKET_NAMEN | {"team_quests", "muster_stimmen", "team_live"}
     assert {n for n, s in stand.items() if s.wartet_auf_recht} == HEIKEL
     for name in HEIKEL:
         assert stand[name].dsfa_hinweis
@@ -237,6 +239,7 @@ def test_admin_werte_frueherer_teile_werden_ignoriert():
     "schalter, paket",
     [
         ("team_quests", "teams"),
+        ("team_live", "teams"),
         ("teams_oeffentlich", "teams"),
         ("muster_stimmen", "spielgefuehl_buehne"),
         ("danke_ohne_konto", "wirkungs_echo"),

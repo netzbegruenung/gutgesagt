@@ -32,6 +32,26 @@ export interface TeamQuest {
   vorige_thema_name: string | null;
 }
 
+/**
+ * Team-Fortschritt quasi-live (Schalter team_live): nur in Teams ab 20 Mitgliedern mit
+ * Einwilligung, nur aus Stundenblöcken, die der Server 15 min nach Blockende einmal
+ * vorberechnet. `tagessumme` und `bis` sind null, solange heute nichts freigegeben ist.
+ */
+export interface TeamLive {
+  /** Die letzte volle Stunde ist noch nicht freigegeben. */
+  laeuft_noch: boolean;
+  /** Auf 10 abgerundet, ab 20. */
+  mitglieder: number | null;
+  /** Volle Stunde (deutsche Zeit), bis zu der die Tagessumme reicht. */
+  bis: number | null;
+  /** „weniger als 10“ oder „rund 80“ (auf 10 abgerundet). */
+  tagessumme: string | null;
+  /** Quest-Stufe 0 bis 3 (Drittel, 3 geschafft); null ohne Quest. */
+  quest_stufe: number | null;
+  /** Vor dem Einschalten eingewilligt: einmal den Hinweis zeigen. */
+  hinweis_neu: boolean;
+}
+
 /** Eine eigene Mitgliedschaft (GET /api/v1/teams/meine). */
 export interface MeinTeam {
   /** Zum Verlassen: DELETE /api/v1/teams/meine/{id}. */
@@ -49,6 +69,8 @@ export interface MeinTeam {
   wirkung?: TeamWirkung | null;
   /** Nur mit Schalter team_quests und ab 5 Mitgliedern; fehlt oder null: nichts zeigen. */
   quest?: TeamQuest | null;
+  /** Nur mit Schalter team_live und ab 20 Mitgliedern; fehlt oder null: nichts zeigen. */
+  live?: TeamLive | null;
 }
 
 export interface MeineTeams {

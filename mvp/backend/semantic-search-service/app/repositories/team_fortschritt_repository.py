@@ -1,6 +1,7 @@
 """
 Repository fuer Team-Fortschritt und Team-Quests: der Wochenzaehler (team_wochen), die
-Quest je Team und Woche (team_quests) und, nur lesend, die Mitgliedschaften mit
+Quest je Team und Woche (team_quests), der Stundenzaehler fuer den Live-Stand
+(team_stunden, Schalter team_live) und, nur lesend, die Mitgliedschaften mit
 deckender Einwilligung. Was gezaehlt wird und warum ohne Kennung:
 services/team_fortschritt_service.py.
 
@@ -9,7 +10,7 @@ Mitgliedschaften werden nur fuer die eigene Kennung gelesen oder je Team gezaehl
 """
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Collection, Dict, Iterable, List, Optional, Tuple
 
 from sqlalchemy import delete, func, select, tuple_
@@ -20,6 +21,7 @@ from infrastructure.database.connection import AppDatabase, get_app_database
 from infrastructure.database.models import (
     TeamMitgliedschaftZeile,
     TeamQuestZeile,
+    TeamStundeZeile,
     TeamWocheZeile,
 )
 
@@ -40,6 +42,31 @@ class EigenesTeam:
     team_name: str
     saison: str
     eingetreten_am: date
+    # Zeitpunkt der Einwilligung; fuer den Hinweis an Bestandsmitglieder (team_live)
+    einwilligung_zeitpunkt: Optional[datetime] = None
+
+    @property
+    def schluessel(self) -> TeamSchluessel:
+        return (self.team_name, self.saison)
+
+
+# Stand eines Stundenblocks (Spalte team_stunden.stand)
+OFFEN = "offen"
+UEBERTRAGEN = "uebertragen"
+FREIGEGEBEN = "freigegeben"
+
+
+@dataclass(frozen=True)
+class Stunde:
+    """Ein Stundenzaehler: nur Zahlen, ohne Kennung."""
+
+    team_name: str
+    saison: str
+    block_beginn: datetime
+    anzahl: int
+    stand: str
+    freigabe: Optional[int]
+    mitglieder: Optional[int]
 
     @property
     def schluessel(self) -> TeamSchluessel:
@@ -75,6 +102,7 @@ class TeamFortschrittRepository:
             TeamMitgliedschaftZeile.team_name,
             TeamMitgliedschaftZeile.saison,
             TeamMitgliedschaftZeile.eingetreten_am,
+            TeamMitgliedschaftZeile.einwilligung_zeitpunkt,
         ).where(
             TeamMitgliedschaftZeile.konto_kennung == konto,
             TeamMitgliedschaftZeile.einwilligung_kennung.in_(list(kennungen)),
@@ -106,6 +134,21 @@ class TeamFortschrittRepository:
         with self.db.get_session() as session:
             gezaehlt = {(n, s): z for n, s, z in session.execute(abfrage).all()}
         return {t: gezaehlt.get(t, 0) for t in teams}
+
+    def einwilligende_der_saison(
+        self, saison: str, kennungen: Collection[str]
+    ) -> Dict[TeamSchluessel, int]:
+        """Je Team der Saison die Zahl der Mitglieder mit deckender Einwilligung."""
+        abfrage = (
+            select(TeamMitgliedschaftZeile.team_name, func.count())
+            .where(
+                TeamMitgliedschaftZeile.saison == saison,
+                TeamMitgliedschaftZeile.einwilligung_kennung.in_(list(kennungen)),
+            )
+            .group_by(TeamMitgliedschaftZeile.team_name)
+        )
+        with self.db.get_session() as session:
+            return {(n, saison): z for n, z in session.execute(abfrage).all()}
 
     # --- Wochenzaehler ---------------------------------------------------------
 
@@ -146,6 +189,114 @@ class TeamFortschrittRepository:
                 (n, s): Wochenzaehlung(b, w, g)
                 for n, s, b, w, g in session.execute(abfrage).all()
             }
+
+    # --- Stundenzaehler (team_live) ---------------------------------------------
+
+    def stunde_erhoehen(
+        self, teams: Iterable[TeamSchluessel], block_beginn: datetime
+    ) -> None:
+        """Den Stundenzaehler je Team fuer den Block um eins erhoehen."""
+        with self.db.get_session() as session:
+            for team_name, saison in teams:
+                anweisung = pg_insert(TeamStundeZeile).values(
+                    team_name=team_name,
+                    saison=saison,
+                    block_beginn=block_beginn,
+                    anzahl=1,
+                )
+                session.execute(
+                    anweisung.on_conflict_do_update(
+                        index_elements=["team_name", "saison", "block_beginn"],
+                        set_={"anzahl": TeamStundeZeile.anzahl + 1},
+                    )
+                )
+
+    def stunden(self, teams: Iterable[TeamSchluessel], ab: datetime) -> List[Stunde]:
+        """Die Stundenzaehler der Teams ab ``ab`` (Blockbeginn), aelteste zuerst."""
+        teams = list(set(teams))
+        if not teams:
+            return []
+        abfrage = (
+            select(TeamStundeZeile)
+            .where(
+                tuple_(TeamStundeZeile.team_name, TeamStundeZeile.saison).in_(teams),
+                TeamStundeZeile.block_beginn >= ab,
+            )
+            .order_by(TeamStundeZeile.block_beginn)
+        )
+        with self.db.get_session() as session:
+            return [
+                Stunde(
+                    z.team_name,
+                    z.saison,
+                    z.block_beginn,
+                    z.anzahl,
+                    z.stand,
+                    z.freigabe,
+                    z.mitglieder,
+                )
+                for z in session.execute(abfrage).scalars().all()
+            ]
+
+    def teams_mit_stunden(self, saison: str, ab: datetime) -> List[TeamSchluessel]:
+        """Die Teams der Saison mit einem Stundenzaehler ab ``ab``."""
+        abfrage = (
+            select(TeamStundeZeile.team_name)
+            .where(TeamStundeZeile.saison == saison, TeamStundeZeile.block_beginn >= ab)
+            .distinct()
+        )
+        with self.db.get_session() as session:
+            return [(n, saison) for n in session.execute(abfrage).scalars().all()]
+
+    def stunde_abschliessen(
+        self,
+        team: TeamSchluessel,
+        block_beginn: datetime,
+        stand: str,
+        freigabe: Optional[int],
+        mitglieder: int,
+    ) -> bool:
+        """
+        Einen Block einmal vorberechnen: Stand, freigegebene Zahl und Mitgliederzahl
+        setzen, nur solange er offen ist (legt ihn ohne Ereignisse mit 0 an). False,
+        wenn er schon vorberechnet war.
+        """
+        anweisung = pg_insert(TeamStundeZeile).values(
+            team_name=team[0],
+            saison=team[1],
+            block_beginn=block_beginn,
+            anzahl=0,
+            stand=stand,
+            freigabe=freigabe,
+            mitglieder=mitglieder,
+        )
+        with self.db.get_session() as session:
+            ergebnis = session.execute(
+                anweisung.on_conflict_do_update(
+                    index_elements=["team_name", "saison", "block_beginn"],
+                    set_={
+                        "stand": anweisung.excluded.stand,
+                        "freigabe": anweisung.excluded.freigabe,
+                        "mitglieder": anweisung.excluded.mitglieder,
+                    },
+                    where=TeamStundeZeile.stand == OFFEN,
+                )
+            )
+            return ergebnis.rowcount > 0
+
+    def erste_stunde(self) -> Optional[datetime]:
+        """Der frueheste Blockbeginn aller Stundenzaehler; None ohne Zaehler."""
+        with self.db.get_session() as session:
+            return session.execute(
+                select(func.min(TeamStundeZeile.block_beginn))
+            ).scalar()
+
+    def stunden_loeschen_vor(self, grenze: datetime) -> int:
+        """Stundenzaehler mit Blockbeginn vor der Grenze loeschen (Wochenwechsel)."""
+        with self.db.get_session() as session:
+            return session.execute(
+                delete(TeamStundeZeile).where(TeamStundeZeile.block_beginn < grenze)
+            ).rowcount
 
     # --- Quests ----------------------------------------------------------------
 
@@ -231,7 +382,7 @@ class TeamFortschrittRepository:
 
     def team_loeschen(self, team_name: str, saison: str, session=None) -> int:
         """
-        Wochenzaehler und Quests eines Teams loeschen ("entfallen mit dem Team",
+        Wochenzaehler, Stundenzaehler und Quests eines Teams loeschen ("entfallen mit dem Team",
         docs/LOESCHKONZEPT.md). Eine Team-Loeschung gibt es noch nicht; wer sie baut
         (etwa ueber team_nummern oder die Einladungen), uebergibt seine ``session``,
         damit alles in einer Transaktion geht; ohne sie eine eigene.
@@ -246,7 +397,7 @@ class TeamFortschrittRepository:
     @staticmethod
     def _team_loeschen(session, team_name: str, saison: str) -> int:
         n = 0
-        for zeile in (TeamWocheZeile, TeamQuestZeile):
+        for zeile in (TeamWocheZeile, TeamQuestZeile, TeamStundeZeile):
             n += session.execute(
                 delete(zeile).where(
                     zeile.team_name == team_name, zeile.saison == saison

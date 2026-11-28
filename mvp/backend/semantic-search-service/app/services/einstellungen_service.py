@@ -3,6 +3,9 @@ Admin-Einstellungen mit Textwert (Seite "Schalter"), neben den Schaltern
 (services/schalter_service.py). Bisher eine: ``aktuelle_saison``, der Ersatz fuer die
 aktuelle Saison der Teams, solange keine Saison begonnen hat (``aktuelle_saison()``
 unten). Standard ist das laufende Jahr (UTC), solange kein Admin etwas anderes setzt.
+Dazu ``team_live_bis``: der letzte Tag (deutsche Zeit), an dem der Schalter team_live
+wirkt (Jura-Akte 28.11.2026, BDK-Ende); danach wirkt er nicht mehr, auch wenn er an
+steht (services/schalter_service.py, ``ENDDATUM``).
 
 Gelesen wird mit kurzem Cache wie bei den Schaltern; ist die Datenbank nicht
 erreichbar, gilt der Standard.
@@ -12,6 +15,7 @@ import re
 import threading
 import time
 from dataclasses import dataclass
+from datetime import date
 from typing import Callable, Dict, List, Optional
 
 from core.logging import get_logger
@@ -23,6 +27,10 @@ logger = get_logger(__name__)
 CACHE_SEKUNDEN = 45.0
 
 AKTUELLE_SAISON = "aktuelle_saison"
+TEAM_LIVE_BIS = "team_live_bis"
+# BDK-Ende (BDK 04.-06.12.2026)
+TEAM_LIVE_BIS_STANDARD = "2026-12-06"
+_DATUM = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 _STEUERZEICHEN = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -59,6 +67,16 @@ EINSTELLUNGEN: Dict[str, Einstellungsart] = {
             max_laenge=SAISON_MAX,
             standard=lambda: str(heute_utc().year),
         ),
+        Einstellungsart(
+            name=TEAM_LIVE_BIS,
+            erklaerung=(
+                "BDK-Ende: Bis zu diesem Tag (deutsche Zeit, einschließlich) wirkt der "
+                "Team-Fortschritt quasi-live (team_live); danach nicht mehr, auch wenn "
+                "der Schalter an steht. Format JJJJ-MM-TT."
+            ),
+            max_laenge=10,
+            standard=lambda: TEAM_LIVE_BIS_STANDARD,
+        ),
     )
 }
 
@@ -83,7 +101,19 @@ def wert_bereinigen(name: str, wert: str) -> str:
     wert = " ".join(wert.split())
     if not wert or len(wert) > art.max_laenge:
         raise UngueltigerWert(name)
+    if name == TEAM_LIVE_BIS and datum_lesen(wert) is None:
+        raise UngueltigerWert(name)
     return wert
+
+
+def datum_lesen(wert: str) -> "date | None":
+    """JJJJ-MM-TT als Datum; sonst None."""
+    if not _DATUM.match(wert or ""):
+        return None
+    try:
+        return date.fromisoformat(wert)
+    except ValueError:
+        return None
 
 
 class EinstellungenService:
