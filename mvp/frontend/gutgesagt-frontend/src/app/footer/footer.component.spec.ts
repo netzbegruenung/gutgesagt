@@ -61,7 +61,7 @@ describe('FooterComponent', () => {
       'Impressum',
       'Datenschutz',
       'Nutzungsbedingungen',
-      'Melden & Kontakt',
+      'Kontakt',
     ]);
     expect(footer.lastElementChild!.classList).toContain('traeger');
   });
@@ -82,7 +82,7 @@ describe('FooterComponent', () => {
   });
 });
 
-/** „Melden & Kontakt“ im Fuß (Meldeweg, Basisfunktion seit dem Schalter-Umbau 27.11.). */
+/** „Kontakt“ im Fuß (Meldeweg, Basisfunktion seit dem Schalter-Umbau 27.11., Name seit dem Rundgang 28.11.). */
 describe('FooterComponent - Meldeweg', () => {
   let fixture: ComponentFixture<FooterComponent>;
 
@@ -104,90 +104,18 @@ describe('FooterComponent - Meldeweg', () => {
       .map((l) => l.textContent!.trim());
   }
 
-  it('ohne Schalter: „Melden & Kontakt“ als letzter Link, führt zum Meldeabschnitt im Impressum', () => {
-    expect(linkTexte().at(-1)).toBe('Melden & Kontakt');
-    const link = fixture.nativeElement.querySelector('.melden-link') as HTMLAnchorElement;
+  it('ohne Schalter: „Kontakt“ als letzter Link in der Linkzeile, führt zum Meldeabschnitt im Impressum', () => {
+    expect(linkTexte().at(-1)).toBe('Kontakt');
+    const link = fixture.nativeElement.querySelector('.footer-links > .melden-link') as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/impressum#melden');
   });
 
-  it('nennt den Meldeweg und nur die Funktionsadresse aus dem Impressum', () => {
-    const zeile = fixture.nativeElement.querySelector('.meldeweg') as HTMLElement;
-    const text = zeile.textContent!.replace(/\s+/g, ' ').trim();
-    expect(text).toBe(
-      `Fällt dir ein Beitrag auf, der nicht hierher gehört? Melde ihn über „Melden“ an der Karte, auch ohne Konto, oder per E-Mail an ${LEGAL_ENTITY.KONTAKT_MAIL}.`,
-    );
-    const mails = Array.from(zeile.querySelectorAll('a[href^="mailto:"]')).map((a) => a.getAttribute('href'));
-    expect(mails).toEqual([`mailto:${LEGAL_ENTITY.KONTAKT_MAIL}`]);
-    // Keine Personennamen aus den Rechtstexten
-    expect(text).not.toContain(LEGAL_ENTITY.ADRESSZUSATZ.replace('c/o ', ''));
-    for (const name of LEGAL_ENTITY.VORSTAND.split(' und ')) {
-      expect(text).not.toContain(name);
-    }
+  it('ohne den Absatz zum Melden (Rundgang 28.11.): nur Links und Trägerzeile, keine Mailadresse', () => {
+    expect(fixture.nativeElement.querySelector('.meldeweg')).toBeNull();
+    expect(fixture.nativeElement.querySelector('a[href^="mailto:"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Fällt dir ein Beitrag auf');
+    expect(fixture.nativeElement.textContent).not.toContain(LEGAL_ENTITY.KONTAKT_MAIL);
     // Die Trägerzeile bleibt die letzte Zeile des Fußes
     expect(fixture.nativeElement.querySelector('.footer').lastElementChild!.classList).toContain('traeger');
-  });
-});
-
-describe('buildKennung', () => {
-  it('kuerzt den Commit auf sieben Zeichen', () => {
-    expect(buildKennung('1.1.0', '3523b55f0e1d2c3b4a5968778695a4b3c2d1e0f9')).toBe('v1.1.0 · 3523b55');
-  });
-
-  it('sagt dev ohne Commit oder mit unersetztem Platzhalter', () => {
-    expect(buildKennung('1.1.0', undefined)).toBe('v1.1.0 · dev');
-    expect(buildKennung('1.1.0', '')).toBe('v1.1.0 · dev');
-    expect(buildKennung('1.1.0', '${GIT_SHA}')).toBe('v1.1.0 · dev');
-  });
-
-  // #327: Beim Release-Build kommt die Version aus dem Git-Tag, package.json muss nicht mit.
-  it('nimmt die Version aus dem Git-Tag, wenn der Build sie mitgibt', () => {
-    expect(buildKennung('0.8.0', '3523b55f0e1d', 'v0.9.0')).toBe('v0.9.0 · 3523b55');
-    expect(buildKennung('0.8.0', '3523b55f0e1d', '0.9.0')).toBe('v0.9.0 · 3523b55');
-  });
-
-  // Entscheidung @BanSe 03.11. (#542): Builds auf main zeigen "main" statt einer Version.
-  it('zeigt main ohne v fuer Builds auf main', () => {
-    expect(buildKennung('0.8.0', '3523b55f0e1d', 'main')).toBe('main · 3523b55');
-  });
-
-  it('nimmt package.json ohne Tag-Version oder mit unersetztem Platzhalter', () => {
-    expect(buildKennung('0.8.0', '3523b55', undefined)).toBe('v0.8.0 · 3523b55');
-    expect(buildKennung('0.8.0', '3523b55', '')).toBe('v0.8.0 · 3523b55');
-    expect(buildKennung('0.8.0', '3523b55', '${APP_VERSION}')).toBe('v0.8.0 · 3523b55');
-  });
-});
-
-describe('buildWerteAusSeite', () => {
-  function seite(kopf: string): Document {
-    return new DOMParser().parseFromString(`<html><head>${kopf}</head><body></body></html>`, 'text/html');
-  }
-
-  it('liest Commit und Version aus den meta-Tags, die replace-env.sh fuellt', () => {
-    const werte = buildWerteAusSeite(seite(
-      '<meta name="gutgesagt-commit" content="b511305abc"><meta name="gutgesagt-version" content="main">'));
-
-    expect(werte).toEqual({ gitSha: 'b511305abc', appVersion: 'main' });
-    expect(buildKennung('0.8.5', werte.gitSha, werte.appVersion)).toBe('main · b511305');
-  });
-
-  it('faellt ohne meta-Tags auf dev und package.json zurueck', () => {
-    const werte = buildWerteAusSeite(seite(''));
-
-    expect(werte).toEqual({ gitSha: undefined, appVersion: undefined });
-    expect(buildKennung('0.8.5', werte.gitSha, werte.appVersion)).toBe('v0.8.5 · dev');
-  });
-
-  it('faellt mit unersetzten Platzhaltern (ng serve) auf dev und package.json zurueck', () => {
-    const werte = buildWerteAusSeite(seite(
-      '<meta name="gutgesagt-commit" content="${GIT_SHA}"><meta name="gutgesagt-version" content="${APP_VERSION}">'));
-
-    expect(buildKennung('0.8.5', werte.gitSha, werte.appVersion)).toBe('v0.8.5 · dev');
-  });
-
-  it('nimmt package.json bei leerer Version aus replace-env.sh', () => {
-    const werte = buildWerteAusSeite(seite(
-      '<meta name="gutgesagt-commit" content="b511305"><meta name="gutgesagt-version" content="">'));
-
-    expect(buildKennung('0.8.5', werte.gitSha, werte.appVersion)).toBe('v0.8.5 · b511305');
   });
 });

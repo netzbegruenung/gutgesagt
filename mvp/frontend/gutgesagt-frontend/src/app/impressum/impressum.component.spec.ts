@@ -36,7 +36,7 @@ describe('ImpressumComponent', () => {
     expect(text).not.toContain('richtest du bitte per E-Mail an');
   });
 
-  it('ist Ziel von „Melden & Kontakt“ im Fuß: der Abschnitt zum Melden trägt die id „melden“', () => {
+  it('ist Ziel von „Kontakt“ im Fuß: der Abschnitt zum Melden trägt die id „melden“', () => {
     const ziel = seite.querySelector('#melden') as HTMLElement;
 
     expect(ziel.querySelector('h2')!.textContent!.trim()).toBe('Kontaktstelle nach Art. 11 und 12 DSA');

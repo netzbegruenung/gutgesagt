@@ -196,6 +196,12 @@ describe('HelpDialogComponent', () => {
     expect(text).toContain('„passt auf Mastodon/Bluesky/X“');
   });
 
+  // Rundgang 28.11.: Der Fuß nennt den Meldeweg nicht mehr, die Hilfe sagt ihn (auch ohne Konto)
+  it('erklärt, wie man über die Karte meldet, auch ohne Konto', () => {
+    const text = (fixture.nativeElement.querySelector('.hilfe-melden') as HTMLElement).textContent!.replace(/\s+/g, ' ').trim();
+    expect(text).toBe('Passt ein Beitrag nicht hierher? Tipp an der Karte auf „Melden“, das geht auch ohne Konto.');
+  });
+
   // Persona-Test Gerd: die Antwort auf „Nutzt Gut gesagt KI?“ bleibt, kurz, mit den Sätzen der Über-Seite
   it('beantwortet „Nutzt Gut gesagt KI?“ kurz mit den Sätzen der Über-Seite und verlinkt die Technik', () => {
     const ki = fixture.nativeElement.querySelector('.hilfe-ki') as HTMLElement;
