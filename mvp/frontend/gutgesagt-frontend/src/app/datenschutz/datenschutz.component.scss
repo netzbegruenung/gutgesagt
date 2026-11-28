@@ -42,7 +42,8 @@
 }
 
 // Fokusziel der Sprunglinks (springen): kein Rahmen um den ganzen Absatz, wie #hauptinhalt
-.legal-section[tabindex='-1']:focus {
+.legal-section[tabindex='-1']:focus,
+#fotos:focus {
   outline: none;
 }
 

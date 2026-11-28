@@ -40,6 +40,24 @@
         Vertreten durch den Vorstand nach § 26 BGB: {{ VEREIN.VORSTAND }}.
         Weitere Angaben findest du im <a routerLink="/impressum">Impressum</a>.
       </p>
+      <!-- Fotos am Stand: Wortlaut der juristischen Prüfung vom 28.11.2026, Kanäle nach S8; ohne Schalter -->
+      <div id="fotos" tabindex="-1" data-testid="dse-fotos">
+        <h3>Fotos am Stand</h3>
+        <p>
+          Auf Veranstaltungen wie der BDK fotografieren wir an unserem Stand nur Menschen ab 18,
+          die vorher schriftlich eingewilligt haben (Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2
+          lit. a DSGVO). Die Fotos zeigen wir auf gruene.social (Mastodon) und in den
+          Signal-Gruppen Netzfeuerwehr und Erste Entdecker. gruene.social betreiben wir selbst;
+          Mastodon verteilt Beiträge an andere Server weltweit, auch außerhalb der EU. Löschen
+          wir ein Foto, senden wir die Löschung an diese Server, können aber nicht garantieren,
+          dass jeder sie umsetzt. Nicht genutzte Fotos löschen wir nach vier Wochen, genutzte,
+          wenn du widerrufst oder wir sie nicht mehr brauchen. Das Kärtchen mit deiner
+          Einwilligung bewahren wir als Nachweis auf, solange das Foto genutzt wird, und danach
+          drei Jahre. Widerrufen kannst du jederzeit mit der Nummer deines Kärtchens an
+          <a href="mailto:{{ KONTAKT_MAIL }}">{{ KONTAKT_MAIL }}</a>. Du hast die Rechte aus dem
+          Abschnitt ‚Deine Rechte‘, auch das Recht auf Beschwerde bei einer Aufsichtsbehörde.
+        </p>
+      </div>
     </section>
 
     <mat-divider></mat-divider>
@@ -57,8 +75,11 @@
 
     <section class="legal-section" id="was-diese-erklaerung-abdeckt" tabindex="-1">
       <h2>Was diese Erklärung abdeckt</h2>
-      <p>
-        Diese Erklärung beschreibt die Verarbeitungen auf dieser Plattform. Sie beschreibt
+      <!-- Erster Satz: Wortlaut der juristischen Prüfung vom 28.11.2026 (Fotos am Stand) -->
+      <p data-testid="dse-abdeckung">
+        Diese Erklärung beschreibt die Verarbeitungen auf dieser Plattform und, im Abschnitt
+        <a href="/datenschutz#fotos" (click)="springen($event, 'fotos')">‚Fotos am Stand‘</a>, was
+        wir außerhalb der App zeigen: Fotos vom Stand und Antworten des Tages. Sie beschreibt
         nicht, was auf anderen Websites geschieht, auf die von hier aus verlinkt wird.
       </p>
       <p>
@@ -85,8 +106,14 @@
         stehen in einem Rechenzentrum in Deutschland. Dazu gehört auch der Anmeldedienst
         samt Mailversand.
       </p>
-      <p>
-        Weitere Empfänger gibt es nicht. Wir geben keine Daten zu Werbezwecken weiter, wir
+      <!-- Empfänger außerhalb der App: Wortlaut der juristischen Prüfung vom 28.11.2026 -->
+      <p data-testid="dse-empfaenger">
+        Weitere Empfänger der Daten aus der App gibt es nicht. Was wir selbst außerhalb der App
+        zeigen, also Fotos vom Stand mit deiner Einwilligung und Antworten des Tages ohne Namen,
+        sehen die Mitglieder der Signal-Gruppen Netzfeuerwehr und Erste Entdecker und die
+        Öffentlichkeit auf gruene.social (siehe
+        <a href="/datenschutz#fotos" (click)="springen($event, 'fotos')">‚Fotos am Stand‘</a>).
+        Wir geben keine Daten zu Werbezwecken weiter, wir
         setzen keine Analysedienste Dritter ein, und wir verkaufen nichts.
       </p>
     </section>
@@ -366,6 +393,13 @@
         die Frist erst ab dem Tag zählt, an dem er den Beitrag gelöscht vorfindet. Früher
         entfernen wir ihn, wenn du uns darum bittest (siehe „Deine Rechte“); löschen wir dein
         Konto vorher, behandeln wir ihn bis dahin wie alle deine Beiträge.
+      </p>
+      <!-- Antworten außerhalb der App: Wortlaut der juristischen Prüfung vom 28.11.2026, Kanäle nach S8; ohne Schalter -->
+      <p data-testid="dse-antworten-ausserhalb">
+        Öffentliche Antworten zeigen wir manchmal auch außerhalb der App, etwa als Antwort des
+        Tages am Stand oder in unseren Kanälen. Das geschieht ohne deinen Namen, außer du hast
+        ausdrücklich eingewilligt (Art. 6 Abs. 1 lit. f DSGVO, unser Interesse: zeigen, was die
+        Community schreibt).
       </p>
       <h3>Gegenlesen beim Schreiben</h3>
       <p>
@@ -1440,6 +1474,13 @@
         Suchähnlichkeit läuft auf unseren eigenen Servern. Wir setzen keinen
         Sprach- oder Bilderkennungsdienst eines Anbieters außerhalb der EU ein.
       </p>
+      <!-- gruene.social: Wortlaut der juristischen Prüfung vom 28.11.2026 -->
+      <p data-testid="dse-eu-gruene-social">
+        Das gilt für die Verarbeitung in der App. Was wir auf gruene.social veröffentlichen
+        (Fotos vom Stand mit deiner Einwilligung, Antworten des Tages ohne Namen), ist
+        öffentlich; Mastodon verteilt es auch an Server außerhalb der EU (siehe
+        <a href="/datenschutz#fotos" (click)="springen($event, 'fotos')">‚Fotos am Stand‘</a>).
+      </p>
       <p>
         Davon zu unterscheiden ist der oben beschriebene Fall der eingebundenen Bilder: Ein
         Bild von einem fremden Server lädt dein Browser erst nach deinem Klick auf „Bild
@@ -1678,7 +1719,7 @@
     </section>
 
     <div class="update-notice">
-      <p><strong>Stand:</strong> 27. November 2026</p>
+      <p><strong>Stand:</strong> 28. November 2026</p>
     </div>
   </div>
 </div>

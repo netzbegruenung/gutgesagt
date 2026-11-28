@@ -97,6 +97,11 @@ export class DatenschutzComponent {
     history.replaceState(history.state, '', `${location.pathname}${location.search}#${anker}`);
   }
   /**
+   * Aufruf mit Fragment (/datenschutz#fotos vom Kärtchen am Stand): Der Router scrollt mit
+   * window.scrollTo und kennt scroll-padding nicht; am Handy läge die Überschrift unter dem
+   * klebenden Kopf. Steht das Ziel beim ersten Zeichnen, springt die Seite deshalb nach dem
+   * Router (setTimeout: dessen Sprung wartet ebenfalls einen Takt) noch einmal wie springen().
+   *
    * Anker hinter einem Schalter (etwa #spielgefuehl, #rangliste): Beim Aufruf mit Fragment
    * steht der Absatz oft noch nicht, weil GET /api/v1/funktionen erst antworten muss; der
    * Router scrollt dann ins Leere und die Person landet oben in der langen Erklärung.
@@ -114,6 +119,8 @@ export class DatenschutzComponent {
     afterNextRender(
       () => {
         if (document.getElementById(anker)) {
+          const takt = setTimeout(() => this.zumAnker(anker));
+          this.destroyRef.onDestroy(() => clearTimeout(takt));
           return;
         }
         this.funktionen
@@ -121,24 +128,26 @@ export class DatenschutzComponent {
           .pipe(take(1), takeUntilDestroyed(this.destroyRef))
           .subscribe(() =>
             afterNextRender(
-              () => {
-                const ziel = document.getElementById(anker);
-                if (!ziel) {
-                  return;
-                }
-                // Wie springen(): Fokus mit, damit Tab dort weitergeht (WCAG 2.4.3).
-                ziel.scrollIntoView({ block: 'start' });
-                if (!ziel.hasAttribute('tabindex')) {
-                  ziel.setAttribute('tabindex', '-1');
-                }
-                ziel.focus({ preventScroll: true });
-              },
+              () => this.zumAnker(anker),
               { injector: this.injector },
             ),
           );
       },
       { injector: this.injector },
     );
+  }
+
+  /** Wie springen(): scrollIntoView beachtet scroll-padding, Fokus mit, damit Tab dort weitergeht (WCAG 2.4.3). */
+  private zumAnker(anker: string): void {
+    const ziel = document.getElementById(anker);
+    if (!ziel) {
+      return;
+    }
+    ziel.scrollIntoView({ block: 'start' });
+    if (!ziel.hasAttribute('tabindex')) {
+      ziel.setAttribute('tabindex', '-1');
+    }
+    ziel.focus({ preventScroll: true });
   }
 
   /** Merker der Meilensteine im Browser; der Absatz dazu steht erst, wenn er an ist (§ 25 TDDDG). */
