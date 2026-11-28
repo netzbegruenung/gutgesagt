@@ -38,7 +38,7 @@ describe('Texte der Teams', () => {
     const text = teamBegruessungSaetze('Bayreuth').join(' ');
 
     expect(text).toContain('dass du im Team Bayreuth bist, mit deiner Nummer und dem Tag');
-    expect(text).toContain('Das siehst nur du, unter „Meine Teams“.');
+    expect(text).toContain('Das siehst nur du, in „Meine Beiträge“ unter „Meine Teams“.');
     expect(text).toContain('auf deine politische Haltung und deinen Ort schließen lassen');
     expect(text).toContain('mit „Team verlassen“ widerrufen, dann löschen wir es sofort');
   });

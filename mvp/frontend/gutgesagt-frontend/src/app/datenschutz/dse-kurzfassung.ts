@@ -62,8 +62,9 @@ export const KURZFASSUNG_SAETZE: readonly KurzfassungSatz[] = [
   {
     // Wie man löscht und widerruft
     text:
-      'Jede Einwilligung kannst du unter „Meine Beiträge“ widerrufen und dein Konto jederzeit ' +
-      'löschen.',
+      'Jede Einwilligung kannst du jederzeit widerrufen: die zur Mitwirkung in den ' +
+      'Datenschutz-Einstellungen im Profilmenü, alle anderen unter „Meine Beiträge“. Dein ' +
+      'Konto kannst du jederzeit löschen.',
     anker: KURZFASSUNG_ANKER.loeschen,
     linkText: 'Mehr dazu',
   },

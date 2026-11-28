@@ -56,7 +56,7 @@ export function teamDabeiSatz(mitglieder: number, naechsteNummer: number): strin
 export function teamBegruessungSaetze(team: string): readonly string[] {
   return [
     `Wenn du willst, speichern wir an deinem Konto, dass du im Team ${team} bist, mit deiner Nummer und dem Tag.`,
-    `Das siehst nur du, unter „${MEINE_TEAMS_TITEL}“.`,
+    `Das siehst nur du, in „Meine Beiträge“ unter „${MEINE_TEAMS_TITEL}“.`,
     'Weil Gut gesagt grüne Argumente sammelt, kann das zusammen mit dem Teamnamen auf deine politische Haltung und deinen Ort schließen lassen.',
     `Du kannst das jederzeit unter „${MEINE_TEAMS_TITEL}“ mit „${TEAM_VERLASSEN}“ widerrufen, dann löschen wir es sofort.`,
   ];
