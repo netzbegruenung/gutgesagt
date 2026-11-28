@@ -299,7 +299,8 @@ Rechtsgrundlagen wie in der Datenschutzerklärung; juristisch geprüft hat sie n
   (`team-oeffentlich-2026-11-25`). DSE „Teams“.
 - **Betroffene:** angemeldete Personen, die über einen Teamlink beitreten oder ein Konto
   anlegen und einwilligen.
-- **Daten:** je Mitgliedschaft Kennung, Teamname, Motiv, Saison, laufende Nummer, Tag des
+- **Daten:** je Mitgliedschaft Kennung, Teamname, Motiv (aus einer festen Liste ohne Symbole
+  zu Religion, Gesundheit, Sexualität oder Herkunft), Saison, laufende Nummer, Tag des
   Beitritts, Kennung des Wortlauts und Zeitpunkt der Einwilligung (`team_mitgliedschaften`),
   ohne Bezug zur Einladung; je Konto die jüngste Antwort auf die Anzeige am Namen
   (`team_oeffentlich`); Zähler je Team und Saison ohne Kennung (`team_nummern`); die aktuelle

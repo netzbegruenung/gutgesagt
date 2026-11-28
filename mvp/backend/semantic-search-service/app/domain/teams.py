@@ -17,6 +17,8 @@ import re
 from dataclasses import dataclass
 from typing import Collection, Dict, Optional
 
+from domain.team_emoji import EMOJI_KATEGORIEN, EMOJI_MOTIVE
+
 TEAM_NAME_MAX = 40
 SAISON_MAX = 20
 
@@ -27,8 +29,10 @@ SAISON_MAX = 20
 # Saisonname steht in keiner Adresse und keinem Pfad, Saisons gehen ueber ihre ID.
 SAISON_VERBOTEN = re.compile(r'[<>&"\\\x00-\x1f\x7f]')
 
-# Motive wie bei den Meilensteinen (Fluent Emoji, Frontend public/meilensteine/<schluessel>.svg),
-# immer mit Namen daneben. Schluessel -> Name.
+# Die ersten sechs Motive wie bei den Meilensteinen (Fluent Emoji, Frontend
+# public/meilensteine/<schluessel>.svg), immer mit Namen daneben. Schluessel -> Name.
+# Neue Teams waehlen seit 28.11.2026 aus EMOJI_MOTIVE; diese Schluessel bleiben gueltig,
+# weil es Teams mit ihnen gibt (Einladungen und Mitgliedschaften speichern den Schluessel).
 MOTIVE: Dict[str, str] = {
     "vogel": "Vogel",
     "sprechblase": "Sprechblase",
@@ -37,6 +41,28 @@ MOTIVE: Dict[str, str] = {
     "waage": "Waage",
     "lautsprecher": "Lautsprecher",
 }
+
+# Alle gueltigen Motive: die sechs Schluessel oben und die feste Positivliste aus
+# domain/team_emoji.py (ein Emoji je Eintrag, Name = deutscher CLDR-Kurzname). Gespeichert
+# wird der Schluessel bzw. das Emoji selbst; angenommen wird nur, was hier genau so steht.
+MOTIV_NAMEN: Dict[str, str] = {
+    **MOTIVE,
+    **{zeichen: name for zeichen, name, _, _ in EMOJI_MOTIVE},
+}
+
+# Kategorie -> Name fuer die Auswahl im Admin-Formular
+MOTIV_KATEGORIEN: Dict[str, str] = dict(EMOJI_KATEGORIEN)
+
+
+def motiv_gueltig(motiv: Optional[str]) -> bool:
+    """Nur exakte Eintraege der Liste, keine freien Zeichen oder Varianten."""
+    return motiv is not None and motiv in MOTIV_NAMEN
+
+
+def motiv_name(motiv: Optional[str]) -> Optional[str]:
+    """Name eines Motivs fuer Alt-Text und Beschriftung, None bei unbekanntem."""
+    return MOTIV_NAMEN.get(motiv) if motiv else None
+
 
 # Teamart an der Einladung (GLOSSARY.md "Team"). Ein Team nach Gruppe traegt den
 # Namen einer Gruppe, die oeffentlich unter diesem Namen auftritt und vorher
@@ -122,7 +148,7 @@ class TeamPille:
 
     @classmethod
     def aus(cls, name: str, motiv: Optional[str]) -> "TeamPille":
-        return cls(name=name, motiv=motiv, motiv_name=MOTIVE.get(motiv or ""))
+        return cls(name=name, motiv=motiv, motiv_name=motiv_name(motiv))
 
 
 class UnbekannterWortlaut(ValueError):

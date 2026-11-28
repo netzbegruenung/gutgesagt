@@ -18,22 +18,26 @@ import {
   EinladungTeamFelder,
   einladungslink,
 } from '../../shared/einladung/einladung.service';
+import { MotivAuswahlComponent } from '../../shared/teams/motiv-auswahl.component';
 import { TeamPilleComponent } from '../../shared/teams/team-pille.component';
 import {
   TEAMNAME_HINWEIS,
   TEAM_ARTEN,
   TEAM_GRUPPENNAME_HINWEIS,
   TEAM_GRUPPENNAME_LABEL,
-  TEAM_MOTIVE,
   TEAM_ZUSTIMMUNG_LABEL,
   TeamArt,
   TEAM_NAME_MAX,
   TEAM_SAISON_MAX,
-  TeamMotiv,
-  motivBild,
+  TeamMotivEintrag,
+  TeamMotivKategorie,
+  motivName,
   teamSaisonGueltig,
   teamTextGueltig,
 } from '../../shared/teams/teams';
+
+/** Vorauswahl des Motivs: grün, ohne Bedeutung über das Team hinaus. */
+const MOTIV_VORSCHLAG = '🌻';
 
 /** Heute plus n Tage als JJJJ-MM-TT, im Kalender des Browsers. */
 function inTagen(tage: number, heute = new Date()): string {
@@ -59,6 +63,7 @@ function inTagen(tage: number, heute = new Date()): string {
     MatIconModule,
     MatInputModule,
     MatRadioModule,
+    MotivAuswahlComponent,
     NachladeHinweisComponent,
     TeamPilleComponent,
   ],
@@ -88,10 +93,13 @@ export class EinladungenComponent implements OnInit {
 
   /** Schalter teams wirkt (Server): nur dann Teamblock und Spalten Team und Mitglieder. */
   teamsAktiv = false;
-  motive: readonly TeamMotiv[] = TEAM_MOTIVE;
+  /** Die feste Emoji-Liste vom Server (domain/team_emoji.py); ohne sie kein Teamlink. */
+  motive: readonly TeamMotivEintrag[] = [];
+  motivKategorien: readonly TeamMotivKategorie[] = [];
   teamnameHinweis = TEAMNAME_HINWEIS;
   teamName = '';
-  teamMotiv = TEAM_MOTIVE[0].schluessel;
+  /** Vorauswahl, bis die Admin etwas anderes wählt: die Sonnenblume, sonst das erste Emoji. */
+  teamMotiv = '';
   /** Teamart; Standard „Team nach Anlass, Ort oder Saison“. */
   readonly teamArten = TEAM_ARTEN;
   readonly zustimmungLabel = TEAM_ZUSTIMMUNG_LABEL;
@@ -139,9 +147,12 @@ export class EinladungenComponent implements OnInit {
     this.einloesenEingerichtet = liste.einloesen_eingerichtet;
     this.teamsAktiv = liste.teams_aktiv === true;
     if (liste.motive?.length) {
-      // Nur Motive, deren Bild es gibt: der Name steht immer daneben
-      const bekannt = liste.motive.filter((m) => motivBild(m.schluessel) !== null);
-      this.motive = bekannt.length ? bekannt : TEAM_MOTIVE;
+      this.motive = liste.motive;
+      this.motivKategorien = liste.motiv_kategorien ?? [];
+      // Eine Wahl bleibt beim Nachladen stehen, solange es sie in der Liste gibt
+      if (!this.motive.some((m) => m.schluessel === this.teamMotiv)) {
+        this.teamMotiv = this.motivVorschlag;
+      }
     }
     this.teamnameHinweis = liste.teamname_hinweis || TEAMNAME_HINWEIS;
     const vorschlag = liste.saison_vorschlag ?? liste.aktuelle_saison ?? '';
@@ -181,12 +192,21 @@ export class EinladungenComponent implements OnInit {
     }
     return (
       !this.mitTeam ||
-      (!this.teamNameUngueltig && !this.teamSaisonUngueltig && !!this.teamMotiv && !this.teamZustimmungFehlt)
+      (!this.teamNameUngueltig &&
+        !this.teamSaisonUngueltig &&
+        this.motive.some((m) => m.schluessel === this.teamMotiv) &&
+        !this.teamZustimmungFehlt)
     );
   }
 
-  motivBild(schluessel: string): string | null {
-    return motivBild(schluessel);
+  /** Vorauswahl im Formular: die Sonnenblume, wenn es sie gibt, sonst das erste Emoji. */
+  get motivVorschlag(): string {
+    return (this.motive.find((m) => m.schluessel === MOTIV_VORSCHLAG) ?? this.motive[0])?.schluessel ?? '';
+  }
+
+  /** Name des Motivs einer Einladung in der Liste: vom Server, sonst aus der Liste. */
+  motivNameZu(motiv: string | null, name?: string | null): string | null {
+    return name ?? this.motive.find((m) => m.schluessel === motiv)?.name ?? motivName(motiv);
   }
 
   anlegen() {
@@ -237,7 +257,7 @@ export class EinladungenComponent implements OnInit {
       teamArt: 'anlass' as TeamArt,
       teamZustimmungAm: '',
       teamSaison: this.saisonVorschlag,
-      teamMotiv: this.motive[0]?.schluessel ?? TEAM_MOTIVE[0].schluessel,
+      teamMotiv: this.motivVorschlag,
     };
     this.formular?.resetForm(standard);
     Object.assign(this, standard);

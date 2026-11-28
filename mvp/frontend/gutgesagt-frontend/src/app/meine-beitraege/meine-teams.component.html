@@ -32,8 +32,11 @@
     </ng-template>
 
     <ng-template #eintrag let-team>
-        <app-team-pille [name]="team.team_name" [motiv]="team.motiv" [nummer]="team.nummer"
+        <app-team-pille [name]="team.team_name" [motiv]="team.motiv" [motivName]="team.motiv_name"
+                        [motivZierde]="!!team.motiv_name" [nummer]="team.nummer"
                         [saison]="team.saison" [vergangen]="!team.aktuelle_saison"></app-team-pille>
+        <!-- Der Name des Motivs steht sichtbar daneben (visuell lesbar), nicht nur als Titel -->
+        <span *ngIf="team.motiv_name" class="team-motiv-name" data-testid="team-motiv-name">Motiv: {{ team.motiv_name }}</span>
         <span class="team-seit">seit {{ tag(team.eingetreten_am) }}</span>
         <button mat-button type="button" class="team-verlassen" data-testid="verlassen" [disabled]="laeuft"
                 [attr.aria-label]="verlassenText + ': ' + team.team_name + ', Saison ' + team.saison"

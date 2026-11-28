@@ -13,8 +13,10 @@ import { TEAM_MOTIVE as MOTIV_LISTE, TeamArt, motivBild } from '../teams/teams';
  */
 export interface TeamBeimPruefen {
   name: string;
-  /** Schlüssel des Motivs (public/meilensteine/<motiv>.svg), siehe TEAM_MOTIVE. */
+  /** Motiv: Emoji der festen Liste oder einer der sechs früheren Schlüssel (TEAM_MOTIVE). */
   motiv: string | null;
+  /** Name des Motivs (deutscher CLDR-Kurzname); ältere Server schicken keinen. */
+  motiv_name?: string | null;
   saison: string;
   /**
    * Teamart: bei „gruppe“ steht über der Frage der Satz, dass das Team mit Zustimmung
@@ -55,13 +57,13 @@ export interface TeamAntwort {
 
 /** Antwort von POST /einladungen/beitreten. */
 export interface BeitretenAntwort {
-  team: { name: string; motiv: string | null; saison: string };
+  team: { name: string; motiv: string | null; motiv_name?: string | null; saison: string };
   nummer: number;
   /** false: schon dabei, nichts gezählt */
   neu: boolean;
 }
 
-/** Motive der Teams, Schlüssel → Name; eine Quelle mit shared/teams/teams.ts. */
+/** Die sechs früheren Motive, Schlüssel → Name; eine Quelle mit shared/teams/teams.ts. */
 export const TEAM_MOTIVE: Record<string, string> = Object.fromEntries(
   MOTIV_LISTE.map((m) => [m.schluessel, m.name]),
 );

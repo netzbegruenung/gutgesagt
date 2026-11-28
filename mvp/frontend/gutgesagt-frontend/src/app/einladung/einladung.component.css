@@ -103,7 +103,7 @@ form .email + button {
   overflow-wrap: anywhere;
 }
 
-.team-motiv-zeile img {
+.team-motiv-zeile app-team-motiv {
   flex: none;
 }
 
@@ -129,6 +129,11 @@ form .email + button {
   border: 3px solid var(--akzent-tanne);
   border-radius: 50%;
   background: var(--primaer-tint);
+}
+
+/* Emoji auf heller Scheibe, auch im Dunkelmodus */
+.team-medaillon.emoji {
+  background: var(--emoji-grund);
 }
 
 .team-ticket-text {

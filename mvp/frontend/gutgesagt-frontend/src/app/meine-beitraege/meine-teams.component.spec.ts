@@ -89,6 +89,27 @@ describe('MeineTeamsComponent', () => {
     expect(el().querySelector('[data-testid="sichtbarkeit"]')!.textContent).toContain('Nur du siehst deine Teams.');
   });
 
+  it('zeigt ein Emoji-Motiv als Zeichen und den Namen des Motivs sichtbar daneben', () => {
+    laden({ ...stand(), teams: [team({ id: 'm3', motiv: '🌻', motiv_name: 'Sonnenblume' })] });
+
+    const eintrag = el().querySelector('[data-testid="team"]')!;
+    const emoji = eintrag.querySelector('[data-testid="motiv-emoji"]')!;
+    expect(emoji.textContent!.trim()).toBe('🌻');
+    // Der Name steht sichtbar daneben; das Zeichen selbst liest der Screenreader nicht doppelt
+    expect(emoji.getAttribute('aria-hidden')).toBe('true');
+    expect(emoji.getAttribute('title')).toBe('Sonnenblume');
+    expect(eintrag.querySelector('[data-testid="team-motiv-name"]')!.textContent).toContain('Motiv: Sonnenblume');
+    expect(eintrag.querySelector('.medaillon.emoji')).not.toBeNull();
+  });
+
+  it('zeigt frühere Motive weiter als Bild, mit Namen daneben', () => {
+    laden(stand());
+
+    const eintrag = el().querySelector('[data-testid="team"]')!;
+    expect(eintrag.querySelector('img')!.getAttribute('src')).toBe('/meilensteine/vogel.svg');
+    expect(eintrag.querySelector('[data-testid="team-motiv-name"]')!.textContent).toContain('Motiv: Vogel');
+  });
+
   it('zeigt ohne Schalter teams und ohne eigene Teams keine Karte (200 statt 404, Saal)', () => {
     laden(stand({ teams_aktiv: false, teams: [], oeffentlich_verfuegbar: false }));
 
