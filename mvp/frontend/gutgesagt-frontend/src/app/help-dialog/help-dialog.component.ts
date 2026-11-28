@@ -1,8 +1,8 @@
-import { Component, DestroyRef, ElementRef, inject } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ElementRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgFor } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
@@ -18,6 +18,7 @@ import { RundgangService } from '../rundgang/rundgang.service';
 import { AppInstallierenService } from '../rundgang/app-installieren.service';
 import { RundgangId, rundgangBeschriftung } from '../rundgang/rundgang-daten';
 import { SiegelComponent } from '../shared/components/siegel/siegel.component';
+import { FunktionenService } from '../services/funktionen.service';
 
 /**
  * Rueckkehrziel-Parameter: Nach der Anmeldung aus der Hilfe oeffnet die App sie wieder.
@@ -25,6 +26,22 @@ import { SiegelComponent } from '../shared/components/siegel/siegel.component';
  * selbst nicht mehr; Adressen, die ihn noch tragen, wirken weiter.
  */
 export const HILFE_PARAM = 'hilfe';
+
+/** Abschnitt „Mitmachen“: wie man ein Konto bekommt (Ziel der Startseite für Abgemeldete). */
+export const HILFE_MITMACHEN = 'mitmachen';
+
+/**
+ * Während der BDK (Einstellungen bdk_hinweis_von/-bis, Paket k_begruessung; GET
+ * /api/v1/funktionen meldet „bdk_hinweis“): wo es einen Einladungslink gibt. Aushänge und
+ * Plakate nennt der Satz nicht, deren Erlaubnis ist offen (Sebastian 28.11.).
+ */
+export const BDK_EINLADUNG_HINWEIS =
+  'Während der BDK (4.–6. Dezember): Einen Einladungslink bekommst du am Stand der Netzbegrünung im CityCube.';
+
+/** Was die Hilfe beim Öffnen anspringt: die id eines Abschnitts mit Überschrift. */
+export interface HilfeDaten {
+  abschnitt?: string;
+}
 
 @Component({
   selector: 'app-help-dialog',
@@ -41,7 +58,7 @@ export const HILFE_PARAM = 'hilfe';
   templateUrl: './help-dialog.component.html',
   styleUrls: ['../rundgang/rundgang-knoepfe.css', './help-dialog.component.css']
 })
-export class HelpDialogComponent {
+export class HelpDialogComponent implements AfterViewInit {
   readonly typen = (['commentary', 'generictext', 'image', 'post'] as const).map((key) => ({
     ...CONTENT_TYPE_REGISTRY[key],
     artikel: key === 'generictext' ? 'eine' : 'ein',
@@ -65,11 +82,31 @@ export class HelpDialogComponent {
   /** Derselbe Stand wie im Band: Knopf nur mit Angebot des Browsers, sonst die Anleitung. */
   readonly app = inject(AppInstallierenService);
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly daten = inject<HilfeDaten | null>(MAT_DIALOG_DATA, { optional: true });
+  readonly bdkHinweis = BDK_EINLADUNG_HINWEIS;
+  readonly bdkHinweisAn = inject(FunktionenService).an('bdk_hinweis');
 
   constructor(
     private dialogRef: MatDialogRef<HelpDialogComponent>,
     private router: Router
   ) {}
+
+  /** Mit Abschnitt geöffnet: dorthin scrollen, Fokus auf seine Überschrift (WCAG 2.4.3). */
+  ngAfterViewInit(): void {
+    const abschnitt = this.daten?.abschnitt;
+    if (!abschnitt) {
+      return;
+    }
+    // Erst nach dem Öffnen: Material setzt den Fokus beim Öffnen auf den Dialog
+    this.dialogRef.afterOpened?.().subscribe(() => this.abschnittZeigen(abschnitt));
+  }
+
+  private abschnittZeigen(abschnitt: string): void {
+    const ziel = this.host.nativeElement.querySelector<HTMLElement>(`#${CSS.escape(abschnitt)}`);
+    const titel = ziel?.querySelector<HTMLElement>('h3[tabindex="-1"]');
+    ziel?.scrollIntoView?.({ block: 'start' });
+    titel?.focus({ preventScroll: true });
+  }
 
   /**
    * Schliesst erst die Hilfe, dann startet der Rundgang: Sonst holte die Hilfe beim
@@ -111,10 +148,12 @@ export class HelpDialogComponent {
 /**
  * Oeffnet die Hilfe als Seitenleiste rechts in voller Hoehe, 560 px breit; schmaler
  * als 560 px wird daraus ein Vollbild (#512). Fokus auf dem Dialog selbst: Sonst
- * fokussierte Material den ersten Link und scrollte ans Ende.
+ * fokussierte Material den ersten Link und scrollte ans Ende. Mit ``abschnitt`` (id, etwa
+ * HILFE_MITMACHEN) springt sie gleich zu diesem Abschnitt.
  */
-export function hilfeOeffnen(dialog: MatDialog): MatDialogRef<HelpDialogComponent> {
-  return dialog.open(HelpDialogComponent, {
+export function hilfeOeffnen(dialog: MatDialog, abschnitt?: string): MatDialogRef<HelpDialogComponent> {
+  return dialog.open<HelpDialogComponent, HilfeDaten>(HelpDialogComponent, {
+    data: abschnitt ? { abschnitt } : {},
     autoFocus: 'dialog',
     position: { top: '0', right: '0' },
     width: '560px',

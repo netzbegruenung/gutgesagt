@@ -6,7 +6,7 @@ import { provideRouter } from '@angular/router';
 import { Subject, of } from 'rxjs';
 
 import { SpielgefuehlComponent } from './spielgefuehl.component';
-import { SpielgefuehlStand } from '../services/spielgefuehl.service';
+import { SpielgefuehlService, SpielgefuehlStand } from '../services/spielgefuehl.service';
 import { EinwilligungsBudgetService } from '../shared/einwilligungs-budget/einwilligungs-budget.service';
 import { EinwilligungsMoment } from '../shared/einwilligungs-budget/einwilligungs-budget';
 import { environment } from '../../environments/environment';
@@ -149,6 +149,48 @@ describe('SpielgefuehlComponent', () => {
     expect(stufen.nextElementSibling!.getAttribute('data-testid')).toBe('absprachen');
     expect(el().textContent).not.toContain('empfohlen');
     expect(el().querySelector('[data-testid="namenswahl"]')).toBeNull();
+  });
+
+  it('offene Frage als abgesetzte Karte, die drei Knöpfe gleich groß (Rundgang 28.11.)', () => {
+    erstellen();
+    laden(stand());
+
+    const karte = el().querySelector('[data-testid="spielgefuehl"]') as HTMLElement;
+    expect(karte.classList).toContain('spielgefuehl--frage');
+    expect(karte.classList).not.toContain('spielgefuehl--stand');
+    expect(getComputedStyle(karte).backgroundColor).not.toBe(getComputedStyle(document.body).backgroundColor);
+    const knoepfe = Array.from(el().querySelectorAll<HTMLButtonElement>('.spielgefuehl-stufe > button'));
+    expect(new Set(knoepfe.map((k) => k.getBoundingClientRect().width)).size).toBe(1);
+    expect(knoepfe.every((k) => k.getBoundingClientRect().height >= 48)).toBeTrue();
+  });
+
+  it('beantwortet: kleine Karte mit der Wahl und „Ändern:“, Aus bleibt ein Klick', () => {
+    erstellen();
+    laden(stand({ stufe: 'fuer_mich' }));
+
+    const karte = el().querySelector('[data-testid="spielgefuehl"]') as HTMLElement;
+    expect(karte.classList).toContain('spielgefuehl--stand');
+    expect(el().querySelector('.spielgefuehl-einleitung')).toBeNull();
+    expect(el().querySelector('.spielgefuehl-wechsel')!.textContent).toContain('Ändern:');
+    expect(knopf('wechsel-aus')).not.toBeNull();
+    expect(knopf('wechsel-rangliste')).not.toBeNull();
+  });
+
+  it('übernimmt den frisch geladenen Stand von „Meine Beiträge“ ohne zweiten Abruf', () => {
+    TestBed.inject(SpielgefuehlService).melden(stand({ stufe: 'aus' }));
+    erstellen();
+
+    expect(knopf('stand').textContent).toContain('Aus');
+    http.expectNone((r) => r.method === 'GET' && r.url === URL);
+  });
+
+  it('offene Frage luftiger gesetzt: Absätze 15 px statt 14 px (Rundgang 28.11.)', () => {
+    erstellen();
+    laden(stand());
+
+    const einleitung = el().querySelector('.spielgefuehl-einleitung') as HTMLElement;
+    expect(getComputedStyle(einleitung).fontSize).toBe('15px');
+    expect(parseFloat(getComputedStyle(einleitung).lineHeight)).toBeCloseTo(24, 0);
   });
 
   it('nennt einmal den Hinweis zu den Abzeichen', () => {

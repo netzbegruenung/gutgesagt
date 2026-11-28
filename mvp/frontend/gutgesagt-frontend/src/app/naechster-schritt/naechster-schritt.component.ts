@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Injector, afterNextRender, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -17,6 +17,7 @@ import {
   Vorschlag,
   anzeige,
   offeneVorschlaege,
+  weggeklicktEntfernen,
   weggeklicktLesen,
   wegklicken,
 } from './naechster-schritt';
@@ -45,7 +46,7 @@ export const NAECHSTER_SCHRITT_URL = `${environment.baseUrl}/api/v1/usage/users/
   template: `
     @if (sichtbar(); as eintrag) {
       <section class="naechster-schritt" aria-labelledby="naechster-schritt-titel">
-        <h2 id="naechster-schritt-titel">Dein nächster Schritt</h2>
+        <h2 id="naechster-schritt-titel" tabindex="-1">Dein nächster Schritt</h2>
         <p class="naechster-schritt-satz">{{ eintrag.anzeige.satz }}</p>
         @if (eintrag.anzeige.zitat) {
           <blockquote class="naechster-schritt-zitat">„{{ eintrag.anzeige.zitat }}“</blockquote>
@@ -91,6 +92,15 @@ export const NAECHSTER_SCHRITT_URL = `${environment.baseUrl}/api/v1/usage/users/
 
       .naechster-schritt h2 {
         margin: 0 0 var(--spacing-sm, 8px);
+      }
+
+      .naechster-schritt h2:focus {
+        outline: none;
+      }
+
+      .naechster-schritt h2:focus-visible {
+        outline: 2px solid var(--akzent-tanne);
+        outline-offset: 2px;
       }
 
       .naechster-schritt-satz {
@@ -147,6 +157,8 @@ export class NaechsterSchrittComponent {
   /** Was die Karte zeigt: der aktuelle Vorschlag, nur wenn die Karte den Vorrang hat. */
   readonly sichtbar = computed(() => (this.start()?.vorrang === 'karte' ? this.aktuell() : null));
 
+  private readonly injector = inject(Injector);
+
   constructor() {
     // Rückkehr auf die Startseite: die letzten Vorschläge sofort, damit nichts springt;
     // die neue Antwort ersetzt sie still.
@@ -182,6 +194,27 @@ export class NaechsterSchrittComponent {
         this.neues.naechsterSchrittGemerkt = liste;
         this.melden();
       });
+    // Rückweg (Rundgang 28.11.): „Vorschlag holen“ im Block darüber leert den Merker im
+    // Browser; die Karte zeigt wieder den ersten Vorschlag, der Fokus geht auf ihre Überschrift.
+    this.neues.vorschlagHolen$.pipe(takeUntilDestroyed()).subscribe(() => this.wiederHolen());
+  }
+
+  private wiederHolen(): void {
+    weggeklicktEntfernen();
+    this.weggeklickt.set({});
+    this.melden();
+    const erster = this.aktuell();
+    this.ansage.set(erster ? `Dein nächster Schritt: ${erster.anzeige.satz}` : '');
+    afterNextRender(
+      () => {
+        const titel = document.getElementById('naechster-schritt-titel');
+        if (titel) {
+          titel.scrollIntoView?.({ block: 'nearest' });
+          titel.focus({ preventScroll: true });
+        }
+      },
+      { injector: this.injector },
+    );
   }
 
   /**
@@ -189,7 +222,14 @@ export class NaechsterSchrittComponent {
    * während der Change Detection: Der Block steht im Template davor.
    */
   private melden(): void {
+    this.neues.naechsterSchrittHolbar$.next(this.holbar());
     this.neues.naechsterSchrittDa$.next(this.aktuell() !== null);
+  }
+
+  /** Ob ein weggeklickter Vorschlag wieder gezeigt werden könnte (Rückweg im Block). */
+  private holbar(): boolean {
+    const alle = offeneVorschlaege(this.vorschlaege(), {});
+    return alle.length > offeneVorschlaege(this.vorschlaege(), this.weggeklickt()).length;
   }
 
   /** „Zur Suche“: Fokus ins Suchfeld der Startseite, ohne die Seite zu wechseln. */

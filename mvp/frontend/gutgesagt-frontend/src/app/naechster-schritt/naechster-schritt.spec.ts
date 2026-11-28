@@ -1,5 +1,5 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
@@ -10,6 +10,7 @@ import { FunktionenService } from '../services/funktionen.service';
 import { BesuchResponse, UsageTrackingService } from '../services/usage-tracking.service';
 import { START_WARTEZEIT_MS, SeitLetztemBesuchService } from '../seit-letztem-besuch/seit-letztem-besuch.service';
 import { NAECHSTER_SCHRITT_URL, NaechsterSchrittComponent } from './naechster-schritt.component';
+import { SeitLetztemBesuchComponent } from '../seit-letztem-besuch/seit-letztem-besuch.component';
 import {
   Vorschlag,
   WEGGEKLICKT_SCHLUESSEL,
@@ -24,6 +25,14 @@ import {
 
 const AUSSAGE = '11111111-1111-4111-8111-111111111111';
 const KOMMENTAR = '22222222-2222-4222-8222-222222222222';
+
+/** Block und Karte in der Reihenfolge der Startseite. */
+@Component({
+  standalone: true,
+  imports: [SeitLetztemBesuchComponent, NaechsterSchrittComponent],
+  template: '<app-seit-letztem-besuch></app-seit-letztem-besuch><app-naechster-schritt></app-naechster-schritt>',
+})
+class StartseiteAttrappe {}
 
 const BRACHE: Vorschlag = {
   art: 'brachflaeche',
@@ -325,6 +334,126 @@ describe('Dein nächster Schritt (#789)', () => {
       http.expectOne(NAECHSTER_SCHRITT_URL).flush('weg', { status: 500, statusText: 'Fehler' });
       fixture.detectChanges();
       expect(fixture.nativeElement.querySelector('.naechster-schritt')).toBeNull();
+    });
+  });
+
+  describe('Rückweg „Vorschlag holen“ (Rundgang 28.11.)', () => {
+    let http: HttpTestingController;
+    let nutzer: BehaviorSubject<UserInfo | null>;
+    let besuch: BehaviorSubject<BesuchResponse | null>;
+
+    function starten(angemeldet = true, stand: BesuchResponse = { nutzung_seit_letztem_besuch: 0 }) {
+      nutzer = new BehaviorSubject<UserInfo | null>({ isAuthenticated: angemeldet, userId: angemeldet ? 'kim' : null, userName: null, claims: null });
+      besuch = new BehaviorSubject<BesuchResponse | null>(stand);
+      TestBed.configureTestingModule({
+        imports: [StartseiteAttrappe],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([]),
+          { provide: AuthService, useValue: { userInfo$: nutzer } },
+          { provide: FunktionenService, useValue: { an: () => signal(true) } },
+          { provide: UsageTrackingService, useValue: { besuchStand$: besuch } },
+        ],
+      });
+      http = TestBed.inject(HttpTestingController);
+      const fixture = TestBed.createComponent(StartseiteAttrappe);
+      document.body.appendChild(fixture.nativeElement);
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    const holen = (fixture: any): HTMLButtonElement | null => fixture.nativeElement.querySelector('[data-testid="vorschlag-holen"]');
+    const karte = (fixture: any): HTMLElement | null => fixture.nativeElement.querySelector('.naechster-schritt');
+
+    afterEach(() => {
+      http.verify();
+      localStorage.removeItem(WEGGEKLICKT_SCHLUESSEL);
+    });
+
+    it('alles weggeklickt: eine Zeile „Vorschlag holen“; der Klick leert den Merker und zeigt die Karte mit Fokus', async () => {
+      wegklicken('einwerfen');
+      wegklicken('suchen');
+      const fixture = starten();
+      http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [{ art: 'einwerfen' }, { art: 'suchen' }] });
+      fixture.detectChanges();
+
+      expect(karte(fixture)).toBeNull();
+      expect(fixture.nativeElement.querySelector('#seit-besuch-titel')!.textContent).toContain('Seit deinem letzten Besuch');
+      expect(holen(fixture)!.textContent!.trim()).toBe('Vorschlag holen');
+      expect(fixture.nativeElement.querySelector('.seit-besuch-zeile.rueckweg mat-icon')!.textContent!.trim()).toBe('lightbulb');
+      expect(fixture.nativeElement.querySelector('.seit-besuch-zeile.rueckweg .seit-besuch-satz')!.textContent!.trim()).toBe(
+        'Nächster Schritt: Deine Vorschläge hast du ausgeblendet.',
+      );
+
+      holen(fixture)!.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(localStorage.getItem(WEGGEKLICKT_SCHLUESSEL)).toBeNull();
+      expect(karte(fixture)!.textContent).toContain('Wirf ihn ein');
+      expect(holen(fixture)).toBeNull();
+      expect(document.activeElement).toBe(fixture.nativeElement.querySelector('#naechster-schritt-titel'));
+      expect(fixture.nativeElement.querySelector('app-naechster-schritt [aria-live]').textContent).toContain('Dein nächster Schritt: Spruch gesehen');
+      fixture.nativeElement.remove();
+    });
+
+    it('neben anderen Kacheln eine weitere Kachel „Nächster Schritt · Vorschlag holen“, die Karte geht danach vor', async () => {
+      wegklicken('einwerfen');
+      const fixture = starten(true, { nutzung_seit_letztem_besuch: 2, neue_einwuerfe: 3 });
+      http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [{ art: 'einwerfen' }] });
+      fixture.detectChanges();
+
+      const kachel = holen(fixture)!;
+      expect(kachel.classList).toContain('seit-besuch-kachel');
+      expect(kachel.closest('li')!.nextElementSibling).toBeNull();
+      expect(kachel.querySelector('.seit-besuch-titel')!.textContent!.trim()).toBe('Nächster Schritt');
+      expect(kachel.querySelector('.seit-besuch-wort')!.textContent!.trim()).toBe('Vorschlag holen');
+      // Name mit dem sichtbaren Text (WCAG 2.5.3), das Symbol nur für Augen
+      expect(kachel.getAttribute('aria-label')).toBe('Nächster Schritt: Vorschlag holen');
+      expect(kachel.querySelector('mat-icon')!.getAttribute('aria-hidden')).toBe('true');
+
+      kachel.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(karte(fixture)).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.seit-besuch')).toBeNull();
+      fixture.nativeElement.remove();
+    });
+
+    it('nicht ohne Weggeklicktes, nicht neben einem sichtbaren Vorschlag und nie für Besucher', () => {
+      const ohne = starten();
+      http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [{ art: 'einwerfen' }] });
+      ohne.detectChanges();
+      expect(holen(ohne)).toBeNull();
+      expect(karte(ohne)).not.toBeNull();
+      ohne.nativeElement.remove();
+      TestBed.resetTestingModule();
+
+      // Eine Art weggeklickt, die andere steht auf der Karte: kein Rückweg
+      wegklicken('einwerfen');
+      const daneben = starten();
+      http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [{ art: 'einwerfen' }, { art: 'suchen' }] });
+      daneben.detectChanges();
+      expect(karte(daneben)).not.toBeNull();
+      expect(holen(daneben)).toBeNull();
+      daneben.nativeElement.remove();
+      TestBed.resetTestingModule();
+
+      const besucher = starten(false);
+      http.expectNone(NAECHSTER_SCHRITT_URL);
+      besucher.detectChanges();
+      expect(holen(besucher)).toBeNull();
+      besucher.nativeElement.remove();
+    });
+
+    it('nicht, wenn der Server den weggeklickten Vorschlag nicht mehr liefert', () => {
+      wegklicken('einwerfen');
+      const fixture = starten();
+      http.expectOne(NAECHSTER_SCHRITT_URL).flush({ vorschlaege: [] });
+      fixture.detectChanges();
+      expect(holen(fixture)).toBeNull();
+      fixture.nativeElement.remove();
     });
   });
 });

@@ -61,7 +61,7 @@ describe('FooterComponent', () => {
       'Impressum',
       'Datenschutz',
       'Nutzungsbedingungen',
-      'Melden & Kontakt',
+      'Kontakt',
     ]);
     expect(footer.lastElementChild!.classList).toContain('traeger');
   });
@@ -82,7 +82,7 @@ describe('FooterComponent', () => {
   });
 });
 
-/** „Melden & Kontakt“ im Fuß (Meldeweg, Basisfunktion seit dem Schalter-Umbau 27.11.). */
+/** „Kontakt“ im Fuß (Meldeweg, Basisfunktion seit dem Schalter-Umbau 27.11., Name seit dem Rundgang 28.11.). */
 describe('FooterComponent - Meldeweg', () => {
   let fixture: ComponentFixture<FooterComponent>;
 
@@ -104,25 +104,17 @@ describe('FooterComponent - Meldeweg', () => {
       .map((l) => l.textContent!.trim());
   }
 
-  it('ohne Schalter: „Melden & Kontakt“ als letzter Link, führt zum Meldeabschnitt im Impressum', () => {
-    expect(linkTexte().at(-1)).toBe('Melden & Kontakt');
-    const link = fixture.nativeElement.querySelector('.melden-link') as HTMLAnchorElement;
+  it('ohne Schalter: „Kontakt“ als letzter Link in der Linkzeile, führt zum Meldeabschnitt im Impressum', () => {
+    expect(linkTexte().at(-1)).toBe('Kontakt');
+    const link = fixture.nativeElement.querySelector('.footer-links > .melden-link') as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/impressum#melden');
   });
 
-  it('nennt den Meldeweg und nur die Funktionsadresse aus dem Impressum', () => {
-    const zeile = fixture.nativeElement.querySelector('.meldeweg') as HTMLElement;
-    const text = zeile.textContent!.replace(/\s+/g, ' ').trim();
-    expect(text).toBe(
-      `Fällt dir ein Beitrag auf, der nicht hierher gehört? Melde ihn über „Melden“ an der Karte, auch ohne Konto, oder per E-Mail an ${LEGAL_ENTITY.KONTAKT_MAIL}.`,
-    );
-    const mails = Array.from(zeile.querySelectorAll('a[href^="mailto:"]')).map((a) => a.getAttribute('href'));
-    expect(mails).toEqual([`mailto:${LEGAL_ENTITY.KONTAKT_MAIL}`]);
-    // Keine Personennamen aus den Rechtstexten
-    expect(text).not.toContain(LEGAL_ENTITY.ADRESSZUSATZ.replace('c/o ', ''));
-    for (const name of LEGAL_ENTITY.VORSTAND.split(' und ')) {
-      expect(text).not.toContain(name);
-    }
+  it('ohne den Absatz zum Melden (Rundgang 28.11.): nur Links und Trägerzeile, keine Mailadresse', () => {
+    expect(fixture.nativeElement.querySelector('.meldeweg')).toBeNull();
+    expect(fixture.nativeElement.querySelector('a[href^="mailto:"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Fällt dir ein Beitrag auf');
+    expect(fixture.nativeElement.textContent).not.toContain(LEGAL_ENTITY.KONTAKT_MAIL);
     // Die Trägerzeile bleibt die letzte Zeile des Fußes
     expect(fixture.nativeElement.querySelector('.footer').lastElementChild!.classList).toContain('traeger');
   });

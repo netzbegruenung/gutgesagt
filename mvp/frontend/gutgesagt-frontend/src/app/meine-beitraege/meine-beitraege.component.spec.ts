@@ -7,6 +7,7 @@ import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { BehaviorSubject, NEVER, Observable, of, throwError } from 'rxjs';
+import { filter, take } from 'rxjs/operators';
 
 import { MeineBeitraegeComponent } from './meine-beitraege.component';
 import { AlbumComponent } from './album/album.component';
@@ -49,10 +50,13 @@ describe('MeineBeitraegeComponent', () => {
   let unbeantworteteLaden: jasmine.Spy;
   /** Antwort des Besuchs beim App-Start; sagt, ob es „Meine Aussagen“ gibt (#760). */
   let besuchStand: BehaviorSubject<any>;
+  /** Der gemeinsame Spielgefühl-Stand; undefined: noch unbekannt. */
+  let spielStand: BehaviorSubject<any>;
 
   afterEach(() => {
     // Je Test frisch; ein Test setzt ihn vor erstellen()
     besuchStand = undefined as any;
+    spielStand = undefined as any;
   });
 
   beforeEach(() => {
@@ -99,6 +103,7 @@ describe('MeineBeitraegeComponent', () => {
       .and.returnValue(of({ results_count: 0, results: [], total_records_count: 0 }));
     alleLaden = jasmine.createSpy('alleMeineBeitraege').and.callFake(laden);
     besuchStand ??= new BehaviorSubject<any>(null);
+    spielStand ??= new BehaviorSubject<any>(undefined);
     TestBed.configureTestingModule({
       imports: [MeineBeitraegeComponent],
       providers: [
@@ -132,7 +137,15 @@ describe('MeineBeitraegeComponent', () => {
         // Die Rangliste ebenso (#793)
         { provide: RanglisteService, useValue: { laden: () => NEVER } },
         // Das Spielgefuehl ebenso
-        { provide: SpielgefuehlService, useValue: { laden: () => NEVER, stufe$: NEVER } },
+        // Ohne gesetzten Stand lädt es nie fertig; mit Stand liefert es ihn einmal
+        {
+          provide: SpielgefuehlService,
+          useValue: {
+            laden: () => spielStand.pipe(filter((s) => s !== undefined), take(1)),
+            stufe$: NEVER,
+            stand$: spielStand,
+          },
+        },
         { provide: StatementService, useValue: { unbeantworteteAussagen: unbeantworteteLaden } },
         {
           provide: AuthService,
@@ -236,6 +249,23 @@ describe('MeineBeitraegeComponent', () => {
       expect(tabs()[0].getAttribute('aria-selected')).toBe('true');
     });
 
+    it('stellt drei Reiter in eine Zeile, die Leiste scrollt notfalls waagerecht (Rundgang 28.11.)', async () => {
+      besuchStand = new BehaviorSubject<any>({ nutzung_seit_letztem_besuch: 0, antworten_auf_eigene_aussagen: 2 });
+      await erstellen([beitrag()]);
+      const leiste = fixture.nativeElement.querySelector('[role="tablist"]') as HTMLElement;
+      // Schmal wie ein Handy: kein Umbruch, kein Kürzen, die Leiste scrollt
+      leiste.style.width = '300px';
+
+      expect(tabs().length).toBe(3);
+      expect(new Set(tabs().map((tab) => tab.offsetTop)).size).toBe(1);
+      expect(getComputedStyle(leiste).overflowX).toBe('auto');
+      expect(leiste.scrollWidth).toBeGreaterThan(leiste.clientWidth);
+      for (const tab of tabs()) {
+        expect(getComputedStyle(tab).whiteSpace).toBe('nowrap');
+        expect(tab.scrollWidth).toBeLessThanOrEqual(tab.clientWidth);
+      }
+    });
+
     it('zeigt unter "Meine Einwürfe" die eigenen Einwuerfe statt der Beitraege', async () => {
       await erstellen([beitrag()]);
 
@@ -335,6 +365,8 @@ describe('MeineBeitraegeComponent', () => {
   // Jura 27.11.: Der Fußsatz der Spielgefühl-Frage verweist auf „Meine Beiträge“; der Weg zum
   // Widerruf muss dort auch stehen, wenn die Karte leer ist (Schalter aus).
   it('bietet unter der Spielgefühl-Karte die Widerrufszeilen an, als eigene Karte', async () => {
+    // Schalter aus: Die Karte steht (leer) an ihrem Platz, die Widerrufszeilen darunter
+    spielStand = new BehaviorSubject<any>(null);
     await erstellen([beitrag()]);
 
     const bereich = fixture.nativeElement.querySelector('#meine-bereich-beitraege') as HTMLElement;
@@ -428,6 +460,72 @@ describe('MeineBeitraegeComponent', () => {
     expect(meldung).toContain('ließen sich gerade nicht laden');
     expect(meldung).not.toMatch(/neu laden/i);
     expect(fixture.nativeElement.querySelector('.beitraege-leer')).toBeNull();
+  });
+
+  describe('Platz der Spielgefühl-Karte (Rundgang 28.11.)', () => {
+    /** Nur was die Karte zum Zeichnen braucht; die Inhalte prüft spielgefuehl.component.spec.ts. */
+    function spielgefuehlStand(stufe: string | null): any {
+      return { stufe, mit_anzeigename: null, aktueller_wortlaut: { stufen: [], namenswahl: {} } };
+    }
+
+    function spielgefuehl(): HTMLElement[] {
+      return Array.from(fixture.nativeElement.querySelectorAll('app-spielgefuehl'));
+    }
+
+    it('offene Frage: oben direkt unter dem Deckel, vor Suche und Themen', async () => {
+      spielStand = new BehaviorSubject<any>(spielgefuehlStand(null));
+      await erstellen([beitrag(), beitrag({ id: 'b2' }), beitrag({ id: 'b3' }), beitrag({ id: 'b4' })]);
+
+      expect(spielgefuehl().length).toBe(1);
+      const karte = spielgefuehl()[0];
+      const albumEl = fixture.nativeElement.querySelector('app-album') as HTMLElement;
+      expect(albumEl.contains(karte)).toBeTrue();
+      const deckel = albumEl.querySelector('.deckel')!;
+      expect(deckel.compareDocumentPosition(karte) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      const abschnitt = albumEl.querySelector('.abschnitt, .raster')!;
+      expect(karte.compareDocumentPosition(abschnitt) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('beantwortet: unten an der bisherigen Stelle, nach dem Album', async () => {
+      spielStand = new BehaviorSubject<any>(spielgefuehlStand('fuer_mich'));
+      await erstellen([beitrag()]);
+
+      expect(spielgefuehl().length).toBe(1);
+      const albumEl = fixture.nativeElement.querySelector('app-album') as HTMLElement;
+      expect(albumEl.contains(spielgefuehl()[0])).toBeFalse();
+      expect(albumEl.compareDocumentPosition(spielgefuehl()[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('ohne Beiträge mit offener Frage: oben unter dem Leer-Hinweis', async () => {
+      spielStand = new BehaviorSubject<any>(spielgefuehlStand(null));
+      await erstellen([]);
+
+      expect(spielgefuehl().length).toBe(1);
+      const leer = fixture.nativeElement.querySelector('.beitraege-leer') as HTMLElement;
+      expect(leer.compareDocumentPosition(spielgefuehl()[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('.beitraege-leer-knopf').compareDocumentPosition(spielgefuehl()[0]) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    });
+
+    it('entsteht nur einmal und erst mit dem Stand, kein Platzwechsel beim Laden', async () => {
+      spielStand = new BehaviorSubject<any>(undefined);
+      await erstellen([beitrag()]);
+      expect(spielgefuehl().length).toBe(0);
+
+      spielStand.next(spielgefuehlStand(null));
+      fixture.detectChanges();
+      expect(spielgefuehl().length).toBe(1);
+      expect((fixture.nativeElement.querySelector('app-album') as HTMLElement).contains(spielgefuehl()[0])).toBeTrue();
+    });
+
+    it('springt nicht: eine Antwort oben lässt die Karte für diesen Besuch oben', async () => {
+      spielStand = new BehaviorSubject<any>(spielgefuehlStand(null));
+      await erstellen([beitrag()]);
+      spielStand.next(spielgefuehlStand('aus'));
+      fixture.detectChanges();
+
+      expect(spielgefuehl().length).toBe(1);
+      expect((fixture.nativeElement.querySelector('app-album') as HTMLElement).contains(spielgefuehl()[0])).toBeTrue();
+    });
   });
 
   describe('Meine Aussagen (#760)', () => {

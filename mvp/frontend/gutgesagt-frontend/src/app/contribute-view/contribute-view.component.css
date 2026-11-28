@@ -3,26 +3,29 @@
  * steckt nur noch in der Kachel hinter dem Symbol. Am Handy alles untereinander, am Desktop
  * die Kette in einer Reihe und die Typen zweispaltig. Ohne eigene Hoechstbreite: so breit wie
  * Kopf und Rundgang-Band darueber, die Kanten fluchten (Designrunde 12.11.). Darunter, mittig
- * und ruhiger, der Erstnutzer-Satz und der Knopf zu den eigenen Beitraegen (Sebastian 20.11.).
+ * und ruhiger, der Erstnutzer-Satz und der Abschnitt „Deins“ mit den eigenen Beitraegen.
+ *
+ * Abstaende wie auf der Startseite (Rundgang 28.11.): Abschnitte --spacing-xl auseinander,
+ * mobil --spacing-lg; in den Kacheln mehr Innenabstand.
  */
 .typ-zeilen {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-lg);
-    padding: var(--spacing-md) var(--page-margin);
+    gap: var(--spacing-xl);
+    padding: var(--spacing-lg) var(--page-margin) var(--spacing-xl);
 }
 
 .typ-abschnitt {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--spacing-md);
     min-width: 0;
 }
 
 .typ-liste {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--spacing-md);
 }
 
 /* Abschnittsueberschrift: Hausschrift wie h2, eine Stufe unter dem Seitentitel */
@@ -67,7 +70,7 @@
 .erstnutzer-satz {
     max-width: 60ch;
     margin: 0 auto;
-    padding: 12px 20px;
+    padding: var(--spacing-md) var(--spacing-lg);
     border-radius: var(--border-radius-medium);
     background: var(--mulde);
     color: var(--text-leise);
@@ -76,15 +79,21 @@
     text-align: center;
 }
 
-/* Meine Beitraege: Optik aus .nebenweg-zeile und .nebenweg-knopf (styles.css), wie "Fangkorb ansehen" */
+/* Deins: eine Kachel, am Desktop so breit wie eine Spalte der Typen darunter */
+@media (min-width: 900px) {
+    .deins-abschnitt .typ-liste {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+}
 
 .typ-zeile {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--spacing-md);
     width: 100%;
     min-height: 48px;
-    padding: 14px 16px;
+    padding: var(--spacing-md) var(--spacing-lg);
     border: 1px solid var(--feldrand);
     border-radius: 12px;
     background: var(--flaeche);
@@ -185,12 +194,18 @@
 
 @media (max-width: 599px) {
     .typ-zeilen {
-        gap: 20px;
-        padding-top: 12px;
+        gap: var(--spacing-lg);
+        padding-top: var(--spacing-md);
+        padding-bottom: var(--spacing-lg);
     }
 
     .typ-zeile {
-        padding: 10px 12px;
+        gap: calc(var(--spacing-sm) + var(--spacing-xs));
+        padding: calc(var(--spacing-sm) + var(--spacing-xs)) var(--spacing-md);
+    }
+
+    .erstnutzer-satz {
+        padding: var(--spacing-md);
     }
 
     .typ-icon {

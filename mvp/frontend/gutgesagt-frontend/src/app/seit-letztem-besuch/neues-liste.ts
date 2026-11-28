@@ -227,15 +227,23 @@ export type StartVorrang = 'offen' | 'block' | 'spruch' | 'karte';
  * noch aus“ (beim Saal-Spruch 'offen'; auf ihn wird nur gewartet, wenn kein Vorschlag da
  * ist), null beim Stand „keine Antwort“ (Fehler, Zeitgrenze). Ohne Angabe zum Saal-Spruch
  * gibt es heute keinen.
+ *
+ * `vorschlagGewuenscht`: Die Person hat über die Kachel „Nächster Schritt“ ausdrücklich
+ * einen Vorschlag geholt (Rundgang 28.11.); dann geht die Karte auch eigenem Neuen vor,
+ * sonst bliebe der Klick ohne sichtbare Folge.
  */
 export function startVorrang(
   stand: NeuesStand | null | undefined,
   erledigt: ReadonlySet<NeuesArt>,
   naechsterSchrittDa: boolean | undefined,
   saalSpruchDa: boolean | 'offen' = false,
+  vorschlagGewuenscht = false,
 ): StartVorrang {
   if (stand === undefined || naechsterSchrittDa === undefined) {
     return 'offen';
+  }
+  if (naechsterSchrittDa && vorschlagGewuenscht) {
+    return 'karte';
   }
   if (eigenesNeuesSichtbar(stand, erledigt)) {
     return 'block';
@@ -258,11 +266,23 @@ export function startKacheln(
   stand: NeuesStand | null | undefined,
   erledigt: ReadonlySet<NeuesArt>,
   vorrang: StartVorrang,
+  rueckweg = false,
 ): NeuesEintrag[] {
   if (!stand || stand.erster_besuch || vorrang !== 'block') {
     return [];
   }
   return neuesListe(stand)
     .filter((e) => !erledigt.has(e.art))
-    .slice(0, MAX_KACHELN);
+    .slice(0, rueckweg ? MAX_KACHELN - 1 : MAX_KACHELN);
+}
+
+/**
+ * Rückweg zu „Dein nächster Schritt“ (Rundgang 28.11.): Wer Vorschläge weggeklickt hat,
+ * bekommt im Block eine Kachel „Nächster Schritt · Vorschlag holen“. Nur, wenn der Block
+ * steht (Vorrang „block“, nicht beim ersten Besuch) und es einen weggeklickten Vorschlag
+ * gibt, den die Karte wieder zeigen könnte (`holbar`); die Karte selbst steht dann nicht da.
+ * Sie zählt in die höchstens MAX_KACHELN Kacheln und steht zuletzt.
+ */
+export function rueckwegSichtbar(stand: NeuesStand | null | undefined, vorrang: StartVorrang, holbar: boolean): boolean {
+  return holbar && vorrang === 'block' && !!stand && !stand.erster_besuch;
 }

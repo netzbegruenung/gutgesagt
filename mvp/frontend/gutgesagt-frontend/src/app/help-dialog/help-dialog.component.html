@@ -44,6 +44,10 @@
         Viele Kommentare gibt es in drei Fassungen: Kurz, Mittel und Lang. Steht „passt auf Mastodon/Bluesky/X“
         darunter, ist der Text kurz genug für diese Plattformen.
     </p>
+    <!-- Meldeweg (Rundgang 28.11.): der Fuß sagt es nicht mehr, deshalb hier -->
+    <p class="hilfe-melden">
+        Passt ein Beitrag nicht hierher? Melde ihn über „Melden“ an der Karte, das geht auch ohne Konto.
+    </p>
 
     <h3>Bewerten und Siegel</h3>
     <p class="hilfe-bewerten">
@@ -91,12 +95,20 @@
     <p class="nicht-jede-aussage">{{ nichtJedeAussage }}</p>
     <p class="erfundenes-melden">{{ erfundenesMelden }}</p>
 
-    <h3>Konto und Anmeldung</h3>
-    <p class="hilfe-konto">
-        Suchen, lesen und kopieren geht ohne Anmeldung. Zum Bewerten und Beitragen meldest du dich
-        mit deinem Netzbegrünung-Konto oder einem Konto aus einer Einladung an. Auf die
-        Warteliste für eine Einladung kommst du über „Feedback“.
-    </p>
+    <!-- Ziel von „ist deine die nächste?“ auf der Startseite für Abgemeldete (Rundgang 28.11.) -->
+    <section class="hilfe-mitmachen" id="mitmachen" aria-labelledby="hilfe-mitmachen-titel">
+        <h3 id="hilfe-mitmachen-titel" tabindex="-1">Mitmachen</h3>
+        <p class="hilfe-konto">
+            Suchen, lesen und kopieren geht ohne Konto. Zum Bewerten und Beitragen brauchst du eins:
+            Du bekommst es mit einer Einladung, etwa einem Teamlink am Stand oder von deiner Gruppe.
+            Mitglieder melden sich mit ihrem Netzbegrünung-Konto an. Auf die Warteliste für eine
+            Einladung kommst du über „Feedback“.
+        </p>
+        <!-- Nur während der BDK (Einstellungen bdk_hinweis_von/-bis) und mit dem Paket k_begruessung -->
+        @if (bdkHinweisAn()) {
+            <p class="hilfe-bdk-hinweis" data-testid="bdk-hinweis">{{ bdkHinweis }}</p>
+        }
+    </section>
 
     <!-- Als App installieren, je Geraet (Entscheidung Maintainer 18.11.). Knopf nur, wenn
          der Browser das Installieren anbietet (AppInstallierenService). -->

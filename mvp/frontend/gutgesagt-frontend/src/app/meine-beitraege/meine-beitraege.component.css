@@ -24,14 +24,24 @@
   font-weight: 600;
 }
 
-/* Tabs: shared/tabs.css. Hier ohne Zaehler, der Name wird notfalls gekuerzt. */
+/*
+ * Tabs: shared/tabs.css. Hier drei oder vier Reiter in einer Zeile statt im
+ * Zweierraster (Rundgang 28.11.: der dritte brach in eine zweite Zeile um). Am Desktop
+ * gleich breit; reicht die Breite nicht (Handy), scrollt die Leiste waagerecht, die Namen
+ * werden nicht gekuerzt. Der Fokus per Pfeiltaste holt den Reiter selbst ins Bild.
+ */
 .tabs {
+  grid-template-columns: none;
+  grid-auto-columns: minmax(max-content, 1fr);
+  grid-auto-flow: column;
   margin-bottom: var(--spacing-md);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
 }
 
 .tab {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding: var(--spacing-xs) var(--spacing-md);
   white-space: nowrap;
 }
 

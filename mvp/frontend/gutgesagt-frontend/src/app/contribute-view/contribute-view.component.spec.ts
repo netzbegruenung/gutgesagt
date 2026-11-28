@@ -49,9 +49,9 @@ describe('ContributeViewComponent', () => {
     beforeEach(() => erstellen());
 
     // Sebastian 20.11.: oben die Kette in drei Schritten, darunter die vier Typen
-    it('zeigt zuerst die drei Schritte der Kette, dann die vier Typen', () => {
+    it('zeigt zuerst die drei Schritte der Kette, dann die vier Typen, zuletzt Meine Beiträge', () => {
       expect(zeilen().map((zeile) => zeile.querySelector('.typ-titel')!.textContent!.trim()))
-        .toEqual(['Schnell einwerfen', 'Einwürfe destillieren', 'Sätze ausformulieren', 'Kommentar', 'Hintergrundinfo', 'Bild', 'Post']);
+        .toEqual(['Schnell einwerfen', 'Einwürfe destillieren', 'Sätze ausformulieren', 'Kommentar', 'Hintergrundinfo', 'Bild', 'Post', 'Meine Beiträge']);
     });
 
     it('ordnet die Schritte als Liste, mit Pfeilen nur zwischen den Kacheln und ohne Pfeile auf ihnen', () => {
@@ -79,17 +79,24 @@ describe('ContributeViewComponent', () => {
       expect(satz.previousElementSibling!.matches('section.verfassen-abschnitt')).toBeTrue();
     });
 
-    it('setzt Meine Beitraege als eigenen Knopf unter den Satz, nicht als Kachel', () => {
-      const knopf: HTMLButtonElement = fixture.nativeElement.querySelector('.meine-beitraege-knopf');
-      expect(knopf.textContent).toContain('Meine Beiträge');
-      // Dieselbe Optik wie "Fangkorb ansehen" auf der Einwerfen-Seite (Sebastian 20.11.)
-      expect(knopf.classList).toContain('nebenweg-knopf');
-      expect(knopf.parentElement!.classList).toContain('nebenweg-zeile');
-      expect(knopf.classList.contains('typ-zeile')).toBeFalse();
-      expect(knopf.closest('section')).toBeNull();
-      expect(knopf.parentElement!.previousElementSibling!.matches('.erstnutzer-satz')).toBeTrue();
+    it('zeigt Meine Beiträge als eigene Kachel im Abschnitt „Deins“, ohne Trennlinie (Rundgang 28.11.)', () => {
+      const kachel: HTMLButtonElement = fixture.nativeElement.querySelector('.meine-beitraege-kachel');
+      const abschnitt = kachel.closest('section')!;
+      expect(abschnitt.classList).toContain('deins-abschnitt');
+      expect(abschnitt.querySelector('h2')!.textContent!.trim()).toBe('Deins');
+      // Derselbe Stil wie die Kacheln darüber, mit Symbol, Titel und Untertitel
+      expect(kachel.classList).toContain('typ-zeile');
+      expect(kachel.querySelector('.typ-icon')!.textContent!.trim()).toBe('📦');
+      expect(kachel.querySelector('.typ-icon')!.getAttribute('aria-hidden')).toBe('true');
+      expect(kachel.querySelector('.typ-titel')!.textContent!.trim()).toBe('Meine Beiträge');
+      expect(kachel.querySelector('.typ-satz')!.textContent!.trim()).toBe(
+        'Was du schon beigetragen hast und wie oft es genutzt wurde',
+      );
+      // Der Abschnitt steht zuletzt, nach dem Erstnutzer-Satz; die alte Zeile mit Trennlinie ist weg
+      expect(abschnitt.previousElementSibling!.matches('.erstnutzer-satz')).toBeTrue();
+      expect(fixture.nativeElement.querySelector('.nebenweg-zeile')).toBeNull();
 
-      knopf.click();
+      kachel.click();
       expect(router.navigate).toHaveBeenCalledWith(['/contributions']);
     });
 
@@ -112,13 +119,13 @@ describe('ContributeViewComponent', () => {
         .toBeNull();
     });
 
-    it('gliedert die Seite in Kette und Verfassen mit Abschnittsueberschriften', () => {
+    it('gliedert die Seite in Kette, Verfassen und Deins mit Abschnittsueberschriften', () => {
       const ueberschriften: HTMLElement[] = Array.from(
         fixture.nativeElement.querySelectorAll('.typ-zwischenueberschrift'),
       );
       const [kette, verfassen] = ueberschriften;
 
-      expect(ueberschriften.map((u) => u.textContent!.trim())).toEqual(['Einwerfen und weiterarbeiten', 'Direkt verfassen']);
+      expect(ueberschriften.map((u) => u.textContent!.trim())).toEqual(['Einwerfen und weiterarbeiten', 'Direkt verfassen', 'Deins']);
       expect(ueberschriften.every((u) => u.tagName === 'H2')).toBeTrue();
       expect(kette.nextElementSibling!.querySelectorAll('button.typ-zeile').length).toBe(3);
       expect(verfassen.nextElementSibling!.matches('nav.typ-liste')).toBeTrue();

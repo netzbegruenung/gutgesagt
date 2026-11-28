@@ -8,6 +8,8 @@ import { cacheInterceptor } from './auth/cache.interceptor';
 import { GlobalErrorHandler } from './services/error-handler.service';
 import { alteSitzungskennungEntfernen } from './services/alte-sitzungskennung';
 import { NeueVersionService } from './shared/neue-version';
+import { ViewportScroller } from '@angular/common';
+import { sprungAbstand } from './shared/sprung-abstand';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -24,6 +26,8 @@ export const appConfig: ApplicationConfig = {
     // Keine Sitzungskennung im Browser (#446): was fruehere Versionen ablegten, kommt weg.
     provideAppInitializer(() => alteSitzungskennungEntfernen()),
     // Der Merker eines automatischen Neuladens (Schleifensperre) faellt nach zehn Minuten.
-    provideAppInitializer(() => inject(NeueVersionService).aufraeumen())
+    provideAppInitializer(() => inject(NeueVersionService).aufraeumen()),
+    // Anker-Sprünge halten Abstand zum klebenden Kopf am Handy, wie scroll-padding-top (shared/sprung-abstand.ts)
+    provideAppInitializer(() => inject(ViewportScroller).setOffset(() => sprungAbstand()))
   ]
 };

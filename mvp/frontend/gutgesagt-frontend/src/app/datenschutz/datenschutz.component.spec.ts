@@ -1293,7 +1293,7 @@ describe('DatenschutzComponent: Absätze an Schaltern (Jura vorläufig 26.11.202
     'geschrieben hat, nennen wir dort nicht. Auch das speichern wir nicht.';
   const MELDEN =
     'An jedem Beitrag kannst du über „Melden“ auf rechtswidrige oder regelwidrige Inhalte hinweisen; im Fuß ' +
-    'jeder Seite findest du dazu „Melden & Kontakt“. Was wir mit einer Meldung speichern, steht in diesem ' +
+    'jeder Seite findest du dazu „Kontakt“. Was wir mit einer Meldung speichern, steht in diesem ' +
     'Abschnitt.';
   const GESTOERT =
     'In der Startphase kannst du uns über „Was hat dich gestört?“ kurz schreiben, was dich gestört hat. Wir ' +

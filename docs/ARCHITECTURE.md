@@ -91,11 +91,11 @@ visit at most one card that points the person somewhere new (review Spielgefühl
 
 | # | Card | Who sees it | Shown when |
 |---|------|-------------|------------|
-| 1 | Hero and search; the subtitle carries the Bestandszahl (`app-hero-unterzeile`, `/getMetrics`, no Schalter) and its growth (Schalter `bestandszahl_zuwachs`, links to card 6 „Frisch aus der Community“) | everyone | always; without a number the plain subtitle |
+| 1 | Hero and search; the subtitle carries the Bestandszahl (`app-hero-unterzeile`, `/getMetrics`, no Schalter) and its growth („diese Woche“, last seven days); the closing question „ist deine die nächste?“ links to Beitragen (Rundgang 28.11.) | everyone | always; without a number the plain subtitle |
 | 2 | Rundgang line (`app-rundgang-band`, Willkommen) | everyone | until answered; signed in without „Ein Konto brauchst du nicht“ (`WILLKOMMEN_ANGEMELDET`) |
 | 2a | „Heute im Netz zur BDK:“ (`app-saal-spruch`) | everyone, Schalter `saal_spruch` | an admin has set a Saal-Spruch for today (Europe/Berlin); not while a Rundgang offer (`imInhalt`: Willkommen, home screen, app install) is on the start page, except the slim Willkommen line („Neu hier?“, or its Kampagnenwort greeting such as „Von der BDK?“); signed in only when card 3 shows no own news and card 4 has no suggestion |
-| 3 | „Seit deinem letzten Besuch“ | signed in | not on the very first visit (`erster_besuch` from `POST /users/me/besuch`); next to a suggestion of card 4 only with news about the person's own Beiträge (`EIGENES_NEUES`: answers, uses, Wirkungs-Echo, ausformulierte Einwürfe) |
-| 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion and card 3 shows no own news |
+| 3 | „Seit deinem letzten Besuch“ | signed in | not on the very first visit (`erster_besuch` from `POST /users/me/besuch`); next to a suggestion of card 4 only with news about the person's own Beiträge (`EIGENES_NEUES`: answers, uses, Wirkungs-Echo, ausformulierte Einwürfe). Extra tile „Nächster Schritt · Vorschlag holen“ when card 4 has a suggestion the person clicked away (`naechsterSchrittHolbar$`); a click clears the browser entry and lets card 4 win for this App-Start (`vorschlagGewuenscht$`) |
+| 4 | „Dein nächster Schritt“ | signed in, Schalter `naechster_schritt` | has a suggestion and card 3 shows no own news, or the person fetched one through the tile in card 3 |
 | 5 | Saison goal | everyone, Schalter `saison_ziel` | from the threshold (#782) |
 | 6 | Oft genutzt, Konter-Probe, Frisch aus der Community, the action tiles Einwerfen, Beitragen and Themen im Überblick (one tile kind, `app-start-kachel`; three side by side from 720 px), „Was hat dich gestört?“ as a text line below them (Schalter `feedback_gestoert`), About as the quiet closing card | everyone | as each card decides |
 
@@ -461,8 +461,8 @@ All settings use the `SEMANTIC_SEARCH_` prefix (see `app/core/config.py`):
   the card draws the image in the browser and hands it to the device's share menu, nothing is
   sent or stored); takes effect only when an admin switches it on.
 - `SEMANTIC_SEARCH_MELDEWEG_SICHTBAR_AKTIV` - upper bound of the Schalter `meldeweg_sichtbar`
-  (default `false`): "Melden" in the meta line of every Beitrag card and "Melden & Kontakt" in the
-  footer, display only; details below (section "Schalter für das Spielgefühl").
+  (default `false`): "Melden" in the meta line of every Beitrag card and "Kontakt" in the
+  footer (until Rundgang 28.11. "Melden & Kontakt"), display only; details below (section "Schalter für das Spielgefühl").
 - `SEMANTIC_SEARCH_DSE_KURZFASSUNG_AKTIV` - upper bound of the Schalter `dse_kurzfassung`
   (default `false`, public via `GET /api/v1/funktionen`): box "Kurz gesagt" at the top of the
   privacy policy with three sentences, each linking to its paragraph in the full text
@@ -623,7 +623,9 @@ leaderboard of the Spielgefühl package.
 
 `GET /api/v1/funktionen` reports the 4 packages, the public single switches (all except
 `aufrufe_zaehlen`) and the emergency-off functions `gepostet_ohne_konto`, `null_treffer_anzahl`,
-`feedback_gestoert` (the latter also `false` from 31.12.2026).
+`feedback_gestoert` (the latter also `false` from 31.12.2026), plus the derived `bdk_hinweis`
+(package `k_begruessung` on and today, German time, between the admin settings `bdk_hinweis_von`
+and `bdk_hinweis_bis`, defaults 2026-12-04 and 2026-12-06; `services/bdk_hinweis.py`).
 
 | Name | Kind | Replaces / contains | Works only with | Legal state (27.11.) |
 |------|------|---------------------|-----------------|----------------------|
@@ -728,7 +730,9 @@ The app reads `?k=<word>` once at start (`shared/kampagnenwort.service.ts`), low
 
 - `k_begruessung`: for `sticker` and `bdk` the Willkommen line shows a matching greeting
   (`K_BEGRUESSUNG` in `rundgang/rundgang-daten.ts`) instead of "Neu hier?"; same tour, same
-  browser entry, same "Ausblenden". Other words change nothing.
+  browser entry, same "Ausblenden". Other words change nothing. During the BDK window
+  (`bdk_hinweis`, see above) the help section „Mitmachen“ (`#mitmachen`) says where to get an
+  invitation link (`BDK_EINLADUNG_HINWEIS`), for everyone, not only with `?k=bdk`.
 - `k_ankuenfte`: once per page load `POST /api/v1/ankunft` with `{"k": "<word>"}` in the body
   (unknown fields 422), only when `/api/v1/funktionen` reports the switch on; an unknown state
   (older server, failed request) sends nothing, so a mixed rollout cannot produce 401/404. The service counts only words of `SEMANTIC_SEARCH_K_WOERTER` (default
@@ -746,8 +750,9 @@ The app reads `?k=<word>` once at start (`shared/kampagnenwort.service.ts`), low
 `meldeweg_sichtbar` (group Grundfunktionen, upper bound `SEMANTIC_SEARCH_MELDEWEG_SICHTBAR_AKTIV`,
 default off, public, no condition for switching on: preliminary legal assessment 26.11. without
 conditions): "Melden" as a small button at the end of the meta line of every Beitrag card (no extra height), in
-addition to the ⋮ menu entry, and "Melden & Kontakt" in the footer with the reporting route and only the
-function address from the imprint (`LEGAL_ENTITY.KONTAKT_MAIL`), linking to the imprint section
+addition to the ⋮ menu entry, and "Kontakt" in the footer link row (until Rundgang 28.11. "Melden &
+Kontakt" with a sentence on the reporting route and the function address; now the help dialog explains
+"Melden" on the card), linking to the imprint section
 DSA-Kontaktstelle (Art. 11/12, with reports under Art. 16; `/impressum#melden`). Display only: the
 report dialog and what it stores stay as they are. Because the footer reads the Schalter,
 `GET /api/v1/funktionen` is now also requested on pages without cards (imprint, privacy policy);

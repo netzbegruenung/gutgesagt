@@ -30,6 +30,7 @@
 
             <ng-container *ngIf="!eintraege.length && !ladefehler">
                 <p class="beitraege-leer">Du hast noch keine Beiträge.</p>
+                <ng-container *ngIf="spielgefuehlOben" [ngTemplateOutlet]="spielgefuehlKarte"></ng-container>
                 <!-- Ein konkreter erster Schritt statt nur "Beitragen" (#645) -->
                 <section *ngIf="unbeantworteteAussagen.length" class="erster-schritt" aria-labelledby="erster-schritt-titel">
                     <h2 id="erster-schritt-titel">Fang mit einer unbeantworteten Aussage an</h2>
@@ -55,11 +56,16 @@
                        [naechsterMeilenstein]="naechsterMeilenstein"
                        (aendern)="aendern($event)"
                        (loeschen)="loeschen($event)">
+                <div album-nach-deckel *ngIf="spielgefuehlOben" class="spielgefuehl-oben">
+                    <ng-container [ngTemplateOutlet]="spielgefuehlKarte"></ng-container>
+                </div>
             </app-album>
         </div>
 
-        <!-- Spielgefuehl als eine Einstellung in drei Stufen; ohne Schalter spielgefuehl_buehne leer -->
-        <app-spielgefuehl></app-spielgefuehl>
+        <!-- Spielgefuehl als eine Einstellung in drei Stufen; ohne Schalter spielgefuehl_buehne leer.
+             Offene Frage oben unter dem Deckel, beantwortet hier unten (spielgefuehlOben). -->
+        <ng-container *ngIf="spielgefuehlBereit && (!spielgefuehlOben || ladefehler)" [ngTemplateOutlet]="spielgefuehlKarte"></ng-container>
+        <ng-template #spielgefuehlKarte><app-spielgefuehl></app-spielgefuehl></ng-template>
 
         <!-- Widerruf jederzeit (Art. 7 Abs. 3 DSGVO), auch wenn die Spielgefühl-Karte leer ist (Schalter aus):
              je gespeicherter Einwilligung eine Zeile „Ausschalten“; ohne gespeichertes Ja leer -->

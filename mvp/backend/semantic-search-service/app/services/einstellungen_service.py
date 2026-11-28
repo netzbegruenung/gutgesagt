@@ -5,7 +5,10 @@ aktuelle Saison der Teams, solange keine Saison begonnen hat (``aktuelle_saison(
 unten). Standard ist das laufende Jahr (UTC), solange kein Admin etwas anderes setzt.
 Dazu ``team_live_bis``: der letzte Tag (deutsche Zeit), an dem der Schalter team_live
 wirkt (Jura-Akte 28.11.2026, BDK-Ende); danach wirkt er nicht mehr, auch wenn er an
-steht (services/schalter_service.py, ``ENDDATUM``).
+steht (services/schalter_service.py, ``ENDDATUM``). Und ``bdk_hinweis_von`` /
+``bdk_hinweis_bis``: das Zeitfenster (deutsche Zeit, je einschliesslich) des Hinweises zum
+Einladungslink in der Hilfe, Abschnitt „Mitmachen“ (services/bdk_hinweis.py, Rundgang
+28.11.2026).
 
 Gelesen wird mit kurzem Cache wie bei den Schaltern; ist die Datenbank nicht
 erreichbar, gilt der Standard.
@@ -30,6 +33,13 @@ AKTUELLE_SAISON = "aktuelle_saison"
 TEAM_LIVE_BIS = "team_live_bis"
 # BDK-Ende (BDK 04.-06.12.2026)
 TEAM_LIVE_BIS_STANDARD = "2026-12-06"
+BDK_HINWEIS_VON = "bdk_hinweis_von"
+BDK_HINWEIS_BIS = "bdk_hinweis_bis"
+# BDK 04.-06.12.2026
+BDK_HINWEIS_VON_STANDARD = "2026-12-04"
+BDK_HINWEIS_BIS_STANDARD = "2026-12-06"
+# Einstellungen, deren Wert ein Tag JJJJ-MM-TT ist
+DATUMS_EINSTELLUNGEN = frozenset({TEAM_LIVE_BIS, BDK_HINWEIS_VON, BDK_HINWEIS_BIS})
 _DATUM = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 _STEUERZEICHEN = re.compile(r"[\x00-\x1f\x7f]")
@@ -77,6 +87,25 @@ EINSTELLUNGEN: Dict[str, Einstellungsart] = {
             max_laenge=10,
             standard=lambda: TEAM_LIVE_BIS_STANDARD,
         ),
+        Einstellungsart(
+            name=BDK_HINWEIS_VON,
+            erklaerung=(
+                "Ab diesem Tag (deutsche Zeit) steht in der Hilfe unter „Mitmachen“, wo "
+                "es auf der BDK einen Einladungslink gibt; nur mit dem Paket "
+                "BDK-Begrüßung (k_begruessung). Format JJJJ-MM-TT."
+            ),
+            max_laenge=10,
+            standard=lambda: BDK_HINWEIS_VON_STANDARD,
+        ),
+        Einstellungsart(
+            name=BDK_HINWEIS_BIS,
+            erklaerung=(
+                "Bis zu diesem Tag (deutsche Zeit, einschließlich) steht der Hinweis zum "
+                "Einladungslink in der Hilfe. Format JJJJ-MM-TT."
+            ),
+            max_laenge=10,
+            standard=lambda: BDK_HINWEIS_BIS_STANDARD,
+        ),
     )
 }
 
@@ -101,7 +130,7 @@ def wert_bereinigen(name: str, wert: str) -> str:
     wert = " ".join(wert.split())
     if not wert or len(wert) > art.max_laenge:
         raise UngueltigerWert(name)
-    if name == TEAM_LIVE_BIS and datum_lesen(wert) is None:
+    if name in DATUMS_EINSTELLUNGEN and datum_lesen(wert) is None:
         raise UngueltigerWert(name)
     return wert
 

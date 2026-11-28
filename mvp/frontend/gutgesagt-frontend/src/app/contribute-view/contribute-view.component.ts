@@ -1,7 +1,6 @@
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, ActivatedRoute } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
 import { typBeschreibung, typLabel } from '../shared/content-type-registry';
@@ -10,14 +9,17 @@ import {
   ERSTNUTZER_SATZ,
   FANGKORB_KURZ,
   KETTEN_ICONS,
-  MENUE_ICONS,
 } from '../shared/fangkorb-texte';
 import { FANGKORB_TAB_PARAM, FangkorbTab } from '../fangkorb/fangkorb-filter';
 import { FORMULAR_PFAD, FormularTyp, SUCHTEXT_PARAM, aussageParameter, istFormularTyp } from '../shared/formular-adresse';
 
+/** Untertitel der Kachel „Meine Beiträge“ im Abschnitt „Deins“ (Rundgang 28.11.). */
+export const MEINE_BEITRAEGE_SATZ = 'Was du schon beigetragen hast und wie oft es genutzt wurde';
+
 /**
  * Die Beitragen-Seite: nur Uebersicht, auf Desktop und Handy gleich - erst die Kette in drei
- * Schritten, dann Verfassen, abgesetzt darunter die eigenen Beitraege (Sebastian 20.11.; davor
+ * Schritten, dann Verfassen, darunter der Abschnitt „Deins“ mit den eigenen Beitraegen (Rundgang
+ * 28.11., zuvor Sebastian 20.11.; davor
  * Designrunde 12.11., #620 hatte es umgekehrt). Die Formulare sind eigene Seiten unter
  * /workflow/add-*; hier wird keins eingebettet.
  */
@@ -26,7 +28,6 @@ import { FORMULAR_PFAD, FormularTyp, SUCHTEXT_PARAM, aussageParameter, istFormul
   standalone: true,
   imports: [
     CommonModule,
-    MatButtonModule,
     MatIconModule,
   ],
   templateUrl: './contribute-view.component.html',
@@ -37,10 +38,10 @@ export class ContributeViewComponent implements OnInit {
   readonly typBeschreibung = typBeschreibung;
   readonly fangkorbKurz = FANGKORB_KURZ;
   readonly kettenIcons = KETTEN_ICONS;
-  readonly menueIcons = MENUE_ICONS;
   readonly einwerfenTitel = EINWERFEN_TITEL;
   /** Die Route verlangt eine Anmeldung, der Satz braucht deshalb keine eigene Pruefung. */
   readonly erstnutzerSatz = ERSTNUTZER_SATZ;
+  readonly meineBeitraegeSatz = MEINE_BEITRAEGE_SATZ;
   private destroyRef = inject(DestroyRef);
 
   constructor(

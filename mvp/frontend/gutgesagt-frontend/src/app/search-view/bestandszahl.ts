@@ -1,8 +1,8 @@
 /**
- * Bestandszahl auf der Startseite (Entscheidung des Maintainers vom 25.11.2026): Die Unterzeile
- * unter „Nie wieder sprachlos“ zeigt, wie viel schon da ist, etwa „800 Antworten auf 250 Sprüche
- * – 12 neu in 7 Tagen“ (hero-unterzeile.component.ts). Nur Inhalte, keine Personen,
- * keine Nutzung, keine Konten.
+ * Bestandszahl auf der Startseite (Entscheidung des Maintainers vom 25.11.2026, Wortlaut seit
+ * dem Rundgang 28.11.): Die Unterzeile unter „Nie wieder sprachlos“ zeigt, wie viel schon da ist,
+ * etwa „800 Antworten, 10 neu diese Woche – ist deine die nächste?“
+ * (hero-unterzeile.component.ts). Nur Inhalte, keine Personen, keine Nutzung, keine Konten.
  *
  * Gezählt wird, was /getMetrics ohnehin für alle liefert: sichtbare Kommentare und Aussagen ohne
  * unbeantwortete Suchanfragen (Vormoderation). Abgerundet auf runde Stufen, damit die Zahl nicht
@@ -12,7 +12,8 @@
 /** Darunter bleibt die Unterzeile ohne Zahl: „3 Antworten“ zeigt noch keinen Gewinn. */
 export const BESTAND_MINDEST_KOMMENTARE = 10;
 
-/** Im Code die Glossarbegriffe; die Oberfläche schreibt bewusst „Antworten“ und „Sprüche“. */
+/** Im Code die Glossarbegriffe; die Oberfläche schreibt bewusst „Antworten“. Die Aussagen zählen
+ * nur noch für die Mindestgrenze, die Zeile nennt sie seit dem Rundgang 28.11. nicht mehr. */
 export interface Bestandszahl {
   /** Kommentare, abgerundet */
   kommentare: number;

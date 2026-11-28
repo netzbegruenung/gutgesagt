@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { BehaviorSubject, Subject, of } from 'rxjs';
+import { FunktionenService } from '../services/funktionen.service';
 import { DestroyRef, WritableSignal, signal } from '@angular/core';
 import { AppInstallierenService } from '../rundgang/app-installieren.service';
 import { DefaultUrlSerializer, NavigationEnd, Router, provideRouter } from '@angular/router';
@@ -11,7 +12,14 @@ import { RundgangService } from '../rundgang/rundgang.service';
 import { KEINE_GENERATIVE_KI, SUCHE_MIT_SPRACHMODELLEN } from '../shared/ki-saetze';
 import { FeedbackDialogComponent } from '../shared/feedback/feedback-dialog.component';
 
-import { HILFE_PARAM, HelpDialogComponent, hilfeNachAnmeldung, hilfeOeffnen } from './help-dialog.component';
+import {
+  BDK_EINLADUNG_HINWEIS,
+  HILFE_MITMACHEN,
+  HILFE_PARAM,
+  HelpDialogComponent,
+  hilfeNachAnmeldung,
+  hilfeOeffnen,
+} from './help-dialog.component';
 import { SELBST_PRUEFEN } from '../shared/schreibregeln';
 
 describe('HelpDialogComponent', () => {
@@ -20,8 +28,11 @@ describe('HelpDialogComponent', () => {
   let geschlossen: Subject<void>;
   let rundgang: jasmine.SpyObj<RundgangService>;
   let angemeldet: boolean;
+  /** Was GET /api/v1/funktionen zu „bdk_hinweis“ meldet (Paket k_begruessung und BDK-Tage). */
+  let bdkHinweis: WritableSignal<boolean>;
 
   beforeEach(async () => {
+    bdkHinweis = signal(false);
     geschlossen = new Subject<void>();
     rundgang = jasmine.createSpyObj<RundgangService>('RundgangService', ['starten']);
     angemeldet = false;
@@ -39,6 +50,13 @@ describe('HelpDialogComponent', () => {
         },
         { provide: RundgangService, useValue: rundgang },
         { provide: AuthService, useValue: { getUserInfo: () => ({ isAuthenticated: angemeldet }) } },
+        {
+          provide: FunktionenService,
+          useValue: {
+            an: (name: string) => (name === 'bdk_hinweis' ? bdkHinweis : signal(false)),
+            stand$: () => of(false),
+          },
+        },
       ]
     })
     .compileComponents();
@@ -182,7 +200,7 @@ describe('HelpDialogComponent', () => {
       'Suchen und Kopieren',
       'Bewerten und Siegel',
       'Beitragen',
-      'Konto und Anmeldung',
+      'Mitmachen',
       'Als App aufs Handy',
       'Nutzt Gut gesagt KI?',
       'Feedback',
@@ -194,6 +212,12 @@ describe('HelpDialogComponent', () => {
     const text = (fixture.nativeElement.querySelector('.hilfe-fassungen') as HTMLElement).textContent!;
     expect(text).toContain('Kurz, Mittel und Lang');
     expect(text).toContain('„passt auf Mastodon/Bluesky/X“');
+  });
+
+  // Rundgang 28.11.: Der Fuß nennt den Meldeweg nicht mehr, die Hilfe sagt ihn (auch ohne Konto)
+  it('erklärt, wie man über die Karte meldet, auch ohne Konto', () => {
+    const text = (fixture.nativeElement.querySelector('.hilfe-melden') as HTMLElement).textContent!.replace(/\s+/g, ' ').trim();
+    expect(text).toBe('Passt ein Beitrag nicht hierher? Melde ihn über „Melden“ an der Karte, das geht auch ohne Konto.');
   });
 
   // Persona-Test Gerd: die Antwort auf „Nutzt Gut gesagt KI?“ bleibt, kurz, mit den Sätzen der Über-Seite
@@ -268,13 +292,32 @@ describe('HelpDialogComponent', () => {
     });
   });
 
-  it('sagt, wie man zu einem Konto kommt: Netzbegrünung-Konto, Einladung, Warteliste', () => {
-    const text = (fixture.nativeElement.querySelector('.hilfe-konto') as HTMLElement).textContent!;
+  it('Mitmachen (Rundgang 28.11.): Suchen ohne Konto, Konto per Einladung oder Teamlink, Warteliste', () => {
+    const abschnitt = fixture.nativeElement.querySelector(`#${HILFE_MITMACHEN}`) as HTMLElement;
+    expect(abschnitt.querySelector('h3')!.textContent!.trim()).toBe('Mitmachen');
+    const text = (abschnitt.querySelector('.hilfe-konto') as HTMLElement).textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain('Suchen, lesen und kopieren geht ohne Konto.');
+    expect(text).toContain('Einladung, etwa einem Teamlink am Stand oder von deiner Gruppe');
     expect(text).toContain('Netzbegrünung-Konto');
-    expect(text).toContain('Konto aus einer Einladung');
     expect(text).not.toMatch(/Ab \d/);
     expect(text).toContain('Warteliste');
     expect(text).toContain('„Feedback“');
+  });
+
+  it('nennt den BDK-Stand nur, solange der Server „bdk_hinweis“ meldet (Paket an, BDK-Tage)', () => {
+    const hinweis = () => fixture.nativeElement.querySelector('[data-testid="bdk-hinweis"]') as HTMLElement | null;
+    expect(hinweis()).toBeNull();
+
+    bdkHinweis.set(true);
+    fixture.detectChanges();
+    expect(hinweis()!.textContent!.trim()).toBe(BDK_EINLADUNG_HINWEIS);
+    expect(hinweis()!.closest(`#${HILFE_MITMACHEN}`)).not.toBeNull();
+    expect(BDK_EINLADUNG_HINWEIS).toContain('am Stand der Netzbegrünung im CityCube');
+    expect(BDK_EINLADUNG_HINWEIS).not.toMatch(/Plakat|Aushang|Aushäng/);
+
+    bdkHinweis.set(false);
+    fixture.detectChanges();
+    expect(hinweis()).toBeNull();
   });
 
   it('öffnet Feedback aus der Hilfe heraus', () => {
@@ -499,5 +542,37 @@ describe('HelpDialogComponent: Als App aufs Handy', () => {
     );
     expect(abschnitt().querySelector('dl')).toBeNull();
     expect(knopf()).toBeNull();
+  });
+});
+
+describe('HelpDialogComponent mit Abschnitt (Rundgang 28.11.)', () => {
+  it('springt beim Öffnen zu „Mitmachen“ und setzt den Fokus auf die Überschrift', async () => {
+    const geoeffnet = new Subject<void>();
+    await TestBed.configureTestingModule({
+      imports: [HelpDialogComponent, HttpClientTestingModule],
+      providers: [
+        provideRouter([]),
+        { provide: MatDialogRef, useValue: { close: () => undefined, afterClosed: () => new Subject(), afterOpened: () => geoeffnet } },
+        { provide: MAT_DIALOG_DATA, useValue: { abschnitt: HILFE_MITMACHEN } },
+        { provide: RundgangService, useValue: jasmine.createSpyObj<RundgangService>('RundgangService', ['starten']) },
+        { provide: AuthService, useValue: { getUserInfo: () => ({ isAuthenticated: false }) } },
+        { provide: FunktionenService, useValue: { an: () => signal(false), stand$: () => of(false) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(HelpDialogComponent);
+    document.body.appendChild(fixture.nativeElement);
+    try {
+      fixture.detectChanges();
+      geoeffnet.next();
+      expect(document.activeElement).toBe(fixture.nativeElement.querySelector('#hilfe-mitmachen-titel'));
+    } finally {
+      fixture.nativeElement.remove();
+    }
+  });
+
+  it('hilfeOeffnen gibt den Abschnitt mit', () => {
+    const dialog = jasmine.createSpyObj<MatDialog>('MatDialog', ['open']);
+    hilfeOeffnen(dialog, HILFE_MITMACHEN);
+    expect(dialog.open.calls.mostRecent().args[1]!.data).toEqual({ abschnitt: HILFE_MITMACHEN });
   });
 });
