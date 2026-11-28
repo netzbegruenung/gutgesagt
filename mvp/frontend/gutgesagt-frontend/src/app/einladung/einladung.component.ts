@@ -17,8 +17,9 @@ import {
   TEAM_MOTIVE,
   TeamAntwort,
   TeamBeimPruefen,
-  teamMotivBild,
 } from '../shared/einladung/team-einladung';
+import { TeamMotivComponent } from '../shared/teams/team-motiv.component';
+import { motivBild, motivEmoji } from '../shared/teams/teams';
 import { ROUTES } from '../shared/constants/app.constants';
 import { sitzungPruefen } from '../auth/sitzung';
 import { FunktionenService } from '../services/funktionen.service';
@@ -59,6 +60,7 @@ type BeitrittFehler = 'zu_oft' | 'abgemeldet' | 'unbekannt';
 interface Beitritt {
   name: string;
   motiv: string | null;
+  motiv_name?: string | null;
   nummer: number;
   neu: boolean;
 }
@@ -203,6 +205,7 @@ export function codeAusEingabe(eingabe: string): string | null {
     MatCheckboxModule,
     MatFormFieldModule,
     MatInputModule,
+    TeamMotivComponent,
   ],
   templateUrl: './einladung.component.html',
   styleUrls: ['./einladung.component.css'],
@@ -432,7 +435,7 @@ export class EinladungComponent implements OnInit {
 
   /** Mit Ja beim Anlegen: gerade beim Anlegen des Kontos beigetreten; sonst schon länger dabei. */
   private schonImTeam(team: TeamBeimPruefen, mitJa: boolean) {
-    this.beitritt = { name: team.name, motiv: team.motiv, nummer: team.eigene_nummer ?? 0, neu: mitJa };
+    this.beitritt = { name: team.name, motiv: team.motiv, motiv_name: team.motiv_name, nummer: team.eigene_nummer ?? 0, neu: mitJa };
     this.stand = 'beigetreten';
   }
 
@@ -491,7 +494,13 @@ export class EinladungComponent implements OnInit {
     this.stand = 'tritt_bei';
     this.einladungService.beitreten(this.code, antwort).subscribe({
       next: (antwort) => {
-        this.beitritt = { name: antwort.team.name, motiv: antwort.team.motiv, nummer: antwort.nummer, neu: antwort.neu };
+        this.beitritt = {
+          name: antwort.team.name,
+          motiv: antwort.team.motiv,
+          motiv_name: antwort.team.motiv_name,
+          nummer: antwort.nummer,
+          neu: antwort.neu,
+        };
         this.ueberschriftFokussieren = true;
         this.stand = 'beigetreten';
       },
@@ -530,13 +539,25 @@ export class EinladungComponent implements OnInit {
     return false;
   }
 
-  get motivBild(): string | null {
-    return teamMotivBild(this.beitritt?.motiv ?? this.team?.motiv);
+  /** Gespeicherter Schlüssel des Motivs: Emoji der festen Liste oder einer der sechs früheren. */
+  get motiv(): string | null {
+    return this.beitritt?.motiv ?? this.team?.motiv ?? null;
   }
 
+  /** Ob es etwas zu zeichnen gibt (Emoji oder Bild); unbekannte Motive zeigen nur den Namen. */
+  get hatMotiv(): boolean {
+    return motivBild(this.motiv) !== null || motivEmoji(this.motiv) !== null;
+  }
+
+  get istEmoji(): boolean {
+    return motivEmoji(this.motiv) !== null;
+  }
+
+  /** Name des Motivs: vom Server (motiv_name), für die früheren Schlüssel auch ohne. */
   get motivName(): string {
-    const motiv = this.beitritt?.motiv ?? this.team?.motiv;
-    return (motiv && TEAM_MOTIVE[motiv]) || '';
+    const motiv = this.motiv;
+    const vomServer = this.beitritt?.motiv_name ?? this.team?.motiv_name;
+    return vomServer || (motiv && TEAM_MOTIVE[motiv]) || '';
   }
 
   /** Kasten mit der Frage: ohne Konto über dem Formular, angemeldet statt des Formulars. */

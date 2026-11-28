@@ -32,7 +32,7 @@ from domain.teams import (
     EINWILLIGUNG_WORTLAUTE,
     KNOPF_JA,
     KNOPF_NEIN,
-    MOTIVE,
+    MOTIV_KATEGORIEN,
     OEFFENTLICH_KENNUNG,
     OEFFENTLICH_WORTLAUTE,
     SAISON_MAX,
@@ -41,7 +41,10 @@ from domain.teams import (
     TEAM_ART_GRUPPE,
     TEAM_NAME_MAX,
     TEAMNAME_HINWEIS,
+    motiv_gueltig,
+    motiv_name,
 )
+from domain.team_emoji import EMOJI_MOTIVE
 from services.anzeigename_service import angemeldet
 from services.einladung_service import (
     EINLOESUNGEN_MAX,
@@ -134,7 +137,9 @@ class TeamFelder(BaseModel):
     @field_validator("team_motiv")
     @classmethod
     def _team_motiv(cls, wert: Optional[str]) -> Optional[str]:
-        if wert is not None and wert not in MOTIVE:
+        # Nur exakte Eintraege der festen Liste (domain/teams.py MOTIV_NAMEN): keine
+        # freien Zeichen, keine ZWJ-Sequenzen, keine Modifikatoren.
+        if wert is not None and not motiv_gueltig(wert):
             raise ValueError("Unbekanntes Motiv")
         return wert
 
@@ -229,6 +234,8 @@ class EinladungAendernRequest(TeamFelder):
 class TeamAdminResponse(BaseModel):
     name: str
     motiv: Optional[str]
+    # Name des Motivs fuer Alt-Text und Beschriftung
+    motiv_name: Optional[str] = None
     saison: str
     # "anlass" oder "gruppe"; bei "gruppe" der Tag der schriftlichen Zustimmung der
     # Gruppenleitung, nur fuer Admins
@@ -269,6 +276,7 @@ class EinladungResponse(BaseModel):
                 TeamAdminResponse(
                     name=team.name,
                     motiv=team.motiv,
+                    motiv_name=motiv_name(team.motiv),
                     saison=team.saison,
                     art=team.art,
                     zustimmung_am=team.zustimmung_am,
@@ -281,6 +289,16 @@ class EinladungResponse(BaseModel):
 
 
 class MotivResponse(BaseModel):
+    # Das Emoji selbst; wird so gespeichert
+    schluessel: str
+    # Deutscher CLDR-Kurzname, steht immer daneben
+    name: str
+    kategorie: str
+    # Stichworte fuer die Suche im Admin-Formular (CLDR), durch Leerzeichen getrennt
+    stichworte: str = ""
+
+
+class MotivKategorieResponse(BaseModel):
     schluessel: str
     name: str
 
@@ -297,6 +315,7 @@ class EinladungListeResponse(BaseModel):
     # aktuelle Saison
     saison_vorschlag: Optional[str] = None
     motive: List[MotivResponse] = []
+    motiv_kategorien: List[MotivKategorieResponse] = []
     teamname_hinweis: Optional[str] = None
 
 
@@ -307,6 +326,8 @@ class CodeRequest(BaseModel):
 class TeamPruefenResponse(BaseModel):
     name: str
     motiv: Optional[str]
+    # Name des Motivs fuer Alt-Text und Beschriftung
+    motiv_name: Optional[str] = None
     saison: str
     # "anlass" oder "gruppe": bei "gruppe" zeigt die Begruessung den Satz, dass das
     # Team mit Zustimmung der Gruppe nach ihr benannt ist. Das Datum der Zustimmung
@@ -444,6 +465,7 @@ class BeitretenRequest(CodeRequest):
 class TeamKurzResponse(BaseModel):
     name: str
     motiv: Optional[str]
+    motiv_name: Optional[str] = None
     saison: str
 
 
@@ -487,7 +509,16 @@ async def einladungen_liste(
         teams_aktiv=True,
         aktuelle_saison=teams.aktuelle_saison(),
         saison_vorschlag=teams.saison_vorschlag(),
-        motive=[MotivResponse(schluessel=k, name=v) for k, v in MOTIVE.items()],
+        # Zur Auswahl steht nur die Positivliste; die sechs frueheren Schluessel bleiben
+        # gueltig, werden aber nicht mehr angeboten.
+        motive=[
+            MotivResponse(schluessel=z, name=n, kategorie=k, stichworte=st)
+            for z, n, k, st in EMOJI_MOTIVE
+        ],
+        motiv_kategorien=[
+            MotivKategorieResponse(schluessel=k, name=n)
+            for k, n in MOTIV_KATEGORIEN.items()
+        ],
         teamname_hinweis=TEAMNAME_HINWEIS,
     )
 
@@ -560,6 +591,7 @@ async def einladung_pruefen(
         team=TeamPruefenResponse(
             name=team.name,
             motiv=team.motiv,
+            motiv_name=motiv_name(team.motiv),
             saison=team.saison,
             art=team.art,
             mitglieder=info.mitglieder,
@@ -658,6 +690,7 @@ async def einladung_beitreten(
         team=TeamKurzResponse(
             name=mitgliedschaft.team_name,
             motiv=mitgliedschaft.team_motiv,
+            motiv_name=motiv_name(mitgliedschaft.team_motiv),
             saison=mitgliedschaft.saison,
         ),
         nummer=mitgliedschaft.nummer,

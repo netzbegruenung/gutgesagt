@@ -17,7 +17,7 @@ from core.logging import get_logger
 from dependencies import require_user
 from domain.themen import NACH_SCHLUESSEL as THEMEN_NACH_SCHLUESSEL
 from domain.teams import (
-    MOTIVE,
+    motiv_name,
     OEFFENTLICH_KENNUNG,
     OEFFENTLICH_WORTLAUTE,
     UnbekannterWortlaut,
@@ -216,7 +216,7 @@ async def meine_teams(
                 id=t.id,
                 team_name=t.team_name,
                 motiv=t.team_motiv,
-                motiv_name=MOTIVE.get(t.team_motiv) if t.team_motiv else None,
+                motiv_name=motiv_name(t.team_motiv),
                 saison=t.saison,
                 nummer=t.nummer,
                 eingetreten_am=t.eingetreten_am,

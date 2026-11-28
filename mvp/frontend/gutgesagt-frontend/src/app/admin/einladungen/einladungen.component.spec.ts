@@ -119,13 +119,17 @@ describe('EinladungenComponent', () => {
     expect(el().textContent).toContain('gerade nicht erreichbar, neuer Versuch in Kürze');
   });
   describe('Teams', () => {
+    // Ein Ausschnitt der festen Emoji-Liste (domain/team_emoji.py), wie der Server sie schickt
     const MOTIVE = [
-      { schluessel: 'vogel', name: 'Vogel' },
-      { schluessel: 'sprechblase', name: 'Sprechblase' },
-      { schluessel: 'handschlag', name: 'Handschlag' },
-      { schluessel: 'laufschuh', name: 'Laufschuh' },
-      { schluessel: 'waage', name: 'Waage' },
-      { schluessel: 'lautsprecher', name: 'Lautsprecher' },
+      { schluessel: '🐝', name: 'Biene', kategorie: 'tiere-natur', stichworte: 'insekt honig' },
+      { schluessel: '🌱', name: 'Spross', kategorie: 'tiere-natur', stichworte: 'junge pflanze' },
+      { schluessel: '🚲', name: 'Fahrrad', kategorie: 'reisen-orte', stichworte: 'rad' },
+      { schluessel: '⚖️', name: 'Waage', kategorie: 'gegenstaende', stichworte: 'gerechtigkeit' },
+    ];
+    const KATEGORIEN = [
+      { schluessel: 'tiere-natur', name: 'Tiere & Natur' },
+      { schluessel: 'reisen-orte', name: 'Reisen & Orte' },
+      { schluessel: 'gegenstaende', name: 'Gegenstände' },
     ];
     const TEAMLINK: Einladung = {
       ...GRUPPE,
@@ -142,6 +146,7 @@ describe('EinladungenComponent', () => {
         aktuelle_saison: '2026',
         ...(saisonVorschlag ? { saison_vorschlag: saisonVorschlag } : {}),
         motive: MOTIVE,
+        motiv_kategorien: KATEGORIEN,
         teamname_hinweis: 'Nur nach Anlass, Ort oder Saison benennen.',
       });
       fixture.detectChanges();
@@ -155,17 +160,20 @@ describe('EinladungenComponent', () => {
       expect(el().textContent).not.toContain('Mitglieder');
     });
 
-    it('zeigt den Block „Team (optional)“ mit Saison-Vorschlag, Hinweis und allen Motiven mit Namen', () => {
+    it('zeigt den Block „Team (optional)“ mit Saison-Vorschlag, Hinweis und der Motiv-Auswahl mit Suche', () => {
       mitTeams([]);
 
       const block = el().querySelector('[data-testid="team-block"]') as HTMLElement;
       expect(block.querySelector('legend')!.textContent).toContain('Team (optional)');
       expect(block.textContent).toContain('Nur nach Anlass, Ort oder Saison benennen.');
-      const motive = Array.from(block.querySelectorAll('[data-testid="motiv"]'));
-      expect(motive.length).toBe(6);
-      expect(motive.map((m) => m.textContent!.trim())).toEqual(MOTIVE.map((m) => m.name));
-      expect(motive.every((m) => m.querySelector('img[src^="/meilensteine/"]'))).toBeTrue();
-      expect(block.querySelector('mat-radio-group')!.getAttribute('role')).toBe('radiogroup');
+      // Statt sechs Radioknöpfen eine Combobox mit Suche und ein Filter nach Kategorie
+      const suche = block.querySelector('[data-testid="motiv-suche"]') as HTMLInputElement;
+      expect(suche.getAttribute('role')).toBe('combobox');
+      expect(block.querySelector('[data-testid="motiv-kategorie"]')).not.toBeNull();
+      expect(block.querySelector('[data-testid="motiv"]')).toBeNull();
+      // Vorauswahl Spross, mit Namen sichtbar
+      expect(fixture.componentInstance.teamMotiv).toBe('🌱');
+      expect(block.querySelector('[data-testid="motiv-gewaehlt"]')!.textContent).toContain('Gewählt: Spross');
       expect(fixture.componentInstance.teamSaison).toBe('2026');
       expect((block.querySelector('input[name="teamName"]') as HTMLInputElement).maxLength).toBe(40);
     });
@@ -186,7 +194,7 @@ describe('EinladungenComponent', () => {
       k.erlaubteEinloesungen = 50;
       k.gueltigBis = '2026-12-06';
       k.teamName = '  BDK 26 Berlin ';
-      k.teamMotiv = 'waage';
+      k.teamMotiv = '⚖️';
 
       k.anlegen();
 
@@ -196,7 +204,7 @@ describe('EinladungenComponent', () => {
         erlaubte_einloesungen: 50,
         gueltig_bis: '2026-12-06',
         team_name: 'BDK 26 Berlin',
-        team_motiv: 'waage',
+        team_motiv: '⚖️',
         team_saison: '2026',
         team_art: 'anlass',
       });
@@ -358,10 +366,47 @@ describe('EinladungenComponent', () => {
       const team = mit.querySelector('[data-testid="team"]')!;
       expect(team.textContent).toContain('BDK 26 Berlin');
       expect(team.textContent).toContain('2026');
-      expect(team.querySelector('img')!.getAttribute('src')).toBe('/meilensteine/vogel.svg');
+      // Frühere Schlüssel weiter als Bild, mit dem Namen als Alt-Text
+      const bild = team.querySelector('img')!;
+      expect(bild.getAttribute('src')).toBe('/meilensteine/vogel.svg');
+      expect(bild.getAttribute('alt')).toBe('Vogel');
       expect(mit.querySelector('[data-testid="mitglieder"]')!.textContent!.trim()).toBe('36');
       expect(ohne.querySelector('[data-testid="team"]')!.textContent).toContain('kein Team');
       expect(el().textContent).toContain('nur die Zahl der Mitglieder');
+    });
+
+    it('zeigt ein Team mit Emoji als Zeichen mit dem deutschen Namen als Alt-Text', () => {
+      mitTeams([{ ...TEAMLINK, team: { ...TEAMLINK.team!, motiv: '🚲', motiv_name: 'Fahrrad' } }]);
+
+      const team = el().querySelector('[data-testid="team"]')!;
+      const emoji = team.querySelector('[data-testid="motiv-emoji"]')!;
+      expect(emoji.textContent!.trim()).toBe('🚲');
+      expect(emoji.getAttribute('role')).toBe('img');
+      expect(emoji.getAttribute('aria-label')).toBe('Fahrrad');
+      expect(team.querySelector('img')).toBeNull();
+    });
+
+    it('sperrt Anlegen mit einem Motiv, das nicht in der Liste steht', () => {
+      mitTeams([]);
+      const k = fixture.componentInstance;
+      k.notiz = 'Stand';
+      k.teamName = 'Team';
+      k.teamSaison = '2026';
+      expect(k.kannAnlegen).toBeTrue();
+      k.teamMotiv = '✝️';
+      expect(k.kannAnlegen).toBeFalse();
+      k.teamMotiv = 'vogel';
+      expect(k.kannAnlegen).toBeFalse();
+    });
+
+    it('übernimmt das in der Auswahl gewählte Motiv', () => {
+      mitTeams([]);
+      const auswahl = fixture.debugElement.query((d) => d.name === 'app-motiv-auswahl');
+      auswahl.componentInstance.waehlen('🚲');
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.teamMotiv).toBe('🚲');
+      expect(el().querySelector('[data-testid="motiv-gewaehlt"]')!.textContent).toContain('Gewählt: Fahrrad');
     });
 
     /** ngModel meldet seine Steuerelemente erst nach einem Microtask an; whenStable wartet wegen
@@ -385,7 +430,7 @@ describe('EinladungenComponent', () => {
       tippen('gueltigBis', '2026-12-24');
       tippen('teamName', 'Selbsttest');
       tippen('teamSaison', 'Winter');
-      k.teamMotiv = 'waage';
+      k.teamMotiv = '⚖️';
       fixture.detectChanges();
 
       const knopf = Array.from(el().querySelectorAll('button[type="submit"]'))[0] as HTMLButtonElement;
@@ -403,7 +448,7 @@ describe('EinladungenComponent', () => {
       expect(k.gueltigBis).not.toBe('2026-12-24');
       expect(k.teamName).toBe('');
       expect(k.teamSaison).toBe('Winter 26/27');
-      expect(k.teamMotiv).toBe('vogel');
+      expect(k.teamMotiv).toBe('🌱');
       expect(k.teamArt).toBe('anlass');
       const notiz = el().querySelector('input[name="notiz"]') as HTMLInputElement;
       expect(notiz.value).toBe('');
